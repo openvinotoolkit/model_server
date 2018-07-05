@@ -1,10 +1,8 @@
-from ie_serving.tensorflow_serving_api import prediction_service_pb2, predict_pb2
-import tensorflow as tf
-from tensorflow.core.framework import tensor_pb2 as tensorflow_dot_core_dot_framework_dot_tensor__pb2
-from tensorflow.core.framework import types_pb2
-from tensorflow.python.framework import tensor_shape
+from ie_serving.tensorflow_serving_api import prediction_service_pb2
+import tensorflow.contrib.util as tf_contrib_util
 import grpc
-from ie_serving.server.parsers import check_if_model_name_and_version_is_valid
+from ie_serving.server.predict_utils import check_if_model_name_and_version_is_valid, prepare_output_as_list, \
+    get_version_model
 
 
 class PredictionServiceServicer(prediction_service_pb2.PredictionServiceServicer):
@@ -17,31 +15,65 @@ class PredictionServiceServicer(prediction_service_pb2.PredictionServiceServicer
         Predict -- provides access to loaded TensorFlow model.
         """
         # check if model with was requested is available on server with proper version
-        valid_model_spec, model_name, version = check_if_model_name_and_version_is_valid(model_spec=request.model_spec,
-                                                                                         available_models=self.models)
+        model_name = request.model_spec.name
+        version = get_version_model(model_name=model_name, requested_version=request.model_spec.version.value,
+                                    available_models=self.models)
+        valid_model_spec = check_if_model_name_and_version_is_valid(model_name=model_name, version=version,
+                                                                    available_models=self.models)
 
+        if not valid_model_spec:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details('Servable not found for request: Specific({}, {})'.format(model_name, version))
+            return
         model_inputs_in_input_request = list(dict(request.inputs).keys())
+        input_blob = self.models[model_name].engines[version].input_blob
+        # check if name of requested blob is equal model blob
+        if input_blob not in model_inputs_in_input_request:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details('input tensor alias not found in signature: %s. '
+                                'Inputs expected to be in the set {%s}.' % (model_inputs_in_input_request,
+                                                                            input_blob))
+            return
+
+        inference_input = tf_contrib_util.make_ndarray(request.inputs[input_blob])
+        shape_required_in_model = self.models[model_name].engines[version].inputs[input_blob]
+        # check requested shape and model shape
+        if shape_required_in_model != list(inference_input.shape):
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details('The input data is incorrect. Obtained shape {}, required shape {}'.
+                                format(list(inference_input.shape),
+                                       self.models[model_name].engines[version].inputs[input_blob]))
+            return
+
+        inference_output = self.models[model_name].engines[version].infer(inference_input)
+        response = prepare_output_as_list(inference_output=inference_output,
+                                          model_avaible_outputs=self.models[model_name].
+                                          engines[version].outputs)
+        response.model_spec.name = model_name
+        response.model_spec.version.value = version
+        response.model_spec.signature_name = "serving_default"
+        return response
+
+
+        '''
         if valid_model_spec:
+            model_inputs_in_input_request = list(dict(request.inputs).keys())
             input_blob = self.models[model_name].engines[version].input_blob
+            # check if name of requested blob is equal model blob
             if input_blob in model_inputs_in_input_request:
-                inference_input = tf.contrib.util.make_ndarray(request.inputs[input_blob])
-                if self.models[model_name].engines[version].inputs[input_blob] == list(inference_input.shape):
+                inference_input = tf_contrib_util.make_ndarray(request.inputs[input_blob])
+                shape_required_in_model = self.models[model_name].engines[version].inputs[input_blob]
+                # check requested shape and model shape
+                if shape_required_in_model == list(inference_input.shape):
                     inference_output = self.models[model_name].engines[version].infer(inference_input)
-                    response = predict_pb2.PredictResponse()
-                    for output in self.models[model_name].engines[version].outputs:
-                        output_tensor = tensorflow_dot_core_dot_framework_dot_tensor__pb2.TensorProto(
-                            dtype=types_pb2.DT_FLOAT,
-                            tensor_shape=tensor_shape.as_shape(inference_output[output].shape).as_proto())
-                        for result in inference_output[output]:
-                            output_tensor.float_val.extend(result)
-                        response.outputs[output].CopyFrom(output_tensor)
-                        response.model_spec.name = model_name
-                        response.model_spec.version.value = version
-                        response.model_spec.signature_name = "serving_default"
-                        return response
+                    response = prepare_output_as_list(inference_output=inference_output,
+                                                      model_avaible_outputs=self.models[model_name].
+                                                      engines[version].outputs)
+                    response.model_spec.name = model_name
+                    response.model_spec.version.value = version
+                    response.model_spec.signature_name = "serving_default"
+                    return response
                 else:
-                    print("test")
-                    # the input data is incorrect
                     context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                     context.set_details('The input data is incorrect. Obtained shape {}, required shape {}'.
                                         format(list(inference_input.shape),
@@ -50,15 +82,9 @@ class PredictionServiceServicer(prediction_service_pb2.PredictionServiceServicer
             else:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details('input tensor alias not found in signature: %s. '
-                                    'Inputs expected to be in the set {%s}.' % (model_inputs_in_input_request, input_blob))
-            '''
-            response.outputs['out'].CopyFrom(
-            tf.contrib.util.make_tensor_proto(test['resnet_v1_50/predictions/Reshape_1'],
-                                          shape=test['resnet_v1_50/predictions/Reshape_1'].shape,
-                                          dtype=types_pb2.DT_FLOAT))
-            '''
-
+                                    'Inputs expected to be in the set {%s}.' % (model_inputs_in_input_request,
+                                                                                input_blob))
         else:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Servable not found for request: Specific({}, {})'.format(model_name, version))
-        raise NotImplementedError('Method not implemented!')
+'''

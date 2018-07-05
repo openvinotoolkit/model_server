@@ -11,17 +11,17 @@ def open_config(path):
 
 
 def parse_config(args):
-    config = open_config(path=args.config_path)
+    configs = open_config(path=args.config_path)
     models = {}
-    for model in config['model_config_list']:
-        modelin = Model(model_name=model['config']['name'], model_directory=model['config']['base_path'])
-        models[model['config']['name']] = modelin
-    start_server(models)
+    for config in configs['model_config_list']:
+        modeli = Model(model_name=config['config']['name'], model_directory=config['config']['base_path'])
+        models[config['config']['name']] = modeli
+    start_server(models=models, max_workers=args.max_workers, port=args.port)
 
 
 def parse_one_model(args):
     model = Model(model_name=args.model_name, model_directory=args.model_path)
-    start_server({args.model_name: model})
+    start_server(models={args.model_name: model}, max_workers=args.max_workers, port=args.port)
 
 
 def main():
@@ -30,11 +30,16 @@ def main():
 
     parser_a = subparsers.add_parser('config', help='Allows you to share multiple models using a configuration file')
     parser_a.add_argument('--config_path', type=str, help='absolute path to json configuration file', required=True)
+    parser_a.add_argument('--port', type=int, help='server port', required=False, default=9000)
+    parser_a.add_argument('--max_workers', type=int, help='maximum number of workers for the server', required=False, default=10)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model', help='Allows you to share one type of model')
     parser_b.add_argument('--model_name', type=str, help='name of the model', required=True)
     parser_b.add_argument('--model_path', type=str, help='absolute path to model,as in tf serving', required=True)
+    parser_b.add_argument('--port', type=int, help='server port', required=False, default=9000)
+    parser_b.add_argument('--max_workers', type=int, help='maximum number of workers for the server', required=False,
+                          default=10)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     parser.parse_args().func(args)
