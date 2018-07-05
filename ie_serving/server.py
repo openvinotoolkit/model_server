@@ -1,11 +1,10 @@
-from tensorflow_serving.apis import prediction_service_pb2, predict_pb2
+from ie_serving.tensorflow_serving_api import prediction_service_pb2, predict_pb2
 from concurrent import futures
 import time
 import grpc
 import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2 as tensorflow_dot_core_dot_framework_dot_tensor__pb2
 import numpy as np
-from tensorflow.python.framework import dtypes
 from tensorflow.core.framework import types_pb2
 from tensorflow.python.framework import tensor_shape
 from inference_engine import IENetwork, IEPlugin
@@ -18,6 +17,9 @@ h = 224
 
 
 class PredictionServiceServicer(prediction_service_pb2.BetaPredictionServiceServicer):
+
+    def __init__(self):
+        print("beka")
 
     def Predict(self, request, context):
         """
