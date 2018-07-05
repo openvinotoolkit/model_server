@@ -17,10 +17,11 @@ def check_if_model_name_and_version_is_valid(model_name, version, available_mode
 
 def get_version_model(model_name, requested_version, available_models):
     version = 0
-    if requested_version == 0:
-        version = available_models[model_name].default_version
-    elif int(requested_version) in available_models[model_name].versions:
-        version = available_models[model_name].default_version
+    if model_name in available_models:
+        if requested_version == 0:
+            version = available_models[model_name].default_version
+        elif int(requested_version) in available_models[model_name].versions:
+            version = available_models[model_name].default_version
     return version
 
 
