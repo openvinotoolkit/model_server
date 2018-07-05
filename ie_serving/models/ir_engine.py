@@ -1,5 +1,5 @@
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
-from openvino.inference_engine import IENetwork, IEPlugin
+from inference_engine import IENetwork, IEPlugin
 
 
 class IrEngine():
