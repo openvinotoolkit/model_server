@@ -31,7 +31,8 @@ def main():
     parser_a = subparsers.add_parser('config', help='Allows you to share multiple models using a configuration file')
     parser_a.add_argument('--config_path', type=str, help='absolute path to json configuration file', required=True)
     parser_a.add_argument('--port', type=int, help='server port', required=False, default=9000)
-    parser_a.add_argument('--max_workers', type=int, help='maximum number of workers for the server', required=False, default=10)
+    parser_a.add_argument('--max_workers', type=int, help='maximum number of workers for the server', required=False,
+                          default=10)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model', help='Allows you to share one type of model')

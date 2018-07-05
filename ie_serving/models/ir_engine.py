@@ -1,5 +1,5 @@
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
-from inference_engine import IENetwork, IEPlugin
+from openvino.inference_engine import IENetwork, IEPlugin
 
 
 class IrEngine():
@@ -15,7 +15,6 @@ class IrEngine():
         self.input_blob = next(iter(net.inputs))
         self.inputs = net.inputs
         self.outputs = net.outputs
-
 
     def infer(self, data):
         results = self.exec_net.infer(inputs={self.input_blob: data})
