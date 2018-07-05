@@ -30,14 +30,17 @@ ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:\
     $DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:\
     $DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
 
-COPY . /ie-serving
+COPY ie_serving /ie-serving
 
 WORKDIR /ie-serving
+
+COPY requirements.txt /ie-serving
 
 RUN virtualenv -p python3 .venv && \
     . .venv/bin/activate && \
     pip3 --no-cache-dir install -r requirements.txt
-#RUN make install
+
+RUN pip install .
 
 # Set path to serving config - it will be used by make run target
 ARG CONFIG=/opt/ml/config.json
