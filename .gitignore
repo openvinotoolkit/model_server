@@ -1,0 +1,10 @@
+/logs/*
+.idea
+.venv
+*~
+*.pyc
+*.pyo
+*.log
+*__pycache__/
+*.cache
+.cache
