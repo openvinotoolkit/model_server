@@ -15,8 +15,7 @@ class IrEngine():
         self.input_blob = next(iter(net.inputs))
         self.inputs = net.inputs
         self.outputs = net.outputs
-        print(net.outputs)
-        print(self.input_blob)
+
 
     def infer(self, data):
         results = self.exec_net.infer(inputs={self.input_blob: data})

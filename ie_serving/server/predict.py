@@ -16,6 +16,7 @@ class PredictionServiceServicer(prediction_service_pb2.PredictionServiceServicer
         """
         Predict -- provides access to loaded TensorFlow model.
         """
+        # check if model with was requested is available on server with proper version
         valid_model_spec, model_name, version = check_if_model_name_and_version_is_valid(model_spec=request.model_spec,
                                                                                          available_models=self.models)
 
@@ -40,9 +41,14 @@ class PredictionServiceServicer(prediction_service_pb2.PredictionServiceServicer
                         return response
                 else:
                     print("test")
+                    # the input data is incorrect
+                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                    context.set_details('The input data is incorrect. Obtained shape {}, required shape {}'.
+                                        format(list(inference_input.shape),
+                                               self.models[model_name].engines[version].inputs[input_blob]))
 
             else:
-                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details('input tensor alias not found in signature: %s. '
                                     'Inputs expected to be in the set {%s}.' % (model_inputs_in_input_request, input_blob))
             '''

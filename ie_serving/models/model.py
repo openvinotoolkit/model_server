@@ -15,7 +15,6 @@ class Model():
     def get_absolut_path_to_model(self, specific_version_model_path):
         bin_path = glob.glob("{}/*.bin".format(specific_version_model_path))
         xml_path = glob.glob("{}/*.xml".format(specific_version_model_path))
-        print(bin_path, xml_path)
         if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
             return xml_path[0], bin_path[0]
         return None, None
@@ -45,5 +44,4 @@ class Model():
         for version in self.versions:
             inference_engines[version['version']] = IrEngine(model_bin=version['bin_model_path'],
                                                              model_xml=version['xml_model_path'])
-        print(inference_engines)
         return inference_engines
