@@ -12,7 +12,8 @@ ARG DL_DIR=/tmp
 
 ENV TEMP_DIR TEMP_DIR
 
-RUN apt-get update && apt-get install -y --no-install-recommends wget cpio cmake sudo python3-pip virtualenv
+RUN apt-get update && apt-get install -y --no-install-recommends wget cpio cmake sudo \
+    python3-pip python3-venv python3-setuptools virtualenv
 
 RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR && wget -c $DOWNLOAD_LINK && \
     pwd && ls && \
@@ -33,11 +34,15 @@ COPY . /ie-serving
 
 WORKDIR /ie-serving
 
-RUN make install
+RUN virtualenv -p python3 .venv && \
+    . .venv/bin/activate && \
+    pip3 --no-cache-dir install -r requirements.txt
+#RUN make install
 
 # Set path to serving config - it will be used by make run target
 ARG CONFIG=/opt/ml/config.json
+ARG MODEL=/opt/ml/ir_model
 
-ENTRYPOINT make run
+#ENTRYPOINT make run
 
 
