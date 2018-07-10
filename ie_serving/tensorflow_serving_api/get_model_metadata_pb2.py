@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 
 from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
 from tensorflow.core.protobuf import meta_graph_pb2 as tensorflow_dot_core_dot_protobuf_dot_meta__graph__pb2
-from tensorflow_serving.apis import model_pb2 as tensorflow__serving_dot_apis_dot_model__pb2
+from ie_serving.tensorflow_serving_api import model_pb2 as tensorflow__serving_dot_apis_dot_model__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(

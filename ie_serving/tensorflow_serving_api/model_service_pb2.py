@@ -29,7 +29,7 @@ from google.protobuf import descriptor_pb2
 _sym_db = _symbol_database.Default()
 
 
-from tensorflow_serving.apis import get_model_status_pb2 as tensorflow__serving_dot_apis_dot_get__model__status__pb2
+from ie_serving.tensorflow_serving_api import get_model_status_pb2 as tensorflow__serving_dot_apis_dot_get__model__status__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(

@@ -1,7 +1,5 @@
-futures
 grpcio
 grpcio-tools
 numpy
-opencv-python
 protobuf
 tensorflow

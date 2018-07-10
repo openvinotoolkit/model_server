@@ -34,7 +34,7 @@ install: venv
 	@echo "no extra steps for now"
 
 run: venv install
-	@. $(ACTIVATE); python server.py --config "$CONFIG"
+	@. $(ACTIVATE); python ie_serving/main.py --config "$CONFIG"
 
 unit_test: venv
 	@echo "Running unit tests..."

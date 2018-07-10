@@ -25,7 +25,7 @@ for x in range(10):
     request = predict_pb2.PredictRequest()
     request.model_spec.name = 'resnet'
     request.inputs['in'].CopyFrom(
-    tf.contrib.util.make_tensor_proto(imgs[x,:,:,:], shape=[1, 224, 224, 3]))
+        tf.contrib.util.make_tensor_proto(imgs[x,:,:,:], shape=[1, 224, 224, 3]))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0)
     end_time = datetime.datetime.now()

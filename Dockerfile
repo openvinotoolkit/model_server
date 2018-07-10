@@ -25,24 +25,20 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR && wget -c $DOWNLOAD_LINK && \
     rm -Rf /TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5:$DL_INSTALL_DIR/model_optimizer"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:\
-    $DL_INSTALL_DIR/inference_engine/external/gna/lib:\
-    $DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:\
-    $DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
 
-COPY . /ie-serving
+COPY . /ie-serving-py/
 
-WORKDIR /ie-serving
+WORKDIR /ie-serving-py
 
 RUN virtualenv -p python3 .venv && \
-    . .venv/bin/activate && \
-    pip3 --no-cache-dir install -r requirements.txt
-#RUN make install
+    . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
+
+RUN . .venv/bin/activate && pip3 install .
 
 # Set path to serving config - it will be used by make run target
-ARG CONFIG=/opt/ml/config.json
-ARG MODEL=/opt/ml/ir_model
+RUN chmod 700 start_server.sh
 
-#ENTRYPOINT make run
+#ENTRYPOINT ["./start_server.sh "]
 
 

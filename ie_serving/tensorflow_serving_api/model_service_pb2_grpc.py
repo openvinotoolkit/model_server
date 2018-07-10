@@ -21,7 +21,7 @@ import grpc
 from grpc.framework.common import cardinality
 from grpc.framework.interfaces.face import utilities as face_utilities
 
-import tensorflow_serving.apis.get_model_status_pb2 as tensorflow__serving_dot_apis_dot_get__model__status__pb2
+import ie_serving.tensorflow_serving_api.get_model_status_pb2 as tensorflow__serving_dot_apis_dot_get__model__status__pb2
 
 
 class ModelServiceStub(object):
