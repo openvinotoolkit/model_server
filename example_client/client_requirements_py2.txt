@@ -5,3 +5,4 @@ numpy
 opencv-python
 protobuf
 tensorflow
+tensorflow-serving-api
