@@ -1,0 +1,22 @@
+{
+  "model_config_list":[
+    {
+      "config":{
+        "name":"resnet_V1_50",
+        "base_path":"/opt/ml/resnet_V1_50"
+      }
+    },
+    {
+      "config": {
+        "name": "pnasnet_large",
+        "base_path": "/opt/ml/pnasnet_large"
+      }
+    },
+    {
+      "config": {
+        "name": "resnet",
+        "base_path": "/opt/ml/resnet"
+      }
+    }
+  ]
+}

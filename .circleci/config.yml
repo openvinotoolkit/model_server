@@ -1,0 +1,28 @@
+version: 2.0
+
+jobs:
+  style:
+    docker:
+      - image: circleci/python:3.6.6-jessie-browsers
+    steps:
+      - checkout
+      - run: make style
+  test:
+    machine:
+      enabled: true
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Build docker image
+          command: make docker_build
+
+      - run:
+          name: Start functional tests
+          command: pyenv global 3.5.2 && make test
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - style
+      - test

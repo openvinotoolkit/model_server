@@ -6,13 +6,9 @@ Inference serving implementation with gRPC interface and DLDT in the backend
 
 
 ## Building
-If you want work in virtualenv please provide command:
+If you want work in virtualenv please provide command in root directory of this repository:
 ```
 make install
-```
-In root directory of this repository please provide command:
-```
-pip install .
 ```
 
 If you want to contribute to this repository and make changes in code the easiest way to install this package is provide command: 
@@ -21,17 +17,24 @@ pip install -e .
 ```
 
 ## Service configuration
-Before start service you have to install intel OpenVino
+Before start service you have to install Intel OpenVino. Refer to Dockerfile as a reference how it can be done 
+or follow the documentation from https://software.intel.com/en-us/openvino-toolkit
 
-And provide this command(this is an default path to this script):
+
+## Setting CPU extention library
+
+You need you change the default value of CPU_EXTENSION library path in the following situations:
+* you install Intel OpenVino in non default path which is /opt/intel/computer_vision_sdk
+* your HW does not support AVX2 cpu feature 
+* you use non ubuntu OS to host is-serving-py service
+
+The default value of CPU_EXTENSION is:
 ```
-source /opt/intel/deeplearning_deploymenttoolkit/deployment_tools/inference_engine/bin/setvars.sh
+/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64/libcpu_extension_avx2.so
 ```
+
 ## Starting inference service
-You have to set env file which will be specify to CPU_EXTENSION. In case of my OpenVino installation this path is:
-```
-/opt/intel/deeplearning_deploymenttoolkit/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64/libcpu_extension_avx2.so
-```
+
 To start server with one model:
 ```
 ie_serving model --model_path <absolute_path_to_model> --model_name <model_name>
@@ -75,8 +78,29 @@ or for config
 ```
 ie_serving config --config_path <absolute_path_to_config> --port 9999
 ```
+
+### Starting ie-sevice-py
+
+Follow example from `make docker_run`
+
+
 ## Testing
+
+### Python style tests
+`make style`
+It executes style verification using flake8
+
+
+### Functional tests
+Functional testing can be triggered via:
+
+`make test`
+
+Tests should be preceded by building a docker image with `make docker_build`. 
+During tests there will be downloaded sample models along with sample datasets to 
+execute inference against local docker container 
 
 
 ## Known limitations
 
+For now only Predict calls are implemented using Tensorflow Serving API.

@@ -5,8 +5,8 @@ VIRTUALENV_EXE=$(if $(subst 2,,$(PY_VERSION)),python3 -m venv,virtualenv)
 VIRTUALENV_DIR=$(if $(subst 2,,$(PY_VERSION)),.venv3,.venv)
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
-STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving
-STYLE_CHECK_DIRS := ie_serving tf_serving_client
+STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
+STYLE_CHECK_DIRS := tests
 TEST_OPTS :=
 TEST_DIRS ?= tests/
 CONFIG := "$(CONFIG)"
@@ -26,12 +26,12 @@ venv: $(ACTIVATE)
 $(ACTIVATE): requirements.txt requirements-dev.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip$(PY_VERSION) install -r requirements.txt
-	@. $(ACTIVATE); pip$(PY_VERSION) install -r requirements-dev.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
 	@touch $(ACTIVATE)
 
-install: venv
-	@echo "no extra steps for now"
+install:
+	@pip install .
 
 run: venv install
 	@. $(ACTIVATE); python ie_serving/main.py --config "$CONFIG"
@@ -44,6 +44,10 @@ coverage: venv
 	@echo "Computing unit test coverage..."
 	@. $(ACTIVATE); py.test --cov-report term-missing --cov=ncloud \
 		$(TEST_OPTS) $(TEST_DIRS)
+
+test: venv
+	@echo "Executing functional tests..."
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/
 
 style: venv
 	@echo "Style-checking codebase..."
@@ -64,4 +68,4 @@ docker_build:
 
 docker_run:
 	@echo "Starting the docker container with serving model"
-	@
+	@docker run --rm -d --name ie-serving-py-test-multi -v /tmp/test_models/saved_models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
