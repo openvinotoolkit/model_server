@@ -33,8 +33,8 @@ def prepare_output_as_list(inference_output, model_avaible_outputs):
         output_tensor = tensorflow_dot_core_dot_framework_dot_tensor__pb2.TensorProto(
             dtype=dtype.as_datatype_enum,
             tensor_shape=tensor_shape.as_shape(inference_output[output].shape).as_proto())
-        for result in inference_output[output]:
-            tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor, result)
+        result = inference_output[output].flatten()
+        tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor, result)
         response.outputs[output].CopyFrom(output_tensor)
     return response
 
