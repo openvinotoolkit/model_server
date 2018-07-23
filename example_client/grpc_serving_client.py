@@ -29,7 +29,7 @@ if args['transpose_input']:
     imgs = imgs.transpose((0,3,1,2))
 for x in range(100):
     request = predict_pb2.PredictRequest()
-    request.model_spec.name = 'resnetsddfg'
+    request.model_spec.name = 'resnet'
     img = imgs[x,:,:,:]
     request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=list((1,)+img.shape)))
     start_time = datetime.datetime.now()

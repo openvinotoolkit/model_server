@@ -6,7 +6,7 @@ VIRTUALENV_DIR=$(if $(subst 2,,$(PY_VERSION)),.venv3,.venv)
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
 STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
-STYLE_CHECK_DIRS := tests
+STYLE_CHECK_DIRS := tests ie_serving setup.py
 TEST_OPTS :=
 TEST_DIRS ?= tests/
 CONFIG := "$(CONFIG)"

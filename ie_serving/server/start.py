@@ -13,16 +13,19 @@ GIGABYTE = 1024 ** 3
 
 def initialize_tf():
     initialization_list = np.zeros((1, 1), dtype=float)
-    tf_contrib_util.make_ndarray(initialization_list, shape=initialization_list.shape, dtype=types_pb2.DT_FLOAT)
+    tf_contrib_util.make_ndarray(initialization_list,
+                                 shape=initialization_list.shape,
+                                 dtype=types_pb2.DT_FLOAT)
     pass
 
 
 def serve(models, max_workers: int=10, port: int=9001):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers), options=[
-        ('grpc.max_send_message_length', GIGABYTE),
-        ('grpc.max_receive_message_length', GIGABYTE)
-    ])
-    prediction_service_pb2.add_PredictionServiceServicer_to_server(PredictionServiceServicer(models=models), server)
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers),
+                         options=[('grpc.max_send_message_length', GIGABYTE),
+                                  ('grpc.max_receive_message_length', GIGABYTE)
+                                  ])
+    prediction_service_pb2.add_PredictionServiceServicer_to_server(
+        PredictionServiceServicer(models=models), server)
     server.add_insecure_port('[::]:{}'.format(port))
     server.start()
     print("server start")
