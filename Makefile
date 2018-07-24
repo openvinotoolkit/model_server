@@ -30,20 +30,19 @@ $(ACTIVATE): requirements.txt requirements-dev.txt
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
 	@touch $(ACTIVATE)
 
-install:
-	@pip install .
+install: venv
+	@. $(ACTIVATE); pip$(PY_VERSION) install .
 
 run: venv install
 	@. $(ACTIVATE); python ie_serving/main.py --config "$CONFIG"
 
 unit_test: venv
 	@echo "Running unit tests..."
-	@. $(ACTIVATE); py.test $(TEST_OPTS) $(TEST_DIRS)
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/unit/
 
 coverage: venv
 	@echo "Computing unit test coverage..."
-	@. $(ACTIVATE); py.test --cov-report term-missing --cov=ncloud \
-		$(TEST_OPTS) $(TEST_DIRS)
+	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
 
 test: venv
 	@echo "Executing functional tests..."

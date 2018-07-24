@@ -7,7 +7,44 @@ jobs:
     steps:
       - checkout
       - run: make style
-  test:
+  unit_tests:
+    docker:
+      - image: ubuntu:16.04
+        environment:
+          PYTHONPATH: /opt/intel/computer_vision_sdk/python/python3.5
+          LD_LIBRARY_PATH: >-
+            /opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/cldnn/lib
+            :/opt/intel/computer_vision_sdk/deployment_toolsinference_engine/external/gna/lib
+            :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/mkltiny_lnx/lib
+            :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64
+    environment:
+      TEMP_DIR: /tmp/openvino_installer
+      DOWNLOAD_LINK: http://registrationcenter-download.intel.com/akdlm/irc_nas/13232/l_openvino_toolkit_fpga_p_2018.2.300_online.tgz
+    steps:
+      - checkout
+      - run:
+          name: Install openvino
+          command: >-
+            mkdir -p $TEMP_DIR &&
+            cd $TEMP_DIR &&
+            apt-get update &&
+            apt-get install -y --no-install-recommends cpio wget cpio cmake sudo python3-pip python3-venv python3-setuptools virtualenv build-essential &&
+            wget -c $DOWNLOAD_LINK &&
+            tar xf l_openvino_toolkit*.tgz &&
+            cd l_openvino_toolkit* &&
+            sed -i 's/decline/accept/g' silent.cfg &&
+            sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-model-optimizer__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg &&
+            ./install.sh -s silent.cfg
+      - run:
+          name: Install ie-serving-py
+          command: make install
+      - run:
+          name: run unit tests
+          command: make unit_test
+      - run:
+          name: check coverage
+          command: make coverage
+  functional_tests:
     machine:
       enabled: true
     resource_class: medium
@@ -24,5 +61,6 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
+      - unit_tests
       - style
-      - test
+      - functional_tests
