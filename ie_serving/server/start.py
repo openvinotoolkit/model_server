@@ -19,7 +19,7 @@ def initialize_tf():
     pass
 
 
-def serve(models, max_workers: int=10, port: int=9001):
+def serve(models, max_workers: int=1, port: int=9000):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers),
                          options=[('grpc.max_send_message_length', GIGABYTE),
                                   ('grpc.max_receive_message_length', GIGABYTE)

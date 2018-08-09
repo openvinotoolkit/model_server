@@ -17,14 +17,14 @@ def parse_config(args):
         model = Model.build(model_name=config['config']['name'],
                             model_directory=config['config']['base_path'])
         models[config['config']['name']] = model
-    start_server(models=models, max_workers=args.max_workers, port=args.port)
+    start_server(models=models, max_workers=1, port=args.port)
 
 
 def parse_one_model(args):
     model = Model.build(model_name=args.model_name,
                         model_directory=args.model_path)
     start_server(models={args.model_name: model},
-                 max_workers=args.max_workers, port=args.port)
+                 max_workers=1, port=args.port)
 
 
 def main():
@@ -39,9 +39,6 @@ def main():
                           required=True)
     parser_a.add_argument('--port', type=int, help='server port',
                           required=False, default=9000)
-    parser_a.add_argument('--max_workers', type=int,
-                          help='maximum number of workers for the server',
-                          required=False, default=10)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model',
@@ -54,9 +51,6 @@ def main():
                           required=True)
     parser_b.add_argument('--port', type=int, help='server port',
                           required=False, default=9000)
-    parser_b.add_argument('--max_workers', type=int,
-                          help='maximum number of workers for the server',
-                          required=False, default=10)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     args.func(args)
