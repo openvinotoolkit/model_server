@@ -1,17 +1,17 @@
 import numpy as np
-from grpc.beta import implementations
 import sys
 import time
 sys.path.append(".")
-from ie_serving.tensorflow_serving_api import prediction_service_pb2 # noqa
-from conftest import infer # noqa
+from conftest import infer, get_model_metadata, model_metadata_response, \
+    ERROR_SHAPE # noqa
 
 
 class TestSingleModelInference():
 
     def test_run_inference(self, resnet_v1_50_model_downloader,
                            input_data_downloader_v1_224,
-                           start_server_single_model):
+                           start_server_single_model,
+                           create_channel_for_port_single_server):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -40,17 +40,42 @@ class TestSingleModelInference():
         assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service
-        channel = implementations.insecure_channel('localhost', 9000)
-        stub = prediction_service_pb2.beta_create_PredictionService_stub(
-            channel)
+        stub = create_channel_for_port_single_server
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
-
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,
                            input_tensor='input', grpc_stub=stub,
                            model_spec_name='resnet',
                            model_spec_version=None,
-                           output_tensor='resnet_v1_50/predictions/Reshape_1')
-        print("output shape", output.shape)
-        assert output.shape == (1, 1000), 'resnet model has invalid output'
+                           output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+    def test_get_model_metadata(self, resnet_v1_50_model_downloader,
+                                start_server_single_model,
+                                create_channel_for_port_single_server):
+
+        print("Downloaded model files:", resnet_v1_50_model_downloader)
+        result = start_server_single_model
+        print("docker starting status:", result)
+        time.sleep(30)  # Waiting for inference service to load models
+        assert result == 0, "docker container was not started successfully"
+
+        stub = create_channel_for_port_single_server
+
+        model_name = 'resnet'
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        expected_input_metadata = {'input': {'dtype': 1,
+                                             'shape': [1, 3, 224, 224]}}
+        expected_output_metadata = {out_name: {'dtype': 1,
+                                               'shape': [1, 1, 1]}}
+        request = get_model_metadata(model_name='resnet')
+        response = stub.GetModelMetadata(request, 10)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+        print(output_metadata)
+        assert model_name == response.model_spec.name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata

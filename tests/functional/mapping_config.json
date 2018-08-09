@@ -1,0 +1,8 @@
+ {
+    "inputs":
+        { "input":"new_key"},
+    "outputs":
+        { "res5c_branch2c1":"mask",
+          "res5c_branch2c2":"output"}
+ }
+

@@ -1,5 +1,6 @@
 # ie-serving-py
-Inference serving implementation with gRPC interface and DLDT in the backend
+Inference serving implementation with gRPC interface compatible with TensorFlow sering API and OpenVino in the 
+execution backend
 
 
 ## Project overview
@@ -46,20 +47,20 @@ To start server with multiple models please prepare config like this:
    "model_config_list":[
       {
          "config":{
-            "name":"resnet1",
-            "base_path":"/home/marek/models/grpc_model"
+            "name":"model_name1",
+            "base_path":"/opt/ml/models/IR_model1"
          }
       },
       {
          "config":{
-            "name":"resnet2",
-            "base_path":"/home/marek/models/grpc_model"
+            "name":"model_name2",
+            "base_path":"/opt/ml/models/IR_model2"
          }
       },
       {
          "config":{
-            "name":"resnet3",
-            "base_path":"/home/marek/models/grpc_model"
+            "name":"model_name3",
+            "base_path":"/opt/ml/models/IR_model3"
          }
       }
    ]
@@ -78,6 +79,27 @@ or for config
 ```
 ie_serving config --config_path <absolute_path_to_config> --port 9999
 ```
+
+### Config map for model
+Optionally gRPC input and output key names can be mapped to the graph tensor names. This way from gRPC interface individual 
+input and outputs can be referenced with different naming convention.
+If tensors_mapping.json file is not included in the model version folder along with .bin and .xml model files there will
+be set default input and output key names equal to the corespondent tensor names.
+
+
+tensors_mapping.json
+```
+{
+       "inputs": 
+           { "tensor_name":"custom_name"},
+       "outputs":{
+        "tesnor_name1":"grpc_output_key_name1",
+        "tensor_name2":"grpc_output_key_name2"
+       }
+}
+```
+
+
 
 ### Starting ie-sevice-py
 

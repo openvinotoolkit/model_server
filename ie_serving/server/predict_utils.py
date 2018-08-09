@@ -1,44 +1,60 @@
+from grpc import StatusCode
 from tensorflow.core.framework import tensor_pb2
 from tensorflow.python.framework import tensor_shape
 from ie_serving.tensorflow_serving_api import predict_pb2
-# import tensorflow.contrib.util as tf_contrib_util
 from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
+import tensorflow.contrib.util as tf_contrib_util
+# import tensorflow.contrib.util as tf_contrib_util
+from ie_serving.server.constants import INVALID_INPUT_KEY, INVALID_SHAPE
 
 
-def check_if_model_name_and_version_is_valid(model_name, version,
-                                             available_models):
-    if model_name in list(available_models.keys()):
-        if version == 0:
-            return False
-        else:
-            return True
-    return False
+def prepare_input_data(models, model_name, version, data):
+    model_inputs_in_input_request = list(dict(data).keys())
+    input_keys = models[model_name].engines[version].input_key_names
+    inference_input = {}
+    for requested_input_blob in model_inputs_in_input_request:
+        if requested_input_blob not in input_keys:
+            code = StatusCode.INVALID_ARGUMENT
+            message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
+                                           input_keys)
+            return True, message, code
 
+        tensor_name = models[model_name].engines[version]. \
+            model_keys['inputs'][requested_input_blob]
+        try:
+            tensor_input = tf_contrib_util. \
+                make_ndarray(data[requested_input_blob])
+        except Exception as e:
+            code = StatusCode.INVALID_ARGUMENT
+            message = str(e)
+            return True, message, code
 
-def get_version_model(model_name, requested_version, available_models):
-    version = 0
-    requested_version = int(requested_version)
-    if model_name in available_models:
-        if requested_version == 0:
-            version = available_models[model_name].default_version
-        elif requested_version in available_models[model_name].versions:
-            version = requested_version
-    return version
+        shape_required_in_model = models[model_name].engines[version] \
+            .input_tensors[tensor_name]
+        # check requested shape and model shape
+        if shape_required_in_model != list(tensor_input.shape):
+            code = StatusCode.INVALID_ARGUMENT
+            message = INVALID_SHAPE.format(list(tensor_input.shape),
+                                           shape_required_in_model)
+            return True, message, code
+        inference_input[tensor_name] = tensor_input
+    return False, inference_input, None
 
 
 def prepare_output_as_list(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
-    for output in model_available_outputs:
-        dtype = dtypes.as_dtype(inference_output[output].dtype)
-        output_tensor = tensor_pb2.TensorProto(
-            dtype=dtype.as_datatype_enum,
-            tensor_shape=tensor_shape.as_shape(
-                inference_output[output].shape).as_proto())
-        result = inference_output[output].flatten()
-        tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
-                                                           result)
-        response.outputs[output].CopyFrom(output_tensor)
+    for key, value in model_available_outputs.items():
+        if value in inference_output:
+            dtype = dtypes.as_dtype(inference_output[value].dtype)
+            output_tensor = tensor_pb2.TensorProto(
+                dtype=dtype.as_datatype_enum,
+                tensor_shape=tensor_shape.as_shape(
+                    inference_output[value].shape).as_proto())
+            result = inference_output[value].flatten()
+            tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
+                                                               result)
+            response.outputs[key].CopyFrom(output_tensor)
     return response
 
 

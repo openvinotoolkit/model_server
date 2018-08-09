@@ -5,7 +5,7 @@ import tensorflow.contrib.util as tf_contrib_util
 from tensorflow.core.framework import types_pb2
 import numpy as np
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
-from ie_serving.server.predict import PredictionServiceServicer
+from ie_serving.server.service import PredictionServiceServicer
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 GIGABYTE = 1024 ** 3

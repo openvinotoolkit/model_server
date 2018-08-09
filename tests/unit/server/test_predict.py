@@ -1,7 +1,8 @@
 import grpc
 import numpy as np
 from tensorflow.contrib.util import make_ndarray
-from conftest import get_fake_request, PREDICT_SERVICE
+from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
+    predict_pb2
 
 
 def test_predict_successful(mocker, get_grpc_service_for_predict,
@@ -99,6 +100,23 @@ def test_predict_wrong_input_blob(get_grpc_service_for_predict):
           PREDICT_SERVICE.methods_by_name['Predict'],
           (),
           request, None)
+    rpc.initial_metadata()
+    response, trailing_metadata, code, details = rpc.termination()
+    assert grpc.StatusCode.INVALID_ARGUMENT == code
+
+
+def test_predict_problem_with_serialize_data(get_grpc_service_for_predict):
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = 'test'
+    data = np.ones(shape=(2, 2, 2))
+    request.inputs['input'].CopyFrom(
+        make_tensor_proto(data, shape=(3, 3, 3)))
+
+    grpc_server = get_grpc_service_for_predict
+    rpc = grpc_server.invoke_unary_unary(
+        PREDICT_SERVICE.methods_by_name['Predict'],
+        (),
+        request, None)
     rpc.initial_metadata()
     response, trailing_metadata, code, details = rpc.termination()
     assert grpc.StatusCode.INVALID_ARGUMENT == code
