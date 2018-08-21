@@ -19,14 +19,15 @@ class IrEngine():
         self.input_key_names = list(self.model_keys['inputs'].keys())
 
     @classmethod
-    def build(cls, model_xml, model_bin, num_request: int=1):
+    def build(cls, model_xml, model_bin):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork.from_ir(model=model_xml, weights=model_bin)
-        exec_net = plugin.load(network=net, num_requests=num_request)
         inputs = net.inputs
+        batch_size = list(inputs.values())[0][0]
         outputs = net.outputs
+        exec_net = plugin.load(network=net, num_requests=batch_size)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs)
         return ir_engine

@@ -78,6 +78,12 @@ def resnet_2_out_model_downloader(get_test_dir):
 
 
 @pytest.fixture(autouse=True, scope="session")
+def resnet_8_batch_model_downloader(get_test_dir):
+    return download_model('resnet_V1_50_batch8', 'resnet_V1_50_batch8/', '1/',
+                          get_test_dir + '/saved_models/')
+
+
+@pytest.fixture(autouse=True, scope="session")
 def download_two_models(get_test_dir):
     model1_info = download_model('resnet_V1_50', 'resnet_V1_50/', '1/',
                                  get_test_dir + '/saved_models/')
@@ -139,6 +145,13 @@ def create_channel_for_port_single_server():
 @pytest.fixture(scope="session")
 def create_channel_for_port_mapping_server():
     channel = implementations.insecure_channel('localhost', 9002)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_batching_server():
+    channel = implementations.insecure_channel('localhost', 9003)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
 
@@ -253,6 +266,40 @@ def start_server_multi_model(request, get_image, get_test_dir):
     return subprocess.check_call(cmd)
 
 
+@pytest.fixture(scope="class")
+def start_server_batch_model(request, get_image, get_test_dir):
+    CYAN_COLOR = '\033[36m'
+    END_COLOR = '\033[0m'
+    cmd = ['docker',
+           'run',
+           '--rm',
+           '-d',
+           '--name', 'ie-serving-py-test-batch',
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
+           '-p', '9003:9003',
+           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
+           'model',
+           '--model_name', 'resnet',
+           '--model_path', '/opt/ml/resnet_V1_50_batch8',
+           '--port', '9003'
+           ]
+    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
+                                                     END_COLOR))
+
+    def stop_docker():
+
+        print("stopping docker container...")
+        return_code = subprocess.call(
+            "for I in `docker ps -f 'name=ie-serving-py-test-batch' -q` ;"
+            "do echo $I; docker stop $I; done",
+            shell=True)
+        if return_code == 0:
+            print("docker container removed")
+    request.addfinalizer(stop_docker)
+
+    return subprocess.check_call(cmd)
+
+
 def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,
           model_spec_version, output_tensors):
     request = predict_pb2.PredictRequest()
@@ -263,6 +310,22 @@ def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,
     print("input shape", list((1,) + img.shape))
     request.inputs[input_tensor].CopyFrom(
         make_tensor_proto(img, shape=list((1,) + img.shape)))
+    result = grpc_stub.Predict(request, 10.0)
+    data = {}
+    for output_tensor in output_tensors:
+        data[output_tensor] = make_ndarray(result.outputs[output_tensor])
+    return data
+
+
+def infer_batch(batch_input, input_tensor, grpc_stub, model_spec_name,
+                model_spec_version, output_tensors):
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = model_spec_name
+    if model_spec_version is not None:
+        request.model_spec.version.value = model_spec_version
+    print("input shape", list(batch_input.shape))
+    request.inputs[input_tensor].CopyFrom(
+        make_tensor_proto(batch_input, shape=list(batch_input.shape)))
     result = grpc_stub.Predict(request, 10.0)
     data = {}
     for output_tensor in output_tensors:
