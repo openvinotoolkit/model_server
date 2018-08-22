@@ -19,6 +19,9 @@ from openvino.inference_engine import IENetwork, IEPlugin
 import glob
 import json
 from os.path import dirname
+from ie_serving.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class IrEngine():
@@ -33,6 +36,7 @@ class IrEngine():
         self.output_tensor_names = outputs
         self.model_keys = self.set_keys()
         self.input_key_names = list(self.model_keys['inputs'].keys())
+        logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod
     def build(cls, model_xml, model_bin):
@@ -56,10 +60,10 @@ class IrEngine():
                 with open(config_path[0], 'r') as f:
                     data = json.load(f)
                 return data
-            except EnvironmentError:
-                print("we cannot open config file")
-            except ValueError:
-                print("we cannot parse json file")
+            except Exception as e:
+                logger.error("Error occurred while reading mapping_config in "
+                             "path {}. Message error {}"
+                             .format(config_path, e))
         return None
 
     def _return_proper_key_value(self, data: dict, which_way: str,

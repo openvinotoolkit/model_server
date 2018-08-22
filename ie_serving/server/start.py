@@ -22,6 +22,9 @@ from tensorflow.core.framework import types_pb2
 import numpy as np
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.server.service import PredictionServiceServicer
+from ie_serving.logger import get_logger
+
+logger = get_logger(__name__)
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 GIGABYTE = 1024 ** 3
@@ -44,7 +47,9 @@ def serve(models, max_workers: int=1, port: int=9000):
         PredictionServiceServicer(models=models), server)
     server.add_insecure_port('[::]:{}'.format(port))
     server.start()
-    print("server start")
+    logger.info("Server listens on port {port} and will be "
+                "serving models: {models}".format(port=port,
+                                                  models=list(models.keys())))
     try:
         while True:
             time.sleep(_ONE_DAY_IN_SECONDS)

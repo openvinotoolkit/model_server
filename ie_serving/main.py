@@ -16,18 +16,51 @@
 
 import argparse
 import json
+import sys
 from ie_serving.server.start import serve as start_server
 from ie_serving.models.model import Model
+from ie_serving.logger import get_logger, LOGGER_LVL
+import os
+
+logger = get_logger(__name__)
 
 
 def open_config(path):
-    with open(path, 'r') as f:
-        data = json.load(f)
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.error("Error occurred while opening config file {}".format(e))
+        sys.exit()
     return data
+
+
+def check_config_structure(configs):
+    required_keys = ('base_path', 'name')
+    if 'model_config_list' in configs:
+        try:
+            for config in configs['model_config_list']:
+                if 'config' in config:
+                    if not all(k in config['config'] for k in required_keys):
+                        logger.error("Config objects in the config file must"
+                                     " contain 'base_path' and 'name' strings")
+                        sys.exit()
+                else:
+                    logger.error("'model_config_list' array in the config"
+                                 "must contain 'config' object")
+                    sys.exit()
+        except Exception as e:
+            logger.error("Error occurred while parsing config file: "
+                         "{}".format(e))
+            sys.exit()
+    else:
+        logger.error("Config file must contain 'model_config_list' array")
+        sys.exit()
 
 
 def parse_config(args):
     configs = open_config(path=args.config_path)
+    check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
         model = Model.build(model_name=config['config']['name'],
@@ -69,6 +102,9 @@ def main():
                           required=False, default=9000)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
+    logger.info("Log level set: {}".format(LOGGER_LVL))
+    logger.debug("ie_serving_py arguments: {}".format(args))
+    logger.debug("configured environment variables: {}".format(os.environ))
     args.func(args)
 
 

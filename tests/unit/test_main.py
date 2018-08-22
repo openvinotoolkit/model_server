@@ -31,12 +31,27 @@ def test_open_config(mocker):
     assert actual == test_dict
 
 
+@pytest.mark.parametrize("should_exit, test_config", [
+    (False, {'model_config_list': [{'config': {'base_path': '',
+                                               'name': ''}}]}),
+    (True, {'model_config_list': [{'config': {'base_path': '', 'test': ''}}]}),
+    (True, {'model_config_list': [{'config': ''}]}),
+    (True, {'model_config_list': 'test'}),
+    (True, {'model_config_list': 5})])
+def test_check_config_structure(should_exit, test_config):
+    if should_exit:
+        with pytest.raises(SystemExit):
+            main.check_config_structure(test_config)
+    else:
+        main.check_config_structure(test_config)
+
+
 def test_open_config_wrong_json(mocker):
     test_dict = {'config': 'test'}
     fake_file_path = 'file/path/mock'
     open_mocker = mocker.patch("ie_serving.main.open",
                                new=mock.mock_open(read_data=str(test_dict)))
-    with pytest.raises(json.JSONDecodeError):
+    with pytest.raises(SystemExit):
         main.open_config(fake_file_path)
     open_mocker.assert_called_once_with(fake_file_path, 'r')
 

@@ -15,14 +15,21 @@
 #
 
 import os
+import importlib
+import pytest
+from ie_serving import config
+from ie_serving import logger
 
-DEVICE = os.environ.get('DEVICE', "CPU")
-CPU_EXTENSION = os.environ.get('CPU_EXTENSION', "/opt/intel/"
-                                                "computer_vision_sdk/"
-                                                "deployment_tools/"
-                                                "inference_engine/lib/"
-                                                "ubuntu_16.04/intel64/"
-                                                "libcpu_extension_avx2.so")
-PLUGIN_DIR = os.environ.get('PLUGIN_DIR', None)
-LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-LOG_PATH = os.getenv('LOG_PATH', None)
+
+@pytest.mark.parametrize("set_env, value_env, expected_lvl", [
+    (False, '', 'INFO'),
+    (True, 'DEBUG', 'DEBUG'),
+    (True, 'TEST', 'INFO'),
+    (True, 'debug', 'DEBUG')])
+def test_get_logger_lvl(set_env, value_env, expected_lvl):
+    if set_env:
+        os.environ['LOG_LEVEL'] = value_env
+        importlib.reload(config)
+        importlib.reload(logger)
+    logger_lvl = logger.get_logger_lvl()
+    assert expected_lvl == logger_lvl

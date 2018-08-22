@@ -23,17 +23,22 @@ from tensorflow.python.framework import tensor_util as tensor_util
 import tensorflow.contrib.util as tf_contrib_util
 # import tensorflow.contrib.util as tf_contrib_util
 from ie_serving.server.constants import INVALID_INPUT_KEY, INVALID_SHAPE
+from ie_serving.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def prepare_input_data(models, model_name, version, data):
     model_inputs_in_input_request = list(dict(data).keys())
     input_keys = models[model_name].engines[version].input_key_names
     inference_input = {}
+
     for requested_input_blob in model_inputs_in_input_request:
         if requested_input_blob not in input_keys:
             code = StatusCode.INVALID_ARGUMENT
             message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
                                            input_keys)
+            logger.debug("PREDICT error: {}".format(message))
             return True, message, code
 
         tensor_name = models[model_name].engines[version]. \
@@ -44,6 +49,8 @@ def prepare_input_data(models, model_name, version, data):
         except Exception as e:
             code = StatusCode.INVALID_ARGUMENT
             message = str(e)
+            logger.debug("PREDICT prepare_input_data make_ndarray error: {}"
+                         .format(message))
             return True, message, code
 
         shape_required_in_model = models[model_name].engines[version] \
@@ -53,6 +60,7 @@ def prepare_input_data(models, model_name, version, data):
             code = StatusCode.INVALID_ARGUMENT
             message = INVALID_SHAPE.format(list(tensor_input.shape),
                                            shape_required_in_model)
+            logger.debug("PREDICT error: {}".format(message))
             return True, message, code
         inference_input[tensor_name] = tensor_input
     return False, inference_input, None

@@ -17,6 +17,9 @@
 import glob
 import os
 from ie_serving.models.ir_engine import IrEngine
+from ie_serving.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Model():
@@ -28,9 +31,15 @@ class Model():
         self.versions = available_versions
         self.engines = engines
         self.default_version = max(self.versions)
+        logger.info("List of available versions "
+                    "for {} model: {}".format(self.model_name, self.versions))
+        logger.info("Default version "
+                    "for {} model is {}".format(self.model_name,
+                                                self.default_version))
 
     @classmethod
     def build(cls, model_name: str, model_directory: str):
+        logger.info("Server start loading model: {}".format(model_name))
         versions = cls.get_all_available_versions(model_directory)
         engines = cls.get_engines_for_model(versions=versions)
         available_versions = [version['version'] for version in versions]
@@ -74,8 +83,21 @@ class Model():
     @staticmethod
     def get_engines_for_model(versions):
         inference_engines = {}
+        failures = []
         for version in versions:
-            inference_engines[version['version']] = IrEngine.build(
-                model_bin=version['bin_model_path'],
-                model_xml=version['xml_model_path'])
+            try:
+                logger.info("Creating inference engine object "
+                            "for version: {}".format(version['version']))
+                inference_engines[version['version']] = IrEngine.build(
+                    model_bin=version['bin_model_path'],
+                    model_xml=version['xml_model_path'])
+            except Exception as e:
+                logger.error("Error occurred while loading model "
+                             "version: {}".format(version))
+                logger.error("Content error: {}".format(str(e).rstrip()))
+                failures.append(version)
+
+        for failure in failures:
+            versions.remove(failure)
+
         return inference_engines

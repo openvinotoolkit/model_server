@@ -26,6 +26,10 @@ from ie_serving.server.predict_utils import prepare_output_as_list, \
     prepare_input_data, StatusCode
 from ie_serving.server.constants import WRONG_MODEL_METADATA, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME
+from ie_serving.logger import get_logger
+import datetime
+
+logger = get_logger(__name__)
 
 
 class PredictionServiceServicer(prediction_service_pb2.
@@ -50,19 +54,33 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_code(StatusCode.NOT_FOUND)
             context.set_details(WRONG_MODEL_METADATA.format(model_name,
                                                             requested_version))
+            logger.debug("PREDICT, invalid model spec from request, {} - {}"
+                         .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
-
+        start_time = datetime.datetime.now()
         occurred_problem, inference_input, code = prepare_input_data(
             models=self.models, model_name=model_name, version=version,
             data=request.inputs)
-
+        deserialization_end_time = datetime.datetime.now()
+        duration = (deserialization_end_time - start_time)\
+            .total_seconds() * 1000
+        logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
+                     .format(model_name, version, duration))
         if occurred_problem:
             context.set_code(code)
             context.set_details(inference_input)
+            logger.debug("PREDICT, problem with input data. Exit code {}"
+                         .format(code))
             return predict_pb2.PredictResponse()
 
+        inference_start_time = datetime.datetime.now()
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input)
+        inference_end_time = datetime.datetime.now()
+        duration = (inference_end_time - inference_start_time)\
+            .total_seconds() * 1000
+        logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
+                     .format(model_name, version, duration))
         response = prepare_output_as_list(inference_output=inference_output,
                                           model_available_outputs=self.models
                                           [model_name].engines[version].
@@ -70,12 +88,18 @@ class PredictionServiceServicer(prediction_service_pb2.
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
+        serialization_end_time = datetime.datetime.now()
+        duration = (serialization_end_time - inference_end_time)\
+            .total_seconds() * 1000
+        logger.debug("PREDICT; inference results serialization completed;"
+                     " {}; {}; {}ms".format(model_name, version, duration))
         return response
 
     def GetModelMetadata(self, request, context):
 
         # check if model with was requested
         # is available on server with proper version
+        logger.debug("MODEL_METADATA, get request: {}". format(request))
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
         valid_model_spec, version = check_availability_of_requested_model(
@@ -86,6 +110,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_code(StatusCode.NOT_FOUND)
             context.set_details(WRONG_MODEL_METADATA.format(model_name,
                                                             requested_version))
+            logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
         metadata_signature_requested = request.metadata_field[0]
@@ -93,7 +118,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_code(StatusCode.INVALID_ARGUMENT)
             context.set_details(INVALID_METADATA_FIELD.format
                                 (metadata_signature_requested))
-
+            logger.debug("MODEL_METADATA, invalid signature def")
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
         inputs = self.models[model_name].engines[version].input_tensors
@@ -112,5 +137,6 @@ class PredictionServiceServicer(prediction_service_pb2.
         response.metadata['signature_def'].Pack(model_data_map)
         response.model_spec.name = model_name
         response.model_spec.version.value = version
-
+        logger.debug("MODEL_METADATA created a response for {} - {}"
+                     .format(model_name, version))
         return response

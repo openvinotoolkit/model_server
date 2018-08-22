@@ -89,3 +89,19 @@ def test_get_engines_for_model(mocker):
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[4]
+
+
+def test_get_engines_for_model_with_ir_raises(mocker):
+    engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
+                                  'build')
+    engines_mocker.side_effect = ['modelv2', 'modelv4', Exception("test")]
+    available_versions = [{'xml_model_path': 'modelv2.xml',
+                           'bin_model_path': 'modelv2.bin', 'version': 2},
+                          {'xml_model_path': 'modelv4.xml', 'bin_model_path':
+                              'modelv4.bin', 'version': 3},
+                          {'xml_model_path': 'modelv4.xml', 'bin_model_path':
+                              'modelv4.bin', 'version': 4}]
+    output = Model.get_engines_for_model(versions=available_versions)
+    assert 2 == len(output)
+    assert 'modelv2' == output[2]
+    assert 'modelv4' == output[3]
