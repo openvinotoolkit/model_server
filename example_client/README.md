@@ -17,7 +17,8 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--grpc_port GRPC_PORT]
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
-                              [--transpose_input TRANSPOSE_INPUT]
+                              [--transpose_input {False,True}] [--iterations]
+                              [--model_name]
 
 Do requests to ie_serving and tf_serving using images in numpy format
 
@@ -33,8 +34,11 @@ optional arguments:
                         Specify input tensor name
   --output_name OUTPUT_NAME
                         Specify output name
-  --transpose_input TRANSPOSE_INPUT
+  --transpose_input {False,True}
                         Set to False to skip NHWC->NCHW input transposing
+  --iterations          Number of requests iterations, as default use number
+                        of images in numpy memmap.
+  --model_name          Define model name, must be same as is in service                       
 (.python_serving) ~/ie-serving-py/example_client$
 
 ```
