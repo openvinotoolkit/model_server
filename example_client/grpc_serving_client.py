@@ -32,11 +32,10 @@ parser.add_argument('--output_name',required=False, default='resnet_v1_50/predic
 parser.add_argument('--transpose_input', choices=["False", "True"], default="True",
                     help='Set to False to skip NHWC->NCHW input transposing',
                     dest="transpose_input",)
-parser.add_argument('--iterations', required=False, action='store_true', default=0,
+parser.add_argument('--iterations', default=0,
                     help='Number of requests iterations, as default use number of images in numpy memmap.',
                     dest='iterations')
-parser.add_argument('--model_name', required=False, action='store_true', default='resnet',
-                    help='Define model name, must be same as is in service',
+parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service',
                     dest='model_name')
 args = vars(parser.parse_args())
 
