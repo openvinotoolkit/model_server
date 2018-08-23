@@ -71,7 +71,7 @@ for x in range(iterations):
     nu = np.array(output)
     ma = np.argmax(nu)
     # for object classification models show imagenet class
-    print('Top 1: {}. Processing time: {} ms'.format(classes.imagenet_classess[ma], int(duration)))
+    print('Top 1: {}. Processing time: {} ms'.format(classes.imagenet_classes[ma], int(duration)))
 
 print('\nprocessing time for all iterations')
 print('average time: {0:.2f} ms; average speed: {0:.2f} fps'.format(round(np.average(processing_times), 2),
