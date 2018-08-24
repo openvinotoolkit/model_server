@@ -40,7 +40,7 @@ jobs:
           command: make install
       - run:
           name: run unit tests
-          command: make unit_test
+          command: make unit
       - run:
           name: check coverage
           command: make coverage

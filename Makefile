@@ -50,7 +50,7 @@ install: venv
 run: venv install
 	@. $(ACTIVATE); python ie_serving/main.py --config "$CONFIG"
 
-unit_test: venv
+unit: venv
 	@echo "Running unit tests..."
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/unit/
 
@@ -76,7 +76,7 @@ clean: clean_pyc
 
 docker_build:
 	@echo "Building docker image"
-	@echo build -f Dockerfile --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@echo docker build -f Dockerfile --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
 docker_run:
