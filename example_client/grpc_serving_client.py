@@ -71,27 +71,31 @@ for x in range(iterations):
     nu = np.array(output)
     ma = np.argmax(nu)
     # for object classification models show imagenet class
-    print('Top 1: {}. Processing time: {} ms'.format(classes.imagenet_classes[ma], int(duration)))
+    print('Top 1: {}. Processing time: {:.2f} ms; speed {:.2f} fps'.format(classes.imagenet_classes[ma],
+                                                                           round(np.average(duration), 2),
+                                                                           round(1000 / np.average(duration), 2)
+                                                                           ))
 
 print('\nprocessing time for all iterations')
-print('average time: {0:.2f} ms; average speed: {0:.2f} fps'.format(round(np.average(processing_times), 2),
-                                                                    round(1000 / np.average(processing_times), 1)))
-print('median time: {0:.2f} ms; median speed: {0:.2f} fps'.format(round(np.median(processing_times), 2),
-                                                                  round(1000 / np.median(processing_times), 1)))
+print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.average(processing_times), 2),
+                                                                    round(1000 / np.average(processing_times), 2)))
 
-print('max time: {0:.2f} ms; max speed: {0:.2f} fps'.format(round(np.max(processing_times), 2),
-                                                            round(1000 / np.max(processing_times), 1)))
+print('median time: {:.2f} ms; median speed: {:.2f} fps'.format(round(np.median(processing_times), 2),
+                                                                  round(1000 / np.median(processing_times), 2)))
 
-print('min time: {0:.2f} ms; min speed: {0:.2f} fps'.format(round(np.min(processing_times), 1),
-                                                            round(1000 / np.min(processing_times), 1)))
+print('max time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
+                                                            round(1000 / np.max(processing_times), 2)))
 
-print('time percentile 90: {0:.2f} ms; speed percentile 90: {0:.2f} fps'.format(
+print('min time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
+                                                            round(1000 / np.min(processing_times), 2)))
+
+print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
     round(np.percentile(processing_times, 90), 2),
     round(1000 / np.percentile(processing_times, 90), 2)
 ))
-print('time percentile 50: {0:.2f} ms; speed percentile 50: {0:.2f} fps'.format(
+print('time percentile 50: {:.2f} ms; speed percentile 50: {:.2f} fps'.format(
     round(np.percentile(processing_times, 50), 2),
     round(1000 / np.percentile(processing_times, 50), 2)
     ))
-print('time standard deviation: {0:.2f}'.format(round(np.std(processing_times))), 4)
-print('time variance: {0:.2f}'.format(round(np.var(processing_times), 4), 4))
+print('time standard deviation: {:.2f}'.format(round(np.std(processing_times), 2)))
+print('time variance: {:.2f}'.format(round(np.var(processing_times), 2)))
