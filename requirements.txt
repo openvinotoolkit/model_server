@@ -1,5 +1,5 @@
-grpcio
-grpcio-tools
-numpy
-protobuf
-tensorflow
+grpcio==1.14.1
+grpcio-tools==1.14.1
+numpy==1.14.5
+protobuf==3.6.1
+tensorflow==1.10.0

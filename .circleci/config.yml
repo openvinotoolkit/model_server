@@ -19,7 +19,6 @@ jobs:
             :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64
     environment:
       TEMP_DIR: /tmp/openvino_installer
-      DOWNLOAD_LINK: http://registrationcenter-download.intel.com/akdlm/irc_nas/13232/l_openvino_toolkit_fpga_p_2018.2.300_online.tgz
     steps:
       - checkout
       - run:
@@ -29,7 +28,7 @@ jobs:
             cd $TEMP_DIR &&
             apt-get update &&
             apt-get install -y --no-install-recommends cpio wget cpio cmake sudo python3-pip python3-venv python3-setuptools virtualenv build-essential &&
-            wget -c $DOWNLOAD_LINK &&
+            wget -c $OPENVINO_DOWNLOAD_LINK &&
             tar xf l_openvino_toolkit*.tgz &&
             cd l_openvino_toolkit* &&
             sed -i 's/decline/accept/g' silent.cfg &&
@@ -52,7 +51,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: make docker_build
+          command: wget -c $OPENVINO_DOWNLOAD_LINK && make docker_build
 
       - run:
           name: Start functional tests

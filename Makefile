@@ -76,8 +76,8 @@ clean: clean_pyc
 
 docker_build:
 	@echo "Building docker image"
-	@echo docker build -f Dockerfile --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -t ie-serving-py:latest .
-	@docker build -f Dockerfile --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
