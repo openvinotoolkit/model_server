@@ -1,0 +1,32 @@
+From 11a86b626a9fbf2ec47dc8a9301479dce9d7ccde Mon Sep 17 00:00:00 2001
+From: Dariusz Trawinski <dariusz.trawinski@intel.com>
+Date: Wed, 5 Sep 2018 11:09:25 +0200
+Subject: [PATCH 1/1] patch sagemaker for OpenVINO model server
+
+---
+ src/tf_container/serve.py | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/src/tf_container/serve.py b/src/tf_container/serve.py
+index b41f3fe..c08a371 100644
+--- a/src/tf_container/serve.py
++++ b/src/tf_container/serve.py
+@@ -105,11 +105,10 @@ def transformer(user_module):
+ 
+ def load_dependencies():
+     env = cs.HostingEnvironment()
+-    saved_model_path = os.path.join(env.model_dir, 'export/Servo')
+-    subprocess.Popen(['tensorflow_model_server',
+-                      '--port={}'.format(TF_SERVING_PORT),
+-                      '--model_name={}'.format(GENERIC_MODEL_NAME),
+-                      '--model_base_path={}'.format(saved_model_path)])
++    saved_model_path = '/opt/ml/config.json'
++    subprocess.Popen(['/ie-serving-py/start_server.sh', 'ie_serving', 'config',
++                      '--config_path={}'.format(saved_model_path),
++                      '--port={}'.format(TF_SERVING_PORT)])
+ 
+ 
+ def _wait_model_to_load(grpc_proxy_client, max_seconds):
+-- 
+2.7.1
+
