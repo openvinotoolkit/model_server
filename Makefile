@@ -27,6 +27,7 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
+OVMS_VERSION := "0.1"
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -76,6 +77,9 @@ clean: clean_pyc
 
 docker_build:
 	@echo "Building docker image"
+	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
+	@echo Git commit: `git rev-parse HEAD` >> version
+	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 

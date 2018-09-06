@@ -9,21 +9,24 @@ ARG DL_DIR=/tmp
 ENV TEMP_DIR $TEMP_DIR
 
 RUN apt-get update && apt-get install -y --no-install-recommends cpio \
-    python3-pip python3-venv python3-setuptools virtualenv
+    python3-pip python3-venv python3-dev python3-setuptools virtualenv
 
 COPY l_openvino_toolkit*.tgz $TEMP_DIR/
 RUN cd $TEMP_DIR && pwd && ls && \
     tar xf l_openvino_toolkit*.tgz && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
-    sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg && \
+    pwd | grep -q openvino_toolkit_p ; \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-base-shared__noarch;intel-cv-sdk-base-l-setupvars__noarch;intel-cv-sdk-base-l-inference-engine__noarch;intel-cv-sdk-base-gfx-install__noarch;intel-cv-sdk-base-shared-pset/g' silent.cfg; fi && \
+    pwd | grep -q openvino_toolkit_fpga ; \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg; fi && \
     ./install.sh -s silent.cfg && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
-ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
+ENV PYTHONPATH="$INSTALL_DIR/python/python3.5/ubuntu16:$INSTALL_DIR/python/python3.5"
 ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
 
-COPY start_server.sh setup.py requirements.txt /ie-serving-py/
+COPY start_server.sh setup.py requirements.txt version /ie-serving-py/
 COPY ie_serving /ie-serving-py/ie_serving
 
 WORKDIR /ie-serving-py
