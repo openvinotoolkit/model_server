@@ -17,8 +17,10 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--grpc_port GRPC_PORT]
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
-                              [--transpose_input {False,True}] [--iterations]
-                              [--model_name]
+                              [--transpose_input {False,True}]
+                              [--iterations ITERATIONS]
+                              [--batchsize BATCHSIZE]
+                              [--model_name MODEL_NAME]
 
 Do requests to ie_serving and tf_serving using images in numpy format
 
@@ -27,20 +29,26 @@ optional arguments:
   --images_numpy_path IMAGES_NUMPY_PATH
                         numpy in shape [n,w,h,c]
   --grpc_address GRPC_ADDRESS
-                        Specify url to grpc service
+                        Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
-                        Specify port to grpc service
+                        Specify port to grpc service. default: 9000
   --input_name INPUT_NAME
-                        Specify input tensor name
+                        Specify input tensor name. default: input
   --output_name OUTPUT_NAME
-                        Specify output name
+                        Specify output name. default:
+                        resnet_v1_50/predictions/Reshape_1
   --transpose_input {False,True}
-                        Set to False to skip NHWC->NCHW input transposing
-  --iterations          Number of requests iterations, as default use number
-                        of images in numpy memmap.
-  --model_name          Define model name, must be same as is in service                       
-(.python_serving) ~/ie-serving-py/example_client$
-
+                        Set to False to skip NHWC->NCHW input transposing.
+                        default: True
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number
+                        of images in numpy memmap. default:0 (consume all
+                        frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service.
+                        default: resnet
 ```
 
 ## Examples:

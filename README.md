@@ -48,9 +48,9 @@ Refer to the example client code to learn how to use this API and submit the req
 
 ## Usage examples
 
-Kubernetes (TBD)
+[Kubernetes](example_k8s)
 
-Sagemaker (TBD)
+[Sagemaker](example_sagemaker)
 
 [Client Code Example](example_client)
 

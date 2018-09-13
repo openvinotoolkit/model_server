@@ -1,8 +1,0 @@
-futures
-grpcio
-grpcio-tools
-numpy
-opencv-python
-protobuf
-tensorflow
-tensorflow-serving-api-python3
