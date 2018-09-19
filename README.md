@@ -57,7 +57,7 @@ Refer to the example client code to learn how to use this API and submit the req
 
 ## Benchmarking results
 
-(TBD)
+[Report for resnet models](docs/benchmark.md)
 
 ## References
 
