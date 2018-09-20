@@ -1,8 +1,8 @@
-# Using OpenVINO&trade; model server in a docker container
+# Using OpenVINO&trade; Model Server in a Docker Container
 
-## Building the image
+## Building the Image
 
-OpenVINO&trade; model server docker image can be built using the included [Dockerfile](../Dockerfile). It is tested with Ubuntu16.04 as the base image. It should be fairly simple to adjust the process to CentoOS base images.
+OpenVINO&trade; model server Docker image can be built using the included [Dockerfile](../Dockerfile). It is tested with Ubuntu16.04 as the base image. Therefore, it should be simple to adjust the process to CentoOS base images.
 
 Before you start building the docker image, you need to download [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) and place the .tgz file in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
 It is recommended to use online installation package because this way the resultant image will be smaller. 
@@ -21,9 +21,9 @@ docker build -f Dockerfile --build-arg http_proxy=$http_proxy --build-arg https_
 
 ```
 
-## Preparing the models
+## Preparing the Models
 
-After the docker image is built, you can use it to start the model server container, but you should start from preparing the models to be served.
+After the Docker image is built, you can use it to start the model server container, but you should start from preparing the models to be served.
 
 AI models should be created in Intermediate Representation (IR) format (a pair of files with .bin and .xml extensions). 
 OpenVINO&trade; toolkit includes a `model_optimizer` tool for converting  TensorFlow, Caffe and MXNet trained models into IR format.  
@@ -50,7 +50,7 @@ models/
 Each model should be stored in a dedicated folder (model1 and model2 in the examples above) and should include subfolders
 representing its versions. The versions and the subfolder names should be positive integer values. 
 
-Every version folder must include a pair of model files with .bin and .xml extensions while the file name can be arbitrary.
+Every version folder _must_ include a pair of model files with .bin and .xml extensions; however, the file name can be arbitrary.
 
 Each model in IR format defines input and output tensors in the AI graph. By default OpenVINO&trade; model server is using 
 tensors names as the input and output dictionary keys.  The client is passing the input values to the gRPC request and 
@@ -83,16 +83,16 @@ which can map the input and output keys to the appropriate tensors.
 This extra mapping can be handy to enable model `user friendly` names on the client when the model has cryptic 
 tensor names.
 
-OpenVINO&trade; model server is enabling all the versions present in the configured model folder. If you would like to limit 
+OpenVINO&trade; model server is enabling all the versions present in the configured model folder. To limit 
 the versions exposed, for example to reduce the mount of RAM, you need to delete the subfolders representing unnecessary model versions.
 
-While the client is not defining the model version in the request specification, OpenVINO&trade; model server will use the latest one stored in the subfolder of the highest number.
+While the client _is not_ defining the model version in the request specification, OpenVINO&trade; model server will use the latest one stored in the subfolder of the highest number.
 
 
-## Starting docker container with a single model
+## Starting Docker Container with a Single Model
 
-When the models are ready and stored in correct folders structure, you are ready to start the docker container with the 
-OpenVINO&trade; model server. To enable just a single model, you don't need any extra configuration file, so this process can be completed with just one command like below:
+When the models are ready and stored in correct folders structure, you are ready to start the Docker container with the 
+OpenVINO&trade; model server. To enable just a single model, you _do not_ need any extra configuration file, so this process can be completed with just one command like below:
 
 ```bash
 docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
@@ -176,12 +176,13 @@ optional arguments:
   --port PORT           server port
 ```
 
-## Batch processing
+## Batch Processing
 
 Inference processing can be executed in batches when the OpenVINO&trade; model are exported by the model optimizer with batch size >1 or the size of first dimension is >1.
 
 Generally OpenVINO&trade; model server determines the batch size based on the size of the first dimension in the first input.
-Dynamic batch size is not supported.
+
+**Note:** Dynamic batch size _is not_ supported.
 
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
