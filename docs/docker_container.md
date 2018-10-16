@@ -12,13 +12,12 @@ An example file looks like: `l_openvino_toolkit_fpga_p_2018.2.300_online.tgz`.
 From the root of the git repository, execute the command:
 
 ```bash
-docker build -f Dockerfile -t ie-serving-py:latest .
+make docker_build
 ```
 
 If you are building behind the proxy, include also http proxy build parameters:
 ```bash
-docker build -f Dockerfile --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy -t ie-serving-py:latest .
-
+make docker_build http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 
 ## Preparing the Models
