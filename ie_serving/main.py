@@ -16,11 +16,16 @@
 
 import argparse
 import json
+import shutil
 import sys
+from urllib.parse import urlparse
+
 from ie_serving.server.start import serve as start_server
 from ie_serving.models.model import Model
 from ie_serving.logger import get_logger, LOGGER_LVL
 import os
+import boto3
+from google.cloud import storage
 
 logger = get_logger(__name__)
 
@@ -56,6 +61,73 @@ def check_config_structure(configs):
     else:
         logger.error("Config file must contain 'model_config_list' array")
         sys.exit()
+
+
+def s3_download_dir(client, bucket_name, source_directory, destination_directory):
+    paginator = client.get_paginator('list_objects')
+    for listing_result in paginator.paginate(Bucket=bucket_name, Delimiter='/',
+                                             Prefix=source_directory):
+        if listing_result.get('CommonPrefixes') is not None:
+            for subdirectory in listing_result.get('CommonPrefixes'):
+                s3_download_dir(client, bucket_name, subdirectory.get('Prefix'),
+                                destination_directory)
+        if listing_result.get('Contents') is not None:
+            for file in listing_result.get('Contents'):
+                download_file_path = os.path.join(destination_directory, file.get('Key'))
+                download_directory_path = os.path.dirname(download_file_path)
+                if not os.path.exists(download_directory_path):
+                    os.makedirs(download_directory_path)
+                client.download_file(bucket_name, file.get('Key'),
+                                     download_file_path)
+
+
+def s3_download_model(parsed_url):
+    AWS_ACCESS_KEY = os.getenvb('AWS_ACCESS_KEY')
+    AWS_SECRET_KEY = os.getenvb('AWS_SECRET_KEY')
+    bucket_name = parsed_url.netlock
+    model_directory = parsed_url.path
+    s3_client = boto3.client('s3',
+                             endpoint_url='https://storage.googleapis.com',
+                             aws_access_key_id=AWS_ACCESS_KEY,
+                             aws_secret_access_key=AWS_SECRET_KEY)
+    s3_download_dir(s3_client, bucket_name, model_directory, 'tmp')
+
+
+def gs_download_model(parsed_url):
+    bucket_name = parsed_url.netlock
+    model_directory = parsed_url.path
+    gs_client = storage.Client()
+    bucket = gs_client.get_bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=model_directory)
+    for blob in blobs:
+        if blob.name[-1] != os.sep:
+            download_directory_path = os.path.join('tmp', os.path.dirname(blob.name))
+            if not os.path.exists(download_directory_path):
+                os.makedirs(download_directory_path)
+            blob.download_to_filename(os.path.join('tmp', blob.name))
+
+
+def load_model(config: dict):
+    parsed_url = urlparse(config['base_path'])
+    if parsed_url.scheme is '':
+        model = Model.build(model_name=config['name'],
+                            model_directory=config['base_path'])
+    elif parsed_url.scheme is 's3':
+        os.mkdir('tmp')
+        s3_download_model(parsed_url)
+        model = Model.build(model_name=config['name'],
+                            model_directory='tmp')
+        shutil.rmtree('tmp')
+    elif parsed_url.scheme is 'gs':
+        os.mkdir('tmp')
+        gs_download_model(parsed_url)
+        model = Model.build(model_name=config['name'],
+                            model_directory='tmp')
+        shutil.rmtree('tmp')
+    else:
+        print('Unavailable url scheme')
+        return None
+    return model
 
 
 def parse_config(args):
