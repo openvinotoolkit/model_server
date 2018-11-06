@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
+from urllib.parse import urlparse
+
+from google.cloud import storage
 
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
@@ -43,7 +47,10 @@ class IrEngine():
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
-        net = IENetwork.from_ir(model=model_xml, weights=model_bin)
+        local_model_xml, local_model_bin = cls.get_local_paths(model_xml, model_bin)
+        net = IENetwork.from_ir(model=local_model_xml, weights=local_model_bin)
+        if local_model_xml != model_xml and local_model_bin != model_bin:
+            cls.delete_tmp_files([local_model_xml, local_model_bin])
         inputs = net.inputs
         batch_size = list(inputs.values())[0][0]
         outputs = net.outputs
@@ -51,6 +58,37 @@ class IrEngine():
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs)
         return ir_engine
+
+    @classmethod
+    def get_local_paths(cls, model_xml, model_bin):
+        parsed_model_xml = urlparse(model_xml)
+        parsed_model_bin = urlparse(model_bin)
+        if parsed_model_xml.scheme == '' and parsed_model_bin.scheme == '':
+            return model_xml, model_bin
+        elif parsed_model_xml.scheme == 'gs' and parsed_model_bin.scheme == 'gs':
+            local_model_xml = cls.gs_download_file(model_xml)
+            local_model_bin = cls.gs_download_file(model_bin)
+            return local_model_xml, local_model_bin
+        elif parsed_model_xml.scheme == 's3' and parsed_model_bin.scheme == 's3':
+            pass
+        return None, None
+
+    @classmethod
+    def gs_download_file(cls, path):
+        parsed_path = urlparse(path)
+        bucket_name = parsed_path.netloc
+        file_path = parsed_path.path[1:]
+        gs_client = storage.Client()
+        bucket = gs_client.get_bucket(bucket_name)
+        blob = bucket.blob(file_path)
+        tmp_path = os.path.join('/tmp', file_path.split(os.sep)[-1])
+        blob.download_to_filename(tmp_path)
+        return tmp_path
+
+    @classmethod
+    def delete_tmp_files(cls, files_paths):
+        for file_path in files_paths:
+            os.remove(file_path)
 
     def _get_mapping_config_file_if_exists(self):
         parent_dir = dirname(self.model_bin)

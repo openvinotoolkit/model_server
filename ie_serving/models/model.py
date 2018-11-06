@@ -16,8 +16,15 @@
 
 import glob
 import os
+import re
+from urllib.parse import urlparse
+
+from google.cloud import storage
+
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
+from ie_serving.models.model_utils import get_versions_path, get_version_number, \
+    get_full_path_to_model
 
 logger = get_logger(__name__)
 
@@ -66,12 +73,13 @@ class Model():
 
     @staticmethod
     def get_all_available_versions(model_directory):
-        versions_path = glob.glob("{}/*/".format(model_directory))
+        versions_path = get_versions_path(model_directory)
+
         versions = []
         for version in versions_path:
-            number = Model.get_model_version_number(version_path=version)
+            number = get_version_number(version_path=version)
             if number != 0:
-                model_xml, model_bin = Model.get_absolute_path_to_model(
+                model_xml, model_bin = get_full_path_to_model(
                     os.path.join(model_directory, version))
                 if model_xml is not None and model_bin is not None:
                     model_info = {'xml_model_path': model_xml,
@@ -101,3 +109,4 @@ class Model():
             versions.remove(failure)
 
         return inference_engines
+
