@@ -7,8 +7,8 @@ from google.cloud import storage
 
 def gs_list_content(path):
     parsed_path = urlparse(path)
-    bucket_name = parsed_path.netlock
-    model_directory = parsed_path.path
+    bucket_name = parsed_path.netloc
+    model_directory = parsed_path.path[1:]
     gs_client = storage.Client()
     bucket = gs_client.get_bucket(bucket_name)
     blobs = bucket.list_blobs(prefix=model_directory)
@@ -24,7 +24,7 @@ def get_versions_path(model_directory):
         return glob.glob("{}/*/".format(model_directory))
     elif parsed_model_dir.scheme == 'gs':
         content_list = gs_list_content(model_directory)
-        pattern = re.compile(parsed_model_dir.path[1:-1] + '/\d+/')
+        pattern = re.compile(parsed_model_dir.path[1:-1] + '/\d+/$')
         version_dirs = list(filter(pattern.match, content_list))
         return [urlunparse((parsed_model_dir.scheme, parsed_model_dir.netloc, version_dir,
                             parsed_model_dir.params, parsed_model_dir.query,
@@ -47,8 +47,8 @@ def get_full_path_to_model(specific_version_model_path):
         return None, None
     elif parsed_version_model_path.scheme == 'gs':
         content_list = gs_list_content(specific_version_model_path)
-        xml_pattern = re.compile(parsed_version_model_path.path[1:-1] + '/\w+\.xml')
-        bin_pattern = re.compile(parsed_version_model_path.path[1:-1] + '/\w+\.bin')
+        xml_pattern = re.compile(parsed_version_model_path.path[1:-1] + '/\w+\.xml$')
+        bin_pattern = re.compile(parsed_version_model_path.path[1:-1] + '/\w+\.bin$')
         xml_path = list(filter(xml_pattern.match, content_list))
         bin_path = list(filter(bin_pattern.match, content_list))
         if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):

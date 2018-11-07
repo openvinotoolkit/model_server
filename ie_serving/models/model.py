@@ -74,13 +74,12 @@ class Model():
     @staticmethod
     def get_all_available_versions(model_directory):
         versions_path = get_versions_path(model_directory)
-
+        logger.info(versions_path)
         versions = []
         for version in versions_path:
-            number = get_version_number(version_path=version)
+            number = get_version_number(version_directory=version)
             if number != 0:
-                model_xml, model_bin = get_full_path_to_model(
-                    os.path.join(model_directory, version))
+                model_xml, model_bin = get_full_path_to_model(version)
                 if model_xml is not None and model_bin is not None:
                     model_info = {'xml_model_path': model_xml,
                                   'bin_model_path': model_bin,
