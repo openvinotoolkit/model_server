@@ -16,9 +16,7 @@
 
 import argparse
 import json
-import shutil
 import sys
-from urllib.parse import urlparse
 
 from ie_serving.server.start import serve as start_server
 from ie_serving.models.model import Model

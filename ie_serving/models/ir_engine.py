@@ -47,7 +47,8 @@ class IrEngine():
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
-        local_model_xml, local_model_bin = cls.get_local_paths(model_xml, model_bin)
+        local_model_xml, local_model_bin = cls.get_local_paths(
+            model_xml, model_bin)
         net = IENetwork.from_ir(model=local_model_xml, weights=local_model_bin)
         if local_model_xml != model_xml and local_model_bin != model_bin:
             cls.delete_tmp_files([local_model_xml, local_model_bin])
@@ -65,11 +66,13 @@ class IrEngine():
         parsed_model_bin = urlparse(model_bin)
         if parsed_model_xml.scheme == '' and parsed_model_bin.scheme == '':
             return model_xml, model_bin
-        elif parsed_model_xml.scheme == 'gs' and parsed_model_bin.scheme == 'gs':
+        elif parsed_model_xml.scheme == 'gs' and \
+                parsed_model_bin.scheme == 'gs':
             local_model_xml = cls.gs_download_file(model_xml)
             local_model_bin = cls.gs_download_file(model_bin)
             return local_model_xml, local_model_bin
-        elif parsed_model_xml.scheme == 's3' and parsed_model_bin.scheme == 's3':
+        elif parsed_model_xml.scheme == 's3' and \
+                parsed_model_bin.scheme == 's3':
             pass
         return None, None
 

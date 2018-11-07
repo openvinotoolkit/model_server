@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 
 import pytest
 from ie_serving.models.model import Model
@@ -59,10 +60,11 @@ def test_get_all_available_versions(mocker):
     new_model = Model(model_name="test", model_directory='fake_path/model/',
                       available_versions=[1, 2, 3], engines={})
     model_mocker = mocker.patch('glob.glob')
-    models_path = [new_model.model_directory + str(x) for x in range(5)]
+    models_path = [new_model.model_directory + str(x) + os.sep
+                   for x in range(5)]
     model_mocker.return_value = models_path
-    absolute_path_model_mocker = mocker.patch('ie_serving.models.model.Model.'
-                                              'get_absolute_path_to_model')
+    absolute_path_model_mocker = mocker.patch(
+        'ie_serving.models.model.Model.get_full_path_to_model')
     absolute_path_model_mocker.side_effect = [(None, None),
                                               ('modelv2.xml', 'modelv2.bin'),
                                               (None, None),

@@ -16,15 +16,11 @@
 
 import glob
 import os
-import re
-from urllib.parse import urlparse
-
-from google.cloud import storage
 
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
-from ie_serving.models.model_utils import get_versions_path, get_version_number, \
-    get_full_path_to_model
+from ie_serving.models.model_utils import get_versions_path, \
+    get_version_number, get_full_path_to_model
 
 logger = get_logger(__name__)
 
@@ -108,4 +104,3 @@ class Model():
             versions.remove(failure)
 
         return inference_engines
-
