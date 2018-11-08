@@ -24,6 +24,7 @@ import glob
 import json
 from os.path import dirname
 from ie_serving.logger import get_logger
+from ie_serving.models.model_utils import gs_list_content
 
 logger = get_logger(__name__)
 
@@ -94,18 +95,38 @@ class IrEngine():
             os.remove(file_path)
 
     def _get_mapping_config_file_if_exists(self):
-        parent_dir = dirname(self.model_bin)
-        config_path = glob.glob("{}/mapping_config.json".format(parent_dir))
-        if len(config_path) == 1:
-            try:
-                with open(config_path[0], 'r') as f:
-                    data = json.load(f)
-                return data
-            except Exception as e:
-                logger.error("Error occurred while reading mapping_config in "
-                             "path {}. Message error {}"
-                             .format(config_path, e))
-        return None
+        parsed_model_path = urlparse(self.model_bin)
+        if parsed_model_path.scheme == '':
+            parent_dir = dirname(self.model_bin)
+            config_path = glob.glob("{}/mapping_config.json"
+                                    .format(parent_dir))
+            if len(config_path) == 1:
+                try:
+                    with open(config_path[0], 'r') as f:
+                        data = json.load(f)
+                    return data
+                except Exception as e:
+                    logger.error("Error occurred while reading mapping_config "
+                                 "in path {}. Message error {}"
+                                 .format(config_path, e))
+            return None
+        elif parsed_model_path.scheme == 'gs':
+            parent_dir = self.model_bin.rsplit(os.sep, 1)[0]
+            content_list = gs_list_content(parent_dir + os.sep)
+            mapping_config = parent_dir + os.sep + 'mapping_config.json'
+            if mapping_config in content_list:
+                tmp_path = self.gs_download_file(mapping_config)
+                try:
+                    with open(tmp_path, 'r') as f:
+                        data = json.load(f)
+                    self.delete_tmp_files([tmp_path])
+                    return data
+                except Exception as e:
+                    logger.error("Error occurred while reading mapping_config"
+                                 " in path {}. Message error {}"
+                                 .format(tmp_path, e))
+            else:
+                return None
 
     def _return_proper_key_value(self, data: dict, which_way: str,
                                  tensors: list):

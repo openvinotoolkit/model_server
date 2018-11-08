@@ -64,7 +64,7 @@ def test_get_all_available_versions(mocker):
                    for x in range(5)]
     model_mocker.return_value = models_path
     absolute_path_model_mocker = mocker.patch(
-        'ie_serving.models.model.Model.get_full_path_to_model')
+        'ie_serving.models.model_utils.get_full_path_to_model')
     absolute_path_model_mocker.side_effect = [(None, None),
                                               ('modelv2.xml', 'modelv2.bin'),
                                               (None, None),

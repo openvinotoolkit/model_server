@@ -253,12 +253,16 @@ def start_server_multi_model(request, get_image, get_test_dir):
 
     CYAN_COLOR = '\033[36m'
     END_COLOR = '\033[0m'
+    GC_CREDENTIALS_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     cmd = ['docker',
            'run',
            '--rm',
            '-d',
            '--name', 'ie-serving-py-test-multi',
            '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
+           '-v', '/home/circleci/project/' + GC_CREDENTIALS_PATH + ':' +
+           '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH, # noqa
+           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=' + GC_CREDENTIALS_PATH, # noqa
            '-p', '9001:9001',
            get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
            'config',
