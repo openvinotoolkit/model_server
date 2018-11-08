@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-import glob
-import os
-
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
 from ie_serving.models.model_utils import get_versions_path, \
