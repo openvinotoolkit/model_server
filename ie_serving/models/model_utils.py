@@ -43,8 +43,8 @@ def get_version_number(version_directory):
 def get_full_path_to_model(specific_version_model_path):
     parsed_version_path = urlparse(specific_version_model_path)
     if parsed_version_path.scheme == '':
-        bin_path = glob.glob("{}/*.bin".format(specific_version_model_path))
-        xml_path = glob.glob("{}/*.xml".format(specific_version_model_path))
+        bin_path = glob.glob("{}*.bin".format(specific_version_model_path))
+        xml_path = glob.glob("{}*.xml".format(specific_version_model_path))
         if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
             return xml_path[0], bin_path[0]
         return None, None

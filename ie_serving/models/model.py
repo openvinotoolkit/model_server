@@ -51,23 +51,6 @@ class Model():
         return model
 
     @staticmethod
-    def get_absolute_path_to_model(specific_version_model_path):
-        bin_path = glob.glob("{}/*.bin".format(specific_version_model_path))
-        xml_path = glob.glob("{}/*.xml".format(specific_version_model_path))
-        if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
-            return xml_path[0], bin_path[0]
-        return None, None
-
-    @staticmethod
-    def get_model_version_number(version_path):
-        folder_name = os.path.basename(os.path.normpath(version_path))
-        try:
-            number_version = int(folder_name)
-            return number_version
-        except ValueError:
-            return 0
-
-    @staticmethod
     def get_all_available_versions(model_directory):
         versions_path = get_versions_path(model_directory)
         logger.info(versions_path)
