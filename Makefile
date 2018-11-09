@@ -75,13 +75,21 @@ clean: clean_pyc
 	@echo "Removing virtual env files..."
 	@rm -rf $(VIRTUALENV_DIR)
 
-docker_build:
+docker_build_src:
+	@echo "Building docker image"
+	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
+	@echo Git commit: `git rev-parse HEAD` >> version
+	@echo OpenVINO version: 2018_R3 src >> version
+	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+
+docker_build_bin:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
-	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
-	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@echo docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
