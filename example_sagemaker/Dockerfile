@@ -47,7 +47,7 @@ RUN cd $TEMP_DIR && pwd && ls && \
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5/ubuntu16:$INSTALL_DIR/python/python3.5"
 ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
 
-RUN git clone https://github.com/NervanaSystems/ie-serving-py.git /ie-serving-py
+RUN git clone https://github.com/IntelAI/OpenVINO-model-server.git /ie-serving-py
 
 WORKDIR /ie-serving-py
 
@@ -65,3 +65,4 @@ RUN pip install sagemaker_tensorflow_container-1.0.0.tar.gz sagemaker-container-
 RUN rm sagemaker_tensorflow_container-1.0.0.tar.gz
 
 ENTRYPOINT ["entry.py"]
+

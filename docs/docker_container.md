@@ -15,11 +15,11 @@ An example file looks like: `l_openvino_toolkit_fpga_p_2018.2.300_online.tgz`.
 From the root of the git repository, execute the command:
 
 ```bash
-make docker_build_bin
+make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
-make docker_build_src
+make docker_build_src http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 
 ## Preparing the Models
