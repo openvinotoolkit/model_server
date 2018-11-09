@@ -20,9 +20,9 @@ DEVICE = os.environ.get('DEVICE', "CPU")
 if os.path.isfile("/usr/local/lib/libcpu_extension.so"):
     default_cpu_extension = "/usr/local/lib/libcpu_extension.so"
 else:
-    default_cpu_extension =  "/opt/intel/computer_vision_sdk/" \
-                             "deployment_tools/inference_engine/lib/" \
-                             "ubuntu_16.04/intel64/libcpu_extension_avx2.so"
+    default_cpu_extension = "/opt/intel/computer_vision_sdk/" \
+                            "deployment_tools/inference_engine/lib/" \
+                            "ubuntu_16.04/intel64/libcpu_extension_avx2.so"
 CPU_EXTENSION = os.environ.get('CPU_EXTENSION', default_cpu_extension)
 PLUGIN_DIR = os.environ.get('PLUGIN_DIR', None)
 LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
