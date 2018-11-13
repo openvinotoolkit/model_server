@@ -16,8 +16,11 @@
 
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
-from ie_serving.models.model_utils import get_versions_path, \
-    get_version_number, get_full_path_to_model
+import glob
+import os
+import re
+from urllib.parse import urlparse, urlunparse
+from google.cloud import storage
 
 logger = get_logger(__name__)
 
@@ -47,17 +50,19 @@ class Model():
                     available_versions=available_versions, engines=engines)
         return model
 
-    @staticmethod
-    def get_all_available_versions(model_directory):
-        versions_path = get_versions_path(model_directory)
+    @classmethod
+    def get_all_available_versions(cls, model_directory):
+        versions_path = cls.get_versions_path(model_directory)
         logger.info(versions_path)
         versions = []
         for version in versions_path:
-            number = get_version_number(version_directory=version)
+            number = cls.get_version_number(version_directory=version)
             if number != 0:
-                model_xml, model_bin = get_full_path_to_model(version)
+                storage_type, model_xml, model_bin = \
+                    cls.get_full_path_to_model(version)
                 if model_xml is not None and model_bin is not None:
-                    model_info = {'xml_model_path': model_xml,
+                    model_info = {'storage': storage_type,
+                                  'xml_model_path': model_xml,
                                   'bin_model_path': model_bin,
                                   'version': number}
                     versions.append(model_info)
@@ -84,3 +89,23 @@ class Model():
             versions.remove(failure)
 
         return inference_engines
+
+
+    @staticmethod
+    def get_versions_path(model_directory):
+        if model_directory[-1] != os.sep:
+            model_directory += os.sep
+        return glob.glob("{}/*/".format(model_directory))
+
+    @staticmethod
+    def get_version_number(version_directory):
+        version_number = re.search('/\d+/$', version_directory).group(0)[1:-1]
+        return int(version_number)
+
+    @staticmethod
+    def get_full_path_to_model(specific_version_model_path):
+        bin_path = glob.glob("{}*.bin".format(specific_version_model_path))
+        xml_path = glob.glob("{}*.xml".format(specific_version_model_path))
+        if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
+            return xml_path[0], bin_path[0]
+        return None, None
