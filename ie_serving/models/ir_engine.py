@@ -24,7 +24,6 @@ import glob
 import json
 from os.path import dirname
 from ie_serving.logger import get_logger
-from ie_serving.models.model_utils import gs_list_content
 
 logger = get_logger(__name__)
 
@@ -94,6 +93,19 @@ class IrEngine():
         for file_path in files_paths:
             os.remove(file_path)
 
+    @classmethod
+    def gs_list_content(cls, path):
+        parsed_path = urlparse(path)
+        bucket_name = parsed_path.netloc
+        model_directory = parsed_path.path[1:]
+        gs_client = storage.Client()
+        bucket = gs_client.get_bucket(bucket_name)
+        blobs = bucket.list_blobs(prefix=model_directory)
+        contents_list = []
+        for blob in blobs:
+            contents_list.append(blob.name)
+        return contents_list
+
     def _get_mapping_config_file_if_exists(self):
         parsed_model_path = urlparse(self.model_bin)
         if parsed_model_path.scheme == '':
@@ -112,7 +124,7 @@ class IrEngine():
             return None
         elif parsed_model_path.scheme == 'gs':
             parent_dir = self.model_bin.rsplit(os.sep, 1)[0]
-            content_list = gs_list_content(parent_dir + os.sep)
+            content_list = self.gs_list_content(parent_dir + os.sep)
             mapping_config = parent_dir + os.sep + 'mapping_config.json'
             if mapping_config in content_list:
                 tmp_path = self.gs_download_file(mapping_config)

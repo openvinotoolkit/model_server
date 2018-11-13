@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+from ie_serving.config import StorageType
 from ie_serving.logger import get_logger
 from ie_serving.models.model import Model
-import glob
 import os
 import re
 from urllib.parse import urlparse, urlunparse
@@ -65,8 +64,8 @@ class GSModel(Model):
                 parsed_version_path.path[1:-1] + '/\w+\.bin$')
             xml_path = list(filter(xml_pattern.match, content_list))
             bin_path = list(filter(bin_pattern.match, content_list))
-            if xml_path[0].replace('xml', '') == bin_path[0].replace('bin',
-                                                                     ''):
+            if xml_path[0].replace('xml', '') == \
+                    bin_path[0].replace('bin', ''):
                 xml_path[0] = urlunparse(
                     (parsed_version_path.scheme, parsed_version_path.netloc,
                      xml_path[0], parsed_version_path.params,
@@ -75,5 +74,5 @@ class GSModel(Model):
                     (parsed_version_path.scheme, parsed_version_path.netloc,
                      bin_path[0], parsed_version_path.params,
                      parsed_version_path.query, parsed_version_path.fragment))
-                return xml_path[0], bin_path[0]
-            return None, None
+                return StorageType.GS, xml_path[0], bin_path[0]
+            return None, None, None

@@ -13,19 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+from ie_serving.config import StorageType
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
 import glob
 import os
 import re
-from urllib.parse import urlparse, urlunparse
-from google.cloud import storage
-
 logger = get_logger(__name__)
 
 
-class Model():
+class Model:
 
     def __init__(self, model_name: str, model_directory: str,
                  available_versions: list, engines: dict):
@@ -107,5 +104,5 @@ class Model():
         bin_path = glob.glob("{}*.bin".format(specific_version_model_path))
         xml_path = glob.glob("{}*.xml".format(specific_version_model_path))
         if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
-            return xml_path[0], bin_path[0]
-        return None, None
+            return StorageType.LOCAL, xml_path[0], bin_path[0]
+        return None, None, None
