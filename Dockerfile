@@ -1,30 +1,65 @@
-FROM ubuntu:16.04
+FROM ubuntu:16.04 as DEV
+RUN apt-get update && apt-get install -y \
+            curl \
+            ca-certificates \
+            python3-pip \
+            python-dev \
+            libgfortran3 \
+            vim \
+            build-essential \
+            cmake \
+            curl \
+            wget \
+            libssl-dev \
+            ca-certificates \
+            git \
+            libboost-regex-dev \
+            gcc-multilib \
+            g++-multilib \
+            libgtk2.0-dev \
+            pkg-config \
+            unzip \
+            automake \
+            libtool \
+            autoconf \
+            libpng12-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libglib2.0-dev \
+            libgtk2.0-dev \
+            libswscale-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libgstreamer1.0-0 \
+            gstreamer1.0-plugins-base \
+            libusb-1.0-0-dev \
+            libopenblas-dev
+RUN curl -L -o 2018_R3.tar.gz https://github.com/opencv/dldt/archive/2018_R3.tar.gz && \
+    tar -zxf 2018_R3.tar.gz && \
+    rm 2018_R3.tar.gz && \
+    rm -Rf dldt-2018_R3/model-optimizer
+WORKDIR dldt-2018_R3/inference-engine
+RUN mkdir build && cd build && cmake -DGEMM=MKL -DENABLE_MKL_DNN=ON  -DCMAKE_BUILD_TYPE=Release ..
+RUN cd build && make -j4
+RUN pip3 install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/python/build && \
+    cmake -DInferenceEngine_DIR=/dldt-2018_R3/inference-engine/build -DPYTHON_EXECUTABLE=`which python3` -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m .. && \
+    make -j4
 
-ARG INSTALL_DIR=/opt/intel/computer_vision_sdk
-ARG TEMP_DIR=/tmp/openvino_installer
+FROM ubuntu:16.04 as PROD
 
-ARG DL_INSTALL_DIR=/opt/intel/computer_vision_sdk/deployment_tools
-ARG DL_DIR=/tmp
+RUN apt-get update && apt-get install -y \
+            curl \
+            ca-certificates \
+            python3-pip \
+            python3-dev \
+            vim \
+            virtualenv
 
-ENV TEMP_DIR $TEMP_DIR
-
-RUN apt-get update && apt-get install -y --no-install-recommends cpio \
-    python3-pip python3-venv python3-dev python3-setuptools virtualenv
-
-COPY l_openvino_toolkit*.tgz $TEMP_DIR/
-RUN cd $TEMP_DIR && pwd && ls && \
-    tar xf l_openvino_toolkit*.tgz && \
-    cd l_openvino_toolkit* && \
-    sed -i 's/decline/accept/g' silent.cfg && \
-    pwd | grep -q openvino_toolkit_p ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-base-shared__noarch;intel-cv-sdk-base-l-setupvars__noarch;intel-cv-sdk-base-l-inference-engine__noarch;intel-cv-sdk-base-gfx-install__noarch;intel-cv-sdk-base-shared-pset/g' silent.cfg; fi && \
-    pwd | grep -q openvino_toolkit_fpga ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg; fi && \
-    ./install.sh -s silent.cfg && \
-    rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
-
-ENV PYTHONPATH="$INSTALL_DIR/python/python3.5/ubuntu16:$INSTALL_DIR/python/python3.5"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
+COPY --from=DEV /dldt-2018_R3/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
+COPY --from=DEV /dldt-2018_R3/inference-engine/ie_bridges/python/build/ /usr/local/lib/openvino/
+COPY --from=DEV /dldt-2018_R3/inference-engine/temp/mkltiny_lnx_20180511/lib/libiomp5.so /usr/local/lib/
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV PYTHONPATH=/usr/local/lib
 
 COPY start_server.sh setup.py requirements.txt version /ie-serving-py/
 COPY ie_serving /ie-serving-py/ie_serving

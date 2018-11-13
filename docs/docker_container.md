@@ -2,9 +2,12 @@
 
 ## Building the Image
 
-OpenVINO&trade; model server Docker image can be built using the included [Dockerfile](../Dockerfile). It is tested with Ubuntu16.04 as the base image. Therefore, it should be simple to adjust the process to CentoOS base images.
+OpenVINO&trade; model server Docker image can be built using the included [Dockerfile](../Dockerfile) 
+and [Dockerfile_binary_openvino](../Dockerfile_binary_openvino). It is tested with Ubuntu16.04 as the base image. 
+Therefore, it should be simple to adjust the process to CentoOS base images.
 
-Before you start building the docker image, you need to download [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) and place the .tgz file in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
+There is option to build the docker image using OpenVINO source code or binary Intel distribution of OpenVINO toolkit. 
+The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
 It is recommended to use online installation package because this way the resultant image will be smaller. 
 An example file looks like: `l_openvino_toolkit_fpga_p_2018.2.300_online.tgz`.
 
@@ -12,13 +15,11 @@ An example file looks like: `l_openvino_toolkit_fpga_p_2018.2.300_online.tgz`.
 From the root of the git repository, execute the command:
 
 ```bash
-docker build -f Dockerfile -t ie-serving-py:latest .
+make docker_build_bin
 ```
-
-If you are building behind the proxy, include also http proxy build parameters:
+or
 ```bash
-docker build -f Dockerfile --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy -t ie-serving-py:latest .
-
+make docker_build_src
 ```
 
 ## Preparing the Models

@@ -43,7 +43,7 @@ jobs:
       - run:
           name: check coverage
           command: make coverage
-  functional_tests:
+  functional_tests_bin:
     machine:
       enabled: true
     resource_class: medium
@@ -51,7 +51,20 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: wget -c $OPENVINO_DOWNLOAD_LINK && make docker_build
+          command: wget -c $OPENVINO_DOWNLOAD_LINK && make docker_build_bin
+
+      - run:
+          name: Start functional tests
+          command: pyenv global 3.5.2 && make test
+  functional_tests_src:
+    machine:
+      enabled: true
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Build docker image
+          command: make docker_build_src
 
       - run:
           name: Start functional tests
@@ -62,4 +75,5 @@ workflows:
     jobs:
       - unit_tests
       - style
-      - functional_tests
+      - functional_tests_bin
+      - functional_tests_src

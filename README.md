@@ -150,7 +150,9 @@ All new features need to be covered by tests.
 
 ### Building
 
-`make docker_build` to build new docker image
+`make docker_build_bin` to build new docker image using OpenVINO binary distribution
+
+`make docker_build_src` to build new docker image using OpenVINO source code
 
 ### Testing
 
