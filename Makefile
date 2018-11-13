@@ -83,6 +83,14 @@ docker_build_src:
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
+docker_build_intelpython:
+	@echo "Building docker image"
+	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
+	@echo Git commit: `git rev-parse HEAD` >> version
+	@echo OpenVINO version: 2018_R3 src >> version
+	@echo docker build -f Dockerfile_intelpython --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile_intelpython --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+
 docker_build_bin:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
