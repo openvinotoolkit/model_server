@@ -90,3 +90,4 @@ workflows:
       - style
       - functional_tests_bin
       - functional_tests_src
+      - functional_tests_intelpython
