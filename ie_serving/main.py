@@ -20,7 +20,6 @@ import sys
 
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
-from ie_serving.models.model import Model
 from ie_serving.logger import get_logger, LOGGER_LVL
 import os
 

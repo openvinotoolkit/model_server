@@ -17,6 +17,7 @@ import glob
 
 from ie_serving.config import MAPPING_CONFIG_FILENAME
 from ie_serving.logger import get_logger
+from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
 import os
 
@@ -26,26 +27,31 @@ logger = get_logger(__name__)
 class LocalModel(Model):
 
     @classmethod
-    def get_versions_path(cls, model_directory):
+    def get_versions(cls, model_directory):
         if model_directory[-1] != os.sep:
             model_directory += os.sep
         return glob.glob("{}/*/".format(model_directory))
 
     @classmethod
-    def get_full_path_to_model(cls, specific_version_model_path):
-        bin_path = glob.glob("{}*.bin".format(specific_version_model_path))
-        xml_path = glob.glob("{}*.xml".format(specific_version_model_path))
-        if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
-            mapping_config_path = cls._get_path_to_mapping_config(
-                specific_version_model_path)
-            return xml_path[0], bin_path[0], mapping_config_path
+    def get_version_files(cls, version):
+        bin_file = glob.glob("{}*.bin".format(version))
+        xml_file = glob.glob("{}*.xml".format(version))
+        if xml_file[0].replace('xml', '') == bin_file[0].replace('bin', ''):
+            mapping_config = cls._get_mapping_config(version)
+            return xml_file[0], bin_file[0], mapping_config
         return None, None, None
 
     @classmethod
-    def _get_path_to_mapping_config(cls, specific_version_model_path):
-
-        config_path = glob.glob(specific_version_model_path +
-                                MAPPING_CONFIG_FILENAME)
-        if len(config_path) == 1:
-            return config_path[0]
+    def _get_mapping_config(cls, version):
+        mapping_config = glob.glob(version + MAPPING_CONFIG_FILENAME)
+        if len(mapping_config) == 1:
+            return mapping_config[0]
         return None
+
+    @classmethod
+    def get_engine_for_version(cls, version_attributes):
+        engine = IrEngine.build(model_bin=version_attributes['bin_file'],
+                                model_xml=version_attributes['xml_file'],
+                                mapping_config=version_attributes
+                                ['mapping_config'])
+        return engine

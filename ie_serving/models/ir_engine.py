@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
@@ -70,8 +71,9 @@ class IrEngine():
         for input_tensor in tensors:
             if which_way in data:
                 if input_tensor in data[which_way]:
-                    temp_keys.update({data[which_way][input_tensor]:
-                                          input_tensor})
+                    temp_keys.update({
+                        data[which_way][input_tensor]: input_tensor
+                    })
                 else:
                     temp_keys.update({input_tensor: input_tensor})
             else:
@@ -87,15 +89,11 @@ class IrEngine():
         return keys_names
 
     def _set_names_in_config_as_keys(self, data: dict):
-        keys_names = {'inputs': self.
-            _return_proper_key_value(data=data, which_way='inputs',
-                                     tensors=self.
-                                     input_tensor_names),
-                      'outputs': self.
-                          _return_proper_key_value(data=data,
-                                                   which_way='outputs',
-                                                   tensors=self.
-                                                   output_tensor_names)}
+        keys_names = {'inputs': self._return_proper_key_value(
+            data=data, which_way='inputs', tensors=self.input_tensor_names),
+            'outputs': self._return_proper_key_value(
+                data=data, which_way='outputs',
+                tensors=self.output_tensor_names)}
         return keys_names
 
     def set_keys(self, mapping_config):
