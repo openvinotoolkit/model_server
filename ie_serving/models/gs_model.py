@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ie_serving.config import StorageType
+
 from ie_serving.logger import get_logger
+from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
 import os
 import re
@@ -41,6 +42,20 @@ class GSModel(Model):
         return contents_list
 
     @classmethod
+    def gs_download_file(cls, path):
+        if path is None:
+            return None
+        parsed_path = urlparse(path)
+        bucket_name = parsed_path.netloc
+        file_path = parsed_path.path[1:]
+        gs_client = storage.Client()
+        bucket = gs_client.get_bucket(bucket_name)
+        blob = bucket.blob(file_path)
+        tmp_path = os.path.join('/tmp', file_path.split(os.sep)[-1])
+        blob.download_to_filename(tmp_path)
+        return tmp_path
+
+    @classmethod
     def get_versions_path(cls, model_directory):
         if model_directory[-1] != os.sep:
             model_directory += os.sep
@@ -56,23 +71,61 @@ class GSModel(Model):
 
     @classmethod
     def get_full_path_to_model(cls, specific_version_model_path):
-            parsed_version_path = urlparse(specific_version_model_path)
-            content_list = cls.gs_list_content(specific_version_model_path)
-            xml_pattern = re.compile(
-                parsed_version_path.path[1:-1] + '/\w+\.xml$')
-            bin_pattern = re.compile(
-                parsed_version_path.path[1:-1] + '/\w+\.bin$')
-            xml_path = list(filter(xml_pattern.match, content_list))
-            bin_path = list(filter(bin_pattern.match, content_list))
-            if xml_path[0].replace('xml', '') == \
-                    bin_path[0].replace('bin', ''):
-                xml_path[0] = urlunparse(
-                    (parsed_version_path.scheme, parsed_version_path.netloc,
-                     xml_path[0], parsed_version_path.params,
-                     parsed_version_path.query, parsed_version_path.fragment))
-                bin_path[0] = urlunparse(
-                    (parsed_version_path.scheme, parsed_version_path.netloc,
-                     bin_path[0], parsed_version_path.params,
-                     parsed_version_path.query, parsed_version_path.fragment))
-                return StorageType.GS, xml_path[0], bin_path[0]
-            return None, None, None
+        parsed_version_path = urlparse(specific_version_model_path)
+        content_list = cls.gs_list_content(specific_version_model_path)
+        xml_pattern = re.compile(
+            parsed_version_path.path[1:-1] + '/\w+\.xml$')
+        bin_pattern = re.compile(
+            parsed_version_path.path[1:-1] + '/\w+\.bin$')
+        xml_path = list(filter(xml_pattern.match, content_list))
+        bin_path = list(filter(bin_pattern.match, content_list))
+        if xml_path[0].replace('xml', '') == \
+                bin_path[0].replace('bin', ''):
+            xml_path[0] = urlunparse(
+                (parsed_version_path.scheme, parsed_version_path.netloc,
+                 xml_path[0], parsed_version_path.params,
+                 parsed_version_path.query, parsed_version_path.fragment))
+            bin_path[0] = urlunparse(
+                (parsed_version_path.scheme, parsed_version_path.netloc,
+                 bin_path[0], parsed_version_path.params,
+                 parsed_version_path.query, parsed_version_path.fragment))
+            mapping_config_path = cls._get_path_to_mapping_config(
+                specific_version_model_path)
+            return xml_path[0], bin_path[0], mapping_config_path
+        return None, None, None
+
+    @classmethod
+    def _get_path_to_mapping_config(cls, specific_version_model_path):
+        content_list = cls.gs_list_content(specific_version_model_path)
+        mapping_config = specific_version_model_path + 'mapping_config.json'
+        if mapping_config in content_list:
+            return mapping_config
+        else:
+            return None
+
+    @classmethod
+    def get_engine_for_model(cls, version):
+        local_model_xml, local_model_bin, local_mapping_config = \
+            cls.create_local_mirror(version)
+        logger.info('Downloaded files from GCS')
+        engine = IrEngine.build(model_xml=local_model_xml,
+                                model_bin=local_model_bin,
+                                mapping_config=local_mapping_config)
+        cls.delete_local_mirror([local_model_bin, local_model_xml,
+                                 local_mapping_config])
+        logger.info('Deleted temporary files')
+        return engine
+
+    @classmethod
+    def create_local_mirror(cls, version):
+        local_model_xml = cls.gs_download_file(version['xml_model_path'])
+        local_model_bin = cls.gs_download_file(version['bin_model_path'])
+        local_mapping_config = cls.gs_download_file(
+            version['mapping_config_path'])
+        return local_model_xml, local_model_bin, local_mapping_config
+
+    @classmethod
+    def delete_local_mirror(cls, files_paths):
+        for file_path in files_paths:
+            if file_path is not None:
+                os.remove(file_path)

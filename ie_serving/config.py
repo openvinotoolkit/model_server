@@ -29,6 +29,4 @@ LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_PATH = os.getenv('LOG_PATH', None)
 
 
-class StorageType:
-    LOCAL = 0
-    GS = 1
+MAPPING_CONFIG_FILENAME = 'mapping_config.json'

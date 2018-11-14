@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ie_serving.config import StorageType
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
-import glob
-import os
+from abc import ABC, abstractmethod
 import re
 logger = get_logger(__name__)
 
 
-class Model:
+class Model(ABC):
 
     def __init__(self, model_name: str, model_directory: str,
                  available_versions: list, engines: dict):
@@ -55,27 +53,31 @@ class Model:
         for version in versions_path:
             number = cls.get_version_number(version_directory=version)
             if number != 0:
-                storage_type, model_xml, model_bin = \
+                model_xml, model_bin, mapping_config = \
                     cls.get_full_path_to_model(version)
                 if model_xml is not None and model_bin is not None:
-                    model_info = {'storage': storage_type,
-                                  'xml_model_path': model_xml,
+                    model_info = {'xml_model_path': model_xml,
                                   'bin_model_path': model_bin,
+                                  'mapping_config_path': mapping_config,
                                   'version': number}
                     versions.append(model_info)
         return versions
 
     @staticmethod
-    def get_engines_for_model(versions):
+    def get_version_number(version_directory):
+        version_number = re.search('/\d+/$', version_directory).group(0)[1:-1]
+        return int(version_number)
+
+    @classmethod
+    def get_engines_for_model(cls, versions):
         inference_engines = {}
         failures = []
         for version in versions:
             try:
                 logger.info("Creating inference engine object "
                             "for version: {}".format(version['version']))
-                inference_engines[version['version']] = IrEngine.build(
-                    model_bin=version['bin_model_path'],
-                    model_xml=version['xml_model_path'])
+                inference_engines[version['version']] = \
+                    cls.get_engine_for_model(version)
             except Exception as e:
                 logger.error("Error occurred while loading model "
                              "version: {}".format(version))
@@ -87,22 +89,25 @@ class Model:
 
         return inference_engines
 
+    @classmethod
+    def get_engine_for_model(cls, version):
+        engine = IrEngine.build(model_bin=version['bin_model_path'],
+                                model_xml=version['xml_model_path'],
+                                mapping_config=version['mapping_config_path'])
+        return engine
 
-    @staticmethod
-    def get_versions_path(model_directory):
-        if model_directory[-1] != os.sep:
-            model_directory += os.sep
-        return glob.glob("{}/*/".format(model_directory))
+    #   Subclass interface
+    @classmethod
+    @abstractmethod
+    def get_versions_path(cls, model_directory):
+        pass
 
-    @staticmethod
-    def get_version_number(version_directory):
-        version_number = re.search('/\d+/$', version_directory).group(0)[1:-1]
-        return int(version_number)
+    @classmethod
+    @abstractmethod
+    def get_full_path_to_model(cls, specific_version_model_path):
+        pass
 
-    @staticmethod
-    def get_full_path_to_model(specific_version_model_path):
-        bin_path = glob.glob("{}*.bin".format(specific_version_model_path))
-        xml_path = glob.glob("{}*.xml".format(specific_version_model_path))
-        if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
-            return StorageType.LOCAL, xml_path[0], bin_path[0]
-        return None, None, None
+    @classmethod
+    @abstractmethod
+    def _get_path_to_mapping_config(cls, specific_version_model_path):
+        pass
