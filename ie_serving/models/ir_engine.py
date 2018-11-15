@@ -14,11 +14,10 @@
 # limitations under the License.
 #
 
+
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
-import glob
 import json
-from os.path import dirname
 from ie_serving.logger import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +25,8 @@ logger = get_logger(__name__)
 
 class IrEngine():
 
-    def __init__(self, model_xml, model_bin, exec_net, inputs: dict,
+    def __init__(self, model_xml, model_bin, mapping_config, exec_net,
+                 inputs: dict,
                  outputs: list):
         self.model_xml = model_xml
         self.model_bin = model_bin
@@ -34,12 +34,12 @@ class IrEngine():
         self.input_tensor_names = list(inputs.keys())
         self.input_tensors = inputs
         self.output_tensor_names = outputs
-        self.model_keys = self.set_keys()
+        self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod
-    def build(cls, model_xml, model_bin):
+    def build(cls, model_xml, model_bin, mapping_config):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
@@ -49,21 +49,20 @@ class IrEngine():
         outputs = net.outputs
         exec_net = plugin.load(network=net, num_requests=batch_size)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
+                        mapping_config=mapping_config,
                         exec_net=exec_net, inputs=inputs, outputs=outputs)
         return ir_engine
 
-    def _get_mapping_config_file_if_exists(self):
-        parent_dir = dirname(self.model_bin)
-        config_path = glob.glob("{}/mapping_config.json".format(parent_dir))
-        if len(config_path) == 1:
+    def _get_mapping_data_if_exists(self, mapping_config):
+        if mapping_config is not None:
             try:
-                with open(config_path[0], 'r') as f:
-                    data = json.load(f)
-                return data
+                with open(mapping_config, 'r') as f:
+                    mapping_data = json.load(f)
+                return mapping_data
             except Exception as e:
-                logger.error("Error occurred while reading mapping_config in "
-                             "path {}. Message error {}"
-                             .format(config_path, e))
+                logger.error("Error occurred while reading mapping_config "
+                             "in path {}. Message error {}"
+                             .format(mapping_config, e))
         return None
 
     def _return_proper_key_value(self, data: dict, which_way: str,
@@ -72,8 +71,9 @@ class IrEngine():
         for input_tensor in tensors:
             if which_way in data:
                 if input_tensor in data[which_way]:
-                    temp_keys.update({data[which_way][input_tensor]:
-                                     input_tensor})
+                    temp_keys.update({
+                        data[which_way][input_tensor]: input_tensor
+                    })
                 else:
                     temp_keys.update({input_tensor: input_tensor})
             else:
@@ -89,22 +89,19 @@ class IrEngine():
         return keys_names
 
     def _set_names_in_config_as_keys(self, data: dict):
-        keys_names = {'inputs': self.
-                      _return_proper_key_value(data=data, which_way='inputs',
-                                               tensors=self.
-                                               input_tensor_names),
-                      'outputs': self.
-                      _return_proper_key_value(data=data, which_way='outputs',
-                                               tensors=self.
-                                               output_tensor_names)}
+        keys_names = {'inputs': self._return_proper_key_value(
+            data=data, which_way='inputs', tensors=self.input_tensor_names),
+            'outputs': self._return_proper_key_value(
+                data=data, which_way='outputs',
+                tensors=self.output_tensor_names)}
         return keys_names
 
-    def set_keys(self):
-        config_file = self._get_mapping_config_file_if_exists()
-        if config_file is None:
+    def set_keys(self, mapping_config):
+        mapping_data = self._get_mapping_data_if_exists(mapping_config)
+        if mapping_data is None:
             return self._set_tensor_names_as_keys()
         else:
-            return self._set_names_in_config_as_keys(config_file)
+            return self._set_names_in_config_as_keys(mapping_data)
 
     def infer(self, data: dict):
         results = self.exec_net.infer(inputs=data)

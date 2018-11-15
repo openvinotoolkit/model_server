@@ -4,7 +4,7 @@
 OpenVINO Model server can be quite easily deployed in Kubernetes which can let scale the inference service horizontally
 and ensures high availability.
 
-Below is described a simple example which is using NFS as the storage for the models.
+Below are described simple examples which are using NFS and GCS (Google Cloud Storage) as the storage for the models.
 
 ## NFS server deployment
 
@@ -53,7 +53,7 @@ While you have the models available on your laptop just use the command like bel
 kubectl cp /tmp/test_models/saved_models/ [nfs pod name]:/exports/
 ```
 
-## Deploying OpenVINO Model server
+## Deploying OpenVINO Model server with NFS storage
 
 You need to build the OpenVINO Model Server image like described on 
 [docker_container.md#building-the-image](../docs/docker_container.md#building-the-image) and push it to a docker 
@@ -90,6 +90,23 @@ kubectl logs nfs-openvino-j9zkr
 2018-09-05 08:11:52,655 - ie_serving.models.model - INFO - Default version for resnet model is 2
 2018-09-05 08:11:52,662 - ie_serving.server.start - INFO - Server listens on port 80 and will be serving models: ['resnet']
 ```
+
+## Deploying OpenVINO Model server with GCS storage
+
+Deployment process with GCS storage is quite similar to the previous one. The same folders structure should be created
+in google storage with subfolders representing model versions. Below are example deployment steps which rely on a K8S
+secret `gcp-credentials` including key.json file content with GCP authorization key.
+
+```bash
+kubectl apply -f openvino_model_server_gs_rc.yaml
+kubectl apply -f openvino_model_server_service.yaml
+```
+
+Note that in GKE kubernetes cluster the credentials related tags can be dropped as the pods can be authorized natively
+using GKE cluster nodes authorization features as long as the models bucket is in the same GCP project with the cluster.
+
+Learn [more about GCP authentication](https://cloud.google.com/docs/authentication/production).
+
 
 ## Testing
 

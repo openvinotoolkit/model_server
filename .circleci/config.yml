@@ -52,7 +52,9 @@ jobs:
       - run:
           name: Build docker image
           command: wget -c $OPENVINO_DOWNLOAD_LINK && make docker_build_bin
-
+      - run:
+          name: Get Google Cloud credentials
+          command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
       - run:
           name: Start functional tests
           command: pyenv global 3.5.2 && make test
@@ -65,7 +67,9 @@ jobs:
       - run:
           name: Build docker image
           command: make docker_build_src
-
+      - run:
+          name: Get Google Cloud credentials
+          command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
       - run:
           name: Start functional tests
           command: pyenv global 3.5.2 && make test

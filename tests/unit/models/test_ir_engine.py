@@ -23,12 +23,14 @@ import pytest
 def test_init_class():
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
     inputs = {input_key: []}
     outputs = ['output']
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
-                      exec_net=exec_net, inputs=inputs, outputs=outputs)
+                      mapping_config=mapping_config, exec_net=exec_net,
+                      inputs=inputs, outputs=outputs)
     assert model_xml == engine.model_xml
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net
@@ -46,8 +48,10 @@ def test_build_device_cpu(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    mapping_config = 'mapping_config.json'
     with pytest.raises(FileNotFoundError):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml)
+        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+                       mapping_config=mapping_config)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -59,15 +63,17 @@ def test_build_device_other(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    mapping_config = 'mapping_config.json'
 
     with pytest.raises(FileNotFoundError):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml)
+        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+                       mapping_config=mapping_config)
         assert not cpu_extension_mock.assert_called_once_with()
 
 
 def test_mapping_config_not_exists(get_fake_ir_engine):
     engine = get_fake_ir_engine
-    output = engine._get_mapping_config_file_if_exists()
+    output = engine._get_mapping_data_if_exists('mapping_config.json')
     assert None is output
 
 
@@ -79,7 +85,7 @@ def test_mapping_config_exists_ok(mocker, get_fake_ir_engine):
     glob_glob_mocker = mocker.patch('glob.glob')
     glob_glob_mocker.return_value = ['fake_path']
     engine = get_fake_ir_engine
-    output = engine._get_mapping_config_file_if_exists()
+    output = engine._get_mapping_data_if_exists('mapping_config.json')
     assert test_dict == output
 
 
@@ -87,7 +93,7 @@ def test_mapping_config_exists_cannot_open_file(mocker, get_fake_ir_engine):
     glob_glob_mocker = mocker.patch('glob.glob')
     glob_glob_mocker.return_value = ['fake_path']
     engine = get_fake_ir_engine
-    output = engine._get_mapping_config_file_if_exists()
+    output = engine._get_mapping_data_if_exists('mapping_config.json')
     assert None is output
 
 
@@ -100,7 +106,7 @@ def test_mapping_config_exists_cannot_load_json(mocker, get_fake_ir_engine):
     glob_glob_mocker = mocker.patch('glob.glob')
     glob_glob_mocker.return_value = ['fake_path']
     engine = get_fake_ir_engine
-    output = engine._get_mapping_config_file_if_exists()
+    output = engine._get_mapping_data_if_exists('mapping_config.json')
     assert None is output
 
 
@@ -147,7 +153,7 @@ def test_set_keys(get_fake_ir_engine, mocker):
     engine = get_fake_ir_engine
     get_config_file_mocker = mocker.patch('ie_serving.models.'
                                           'ir_engine.IrEngine.'
-                                          '_get_mapping_config_file_if_exists')
+                                          '_get_mapping_data_if_exists')
     get_config_file_mocker.side_effect = [None, 'something']
 
     tensor_names_as_keys_mocker = mocker.patch('ie_serving.models.'
@@ -160,10 +166,10 @@ def test_set_keys(get_fake_ir_engine, mocker):
                                            '_set_names_in_config_as_keys')
     keys_from_config_mocker.return_value = 'config'
 
-    output = engine.set_keys()
+    output = engine.set_keys('mapping_config.json')
     tensor_names_as_keys_mocker.assert_called_once_with()
     assert 'tensor_name' == output
 
-    output = engine.set_keys()
+    output = engine.set_keys('mapping_config.json')
     keys_from_config_mocker.assert_called_once_with('something')
     assert 'config' == output

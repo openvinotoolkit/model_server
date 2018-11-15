@@ -17,8 +17,9 @@
 import argparse
 import json
 import sys
+
+from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
-from ie_serving.models.model import Model
 from ie_serving.logger import get_logger, LOGGER_LVL
 import os
 
@@ -63,15 +64,16 @@ def parse_config(args):
     check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
-        model = Model.build(model_name=config['config']['name'],
-                            model_directory=config['config']['base_path'])
+        model = ModelBuilder.build(model_name=config['config']['name'],
+                                   model_directory=config['config'][
+                                       'base_path'])
         models[config['config']['name']] = model
     start_server(models=models, max_workers=1, port=args.port)
 
 
 def parse_one_model(args):
-    model = Model.build(model_name=args.model_name,
-                        model_directory=args.model_path)
+    model = ModelBuilder.build(model_name=args.model_name,
+                               model_directory=args.model_path)
     start_server(models={args.model_name: model},
                  max_workers=1, port=args.port)
 
