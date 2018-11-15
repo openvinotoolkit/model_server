@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from ie_serving.models.model import Model
+from ie_serving.models.local_model import LocalModel
 
 
 def test_model_init():
-    new_model = Model(model_name="test", model_directory='fake_path',
-                      available_versions=[1, 2, 3], engines={})
+    new_model = LocalModel(model_name="test", model_directory='fake_path',
+                           available_versions=[1, 2, 3], engines={})
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
@@ -30,11 +29,16 @@ def test_get_engines_for_model(mocker):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
                                   'build')
     engines_mocker.side_effect = ['modelv2', 'modelv4']
-    available_versions = [{'xml_model_path': 'modelv2.xml',
-                           'bin_model_path': 'modelv2.bin', 'version': 2},
-                          {'xml_model_path': 'modelv4.xml', 'bin_model_path':
-                           'modelv4.bin', 'version': 4}]
-    output = Model.get_engines_for_model(versions=available_versions)
+    available_versions = [{'xml_file': 'modelv2.xml',
+                           'bin_file': 'modelv2.bin',
+                           'mapping_config': 'mapping_config.json',
+                           'version_number': 2},
+                          {'xml_file': 'modelv4.xml',
+                           'bin_file': 'modelv4.bin',
+                           'mapping_config': 'mapping_config.json',
+                           'version_number': 4}]
+    output = LocalModel.get_engines_for_model(
+        versions_attributes=available_versions)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[4]
@@ -44,13 +48,20 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
                                   'build')
     engines_mocker.side_effect = ['modelv2', 'modelv4', Exception("test")]
-    available_versions = [{'xml_model_path': 'modelv2.xml',
-                           'bin_model_path': 'modelv2.bin', 'version': 2},
-                          {'xml_model_path': 'modelv4.xml', 'bin_model_path':
-                              'modelv4.bin', 'version': 3},
-                          {'xml_model_path': 'modelv4.xml', 'bin_model_path':
-                              'modelv4.bin', 'version': 4}]
-    output = Model.get_engines_for_model(versions=available_versions)
+    available_versions = [{'xml_file': 'modelv2.xml',
+                           'bin_file': 'modelv2.bin',
+                           'mapping_config': 'mapping_config.json',
+                           'version_number': 2},
+                          {'xml_file': 'modelv4.xml',
+                           'bin_file': 'modelv4.bin',
+                           'mapping_config': 'mapping_config.json',
+                           'version_number': 3},
+                          {'xml_file': 'modelv4.xml',
+                           'bin_file': 'modelv4.bin',
+                           'mapping_config': 'mapping_config.json',
+                           'version_number': 4}]
+    output = LocalModel.get_engines_for_model(
+        versions_attributes=available_versions)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[3]
