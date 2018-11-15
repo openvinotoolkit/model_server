@@ -74,6 +74,16 @@ class TestMuiltModelInference():
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        for x in range(0, 10):
+            output = infer(imgs_v1_224, slice_number=x,
+                           input_tensor='input', grpc_stub=stub,
+                           model_spec_name='resnet_gs',
+                           model_spec_version=None,
+                           output_tensors=[out_name])
+            print("output shape", output[out_name].shape)
+            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
         imgs_v3_331 = np.array(input_data_downloader_v3_331)
         print("Starting inference using pnasnet_large model")
         out_name = 'final_layer/predictions'

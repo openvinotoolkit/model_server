@@ -17,6 +17,12 @@
         "name": "resnet",
         "base_path": "/opt/ml/resnet"
       }
+    },
+    {
+      "config": {
+        "name": "resnet_gs",
+        "base_path": "gs://inference-eu/ml-test"
+      }
     }
   ]
 }

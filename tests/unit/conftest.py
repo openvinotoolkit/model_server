@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+from ie_serving.models.local_model import LocalModel
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.tensorflow_serving_api import predict_pb2
 from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
 from ie_serving.server.service import PredictionServiceServicer
-from ie_serving.models.model import Model
 from ie_serving.models.ir_engine import IrEngine
 from tensorflow.contrib.util import make_tensor_proto
 import grpc_testing
@@ -33,15 +32,18 @@ PREDICT_SERVICE = prediction_service_pb2.\
 def get_fake_model():
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
     inputs = {input_key: [1, 1]}
     outputs = ['test_output']
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
-                      exec_net=exec_net, inputs=inputs, outputs=outputs)
+                      mapping_config=mapping_config, exec_net=exec_net,
+                      inputs=inputs, outputs=outputs)
     new_engines = {1: engine, 2: engine, 3: engine}
-    new_model = Model(model_name="test", model_directory='fake_path/model/',
-                      available_versions=[1, 2, 3], engines=new_engines)
+    new_model = LocalModel(model_name="test",
+                           model_directory='fake_path/model/',
+                           available_versions=[1, 2, 3], engines=new_engines)
     return new_model
 
 
@@ -49,12 +51,14 @@ def get_fake_model():
 def get_fake_ir_engine():
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
     inputs = {input_key: []}
     outputs = ['output']
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
-                      exec_net=exec_net, inputs=inputs, outputs=outputs)
+                      mapping_config=mapping_config, exec_net=exec_net,
+                      inputs=inputs, outputs=outputs)
 
     return engine
 

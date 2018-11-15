@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import glob
-import os
-from ie_serving.models.ir_engine import IrEngine
 from ie_serving.logger import get_logger
+from abc import ABC, abstractmethod
+import re
 
 logger = get_logger(__name__)
 
 
-class Model():
+class Model(ABC):
 
     def __init__(self, model_name: str, model_directory: str,
                  available_versions: list, engines: dict):
@@ -40,64 +38,77 @@ class Model():
     @classmethod
     def build(cls, model_name: str, model_directory: str):
         logger.info("Server start loading model: {}".format(model_name))
-        versions = cls.get_all_available_versions(model_directory)
-        engines = cls.get_engines_for_model(versions=versions)
-        available_versions = [version['version'] for version in versions]
+        versions_attributes = cls.get_versions_attributes(model_directory)
+        engines = cls.get_engines_for_model(versions_attributes)
+        available_versions = [version_attributes['version_number'] for
+                              version_attributes in versions_attributes]
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines)
         return model
 
-    @staticmethod
-    def get_absolute_path_to_model(specific_version_model_path):
-        bin_path = glob.glob("{}/*.bin".format(specific_version_model_path))
-        xml_path = glob.glob("{}/*.xml".format(specific_version_model_path))
-        if xml_path[0].replace('xml', '') == bin_path[0].replace('bin', ''):
-            return xml_path[0], bin_path[0]
-        return None, None
+    @classmethod
+    def get_versions_attributes(cls, model_directory):
+        versions = cls.get_versions(model_directory)
+        logger.info(versions)
+        versions_attributes = []
+        for version in versions:
+            version_number = cls.get_version_number(version=version)
+            if version_number != 0:
+                xml_file, bin_file, mapping_config = \
+                    cls.get_version_files(version)
+                if xml_file is not None and bin_file is not None:
+                    version_attributes = {'xml_file': xml_file,
+                                          'bin_file': bin_file,
+                                          'mapping_config': mapping_config,
+                                          'version_number': version_number,
+                                          }
+                    versions_attributes.append(version_attributes)
+        return versions_attributes
 
     @staticmethod
-    def get_model_version_number(version_path):
-        folder_name = os.path.basename(os.path.normpath(version_path))
-        try:
-            number_version = int(folder_name)
-            return number_version
-        except ValueError:
-            return 0
+    def get_version_number(version):
+        version_number = re.search('/\d+/$', version).group(0)[1:-1]
+        return int(version_number)
 
-    @staticmethod
-    def get_all_available_versions(model_directory):
-        versions_path = glob.glob("{}/*/".format(model_directory))
-        versions = []
-        for version in versions_path:
-            number = Model.get_model_version_number(version_path=version)
-            if number != 0:
-                model_xml, model_bin = Model.get_absolute_path_to_model(
-                    os.path.join(model_directory, version))
-                if model_xml is not None and model_bin is not None:
-                    model_info = {'xml_model_path': model_xml,
-                                  'bin_model_path': model_bin,
-                                  'version': number}
-                    versions.append(model_info)
-        return versions
-
-    @staticmethod
-    def get_engines_for_model(versions):
+    @classmethod
+    def get_engines_for_model(cls, versions_attributes):
         inference_engines = {}
         failures = []
-        for version in versions:
+        for version_attributes in versions_attributes:
             try:
                 logger.info("Creating inference engine object "
-                            "for version: {}".format(version['version']))
-                inference_engines[version['version']] = IrEngine.build(
-                    model_bin=version['bin_model_path'],
-                    model_xml=version['xml_model_path'])
+                            "for version: {}".format(
+                             version_attributes['version_number']))
+                inference_engines[version_attributes['version_number']] = \
+                    cls.get_engine_for_version(version_attributes)
             except Exception as e:
                 logger.error("Error occurred while loading model "
-                             "version: {}".format(version))
+                             "version: {}".format(version_attributes))
                 logger.error("Content error: {}".format(str(e).rstrip()))
-                failures.append(version)
+                failures.append(version_attributes)
 
         for failure in failures:
-            versions.remove(failure)
+            versions_attributes.remove(failure)
 
         return inference_engines
+
+    #   Subclass interface
+    @classmethod
+    @abstractmethod
+    def get_versions(cls, model_directory):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_version_files(cls, version):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def _get_mapping_config(cls, version):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_engine_for_version(cls, version_attributes):
+        pass

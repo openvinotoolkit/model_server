@@ -15,11 +15,11 @@ An example file looks like: `l_openvino_toolkit_fpga_p_2018.2.300_online.tgz`.
 From the root of the git repository, execute the command:
 
 ```bash
-make docker_build_bin
+make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
-make docker_build_src
+make docker_build_src http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 
 ## Preparing the Models
@@ -122,6 +122,23 @@ optional arguments:
   --port PORT           server port
 
 ```
+
+The model path could be local on docker container like mounted during startup or it could be Googe Cloud Storage path 
+in a format `gs://<bucket>/model_path`. In this can it will be required to pass to the docker contaner GCS credentials
+unless GKE kubernetes cluster is used which handled the authorization automatically.
+
+Below is an example presenting how to start docker container with a support for GCS paths to the models. The variable 
+`GOOGLE_APPLICATION_CREDENTIALS` contain a path to GCP authentication key. 
+
+```bash
+docker run --rm -d  -p 9001:9001 ie-serving-py:latest \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}/${GOOGLE_APPLICATION_CREDENTIALS}
+/ie-serving-py/start_server.sh ie_serving model --model_path gs://bucket/model_path --model_name my_model --port 9001
+```
+
+Learn [more about GCP authentication](https://cloud.google.com/docs/authentication/production).
+
 
 
 If you need to expose multiple models, you need to create a model server configuration file, which is explained in the following section.
