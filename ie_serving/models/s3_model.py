@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import boto3
-from boto3.s3.transfer import S3Transfer
 from ie_serving.config import MAPPING_CONFIG_FILENAME
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
@@ -27,10 +26,15 @@ logger = get_logger(__name__)
 
 
 class S3Model(Model):
+    endpoint_url = os.getenv('S3_ENDPOINT_URL')
+    access_key = os.getenv('S3_ACCESS_KEY')
+    secret_key = os.getenv('S3_SECRET_KEY')
 
-    @staticmethod
-    def s3_list_content(path):
-        s3_resource = boto3.resource('s3')
+    @classmethod
+    def s3_list_content(cls, path):
+        s3_resource = boto3.resource('s3', endpoint_url=cls.endpoint_url,
+                                     aws_access_key_id=cls.access_key,
+                                     aws_secret_access_key=cls.secret_key)
         parsed_path = urlparse(path)
         my_bucket = s3_resource.Bucket(parsed_path.netloc)
         content_list = []
@@ -38,9 +42,11 @@ class S3Model(Model):
             content_list.append(object.key)
         return content_list
 
-    @staticmethod
-    def s3_download_file(path):
-        s3_client = boto3.client('s3')
+    @classmethod
+    def s3_download_file(cls, path):
+        s3_client = boto3.client('s3', endpoint_url=cls.endpoint_url,
+                                 aws_access_key_id=cls.access_key,
+                                 aws_secret_access_key=cls.secret_key)
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         file_path = parsed_path.path[1:]

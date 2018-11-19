@@ -293,6 +293,9 @@ def start_server_multi_model(request, get_image, get_test_dir):
     CYAN_COLOR = '\033[36m'
     END_COLOR = '\033[0m'
     GC_CREDENTIALS_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')
+    S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
+    S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
     cmd = ['docker',
            'run',
            '--rm',
@@ -303,6 +306,9 @@ def start_server_multi_model(request, get_image, get_test_dir):
            '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH,  # noqa
            '-e', 'GOOGLE_APPLICATION_CREDENTIALS=' +
            '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH,  # noqa
+           '-e', 'S3_ENDPOINT_URL=' + S3_ENDPOINT_URL,  # noqa
+           '-e', 'S3_ACCESS_KEY=' + S3_ACCESS_KEY,  # noqa
+           '-e', 'S3_SECRET_KEY=' + S3_SECRET_KEY,  # noqa
            '-p', '9001:9001',
            get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
            'config',
