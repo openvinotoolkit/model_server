@@ -61,7 +61,7 @@ class GSModel(Model):
             model_directory += os.sep
         parsed_model_dir = urlparse(model_directory)
         content_list = cls.gs_list_content(model_directory)
-        pattern = re.compile(parsed_model_dir.path[1:-1] + '/\d+/$')
+        pattern = re.compile(parsed_model_dir.path[1:-1] + r'/\d+/$')
         versions = list(filter(pattern.match, content_list))
         return [
             urlunparse((parsed_model_dir.scheme, parsed_model_dir.netloc,
@@ -74,9 +74,9 @@ class GSModel(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.gs_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + '/\w+\.xml$')
+            parsed_version_path.path[1:-1] + r'/\w+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + '/\w+\.bin$')
+            parsed_version_path.path[1:-1] + r'/\w+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if xml_file[0].replace('xml', '') == \

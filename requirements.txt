@@ -5,3 +5,4 @@ numpy==1.14.5
 protobuf==3.6.1
 tensorflow==1.10.0
 google-cloud-storage==1.13.0
+boto3==1.9.34

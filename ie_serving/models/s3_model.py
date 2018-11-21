@@ -26,15 +26,9 @@ logger = get_logger(__name__)
 
 
 class S3Model(Model):
-    endpoint_url = os.getenv('S3_ENDPOINT_URL')
-    access_key = os.getenv('S3_ACCESS_KEY')
-    secret_key = os.getenv('S3_SECRET_KEY')
-
     @classmethod
     def s3_list_content(cls, path):
-        s3_resource = boto3.resource('s3', endpoint_url=cls.endpoint_url,
-                                     aws_access_key_id=cls.access_key,
-                                     aws_secret_access_key=cls.secret_key)
+        s3_resource = boto3.resource('s3')
         parsed_path = urlparse(path)
         my_bucket = s3_resource.Bucket(parsed_path.netloc)
         content_list = []
@@ -44,9 +38,9 @@ class S3Model(Model):
 
     @classmethod
     def s3_download_file(cls, path):
-        s3_client = boto3.client('s3', endpoint_url=cls.endpoint_url,
-                                 aws_access_key_id=cls.access_key,
-                                 aws_secret_access_key=cls.secret_key)
+        if path is None:
+            return None
+        s3_client = boto3.client('s3')
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         file_path = parsed_path.path[1:]
@@ -61,7 +55,7 @@ class S3Model(Model):
             model_directory += os.sep
         parsed_model_dir = urlparse(model_directory)
         content_list = cls.s3_list_content(model_directory)
-        pattern = re.compile(parsed_model_dir.path[1:-1] + '/\d+/$')
+        pattern = re.compile(parsed_model_dir.path[1:-1] + r'/\d+/$')
         versions = list(filter(pattern.match, content_list))
         return [
             urlunparse((parsed_model_dir.scheme, parsed_model_dir.netloc,
@@ -74,9 +68,9 @@ class S3Model(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.s3_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + '/\w+\.xml$')
+            parsed_version_path.path[1:-1] + r'/\w+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + '/\w+\.bin$')
+            parsed_version_path.path[1:-1] + r'/\w+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if xml_file[0].replace('xml', '') == \
