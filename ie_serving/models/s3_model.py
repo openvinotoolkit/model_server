@@ -85,7 +85,7 @@ class S3Model(Model):
                  parsed_version_path.query, parsed_version_path.fragment))
             mapping_config = cls._get_mapping_config(version)
             return xml_file[0], bin_file[0], mapping_config
-        return None, None
+        return None, None, None
 
     @classmethod
     def _get_mapping_config(cls, version):
