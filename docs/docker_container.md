@@ -124,7 +124,8 @@ optional arguments:
 ```
 
 The model path could be local on docker container like mounted during startup or it could be Googe Cloud Storage path 
-in a format `gs://<bucket>/model_path`. In this can it will be required to pass to the docker contaner GCS credentials
+in a format `gs://<bucket>/model_path`. In this can it will be required to 
+pass to the docker container GCS credentials
 unless GKE kubernetes cluster is used which handled the authorization automatically.
 
 Below is an example presenting how to start docker container with a support for GCS paths to the models. The variable 
@@ -133,12 +134,31 @@ Below is an example presenting how to start docker container with a support for 
 ```bash
 docker run --rm -d  -p 9001:9001 ie-serving-py:latest \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
--v ${GOOGLE_APPLICATION_CREDENTIALS}/${GOOGLE_APPLICATION_CREDENTIALS}
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}
 /ie-serving-py/start_server.sh ie_serving model --model_path gs://bucket/model_path --model_name my_model --port 9001
 ```
 
 Learn [more about GCP authentication](https://cloud.google.com/docs/authentication/production).
 
+
+It is also possible to provide paths to models located in S3 compatible storage
+in a format `s3://<bucket>/model_path`. In this case it is necessary to 
+provide credentials to bucket by setting environmental variables
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. You can also set 
+`AWS_REGION` variable, although it's not always required. 
+If you are using custom storage server compatible with S3, you must set `S3_ENDPOINT` 
+environmental variable in a HOST:PORT format. In an example below you can see 
+how to start docker container serving single model located in S3.
+
+```bash
+docker run --rm -d  -p 9001:9001 ie-serving-py:latest \
+-e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
+-e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
+-e AWS_REGION=“${AWS_REGION}”  \
+-e S3_ENDPOINT=“${S3_ENDPOINT}”  \
+/ie-serving-py/start_server.sh ie_serving model --model_path 
+s3://bucket/model_path --model_name my_model --port 9001
+```
 
 
 If you need to expose multiple models, you need to create a model server configuration file, which is explained in the following section.
@@ -166,7 +186,13 @@ It uses `json` format as shown in the example below:
       {
          "config":{
             "name":"model_name3",
-            "base_path":"/opt/ml/models/model3"
+            "base_path":"gs://bucket/models/model3"
+         }
+      },
+      {
+         "config":{
+             "name":"model_name4",
+             "base_path":"s3://bucket/models/model4"
          }
       }
    ]
@@ -176,10 +202,20 @@ It uses `json` format as shown in the example below:
 It has a mandatory array `model_config_list`, which includes a collection of `config` objects for each served model. 
 Each config object includes values for the model `name` and the `base_path` attributes.
 
-When the config file is present, the docker container can be started in a similar manner as a single model:
+When the config file is present, the docker container can be started in a 
+similar manner as a single model. Keep in mind that models with cloud 
+storage path require specific environmental variables set. Configuration 
+file above contains both GCS and S3 paths so starting docker container 
+supporting all those models can be done with:
 
 ```bash
 docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}/${GOOGLE_APPLICATION_CREDENTIALS}  \
+-e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
+-e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
+-e AWS_REGION=“${AWS_REGION}”  \
+-e S3_ENDPOINT=“${S3_ENDPOINT}”  \
 /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
 ```
 

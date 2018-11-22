@@ -108,6 +108,18 @@ using GKE cluster nodes authorization features as long as the models bucket is i
 Learn [more about GCP authentication](https://cloud.google.com/docs/authentication/production).
 
 
+## Deploying OpenVINO Model server with S3 storage
+
+Deployment process with S3 storage requires the same directories structure 
+as in previous cases. Example deployment steps are almost identical to those 
+from previous cases:
+
+```bash
+kubectl apply -f openvino_model_server_s3_rc.yaml
+kubectl apply -f openvino_model_server_service.yaml
+```
+
+
 ## Testing
 
 When your OpenVINO Model Server is up and running you can start using it. A simple test would be by submitting 
