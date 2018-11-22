@@ -28,7 +28,8 @@ logger = get_logger(__name__)
 class S3Model(Model):
     @classmethod
     def s3_list_content(cls, path):
-        s3_resource = boto3.resource('s3')
+        s3_endpoint = os.getenv('S3_ENDPOINT')
+        s3_resource = boto3.resource('s3', endpoint_url=s3_endpoint)
         parsed_path = urlparse(path)
         my_bucket = s3_resource.Bucket(parsed_path.netloc)
         content_list = []
