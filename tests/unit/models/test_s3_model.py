@@ -53,3 +53,27 @@ def test_get_versions_files(mocker):
     assert xml == 's3://bucket/model/3/model.xml' and \
         bin == 's3://bucket/model/3/model.bin' and \
         mapping is None
+
+
+def test_get_mapping_config(mocker):
+    list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
+                                           's3_list_content')
+    list_content_mocker.return_value = ['model/3/doc.doc',
+                                        'model/3/mapping_config.json',
+                                        'model/3/model.xml',
+                                        'model/3/model.bin']
+
+    mapping = S3Model._get_mapping_config('s3://bucket/model/3/')
+    assert mapping == 's3://bucket/model/3/mapping_config.json'
+
+
+def test_not_mapping_config(mocker):
+    list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
+                                       's3_list_content')
+    list_content_mocker.return_value = ['model/3/doc.doc',
+                                        'model/3/config.json',
+                                        'model/3/model.xml',
+                                        'model/3/model.bin']
+
+    mapping = S3Model._get_mapping_config('s3://bucket/model/3/')
+    assert mapping is None

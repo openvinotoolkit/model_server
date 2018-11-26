@@ -63,13 +63,14 @@ class GSModel(Model):
             model_directory += os.sep
         parsed_model_dir = urlparse(model_directory)
         content_list = cls.gs_list_content(model_directory)
-        pattern = re.compile(parsed_model_dir.path[1:-1] + r'/\d+/$')
-        versions = list(filter(pattern.match, content_list))
-        return [
-            urlunparse((parsed_model_dir.scheme, parsed_model_dir.netloc,
-                        version, parsed_model_dir.params,
-                        parsed_model_dir.query, parsed_model_dir.fragment))
-            for version in versions]
+        pattern = re.compile('(' + parsed_model_dir.path[1:-1] + '/\d+/).*$')
+        versions = set([m.group(1) for m in (pattern.match(element) for
+                                             element in content_list) if m])
+
+        return [urlunparse((parsed_model_dir.scheme, parsed_model_dir.netloc,
+                            version, parsed_model_dir.params,
+                            parsed_model_dir.query, parsed_model_dir.fragment))
+                for version in versions]
 
     @classmethod
     def get_version_files(cls, version):

@@ -53,3 +53,27 @@ def test_get_versions_files(mocker):
     assert xml == 'gs://bucket/model/3/model.xml' and \
         bin == 'gs://bucket/model/3/model.bin' and \
         mapping is None
+
+
+def test_get_mapping_config(mocker):
+    list_content_mocker = mocker.patch('ie_serving.models.gs_model.GSModel.'
+                                           'gs_list_content')
+    list_content_mocker.return_value = ['model/3/doc.doc',
+                                        'model/3/mapping_config.json',
+                                        'model/3/model.xml',
+                                        'model/3/model.bin']
+
+    mapping = GSModel._get_mapping_config('gs://bucket/model/3/')
+    assert mapping == 'gs://bucket/model/3/mapping_config.json'
+
+
+def test_not_get_mapping_config(mocker):
+    list_content_mocker = mocker.patch('ie_serving.models.gs_model.GSModel.'
+                                       'gs_list_content')
+    list_content_mocker.return_value = ['model/3/doc.doc',
+                                        'model/3/config.json',
+                                        'model/3/model.xml',
+                                        'model/3/model.bin']
+
+    mapping = GSModel._get_mapping_config('gs://bucket/model/3/')
+    assert mapping is None
