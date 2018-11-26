@@ -25,6 +25,18 @@ def test_model_init():
     assert new_model.engines == {}
 
 
+def test_get_versions_files(mocker):
+    glob_mocker = mocker.patch('glob.glob')
+    glob_mocker.side_effect = [['/data/model/3/model.bin'],
+                               ['/data/model/3/model.xml'],
+                               []]
+
+    xml, bin, mapping = LocalModel.get_version_files('/data/model/3/')
+    assert xml == '/data/model/3/model.xml' and \
+        bin == '/data/model/3/model.bin' and \
+        mapping is None
+
+
 def test_get_engines_for_model(mocker):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
                                   'build')

@@ -57,7 +57,7 @@ def test_get_versions_files(mocker):
 
 def test_get_mapping_config(mocker):
     list_content_mocker = mocker.patch('ie_serving.models.gs_model.GSModel.'
-                                           'gs_list_content')
+                                       'gs_list_content')
     list_content_mocker.return_value = ['model/3/doc.doc',
                                         'model/3/mapping_config.json',
                                         'model/3/model.xml',

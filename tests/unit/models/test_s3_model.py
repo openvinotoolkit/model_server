@@ -57,7 +57,7 @@ def test_get_versions_files(mocker):
 
 def test_get_mapping_config(mocker):
     list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
-                                           's3_list_content')
+                                       's3_list_content')
     list_content_mocker.return_value = ['model/3/doc.doc',
                                         'model/3/mapping_config.json',
                                         'model/3/model.xml',
