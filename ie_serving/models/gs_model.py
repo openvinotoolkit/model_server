@@ -30,6 +30,8 @@ class GSModel(Model):
 
     @staticmethod
     def gs_list_content(path):
+        if path is None:
+            return None
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         model_directory = parsed_path.path[1:]

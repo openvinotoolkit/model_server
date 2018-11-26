@@ -28,6 +28,8 @@ logger = get_logger(__name__)
 class S3Model(Model):
     @classmethod
     def s3_list_content(cls, path):
+        if path is None:
+            return None
         s3_endpoint = os.getenv('S3_ENDPOINT')
         s3_resource = boto3.resource('s3', endpoint_url=s3_endpoint)
         parsed_path = urlparse(path)
@@ -41,7 +43,8 @@ class S3Model(Model):
     def s3_download_file(cls, path):
         if path is None:
             return None
-        s3_client = boto3.client('s3')
+        s3_endpoint = os.getenv('S3_ENDPOINT')
+        s3_client = boto3.client('s3', endpoint_url=s3_endpoint)
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         file_path = parsed_path.path[1:]
