@@ -124,9 +124,10 @@ optional arguments:
 ```
 
 The model path could be local on docker container like mounted during startup or it could be Googe Cloud Storage path 
-in a format `gs://<bucket>/model_path`. In this can it will be required to 
-pass to the docker container GCS credentials
-unless GKE kubernetes cluster is used which handled the authorization automatically.
+in a format `gs://<bucket>/model_path`. In this case it will be required to 
+pass GCS credentials to the docker container,
+unless GKE kubernetes cluster, which handled the authorization automatically,
+ is used.
 
 Below is an example presenting how to start docker container with a support for GCS paths to the models. The variable 
 `GOOGLE_APPLICATION_CREDENTIALS` contain a path to GCP authentication key. 

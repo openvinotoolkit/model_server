@@ -28,8 +28,6 @@ logger = get_logger(__name__)
 class S3Model(Model):
     @classmethod
     def s3_list_content(cls, path):
-        if path is None:
-            return None
         s3_endpoint = os.getenv('S3_ENDPOINT')
         s3_resource = boto3.resource('s3', endpoint_url=s3_endpoint)
         parsed_path = urlparse(path)
@@ -73,9 +71,9 @@ class S3Model(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.s3_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/\w+\.xml$')
+            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/\w+\.bin$')
+            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if xml_file[0].replace('xml', '') == \

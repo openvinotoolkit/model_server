@@ -13,46 +13,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import pytest
+
 from ie_serving.models.s3_model import S3Model
 
-
-def test_get_versions(mocker):
+@pytest.mark.parametrize("content_list, versions", [
+    (['model/3/', 'model/3.txt', 'model/sub/2/', 'model/one'],
+     ['s3://bucket/model/3/']),
+    (['model/3/model.xml', 'model/3.txt', 'model/sub/2/', 'model/one'],
+     ['s3://bucket/model/3/']),
+    (['model/3/somethig.xml', 'model/3/something.bin', 'model/2/4/3/file',
+      'model/1/'],
+     ['s3://bucket/model/3/', 's3://bucket/model/2/', 's3://bucket/model/1/']),
+    (['model/3/', 'model/3.txt', 'model/sub/2/', 'model/one']),
+])
+def test_get_versions(mocker, content_list, versions):
     list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
                                        's3_list_content')
-    list_content_mocker.return_value = ['model/3/',
-                                        'model/3.txt',
-                                        'model/sub/2/',
-                                        'model/one']
+    list_content_mocker.return_value = content_list
 
     output = S3Model.get_versions('s3://bucket/model')
-    assert 1 == len(output)
-    assert 's3://bucket/model/3/' == output[0]
+    assert output == versions
 
 
-def test_not_get_versions_files(mocker):
+@pytest.mark.parametrize("content_list, version_files", [
+    (['model/3/', 'model/3.txt', 'model/3/2/'],
+     (None, None, None)),
+    (['model/3/model.xml', 'model/3/model.bin', 'model/3/sub/file'],
+     ('s3://bucket/model/3/model.xml', 's3://bucket/model/3/model.bin', None)),
+    (['model/3/something.xml', 'model/3/something.bin',
+      'model/3/mapping_config.json'],
+     ('s3://bucket/model/3/something.xml',
+      's3://bucket/model/3/something.bin',
+      's3://bucket/model/3/mapping_config.json')),
+    (['model/3//file.bin', 'model/3//file.xml'],
+     (None, None, None)),
+    (['model/3/some file.bin', 'model/3/some file.xml'],
+     (None, None, None)),
+    (['model/3/somefile.bin', 'model/3/otherfile.xml'],
+     (None, None, None)),
+])
+def test_get_versions_files(mocker, content_list, version_files):
     list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
                                        's3_list_content')
-    list_content_mocker.return_value = ['model/3/doc.doc',
-                                        'model/3/subdir',
-                                        'model/3/something.xml',
-                                        'model/3/model.bin']
+    list_content_mocker.return_value = content_list
 
     xml, bin, mapping = S3Model.get_version_files('s3://bucket/model/3/')
-    assert xml is None and bin is None and mapping is None
-
-
-def test_get_versions_files(mocker):
-    list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
-                                       's3_list_content')
-    list_content_mocker.return_value = ['model/3/doc.doc',
-                                        'model/3/subdir',
-                                        'model/3/model.xml',
-                                        'model/3/model.bin']
-
-    xml, bin, mapping = S3Model.get_version_files('s3://bucket/model/3/')
-    assert xml == 's3://bucket/model/3/model.xml' and \
-        bin == 's3://bucket/model/3/model.bin' and \
-        mapping is None
+    assert (xml, bin, mapping) == version_files
 
 
 def test_get_mapping_config(mocker):

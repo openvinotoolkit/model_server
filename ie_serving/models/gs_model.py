@@ -30,8 +30,6 @@ class GSModel(Model):
 
     @staticmethod
     def gs_list_content(path):
-        if path is None:
-            return None
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         model_directory = parsed_path.path[1:]
@@ -77,9 +75,9 @@ class GSModel(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.gs_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/\w+\.xml$')
+            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/\w+\.bin$')
+            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if xml_file[0].replace('xml', '') == \
