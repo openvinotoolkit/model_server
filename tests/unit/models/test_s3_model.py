@@ -50,7 +50,8 @@ def test_get_versions(mocker, content_list, versions):
     (['model/3//file.bin', 'model/3//file.xml'],
      (None, None, None)),
     (['model/3/some file.bin', 'model/3/some file.xml'],
-     (None, None, None)),
+     ('s3://bucket/model/3/some file.xml', 's3://bucket/model/3/some file.bin',
+      None)),
     (['model/3/somefile.bin', 'model/3/otherfile.xml'],
      (None, None, None)),
 ])

@@ -75,9 +75,9 @@ class GSModel(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.gs_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/[^/\s]+\.xml$')
+            parsed_version_path.path[1:-1] + r'/[^/]+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/[^/\s]+\.bin$')
+            parsed_version_path.path[1:-1] + r'/[^/]+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if len(xml_file) != 0 and len(bin_file) != 0:

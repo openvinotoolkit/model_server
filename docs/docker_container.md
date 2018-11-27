@@ -124,7 +124,7 @@ optional arguments:
 ```
 
 The model path could be local on docker container like mounted during startup or it could be Googe Cloud Storage path 
-in a format `gs://<bucket>/model_path`. In this case it will be required to 
+in a format `gs://<bucket>/<model_path>`. In this case it will be required to 
 pass GCS credentials to the docker container,
 unless GKE kubernetes cluster, which handled the authorization automatically,
  is used.
@@ -143,7 +143,7 @@ Learn [more about GCP authentication](https://cloud.google.com/docs/authenticati
 
 
 It is also possible to provide paths to models located in S3 compatible storage
-in a format `s3://<bucket>/model_path`. In this case it is necessary to 
+in a format `s3://<bucket>/<model_path>`. In this case it is necessary to 
 provide credentials to bucket by setting environmental variables
 `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. You can also set 
 `AWS_REGION` variable, although it's not always required. 
