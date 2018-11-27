@@ -17,15 +17,16 @@ import pytest
 
 from ie_serving.models.s3_model import S3Model
 
+
 @pytest.mark.parametrize("content_list, versions", [
     (['model/3/', 'model/3.txt', 'model/sub/2/', 'model/one'],
      ['s3://bucket/model/3/']),
     (['model/3/model.xml', 'model/3.txt', 'model/sub/2/', 'model/one'],
      ['s3://bucket/model/3/']),
-    (['model/3/somethig.xml', 'model/3/something.bin', 'model/2/4/3/file',
+    (['model/3/something.xml', 'model/3/something.bin', 'model/2/4/3/file',
       'model/1/'],
      ['s3://bucket/model/3/', 's3://bucket/model/2/', 's3://bucket/model/1/']),
-    (['model/3/', 'model/3.txt', 'model/sub/2/', 'model/one']),
+    (['model/dir1/', 'model/3.txt', 'model/dir2/2/', 'model/one/file'], []),
 ])
 def test_get_versions(mocker, content_list, versions):
     list_content_mocker = mocker.patch('ie_serving.models.s3_model.S3Model.'
@@ -33,7 +34,7 @@ def test_get_versions(mocker, content_list, versions):
     list_content_mocker.return_value = content_list
 
     output = S3Model.get_versions('s3://bucket/model')
-    assert output == versions
+    assert set(output) == set(versions)
 
 
 @pytest.mark.parametrize("content_list, version_files", [

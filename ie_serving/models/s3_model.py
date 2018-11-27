@@ -71,23 +71,24 @@ class S3Model(Model):
         parsed_version_path = urlparse(version)
         content_list = cls.s3_list_content(version)
         xml_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.xml$')
+            parsed_version_path.path[1:-1] + r'/[^/\s]+\.xml$')
         bin_pattern = re.compile(
-            parsed_version_path.path[1:-1] + r'/[\S^\\]+\.bin$')
+            parsed_version_path.path[1:-1] + r'/[^/\s]+\.bin$')
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
-        if xml_file[0].replace('xml', '') == \
-                bin_file[0].replace('bin', ''):
-            xml_file[0] = urlunparse(
-                (parsed_version_path.scheme, parsed_version_path.netloc,
-                 xml_file[0], parsed_version_path.params,
-                 parsed_version_path.query, parsed_version_path.fragment))
-            bin_file[0] = urlunparse(
-                (parsed_version_path.scheme, parsed_version_path.netloc,
-                 bin_file[0], parsed_version_path.params,
-                 parsed_version_path.query, parsed_version_path.fragment))
-            mapping_config = cls._get_mapping_config(version)
-            return xml_file[0], bin_file[0], mapping_config
+        if len(xml_file) != 0 and len(bin_file) != 0:
+            if xml_file[0].replace('xml', '') == \
+                    bin_file[0].replace('bin', ''):
+                xml_file[0] = urlunparse(
+                    (parsed_version_path.scheme, parsed_version_path.netloc,
+                     xml_file[0], parsed_version_path.params,
+                     parsed_version_path.query, parsed_version_path.fragment))
+                bin_file[0] = urlunparse(
+                    (parsed_version_path.scheme, parsed_version_path.netloc,
+                     bin_file[0], parsed_version_path.params,
+                     parsed_version_path.query, parsed_version_path.fragment))
+                mapping_config = cls._get_mapping_config(version)
+                return xml_file[0], bin_file[0], mapping_config
         return None, None, None
 
     @classmethod
