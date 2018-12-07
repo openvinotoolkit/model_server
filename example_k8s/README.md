@@ -4,7 +4,7 @@
 OpenVINO Model server can be quite easily deployed in Kubernetes which can let scale the inference service horizontally
 and ensures high availability.
 
-Below are described simple examples which are using NFS and GCS (Google Cloud Storage) as the storage for the models.
+Below are described simple examples which are using NFS and GCS (Google Cloud Storage) and S3 as the storage for the models.
 
 ## NFS server deployment
 
