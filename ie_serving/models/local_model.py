@@ -36,9 +36,11 @@ class LocalModel(Model):
     def get_version_files(cls, version):
         bin_file = glob.glob("{}*.bin".format(version))
         xml_file = glob.glob("{}*.xml".format(version))
-        if xml_file[0].replace('xml', '') == bin_file[0].replace('bin', ''):
-            mapping_config = cls._get_mapping_config(version)
-            return xml_file[0], bin_file[0], mapping_config
+        if len(xml_file) != 0 and len(bin_file) != 0:
+            if xml_file[0].replace('xml', '') == \
+                    bin_file[0].replace('bin', ''):
+                mapping_config = cls._get_mapping_config(version)
+                return xml_file[0], bin_file[0], mapping_config
         return None, None, None
 
     @classmethod

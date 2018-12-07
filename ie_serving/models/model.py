@@ -67,7 +67,7 @@ class Model(ABC):
 
     @staticmethod
     def get_version_number(version):
-        version_number = re.search('/\d+/$', version).group(0)[1:-1]
+        version_number = re.search(r'/\d+/$', version).group(0)[1:-1]
         return int(version_number)
 
     @classmethod

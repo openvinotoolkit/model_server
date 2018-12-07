@@ -4,7 +4,7 @@
 OpenVINO Model server can be quite easily deployed in Kubernetes which can let scale the inference service horizontally
 and ensures high availability.
 
-Below are described simple examples which are using NFS and GCS (Google Cloud Storage) as the storage for the models.
+Below are described simple examples which are using NFS and GCS (Google Cloud Storage) and S3 as the storage for the models.
 
 ## NFS server deployment
 
@@ -106,6 +106,18 @@ Note that in GKE kubernetes cluster the credentials related tags can be dropped 
 using GKE cluster nodes authorization features as long as the models bucket is in the same GCP project with the cluster.
 
 Learn [more about GCP authentication](https://cloud.google.com/docs/authentication/production).
+
+
+## Deploying OpenVINO Model server with S3 storage
+
+Deployment process with S3 storage requires the same directories structure 
+as in previous cases. Example deployment steps are almost identical to those 
+from previous cases:
+
+```bash
+kubectl apply -f openvino_model_server_s3_rc.yaml
+kubectl apply -f openvino_model_server_service.yaml
+```
 
 
 ## Testing
