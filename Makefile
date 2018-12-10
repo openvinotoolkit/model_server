@@ -64,6 +64,12 @@ test: venv
 	@echo "Executing functional tests..."
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/
 
+test_local_only: venv
+	@echo "Executing functional tests with only local models..."
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_batching.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_mapping.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_single_model.py
+
 style: venv
 	@echo "Style-checking codebase..."
 	@. $(ACTIVATE); flake8 $(STYLE_CHECK_OPTS) $(STYLE_CHECK_DIRS)
