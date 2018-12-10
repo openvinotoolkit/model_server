@@ -210,7 +210,8 @@ def start_server_single_model(request, get_image, get_test_dir):
 def start_server_single_model_from_gc(request, get_image, get_test_dir):
     CYAN_COLOR = '\033[36m'
     END_COLOR = '\033[0m'
-    GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    GOOGLE_APPLICATION_CREDENTIALS = \
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     cmd = ['docker',
            'run',
            '--rm',
@@ -331,7 +332,8 @@ def start_server_multi_model(request, get_image, get_test_dir):
 
     CYAN_COLOR = '\033[36m'
     END_COLOR = '\033[0m'
-    GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    GOOGLE_APPLICATION_CREDENTIALS = \
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
