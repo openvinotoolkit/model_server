@@ -31,7 +31,6 @@ from ie_serving.tensorflow_serving_api import predict_pb2, \
 
 ERROR_SHAPE = 'response has invalid output'
 
-
 def pytest_addoption(parser):
     parser.addoption(
         "--image", action="store", default="ie-serving-py:latest",
@@ -268,8 +267,6 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir):
            '--model_path', 's3://inference-test-aipg/resnet_v1_50',
            '--port', '9000'
            ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
 
     def stop_docker():
 
@@ -354,8 +351,6 @@ def start_server_multi_model(request, get_image, get_test_dir):
            '--config_path', '/opt/ml/config.json',
            '--port', '9001'
            ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
 
     def stop_docker():
 
