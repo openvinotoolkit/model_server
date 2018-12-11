@@ -49,7 +49,7 @@ class TestSingleModelInferenceGc():
         # Starting docker with ie-serving
         result = start_server_single_model_from_s3
         print("docker starting status:", result)
-        time.sleep(20)  # Waiting for inference service to load models
+        time.sleep(40)  # Waiting for inference service to load models
         assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service
@@ -71,7 +71,7 @@ class TestSingleModelInferenceGc():
 
         result = start_server_single_model_from_s3
         print("docker starting status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
+        time.sleep(40)  # Waiting for inference service to load models
         assert result == 0, "docker container was not started successfully"
 
         stub = create_channel_for_port_single_server
@@ -81,7 +81,7 @@ class TestSingleModelInferenceGc():
         expected_input_metadata = {'input': {'dtype': 1,
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1, 1]}}
+                                               'shape': [1, 1000]}}
         request = get_model_metadata(model_name='resnet')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(

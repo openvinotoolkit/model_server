@@ -49,7 +49,7 @@ class TestSingleModelInferenceGc():
         # Starting docker with ie-serving
         result = start_server_single_model_from_gc
         print("docker starting status:", result)
-        time.sleep(20)  # Waiting for inference service to load models
+        time.sleep(30)  # Waiting for inference service to load models
         assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service

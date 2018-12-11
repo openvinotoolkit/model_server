@@ -39,7 +39,7 @@ def prepare_input_data(models, model_name, version, data):
             message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
                                            input_keys)
             logger.debug("PREDICT error: {}".format(message))
-            return True, message,None, code
+            return True, message, None, code
 
         tensor_name = models[model_name].engines[version]. \
             model_keys['inputs'][requested_input_blob]
@@ -51,7 +51,7 @@ def prepare_input_data(models, model_name, version, data):
             message = str(e)
             logger.debug("PREDICT prepare_input_data make_ndarray error: {}"
                          .format(message))
-            return True, message, code
+            return True, message, None, code
 
         shape_required_in_model = models[model_name].engines[version] \
             .input_tensors[tensor_name].shape

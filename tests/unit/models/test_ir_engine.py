@@ -18,6 +18,7 @@ from ie_serving.models.ir_engine import IrEngine
 from unittest import mock
 import json
 import pytest
+from conftest import Layer
 
 
 def test_init_class():
@@ -26,8 +27,8 @@ def test_init_class():
     mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
-    inputs = {input_key: []}
-    outputs = ['output']
+    inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
+    outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
                       inputs=inputs, outputs=outputs)
@@ -36,7 +37,7 @@ def test_init_class():
     assert exec_net == engine.exec_net
     assert [input_key] == engine.input_tensor_names
     assert inputs == engine.input_tensors
-    assert outputs == engine.output_tensor_names
+    assert ['output'] == engine.output_tensor_names
     assert {'inputs': {'input': 'input'},
             'outputs': {'output': 'output'}} == engine.model_keys
     assert [input_key] == engine.input_key_names
@@ -49,7 +50,7 @@ def test_build_device_cpu(mocker):
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config)
         cpu_extension_mock.assert_called_once_with()
@@ -65,7 +66,7 @@ def test_build_device_other(mocker):
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config)
         assert not cpu_extension_mock.assert_called_once_with()

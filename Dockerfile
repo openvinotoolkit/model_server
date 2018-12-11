@@ -39,10 +39,6 @@ RUN git clone --depth=1 -b 2018_R4 https://github.com/opencv/dldt.git ${DLDT_DIR
     cd ${DLDT_DIR} && git submodule init && git submodule update --recursive && \
     rm -Rf .git && rm -Rf model-optimizer
 
-#RUN curl -L -o 2018_R4.tar.gz https://github.com/opencv/dldt/archive/2018_R4.tar.gz && \
-#    tar -zxf 2018_R4.tar.gz && \
-#    rm 2018_R4.tar.gz && \
-#    rm -Rf dldt-2018_R4/model-optimizer
 WORKDIR ${DLDT_DIR}
 RUN curl -L -o ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz https://github.com/intel/mkl-dnn/releases/download/v0.17/mklml_lnx_2019.0.1.20180928.tgz && \
     tar -xzf ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz && rm ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz

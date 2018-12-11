@@ -14,25 +14,33 @@
 # limitations under the License.
 #
 
-from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.saved_model.signature_def_utils import \
     build_signature_def
 from tensorflow.python.saved_model.utils import build_tensor_info
 from tensorflow.python.ops import gen_array_ops
-import numpy as np
 
 type_mapping = {
     'FP32': 1,
-    'FP16': 19,
-    'I8': 6
-} # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/types.proto
+    'FP16': 0,
+    'I8': 9,
+    'I32': 3,
+    'I16': 8,
+    'U32': 6,
+    'U16': 5
+}
+# mapping supported precisions from https://github.com/opencv/dldt/blob/2018/
+# inference-engine/ie_bridges/python/inference_engine/ie_api.pyx with TF types
+# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/
+# framework/dtypes.py
+
 
 def _prepare_signature(layers: dict, model_keys):
     signature = {}
     for key, value in model_keys.items():
         if value in layers.keys():
-            x = gen_array_ops.placeholder(dtype=type_mapping[layers[value].precision],
-                                          shape=layers[value].shape, name=value)
+            x = gen_array_ops.placeholder(
+                dtype=type_mapping[layers[value].precision],
+                shape=layers[value].shape, name=value)
             x_tensor_info = build_tensor_info(x)
             signature[key] = x_tensor_info
     return signature

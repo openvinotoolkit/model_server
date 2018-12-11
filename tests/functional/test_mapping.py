@@ -92,7 +92,7 @@ class TestSingleModelMappingInference():
                                                'shape': [1, 2048, 7, 7]}}
         request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
-        print("response",response)
+        print("response", response)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 

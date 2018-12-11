@@ -1,7 +1,7 @@
 setuptools==34.3.0
 grpcio==1.14.1
 grpcio-tools==1.14.1
-numpy==1.14.5
+numpy
 protobuf==3.6.1
 tensorflow==1.10.0
 google-cloud-storage==1.13.0

@@ -28,6 +28,13 @@ PREDICT_SERVICE = prediction_service_pb2.\
                   DESCRIPTOR.services_by_name['PredictionService']
 
 
+class Layer:
+    def __init__(self, precision, shape, layout):
+        self. precision = precision
+        self.shape = shape
+        self.layout = layout
+
+
 @pytest.fixture
 def get_fake_model():
     model_xml = 'model1.xml'
@@ -35,8 +42,8 @@ def get_fake_model():
     mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
-    inputs = {input_key: [1, 1]}
-    outputs = ['test_output']
+    inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
+    outputs = {'output': Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
                       inputs=inputs, outputs=outputs)
@@ -54,8 +61,9 @@ def get_fake_ir_engine():
     mapping_config = 'mapping_config.json'
     exec_net = None
     input_key = 'input'
-    inputs = {input_key: []}
-    outputs = ['output']
+    output_key = 'output'
+    inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
+    outputs = {output_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
                       inputs=inputs, outputs=outputs)
