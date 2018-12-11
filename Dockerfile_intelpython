@@ -1,9 +1,7 @@
-FROM ubuntu:16.04 as DEV
+FROM intelpython/intelpython3_core as DEV
 RUN apt-get update && apt-get install -y \
             curl \
             ca-certificates \
-            python3-pip \
-            python-dev \
             libgfortran3 \
             vim \
             build-essential \
@@ -22,7 +20,7 @@ RUN apt-get update && apt-get install -y \
             automake \
             libtool \
             autoconf \
-            libpng12-dev \
+            libpng-dev \
             libcairo2-dev \
             libpango1.0-dev \
             libglib2.0-dev \
@@ -39,21 +37,23 @@ RUN curl -L -o 2018_R3.tar.gz https://github.com/opencv/dldt/archive/2018_R3.tar
     rm 2018_R3.tar.gz && \
     rm -Rf dldt-2018_R3/model-optimizer
 WORKDIR dldt-2018_R3/inference-engine
+RUN sed -i -e 's/get_linux_name(LINUX_OS_NAME)/#get_linux_name(LINUX_OS_NAME)/g' cmake/check_features.cmake && \
+    sed -i -e 's/(${LINUX_OS_NAME} STREQUAL "Ubuntu 16.04")/("${LINUX_OS_NAME}" STREQUAL "Ubuntu 16.04")/g' cmake/dependencies.cmake && \
+    sed -i -e 's/(${LINUX_OS_NAME} STREQUAL "CentOS 7")/("${LINUX_OS_NAME}" STREQUAL "CentOS 7")/g' cmake/dependencies.cmake && \
+    sed -i -e 's/(ENABLE_OPENCV "enables OpenCV" ON)/(ENABLE_OPENCV "enables OpenCV" OFF)/g' cmake/features.cmake
+
 RUN mkdir build && cd build && cmake -DGEMM=MKL -DENABLE_MKL_DNN=ON  -DCMAKE_BUILD_TYPE=Release ..
 RUN cd build && make -j4
-RUN pip3 install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/python/build && \
-    cmake -DInferenceEngine_DIR=/dldt-2018_R3/inference-engine/build -DPYTHON_EXECUTABLE=`which python3` -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m .. && \
+RUN pip install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/python/build && \
+    cmake -DInferenceEngine_DIR=/dldt-2018_R3/inference-engine/build -DPYTHON_EXECUTABLE=`which python` -DPYTHON_LIBRARY=/opt/conda/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=/opt/conda/include/python3.6m .. && \
     make -j4
 
-FROM ubuntu:16.04 as PROD
+FROM intelpython/intelpython3_core as PROD
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
             curl \
             ca-certificates \
-            python3-pip \
-            python3-dev \
-            vim \
-            virtualenv
+            vim
 
 COPY --from=DEV /dldt-2018_R3/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
 COPY --from=DEV /dldt-2018_R3/inference-engine/ie_bridges/python/build/ /usr/local/lib/openvino/
@@ -62,11 +62,16 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
 COPY start_server.sh setup.py requirements.txt version /ie-serving-py/
+
 COPY ie_serving /ie-serving-py/ie_serving
 
 WORKDIR /ie-serving-py
 
-RUN virtualenv -p python3 .venv && \
-    . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
+RUN conda create --name myenv -y
 
-RUN . .venv/bin/activate && pip3 install .
+ENV PATH /opt/conda/envs/myenv/bin:$PATH
+
+RUN pip --no-cache-dir install -r requirements.txt && \
+    pip install .
+
+RUN sed -i '/activate/d' start_server.sh
