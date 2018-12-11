@@ -1,0 +1,77 @@
+FROM intelpython/intelpython3_core as DEV
+RUN apt-get update && apt-get install -y \
+            curl \
+            ca-certificates \
+            libgfortran3 \
+            vim \
+            build-essential \
+            cmake \
+            curl \
+            wget \
+            libssl-dev \
+            ca-certificates \
+            git \
+            libboost-regex-dev \
+            gcc-multilib \
+            g++-multilib \
+            libgtk2.0-dev \
+            pkg-config \
+            unzip \
+            automake \
+            libtool \
+            autoconf \
+            libpng-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libglib2.0-dev \
+            libgtk2.0-dev \
+            libswscale-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libgstreamer1.0-0 \
+            gstreamer1.0-plugins-base \
+            libusb-1.0-0-dev \
+            libopenblas-dev
+RUN curl -L -o 2018_R3.tar.gz https://github.com/opencv/dldt/archive/2018_R3.tar.gz && \
+    tar -zxf 2018_R3.tar.gz && \
+    rm 2018_R3.tar.gz && \
+    rm -Rf dldt-2018_R3/model-optimizer
+WORKDIR dldt-2018_R3/inference-engine
+RUN sed -i -e 's/get_linux_name(LINUX_OS_NAME)/#get_linux_name(LINUX_OS_NAME)/g' cmake/check_features.cmake && \
+    sed -i -e 's/(${LINUX_OS_NAME} STREQUAL "Ubuntu 16.04")/("${LINUX_OS_NAME}" STREQUAL "Ubuntu 16.04")/g' cmake/dependencies.cmake && \
+    sed -i -e 's/(${LINUX_OS_NAME} STREQUAL "CentOS 7")/("${LINUX_OS_NAME}" STREQUAL "CentOS 7")/g' cmake/dependencies.cmake && \
+    sed -i -e 's/(ENABLE_OPENCV "enables OpenCV" ON)/(ENABLE_OPENCV "enables OpenCV" OFF)/g' cmake/features.cmake
+
+RUN mkdir build && cd build && cmake -DGEMM=MKL -DENABLE_MKL_DNN=ON  -DCMAKE_BUILD_TYPE=Release ..
+RUN cd build && make -j4
+RUN pip install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/python/build && \
+    cmake -DInferenceEngine_DIR=/dldt-2018_R3/inference-engine/build -DPYTHON_EXECUTABLE=`which python` -DPYTHON_LIBRARY=/opt/conda/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=/opt/conda/include/python3.6m .. && \
+    make -j4
+
+FROM intelpython/intelpython3_core as PROD
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            curl \
+            ca-certificates \
+            vim
+
+COPY --from=DEV /dldt-2018_R3/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
+COPY --from=DEV /dldt-2018_R3/inference-engine/ie_bridges/python/build/ /usr/local/lib/openvino/
+COPY --from=DEV /dldt-2018_R3/inference-engine/temp/mkltiny_lnx_20180511/lib/libiomp5.so /usr/local/lib/
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV PYTHONPATH=/usr/local/lib
+
+COPY start_server.sh setup.py requirements.txt version /ie-serving-py/
+
+COPY ie_serving /ie-serving-py/ie_serving
+
+WORKDIR /ie-serving-py
+
+RUN conda create --name myenv -y
+
+ENV PATH /opt/conda/envs/myenv/bin:$PATH
+
+RUN pip --no-cache-dir install -r requirements.txt && \
+    pip install .
+
+RUN sed -i '/activate/d' start_server.sh

@@ -55,7 +55,7 @@ RUN pip3 install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/
 
 FROM ubuntu:16.04 as PROD
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
             curl \
             ca-certificates \
             python3-pip \

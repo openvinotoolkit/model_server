@@ -210,17 +210,16 @@ def start_server_single_model(request, get_image, get_test_dir):
 def start_server_single_model_from_gc(request, get_image, get_test_dir):
     CYAN_COLOR = '\033[36m'
     END_COLOR = '\033[0m'
-    GC_CREDENTIALS_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    GOOGLE_APPLICATION_CREDENTIALS = \
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     cmd = ['docker',
            'run',
            '--rm',
            '-d',
            '--name', 'ie-serving-py-test-single',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-v', '/home/circleci/project/' + GC_CREDENTIALS_PATH + ':' +
-           '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH, # noqa
-           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=' +
-           '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH, # noqa
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir + '/saved_models/'),
+           '-v', GOOGLE_APPLICATION_CREDENTIALS + ':/etc/gcp.json',
+           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
            '-p', '9000:9000',
            get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
            'model',
@@ -230,6 +229,43 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir):
            ]
     print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
                                                      END_COLOR))
+
+    def stop_docker():
+
+        print("stopping docker container...")
+        return_code = subprocess.call(
+            "for I in `docker ps -f 'name=ie-serving-py-test-single' -q` ;"
+            "do echo $I; docker stop $I; done",
+            shell=True)
+        if return_code == 0:
+            print("docker container removed")
+    request.addfinalizer(stop_docker)
+
+    return subprocess.check_call(cmd)
+
+
+@pytest.fixture(scope="class")
+def start_server_single_model_from_s3(request, get_image, get_test_dir):
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_REGION = os.getenv('AWS_REGION')
+
+    cmd = ['docker',
+           'run',
+           '--rm',
+           '-d',
+           '--name', 'ie-serving-py-test-single',
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
+           '-e', 'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+           '-e', 'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
+           '-e', 'AWS_REGION=' + AWS_REGION,
+           '-p', '9000:9000',
+           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
+           'model',
+           '--model_name', 'resnet',
+           '--model_path', 's3://inference-test-aipg/resnet_v1_50',
+           '--port', '9000'
+           ]
 
     def stop_docker():
 
@@ -290,27 +326,28 @@ def start_server_multi_model(request, get_image, get_test_dir):
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
 
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    GC_CREDENTIALS_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    GOOGLE_APPLICATION_CREDENTIALS = \
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_REGION = os.getenv('AWS_REGION')
     cmd = ['docker',
            'run',
            '--rm',
            '-d',
            '--name', 'ie-serving-py-test-multi',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-v', '/home/circleci/project/' + GC_CREDENTIALS_PATH + ':' +
-           '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH,  # noqa
-           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=' +
-           '/ie-serving-py/ie_serving/models/' + GC_CREDENTIALS_PATH,  # noqa
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir + '/saved_models/'),
+           '-v', GOOGLE_APPLICATION_CREDENTIALS+':/etc/gcp.json',
+           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
+           '-e', 'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+           '-e', 'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
+           '-e', 'AWS_REGION=' + AWS_REGION,
            '-p', '9001:9001',
            get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
            'config',
            '--config_path', '/opt/ml/config.json',
            '--port', '9001'
            ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
 
     def stop_docker():
 

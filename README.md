@@ -160,7 +160,12 @@ All new features need to be covered by tests.
 
 `make unit` to execute unit tests (it requires OpenVINO installation followed by `make install`)
 
-`make test` to execute functional tests (it requires building the docker image in advance)
+`make test` to execute functional tests (it requires building the docker image in advance). Running 
+the tests require also preconfigured env variables `GOOGLE_APPLICATION_CREDENTIALS`, `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY` and `AWS_REGION` with permissions to access models used in tests.
+To run tests limited to models to locally downloaded models use command:
+
+`make test_local_only`
 
 
 ## Contact
