@@ -122,6 +122,10 @@ class TestModelVersionHandling():
         versions = [None, 1]
         output_names = ['resnet_v2_50/predictions/Reshape_1',
                         'resnet_v1_50/predictions/Reshape_1']
+        expected_outputs_metadata = [
+            {out_name: {'dtype': 1, 'shape': [1, 1001]}},
+            {out_name: {'dtype': 1, 'shape': [1, 1000]}}
+        ]
         for x in range(len(versions)):
             print("Getting info about resnet model version:".format(
                 versions[x]))
@@ -129,8 +133,7 @@ class TestModelVersionHandling():
             out_name = output_names[x]
             expected_input_metadata = {'input': {'dtype': 1,
                                                  'shape': [1, 3, 224, 224]}}
-            expected_output_metadata = {out_name: {'dtype': 1,
-                                                   'shape': [1, 1, 1]}}
+            expected_output_metadata = expected_outputs_metadata[x]
             request = get_model_metadata(model_name='resnet',
                                          version=versions[x])
             response = stub.GetModelMetadata(request, 10)

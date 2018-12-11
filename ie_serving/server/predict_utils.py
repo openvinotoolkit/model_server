@@ -39,7 +39,7 @@ def prepare_input_data(models, model_name, version, data):
             message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
                                            input_keys)
             logger.debug("PREDICT error: {}".format(message))
-            return True, message, code
+            return True, message,None, code
 
         tensor_name = models[model_name].engines[version]. \
             model_keys['inputs'][requested_input_blob]
@@ -54,16 +54,17 @@ def prepare_input_data(models, model_name, version, data):
             return True, message, code
 
         shape_required_in_model = models[model_name].engines[version] \
-            .input_tensors[tensor_name]
+            .input_tensors[tensor_name].shape
         # check requested shape and model shape
         if shape_required_in_model != list(tensor_input.shape):
             code = StatusCode.INVALID_ARGUMENT
             message = INVALID_SHAPE.format(list(tensor_input.shape),
                                            shape_required_in_model)
             logger.debug("PREDICT error: {}".format(message))
-            return True, message, code
+            return True, message, None, code
         inference_input[tensor_name] = tensor_input
-    return False, inference_input, None
+        batch_size = shape_required_in_model[0]
+    return False, inference_input, batch_size, None
 
 
 def prepare_output_as_list(inference_output, model_available_outputs):

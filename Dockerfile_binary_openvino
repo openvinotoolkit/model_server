@@ -18,14 +18,14 @@ RUN cd $TEMP_DIR && pwd && ls && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     pwd | grep -q openvino_toolkit_p ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-base-shared__noarch;intel-cv-sdk-base-l-setupvars__noarch;intel-cv-sdk-base-l-inference-engine__noarch;intel-cv-sdk-base-gfx-install__noarch;intel-cv-sdk-base-shared-pset/g' silent.cfg; fi && \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg; fi && \
     pwd | grep -q openvino_toolkit_fpga ; \
     if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg; fi && \
-    ./install.sh -s silent.cfg && \
+    ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5/ubuntu16:$INSTALL_DIR/python/python3.5"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/cldnn/lib:$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64:$DL_INSTALL_DIR/inference_engine/external/omp/lib"
 
 ENV https_proxy $https_proxy
 ENV HTTPS_PROXY $https_proxy
@@ -39,3 +39,4 @@ RUN virtualenv -p python3 .venv && \
     . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
 
 RUN . .venv/bin/activate && pip3 install .
+

@@ -33,7 +33,8 @@ class IrEngine():
         self.exec_net = exec_net
         self.input_tensor_names = list(inputs.keys())
         self.input_tensors = inputs
-        self.output_tensor_names = outputs
+        self.output_tensor_names = list(outputs.keys())
+        self.output_tensors = outputs
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
         logger.info("Matched keys for model: {}".format(self.model_keys))
@@ -44,8 +45,9 @@ class IrEngine():
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork.from_ir(model=model_xml, weights=model_bin)
+        input_blob = next(iter(net.inputs))
+        batch_size = net.inputs[input_blob].shape[0]
         inputs = net.inputs
-        batch_size = list(inputs.values())[0][0]
         outputs = net.outputs
         exec_net = plugin.load(network=net, num_requests=batch_size)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
@@ -103,6 +105,8 @@ class IrEngine():
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-    def infer(self, data: dict):
+    def infer(self, data: dict, batch_size=None):
+        if batch_size is not None:
+            self.exec_net.requests[0].set_batch(batch_size)
         results = self.exec_net.infer(inputs=data)
         return results
