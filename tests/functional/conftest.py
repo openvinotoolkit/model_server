@@ -31,6 +31,7 @@ from ie_serving.tensorflow_serving_api import predict_pb2, \
 
 ERROR_SHAPE = 'response has invalid output'
 
+
 def pytest_addoption(parser):
     parser.addoption(
         "--image", action="store", default="ie-serving-py:latest",
