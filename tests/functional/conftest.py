@@ -245,8 +245,6 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir):
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_s3(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
@@ -327,8 +325,6 @@ def start_server_multi_model(request, get_image, get_test_dir):
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
 
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
     GOOGLE_APPLICATION_CREDENTIALS = \
         os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
