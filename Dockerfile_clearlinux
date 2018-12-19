@@ -1,7 +1,7 @@
 FROM clearlinux
 
 RUN swupd bundle-add computer-vision-basic && \
-    clrtrust generate &&
+    clrtrust generate && \
     swupd clean
 
 COPY start_server.sh setup.py requirements_clearlinux.txt version /ie-serving-py/
