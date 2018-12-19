@@ -1,6 +1,7 @@
 FROM clearlinux
 
 RUN swupd bundle-add computer-vision-basic
+RUN swupd bundle-add os-core-update-dev
 
 COPY start_server.sh setup.py requirements_clearlinux.txt version /ie-serving-py/
 COPY ie_serving /ie-serving-py/ie_serving
