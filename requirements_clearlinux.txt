@@ -1,6 +1,1 @@
-setuptools==34.3.0
-grpcio==1.14.1
-grpcio-tools==1.14.1
-protobuf==3.6.1
 google-cloud-storage==1.13.0
-boto3==1.9.34

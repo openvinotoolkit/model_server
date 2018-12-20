@@ -27,7 +27,7 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
-OVMS_VERSION := "0.1"
+OVMS_VERSION := "0.2"
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
