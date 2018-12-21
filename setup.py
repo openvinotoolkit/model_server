@@ -28,7 +28,7 @@ setup(
               'ie_serving.tensorflow_serving_api'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=["grpcio", "grpcio-tools", "numpy", "protobuf",
+    install_requires=["grpcio", "numpy", "protobuf",
                       "tensorflow", "google-cloud-storage", "boto3"],
     entry_points={
         'console_scripts': [

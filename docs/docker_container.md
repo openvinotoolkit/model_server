@@ -25,6 +25,16 @@ or
 ```bash
 make docker_build_src_intelpython http_proxy=$http_proxy https_proxy=$https_proxy
 ```
+or 
+```bash
+make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
+
+
+**Note:** You can use also publicly available docker image from [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
+
+```bash
+docker pull intelaipg/openvino-model-server
+```
 
 ## Preparing the Models
 

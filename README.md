@@ -12,6 +12,8 @@ while keeping the same server architecture and APIs like in [TensorFlow Serving]
 It provides out-of-the-box integration with models supported by [OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
 and allows frameworks such as [AWS Sagemaker](https://github.com/aws/sagemaker-tensorflow-containers) to serve AI models with OpenVINO&trade;. 
 
+OpenVINO Model Server supports for the models storage, beside local filesystem, also GCS, S3 and Minio. 
+
 It is implemented as a python service using gRPC library interface; data serialization and deserialization 
 using TensorFlow; and OpenVINO&trade; for inference execution. It acts as an integrator and a bridge exposing CPU optimized 
 inference engine over gRPC network interface. 
@@ -132,8 +134,6 @@ You can parse the logs to analyze: volume of requests, processing statistics and
 * Currently, only *Predict* and *GetModelMetadata* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
 * *GetModelMetadata* is reporting incorrect shape of model outputs. A fix is pending in OpenVINO&trade; API for reporting outputs shape.
-* In current version, models need to be mounted or present on the local file system. 
-There are plans to add support for s3, ftp, sftp and http storage.
 * Currently, model versions are detected at server start time. Adding new versions requires service restart or
  starting new docker container. There are plans to add online detection of new model versions and config file changes.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
@@ -149,10 +149,13 @@ All changes needs to have passed style, unit and functional tests.
 All new features need to be covered by tests.
 
 ### Building
-
-`make docker_build_bin` to build new docker image using OpenVINO binary distribution
-
-`make docker_build_src` to build new docker image using OpenVINO source code
+Docker image with OpenVINO Model Server can be built with several options: 
+- `make docker_build_bin` - using Intel Distribution of OpenVINO binary package (ubuntu base image)
+- `make docker_build_src_ubuntu` - using OpenVINO source code with ubuntu base image
+- `make docker_build_src_intelpython` - using OpenVINO source code with 'intelpython/intelpython3_core' base image 
+(Intel optimized python distribution with conda and debian)
+- `make docker_build_clearlinux` - using ClearLinux base image and 
+[computer vision bundle](https://github.com/clearlinux/clr-bundles/blob/master/bundles/computer-vision-basic) 
 
 ### Testing
 
