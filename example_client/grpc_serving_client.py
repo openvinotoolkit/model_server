@@ -23,6 +23,7 @@ import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
+
 parser = argparse.ArgumentParser(description='Do requests to ie_serving and tf_serving using images in numpy format')
 parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c]')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
@@ -74,6 +75,12 @@ for x in range(0, imgs.shape[0] - batch_size, batch_size):
     request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+    if args['output_name'] not in result.outputs:
+        print("Invalid output name", args['output_name'])
+        print("Available outputs:")
+        for Y in result.outputs:
+            print(Y)
+        exit(1)
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times,np.array([int(duration)]))
