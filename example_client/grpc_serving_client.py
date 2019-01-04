@@ -54,7 +54,7 @@ batch_size = int(args.get('batchsize'))
 
 iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
 
-while iterations * batch_size > imgs.shape[0]:
+while batch_size >= imgs.shape[0]:
     imgs = np.append(imgs, imgs, axis=0)
 
 print('Start processing:')
@@ -66,38 +66,39 @@ print('\tImages in shape: {}\n'.format(imgs.shape))
 if args.get('transpose_input') == "True":
     imgs = imgs.transpose((0,3,1,2))
 iteration = 0
-for x in range(0, imgs.shape[0] - batch_size, batch_size):
-    iteration += 1
-    if iteration > iterations: break
-    request = predict_pb2.PredictRequest()
-    request.model_spec.name = args.get('model_name')
-    img = imgs[x:(x + batch_size)]
-    request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
-    start_time = datetime.datetime.now()
-    result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-    if args['output_name'] not in result.outputs:
-        print("Invalid output name", args['output_name'])
-        print("Available outputs:")
-        for Y in result.outputs:
-            print(Y)
-        exit(1)
-    end_time = datetime.datetime.now()
-    duration = (end_time - start_time).total_seconds() * 1000
-    processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+while iteration <= iterations:
+    for x in range(0, imgs.shape[0] - batch_size, batch_size):
+        iteration += 1
+        if iteration > iterations: break
+        request = predict_pb2.PredictRequest()
+        request.model_spec.name = args.get('model_name')
+        img = imgs[x:(x + batch_size)]
+        request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+        start_time = datetime.datetime.now()
+        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        if args['output_name'] not in result.outputs:
+            print("Invalid output name", args['output_name'])
+            print("Available outputs:")
+            for Y in result.outputs:
+                print(Y)
+            exit(1)
+        end_time = datetime.datetime.now()
+        duration = (end_time - start_time).total_seconds() * 1000
+        processing_times = np.append(processing_times,np.array([int(duration)]))
+        output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
 
-    nu = np.array(output)
-    # for object classification models show imagenet class
-    print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
+        nu = np.array(output)
+        # for object classification models show imagenet class
+        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
                                                                 round(1000 * batch_size / np.average(duration), 2)
                                                                 ))
-    # Comment out this section for non imagenet datasets
-    print("imagenet top results in a single batch:")
-    for i in range(nu.shape[0]):
-        single_result = nu[[i],...]
-        ma = np.argmax(single_result)
-        print("\t",i, classes.imagenet_classes[ma])
-    # Comment out this section for non imagenet datasets
+        # Comment out this section for non imagenet datasets
+        print("imagenet top results in a single batch:")
+        for i in range(nu.shape[0]):
+            single_result = nu[[i],...]
+            ma = np.argmax(single_result)
+            print("\t",i, classes.imagenet_classes[ma])
+        # Comment out this section for non imagenet datasets
 
 print('\nprocessing time for all iterations')
 print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.average(processing_times), 2),
@@ -106,10 +107,10 @@ print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.avera
 print('median time: {:.2f} ms; median speed: {:.2f} fps'.format(round(np.median(processing_times), 2),
                                                                   round(1000 * batch_size / np.median(processing_times), 2)))
 
-print('max time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
+print('max time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
                                                             round(1000 * batch_size / np.max(processing_times), 2)))
 
-print('min time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
+print('min time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
                                                             round(1000 * batch_size / np.min(processing_times), 2)))
 
 print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
