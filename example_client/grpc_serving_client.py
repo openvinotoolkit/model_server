@@ -14,24 +14,27 @@
 # limitations under the License.
 #
 
-from grpc.beta import implementations
+import grpc
 import numpy as np
 import tensorflow.contrib.util as tf_contrib_util
 import classes
 import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc
 
-parser = argparse.ArgumentParser(description='Do requests to ie_serving and tf_serving using images in numpy format')
-parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c]')
+
+parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
+                                             'It displays performance statistics and optionally the model accuracy')
+parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
+parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
 parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1', help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
 parser.add_argument('--transpose_input', choices=["False", "True"], default="True",
                     help='Set to False to skip NHWC->NCHW input transposing. default: True',
-                    dest="transpose_input",)
+                    dest="transpose_input")
 parser.add_argument('--iterations', default=0,
                     help='Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)',
                     dest='iterations', type=int)
@@ -44,17 +47,31 @@ parser.add_argument('--model_name', default='resnet', help='Define model name, m
                     dest='model_name')
 args = vars(parser.parse_args())
 
-channel = implementations.insecure_channel(args['grpc_address'], int(args['grpc_port']))
+channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
-stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
 processing_times = np.zeros((0),int)
+
+# optional preprocessing depending on the model
 imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
+imgs = imgs - np.min(imgs)  # Normalization 0-255
+imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
+#imgs = imgs[:,:,:,::-1] # RGB to BGR
+print('Image data range:', np.amin(imgs), ':', np.amax(imgs))
+# optional preprocessing depending on the model
+
+if args.get('labels_numpy_path') is not None:
+    lbs = np.load(args['labels_numpy_path'], mmap_mode='r', allow_pickle=False)
+    matched_count = 0
+    total_executed = 0
 batch_size = int(args.get('batchsize'))
 
 iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
 
-while iterations * batch_size > imgs.shape[0]:
+while batch_size >= imgs.shape[0]:
     imgs = np.append(imgs, imgs, axis=0)
+    if lbs is not None:
+        lbs = np.append(lbs, lbs, axis=0)
 
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
@@ -65,32 +82,50 @@ print('\tImages in shape: {}\n'.format(imgs.shape))
 if args.get('transpose_input') == "True":
     imgs = imgs.transpose((0,3,1,2))
 iteration = 0
-for x in range(0, imgs.shape[0] - batch_size, batch_size):
-    iteration += 1
-    if iteration > iterations: break
-    request = predict_pb2.PredictRequest()
-    request.model_spec.name = args.get('model_name')
-    img = imgs[x:(x + batch_size)]
-    request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
-    start_time = datetime.datetime.now()
-    result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-    end_time = datetime.datetime.now()
-    duration = (end_time - start_time).total_seconds() * 1000
-    processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
 
-    nu = np.array(output)
-    # for object classification models show imagenet class
-    print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
+while iteration <= iterations:
+    for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
+        iteration += 1
+        if iteration > iterations: break
+        request = predict_pb2.PredictRequest()
+        request.model_spec.name = args.get('model_name')
+        img = imgs[x:(x + batch_size)]
+        if args.get('labels_numpy_path') is not None:
+            lb = lbs[x:(x + batch_size)]
+        request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+        start_time = datetime.datetime.now()
+        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        end_time = datetime.datetime.now()
+        if args['output_name'] not in result.outputs:
+            print("Invalid output name", args['output_name'])
+            print("Available outputs:")
+            for Y in result.outputs:
+                print(Y)
+            exit(1)
+        duration = (end_time - start_time).total_seconds() * 1000
+        processing_times = np.append(processing_times,np.array([int(duration)]))
+        output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+
+        nu = np.array(output)
+        # for object classification models show imagenet class
+        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
                                                                 round(1000 * batch_size / np.average(duration), 2)
                                                                 ))
-    # Comment out this section for non imagenet datasets
-    print("imagenet top results in a single batch:")
-    for i in range(nu.shape[0]):
-        single_result = nu[[i],...]
-        ma = np.argmax(single_result)
-        print("\t",i, classes.imagenet_classes[ma])
-    # Comment out this section for non imagenet datasets
+        # Comment out this section for non imagenet datasets
+        print("imagenet top results in a single batch:")
+        for i in range(nu.shape[0]):
+            single_result = nu[[i],...]
+            ma = np.argmax(single_result)
+            mark_message = ""
+            if args.get('labels_numpy_path') is not None:
+                total_executed += 1
+                if ma == lb[i]:
+                    matched_count += 1
+                    mark_message = "; Correct match."
+                else:
+                    mark_message = "; Incorrect match. Should be {} {}".format(lb[i], classes.imagenet_classes[lb[i]] )
+            print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
+        # Comment out this section for non imagenet datasets
 
 print('\nprocessing time for all iterations')
 print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.average(processing_times), 2),
@@ -99,10 +134,10 @@ print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.avera
 print('median time: {:.2f} ms; median speed: {:.2f} fps'.format(round(np.median(processing_times), 2),
                                                                   round(1000 * batch_size / np.median(processing_times), 2)))
 
-print('max time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
+print('max time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
                                                             round(1000 * batch_size / np.max(processing_times), 2)))
 
-print('min time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
+print('min time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
                                                             round(1000 * batch_size / np.min(processing_times), 2)))
 
 print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
@@ -115,3 +150,6 @@ print('time percentile 50: {:.2f} ms; speed percentile 50: {:.2f} fps'.format(
     ))
 print('time standard deviation: {:.2f}'.format(round(np.std(processing_times), 2)))
 print('time variance: {:.2f}'.format(round(np.var(processing_times), 2)))
+
+if args.get('labels_numpy_path') is not None:
+    print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
