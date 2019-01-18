@@ -145,7 +145,7 @@ class TestMuiltModelInference():
         expected_input_metadata = {'input': {'dtype': 1,
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1, 1]}}
+                                               'shape': [1, 1000]}}
         request = get_model_metadata(model_name='resnet_V1_50')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -166,7 +166,7 @@ class TestMuiltModelInference():
         expected_input_metadata = {'input': {'dtype': 1,
                                              'shape': [1, 3, 331, 331]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1, 1]}}
+                                               'shape': [1, 1001]}}
         print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata

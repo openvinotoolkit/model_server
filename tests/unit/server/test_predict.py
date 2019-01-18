@@ -25,10 +25,10 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
                             get_fake_model):
     infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
     expected_response = np.ones(shape=(2, 2))
-    infer_mocker.return_value = {'test_output': expected_response}
+    infer_mocker.return_value = {'output': expected_response}
 
     request = get_fake_request(model_name='test',
-                               data_shape=(1, 1), input_blob='input')
+                               data_shape=(1, 1, 1), input_blob='input')
     grpc_server = get_grpc_service_for_predict
     rpc = grpc_server.invoke_unary_unary(
             PREDICT_SERVICE.methods_by_name['Predict'],
@@ -37,7 +37,7 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
     rpc.initial_metadata()
     response, trailing_metadata, code, details = rpc.termination()
 
-    encoded_response = make_ndarray(response.outputs['test_output'])
+    encoded_response = make_ndarray(response.outputs['output'])
     assert get_fake_model.default_version == response.model_spec.version.value
     assert grpc.StatusCode.OK == code
     assert expected_response.shape == encoded_response.shape
@@ -46,9 +46,9 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
 def test_predict_successful_version(mocker, get_grpc_service_for_predict):
     infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
     expected_response = np.ones(shape=(2, 2))
-    infer_mocker.return_value = {'test_output': expected_response}
+    infer_mocker.return_value = {'output': expected_response}
     requested_version = 1
-    request = get_fake_request(model_name='test', data_shape=(1, 1),
+    request = get_fake_request(model_name='test', data_shape=(1, 1, 1),
                                input_blob='input', version=requested_version)
     grpc_server = get_grpc_service_for_predict
     rpc = grpc_server.invoke_unary_unary(
@@ -58,7 +58,7 @@ def test_predict_successful_version(mocker, get_grpc_service_for_predict):
     rpc.initial_metadata()
     response, trailing_metadata, code, details = rpc.termination()
 
-    encoded_response = make_ndarray(response.outputs['test_output'])
+    encoded_response = make_ndarray(response.outputs['output'])
     assert requested_version == response.model_spec.version.value
     assert grpc.StatusCode.OK == code
     assert expected_response.shape == encoded_response.shape

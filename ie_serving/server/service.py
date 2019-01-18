@@ -58,9 +58,9 @@ class PredictionServiceServicer(prediction_service_pb2.
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
         start_time = datetime.datetime.now()
-        occurred_problem, inference_input, code = prepare_input_data(
-            models=self.models, model_name=model_name, version=version,
-            data=request.inputs)
+        occurred_problem, inference_input, batch_size, code = \
+            prepare_input_data(models=self.models, model_name=model_name,
+                               version=version, data=request.inputs)
         deserialization_end_time = datetime.datetime.now()
         duration = (deserialization_end_time - start_time)\
             .total_seconds() * 1000
@@ -122,7 +122,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
         inputs = self.models[model_name].engines[version].input_tensors
-        outputs = self.models[model_name].engines[version].output_tensor_names
+        outputs = self.models[model_name].engines[version].output_tensors
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
