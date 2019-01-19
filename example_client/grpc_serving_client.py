@@ -66,12 +66,13 @@ if args.get('labels_numpy_path') is not None:
     total_executed = 0
 batch_size = int(args.get('batchsize'))
 
-iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
 
 while batch_size >= imgs.shape[0]:
     imgs = np.append(imgs, imgs, axis=0)
-    if lbs is not None:
+    if args.get('labels_numpy_path') is not None:
         lbs = np.append(lbs, lbs, axis=0)
+
+iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
 
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
