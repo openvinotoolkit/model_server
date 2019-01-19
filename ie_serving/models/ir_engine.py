@@ -25,12 +25,13 @@ logger = get_logger(__name__)
 
 class IrEngine():
 
-    def __init__(self, model_xml, model_bin, mapping_config, exec_net,
-                 inputs: dict,
-                 outputs: list):
+    def __init__(self, model_xml, model_bin, net, plugin, mapping_config,
+                 exec_net, inputs: dict, outputs: list):
         self.model_xml = model_xml
         self.model_bin = model_bin
         self.exec_net = exec_net
+        self.net = net
+        self.plugin = plugin
         self.input_tensor_names = list(inputs.keys())
         self.input_tensors = inputs
         self.output_tensor_names = list(outputs.keys())
@@ -51,7 +52,7 @@ class IrEngine():
         outputs = net.outputs
         exec_net = plugin.load(network=net, num_requests=batch_size)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
-                        mapping_config=mapping_config,
+                        mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs)
         return ir_engine
 
@@ -106,7 +107,9 @@ class IrEngine():
             return self._set_names_in_config_as_keys(mapping_data)
 
     def infer(self, data: dict, batch_size=None):
-        if batch_size is not None:
-            self.exec_net.requests[0].set_batch(batch_size)
+        if batch_size is not self.net.batch_size:
+            #self.exec_net.requests[0].set_batch(batch_size)
+            self.net.batch_size = batch_size
+            self.exec_net = self.plugin.load(network=self.net)
         results = self.exec_net.infer(inputs=data)
         return results
