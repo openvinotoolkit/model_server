@@ -27,7 +27,7 @@ def test_init_class():
     mapping_config = 'mapping_config.json'
     exec_net = None
     net = None
-    plugin = plugin
+    plugin = None
     input_key = 'input'
     inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
     outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
