@@ -108,7 +108,6 @@ class IrEngine():
 
     def infer(self, data: dict, batch_size=None):
         if batch_size is not self.net.batch_size:
-            #self.exec_net.requests[0].set_batch(batch_size)
             self.net.batch_size = batch_size
             self.exec_net = self.plugin.load(network=self.net)
         results = self.exec_net.infer(inputs=data)

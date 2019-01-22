@@ -26,12 +26,14 @@ def test_init_class():
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
+    net = None
+    plugin = plugin
     input_key = 'input'
     inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
     outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs)
+                      inputs=inputs, outputs=outputs, net=net, pluging=plugin)
     assert model_xml == engine.model_xml
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net

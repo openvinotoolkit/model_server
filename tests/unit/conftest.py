@@ -41,12 +41,14 @@ def get_fake_model():
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
+    net = None
+    plugin = None
     input_key = 'input'
     inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     outputs = {'output': Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
     new_engines = {1: engine, 2: engine, 3: engine}
     new_model = LocalModel(model_name="test",
                            model_directory='fake_path/model/',
@@ -60,13 +62,15 @@ def get_fake_ir_engine():
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
+    net = None
+    plugin = None
     input_key = 'input'
     output_key = 'output'
     inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     outputs = {output_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
 
     return engine
 
