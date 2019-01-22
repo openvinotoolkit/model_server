@@ -33,7 +33,7 @@ def test_init_class():
     outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, pluging=plugin)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
     assert model_xml == engine.model_xml
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net
