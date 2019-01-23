@@ -11,12 +11,9 @@ jobs:
     docker:
       - image: ubuntu:16.04
         environment:
-          PYTHONPATH: /opt/intel/computer_vision_sdk/python/python3.5/ubuntu16
+          PYTHONPATH: /opt/intel/computer_vision_sdk/python/python3.5/ubuntu16:/opt/intel/computer_vision_sdk/python/python3.5
           LD_LIBRARY_PATH: >-
-            /opt/intel/computer_vision_sdk/deployment_toolsinference_engine/external/gna/lib
-            :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/mkltiny_lnx/lib
-            :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/omp/lib
-            :/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64
+            /opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/gna/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/omp/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64
     environment:
       TEMP_DIR: /tmp/openvino_installer
     steps:
@@ -28,7 +25,7 @@ jobs:
             cd $TEMP_DIR &&
             apt-get update &&
             apt-get install -y --no-install-recommends cpio wget cpio cmake sudo python3-pip python3-venv python3-dev python3-setuptools virtualenv build-essential &&
-            wget -c $OPENVINO_DOWNLOAD_LINK_R4 &&
+            wget -c $OPENVINO_DOWNLOAD_LINK_R5 &&
             tar xf l_openvino_toolkit*.tgz &&
             cd l_openvino_toolkit* &&
             sed -i 's/decline/accept/g' silent.cfg &&
@@ -51,7 +48,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: wget -c $OPENVINO_DOWNLOAD_LINK_R4 && make docker_build_bin
+          command: wget -c $OPENVINO_DOWNLOAD_LINK_R5 && make docker_build_bin
       - run:
           name: Get Google Cloud credentials
           command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
