@@ -56,7 +56,7 @@ models/
     └── 1
         ├── ir_model.bin
         ├── ir_model.xml
-        └── tensors_mapping.json
+        └── mapping_config.json
 ``` 
 
 Each model should be stored in a dedicated folder (model1 and model2 in the examples above) and should include subfolders
@@ -79,7 +79,7 @@ output_tensorname = 'resnet_v1_50/predictions/Reshape_1'
 predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
-It is possible to adjust this behavior by adding an optional json file with name `tensors_mapping.json` 
+It is possible to adjust this behavior by adding an optional json file with name `mapping_config.json` 
 which can map the input and output keys to the appropriate tensors.
 
 ```json

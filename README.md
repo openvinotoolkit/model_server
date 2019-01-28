@@ -112,7 +112,7 @@ model server in the DEBUG mode.
 
 The possible issues could be:
 * Incorrect shape of the input data.
-* Incorrect input key name which does not match the tensor name or set input key name in `tensors_mapping.json`.
+* Incorrect input key name which does not match the tensor name or set input key name in `mapping_config.json`.
 * Incorrectly serialized data on the client side.
 
 ### Resource allocation
