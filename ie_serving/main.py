@@ -69,8 +69,8 @@ def parse_config(args):
         else:
             batch_size = None
         model = ModelBuilder.build(model_name=config['config']['name'],
-                                   model_directory=
-                                   config['config']['base_path'],
+                                   model_directory=config
+                                   ['config']['base_path'],
                                    batch_size=batch_size)
         models[config['config']['name']] = model
     start_server(models=models, max_workers=1, port=args.port)

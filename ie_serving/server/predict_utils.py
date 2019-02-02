@@ -60,8 +60,9 @@ def prepare_input_data(models, model_name, version, data):
         if models[model_name].engines[version].batch_size != 0 \
                 and shape_required_in_model[0] != tensor_input.shape[0]:
             code = StatusCode.INVALID_ARGUMENT
-            message = INVALID_BATCHSIZE.format(tensor_input.shape[0],
-                                               models[model_name].engines[version].batch_size)
+            message = INVALID_BATCHSIZE.format(
+                tensor_input.shape[0],
+                models[model_name].engines[version].batch_size)
             logger.debug("PREDICT error,Invalid batchsize:{}".format(message))
             return True, message, None, code
 

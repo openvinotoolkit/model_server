@@ -74,6 +74,7 @@ class TestMuiltModelInference():
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (2, 1000), ERROR_SHAPE
 
+        imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,

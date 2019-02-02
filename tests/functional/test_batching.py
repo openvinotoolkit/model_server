@@ -67,9 +67,9 @@ class TestBatchModelInference():
         assert output[out_name].shape == (8, 1000), ERROR_SHAPE
 
     def test_run_inference_bs4(self, resnet_8_batch_model_downloader,
-                           input_data_downloader_v1_224,
-                           start_server_batch_model_bs4,
-                           create_channel_for_batching_server_bs4):
+                               input_data_downloader_v1_224,
+                               start_server_batch_model_bs4,
+                               create_channel_for_batching_server_bs4):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
@@ -92,9 +92,9 @@ class TestBatchModelInference():
         assert output[out_name].shape == (4, 1000), ERROR_SHAPE
 
     def test_run_inference_auto(self, resnet_8_batch_model_downloader,
-                           input_data_downloader_v1_224,
-                           start_server_batch_model_auto,
-                           create_channel_for_batching_server_auto):
+                                input_data_downloader_v1_224,
+                                start_server_batch_model_auto,
+                                create_channel_for_batching_server_auto):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 

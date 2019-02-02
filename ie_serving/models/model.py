@@ -39,7 +39,8 @@ class Model(ABC):
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size):
         logger.info("Server start loading model: {}".format(model_name))
-        versions_attributes = cls.get_versions_attributes(model_directory, batch_size)
+        versions_attributes = cls.get_versions_attributes(model_directory,
+                                                          batch_size)
         engines = cls.get_engines_for_model(versions_attributes)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]

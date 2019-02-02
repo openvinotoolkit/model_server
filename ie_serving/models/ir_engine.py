@@ -52,14 +52,16 @@ class IrEngine():
                 batch_size = int(batch_size)
                 if batch_size > 0:
                     net.batch_size = batch_size
-                    logger.debug("effective batch size - {}".format(batch_size))
+                    logger.debug("effective batch size - {}".
+                                 format(batch_size))
                 else:
                     logger.debug("effective batch size - auto")
             elif batch_size == 'auto':
                 batch_size = 0
                 logger.debug("effective batch size - auto")
             else:
-                logger.debug("effective batch size - {}".format(net.batch_size))
+                logger.debug("effective batch size - {}".
+                             format(net.batch_size))
         else:
             logger.debug("effective batch size - {}".format(net.batch_size))
 

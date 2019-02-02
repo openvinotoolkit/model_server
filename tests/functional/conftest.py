@@ -171,17 +171,20 @@ def create_channel_for_batching_server():
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
 
+
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_bs4():
     channel = implementations.insecure_channel('localhost', 9004)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
 
+
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_auto():
     channel = implementations.insecure_channel('localhost', 9005)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
+
 
 @pytest.fixture(scope="class")
 def start_server_single_model(request, get_image, get_test_dir):
@@ -407,6 +410,7 @@ def start_server_batch_model(request, get_image, get_test_dir):
 
     return subprocess.check_call(cmd)
 
+
 @pytest.fixture(scope="class")
 def start_server_batch_model_auto(request, get_image, get_test_dir):
     CYAN_COLOR = '\033[36m'
@@ -440,6 +444,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir):
 
     return subprocess.check_call(cmd)
 
+
 @pytest.fixture(scope="class")
 def start_server_batch_model_bs4(request, get_image, get_test_dir):
     CYAN_COLOR = '\033[36m'
@@ -472,6 +477,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir):
     request.addfinalizer(stop_docker)
 
     return subprocess.check_call(cmd)
+
 
 def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,
           model_spec_version, output_tensors):
