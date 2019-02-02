@@ -55,5 +55,6 @@ class LocalModel(Model):
         engine = IrEngine.build(model_bin=version_attributes['bin_file'],
                                 model_xml=version_attributes['xml_file'],
                                 mapping_config=version_attributes
-                                ['mapping_config'])
+                                ['mapping_config'],
+                                batch_size=version_attributes['batch_size'])
         return engine

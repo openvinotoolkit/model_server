@@ -7,11 +7,11 @@ from ie_serving.models.s3_model import S3Model
 
 class ModelBuilder:
     @staticmethod
-    def build(model_name: str, model_directory: str):
+    def build(model_name: str, model_directory: str, batch_size):
         parsed_path = urlparse(model_directory)
         if parsed_path.scheme == '':
-            return LocalModel.build(model_name, model_directory)
+            return LocalModel.build(model_name, model_directory, batch_size)
         elif parsed_path.scheme == 'gs':
-            return GSModel.build(model_name, model_directory)
+            return GSModel.build(model_name, model_directory, batch_size)
         elif parsed_path.scheme == 's3':
-            return S3Model.build(model_name, model_directory)
+            return S3Model.build(model_name, model_directory, batch_size)

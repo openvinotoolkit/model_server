@@ -171,6 +171,17 @@ def create_channel_for_batching_server():
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
 
+@pytest.fixture(scope="session")
+def create_channel_for_batching_server_bs4():
+    channel = implementations.insecure_channel('localhost', 9004)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
+
+@pytest.fixture(scope="session")
+def create_channel_for_batching_server_auto():
+    channel = implementations.insecure_channel('localhost', 9005)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
 
 @pytest.fixture(scope="class")
 def start_server_single_model(request, get_image, get_test_dir):
@@ -396,6 +407,71 @@ def start_server_batch_model(request, get_image, get_test_dir):
 
     return subprocess.check_call(cmd)
 
+@pytest.fixture(scope="class")
+def start_server_batch_model_auto(request, get_image, get_test_dir):
+    CYAN_COLOR = '\033[36m'
+    END_COLOR = '\033[0m'
+    cmd = ['docker',
+           'run',
+           '--rm',
+           '-d',
+           '--name', 'ie-serving-py-test-autobatch',
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
+           '-p', '9005:9005',
+           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
+           'model',
+           '--model_name', 'resnet',
+           '--model_path', '/opt/ml/resnet_V1_50_batch8',
+           '--port', '9005',
+           '--batch_size', 'auto'
+           ]
+    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
+                                                     END_COLOR))
+
+    def stop_docker():
+        print("stopping docker container...")
+        return_code = subprocess.call(
+            "for I in `docker ps -f 'name=ie-serving-py-test-autobatch' -q` ;"
+            "do echo $I; docker stop $I; done",
+            shell=True)
+        if return_code == 0:
+            print("docker container removed")
+    request.addfinalizer(stop_docker)
+
+    return subprocess.check_call(cmd)
+
+@pytest.fixture(scope="class")
+def start_server_batch_model_bs4(request, get_image, get_test_dir):
+    CYAN_COLOR = '\033[36m'
+    END_COLOR = '\033[0m'
+    cmd = ['docker',
+           'run',
+           '--rm',
+           '-d',
+           '--name', 'ie-serving-py-test-batch4',
+           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
+           '-p', '9004:9004',
+           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
+           'model',
+           '--model_name', 'resnet',
+           '--model_path', '/opt/ml/resnet_V1_50_batch8',
+           '--port', '9004',
+           '--batch_size', '4'
+           ]
+    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
+                                                     END_COLOR))
+
+    def stop_docker():
+        print("stopping docker container...")
+        return_code = subprocess.call(
+            "for I in `docker ps -f 'name=ie-serving-py-test-batch4' -q` ;"
+            "do echo $I; docker stop $I; done",
+            shell=True)
+        if return_code == 0:
+            print("docker container removed")
+    request.addfinalizer(stop_docker)
+
+    return subprocess.check_call(cmd)
 
 def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,
           model_spec_version, output_tensors):

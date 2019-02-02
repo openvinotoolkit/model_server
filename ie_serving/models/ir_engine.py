@@ -26,11 +26,12 @@ logger = get_logger(__name__)
 class IrEngine():
 
     def __init__(self, model_xml, model_bin, net, plugin, mapping_config,
-                 exec_net, inputs: dict, outputs: list):
+                 exec_net, inputs: dict, outputs: list, batch_size):
         self.model_xml = model_xml
         self.model_bin = model_bin
         self.exec_net = exec_net
         self.net = net
+        self.batch_size = batch_size
         self.plugin = plugin
         self.input_tensor_names = list(inputs.keys())
         self.input_tensors = inputs
@@ -41,19 +42,34 @@ class IrEngine():
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod
-    def build(cls, model_xml, model_bin, mapping_config):
+    def build(cls, model_xml, model_bin, mapping_config, batch_size):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork.from_ir(model=model_xml, weights=model_bin)
-        input_blob = next(iter(net.inputs))
-        batch_size = net.inputs[input_blob].shape[0]
+        if batch_size is not None:
+            if batch_size.isdigit():
+                batch_size = int(batch_size)
+                if batch_size > 0:
+                    net.batch_size = batch_size
+                    logger.debug("effective batch size - {}".format(batch_size))
+                else:
+                    logger.debug("effective batch size - auto")
+            elif batch_size == 'auto':
+                batch_size = 0
+                logger.debug("effective batch size - auto")
+            else:
+                logger.debug("effective batch size - {}".format(net.batch_size))
+        else:
+            logger.debug("effective batch size - {}".format(net.batch_size))
+
         inputs = net.inputs
         outputs = net.outputs
-        exec_net = plugin.load(network=net, num_requests=batch_size)
+        exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
-                        exec_net=exec_net, inputs=inputs, outputs=outputs)
+                        exec_net=exec_net, inputs=inputs, outputs=outputs,
+                        batch_size=batch_size)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -107,7 +123,7 @@ class IrEngine():
             return self._set_names_in_config_as_keys(mapping_data)
 
     def infer(self, data: dict, batch_size=None):
-        if batch_size is not self.net.batch_size:
+        if batch_size is not self.net.batch_size and self.batch_size == 0:
             self.net.batch_size = batch_size
             self.exec_net = self.plugin.load(network=self.net)
         results = self.exec_net.infer(inputs=data)

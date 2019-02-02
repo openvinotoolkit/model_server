@@ -22,13 +22,14 @@ logger = get_logger(__name__)
 
 class Model(ABC):
 
-    def __init__(self, model_name: str, model_directory: str,
+    def __init__(self, model_name: str, model_directory: str, batch_size,
                  available_versions: list, engines: dict):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
         self.engines = engines
         self.default_version = max(self.versions)
+        self.batch_size = batch_size
         logger.info("List of available versions "
                     "for {} model: {}".format(self.model_name, self.versions))
         logger.info("Default version "
@@ -36,18 +37,19 @@ class Model(ABC):
                                                 self.default_version))
 
     @classmethod
-    def build(cls, model_name: str, model_directory: str):
+    def build(cls, model_name: str, model_directory: str, batch_size):
         logger.info("Server start loading model: {}".format(model_name))
-        versions_attributes = cls.get_versions_attributes(model_directory)
+        versions_attributes = cls.get_versions_attributes(model_directory, batch_size)
         engines = cls.get_engines_for_model(versions_attributes)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         model = cls(model_name=model_name, model_directory=model_directory,
-                    available_versions=available_versions, engines=engines)
+                    available_versions=available_versions, engines=engines,
+                    batch_size=batch_size)
         return model
 
     @classmethod
-    def get_versions_attributes(cls, model_directory):
+    def get_versions_attributes(cls, model_directory, batch_size):
         versions = cls.get_versions(model_directory)
         logger.info(versions)
         versions_attributes = []
@@ -61,6 +63,7 @@ class Model(ABC):
                                           'bin_file': bin_file,
                                           'mapping_config': mapping_config,
                                           'version_number': version_number,
+                                          'batch_size': batch_size
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
