@@ -43,16 +43,19 @@ def get_fake_model():
     exec_net = None
     net = None
     plugin = None
+    batch_size = None
     input_key = 'input'
     inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     outputs = {'output': Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
+                      batch_size=batch_size)
     new_engines = {1: engine, 2: engine, 3: engine}
     new_model = LocalModel(model_name="test",
                            model_directory='fake_path/model/',
-                           available_versions=[1, 2, 3], engines=new_engines)
+                           available_versions=[1, 2, 3], engines=new_engines,
+                           batch_size=batch_size)
     return new_model
 
 
@@ -63,6 +66,7 @@ def get_fake_ir_engine():
     mapping_config = 'mapping_config.json'
     exec_net = None
     net = None
+    batch_size = None
     plugin = None
     input_key = 'input'
     output_key = 'output'
@@ -70,7 +74,8 @@ def get_fake_ir_engine():
     outputs = {output_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
+                      batch_size=batch_size)
 
     return engine
 

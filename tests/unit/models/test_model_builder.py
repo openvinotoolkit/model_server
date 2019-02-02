@@ -19,19 +19,19 @@ from ie_serving.models.model_builder import ModelBuilder
 def test_build_local_model(mocker):
     local_build_mocker = mocker.patch(
         'ie_serving.models.local_model.LocalModel.build')
-    ModelBuilder.build('model_name', 'opt/bucket/model')
+    ModelBuilder.build('model_name', 'opt/bucket/model', None)
     assert local_build_mocker.called
 
 
 def test_build_gs_model(mocker):
     gs_build_mocker = mocker.patch(
         'ie_serving.models.gs_model.GSModel.build')
-    ModelBuilder.build('model_name', 'gs://bucket/model')
+    ModelBuilder.build('model_name', 'gs://bucket/model', None)
     assert gs_build_mocker.called
 
 
 def test_build_s3_model(mocker):
     s3_build_mocker = mocker.patch(
         'ie_serving.models.s3_model.S3Model.build')
-    ModelBuilder.build('model_name', 's3://bucket/model')
+    ModelBuilder.build('model_name', 's3://bucket/model', None)
     assert s3_build_mocker.called

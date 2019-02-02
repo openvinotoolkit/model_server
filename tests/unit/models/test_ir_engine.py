@@ -27,13 +27,15 @@ def test_init_class():
     mapping_config = 'mapping_config.json'
     exec_net = None
     net = None
+    batch_size = None
     plugin = None
     input_key = 'input'
     inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
     outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, plugin=plugin)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
+                      batch_size=batch_size)
     assert model_xml == engine.model_xml
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net
@@ -51,10 +53,12 @@ def test_build_device_cpu(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    batch_size = None
     mapping_config = 'mapping_config.json'
     with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
-                       mapping_config=mapping_config)
+                       mapping_config=mapping_config,
+                       batch_size=batch_size)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -67,10 +71,11 @@ def test_build_device_other(mocker):
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
-
+    batch_size = None
     with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
-                       mapping_config=mapping_config)
+                       mapping_config=mapping_config,
+                       batch_size=batch_size)
         assert not cpu_extension_mock.assert_called_once_with()
 
 

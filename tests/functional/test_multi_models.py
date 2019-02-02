@@ -18,8 +18,8 @@ import numpy as np
 import time
 import sys
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE # noqa
+from conftest import infer, infer_batch, get_model_metadata,\
+    model_metadata_response, ERROR_SHAPE # noqa
 
 
 class TestMuiltModelInference():
@@ -66,11 +66,11 @@ class TestMuiltModelInference():
         print("Starting inference using resnet model")
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         for x in range(0, 10):
-            output = infer(input_data, slice_number=x,
-                           input_tensor='input', grpc_stub=stub,
-                           model_spec_name='resnet_V1_50',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+            output = infer_batch(input_data, input_tensor='input',
+                                 grpc_stub=stub,
+                                 model_spec_name='resnet_V1_50',
+                                 model_spec_version=None,
+                                 output_tensors=[out_name])
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (2, 1000), ERROR_SHAPE
 
@@ -99,10 +99,11 @@ class TestMuiltModelInference():
         print("Starting inference using pnasnet_large model")
         out_name = 'final_layer/predictions'
         for x in range(0, 10):
-            output = infer(input_data, slice_number=x, input_tensor='input',
-                           grpc_stub=stub, model_spec_name='pnasnet_large',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+            output = infer_batch(input_data, input_tensor='input',
+                                 grpc_stub=stub,
+                                 model_spec_name='pnasnet_large',
+                                 model_spec_version=None,
+                                 output_tensors=[out_name])
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
@@ -165,9 +166,9 @@ class TestMuiltModelInference():
             response=response)
 
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 331, 331]}}
+                                             'shape': [4, 3, 331, 331]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
+                                               'shape': [4, 1001]}}
         print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata
