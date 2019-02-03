@@ -18,7 +18,8 @@ from ie_serving.models.local_model import LocalModel
 
 def test_model_init():
     new_model = LocalModel(model_name="test", model_directory='fake_path',
-                           available_versions=[1, 2, 3], engines={})
+                           available_versions=[1, 2, 3], engines={},
+                           batch_size=None)
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
@@ -44,11 +45,11 @@ def test_get_engines_for_model(mocker):
     available_versions = [{'xml_file': 'modelv2.xml',
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 2},
+                           'version_number': 2, 'batch_size': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 4}]
+                           'version_number': 4, 'batch_size': None}]
     output = LocalModel.get_engines_for_model(
         versions_attributes=available_versions)
     assert 2 == len(output)
@@ -63,15 +64,15 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     available_versions = [{'xml_file': 'modelv2.xml',
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 2},
+                           'version_number': 2, 'batch_size': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 3},
+                           'version_number': 3, 'batch_size': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 4}]
+                           'version_number': 4, 'batch_size': None}]
     output = LocalModel.get_engines_for_model(
         versions_attributes=available_versions)
     assert 2 == len(output)
