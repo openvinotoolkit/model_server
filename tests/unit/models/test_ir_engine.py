@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models.ir_engine import IrEngine, _set_batch_size
 from unittest import mock
 import json
 import pytest
@@ -26,12 +26,16 @@ def test_init_class():
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
+    net = None
+    batch_size = None
+    plugin = None
     input_key = 'input'
     inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
     outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs)
+                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
+                      batch_size=batch_size)
     assert model_xml == engine.model_xml
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net
@@ -49,10 +53,12 @@ def test_build_device_cpu(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
+    batch_size = None
     mapping_config = 'mapping_config.json'
     with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
-                       mapping_config=mapping_config)
+                       mapping_config=mapping_config,
+                       batch_size=batch_size)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -65,10 +71,11 @@ def test_build_device_other(mocker):
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
-
+    batch_size = None
     with pytest.raises(Exception):
         IrEngine.build(model_bin=model_bin, model_xml=model_xml,
-                       mapping_config=mapping_config)
+                       mapping_config=mapping_config,
+                       batch_size=batch_size)
         assert not cpu_extension_mock.assert_called_once_with()
 
 
@@ -174,3 +181,21 @@ def test_set_keys(get_fake_ir_engine, mocker):
     output = engine.set_keys('mapping_config.json')
     keys_from_config_mocker.assert_called_once_with('something')
     assert 'config' == output
+
+
+@pytest.mark.parametrize(('in_conf_bs', 'in_model_bs',
+                          'exp_engine_bs', 'exp_net_bs', 'exp_effective_bs'), [
+    ('auto', 1, 0, None, 'auto'),
+    ('invalid', 1, None, None, '1'),
+    ('0', 2, None, None, '2'),
+    ('8', 1, 8, 8, '8'),
+    (None, 4, None, None, '4')
+])
+def test_set_batch_size(in_conf_bs, in_model_bs,
+                        exp_engine_bs, exp_net_bs, exp_effective_bs):
+    e_bs, net_bs, effective_bs = \
+        _set_batch_size(in_conf_bs, in_model_bs)
+
+    assert e_bs == exp_engine_bs
+    assert net_bs == exp_net_bs
+    assert effective_bs == exp_effective_bs

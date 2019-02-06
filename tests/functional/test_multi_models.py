@@ -18,8 +18,8 @@ import numpy as np
 import time
 import sys
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE # noqa
+from conftest import infer, infer_batch, get_model_metadata,\
+    model_metadata_response, ERROR_SHAPE # noqa
 
 
 class TestMuiltModelInference():
@@ -62,18 +62,19 @@ class TestMuiltModelInference():
         # Connect to grpc service
         stub = create_channel_for_port_multi_server
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        input_data = input_data_downloader_v1_224[:2, :, :, :]
         print("Starting inference using resnet model")
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='input', grpc_stub=stub,
-                           model_spec_name='resnet_V1_50',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+            output = infer_batch(input_data, input_tensor='input',
+                                 grpc_stub=stub,
+                                 model_spec_name='resnet_V1_50',
+                                 model_spec_version=None,
+                                 output_tensors=[out_name])
             print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+            assert output[out_name].shape == (2, 1000), ERROR_SHAPE
 
+        imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,
@@ -94,16 +95,17 @@ class TestMuiltModelInference():
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
-        imgs_v3_331 = np.array(input_data_downloader_v3_331)
+        input_data = input_data_downloader_v3_331[:4, :, :, :]
         print("Starting inference using pnasnet_large model")
         out_name = 'final_layer/predictions'
         for x in range(0, 10):
-            output = infer(imgs_v3_331, slice_number=x, input_tensor='input',
-                           grpc_stub=stub, model_spec_name='pnasnet_large',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+            output = infer_batch(input_data, input_tensor='input',
+                                 grpc_stub=stub,
+                                 model_spec_name='pnasnet_large',
+                                 model_spec_version=None,
+                                 output_tensors=[out_name])
             print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+            assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
     def test_get_model_metadata(self, download_two_models,
                                 start_server_multi_model,
@@ -164,9 +166,9 @@ class TestMuiltModelInference():
             response=response)
 
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 331, 331]}}
+                                             'shape': [4, 3, 331, 331]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
+                                               'shape': [4, 1001]}}
         print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata

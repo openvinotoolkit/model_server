@@ -122,7 +122,8 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
 * `ie_serving` command starts the model server which has the following parameters:
 
 ```bash
-usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH [--port PORT] 
+usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
+                        [--batch_size BATCH_SIZE] [--port PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -130,11 +131,14 @@ optional arguments:
                         name of the model
   --model_path MODEL_PATH
                         absolute path to model,as in tf serving
+  --batch_size BATCH_SIZE
+                        sets models batchsize, int value or auto
   --port PORT           server port
 
 ```
 
-The model path could be local on docker container like mounted during startup or it could be Googe Cloud Storage path 
+
+The model path could be local on docker container like mounted during startup or it could be Google Cloud Storage path 
 in a format `gs://<bucket>/<model_path>`. In this case it will be required to 
 pass GCS credentials to the docker container,
 unless GKE kubernetes cluster, which handled the authorization automatically,
@@ -169,7 +173,7 @@ docker run --rm -d  -p 9001:9001 ie-serving-py:latest \
 -e AWS_REGION=“${AWS_REGION}”  \
 -e S3_ENDPOINT=“${S3_ENDPOINT}”  \
 /ie-serving-py/start_server.sh ie_serving model --model_path 
-s3://bucket/model_path --model_name my_model --port 9001
+s3://bucket/model_path --model_name my_model --port 9001 --batch_size auto
 ```
 
 
@@ -186,13 +190,15 @@ It uses `json` format as shown in the example below:
       {
          "config":{
             "name":"model_name1",
-            "base_path":"/opt/ml/models/model1"
+            "base_path":"/opt/ml/models/model1",
+            "batch_size": "16"
          }
       },
       {
          "config":{
             "name":"model_name2",
-            "base_path":"/opt/ml/models/model2"
+            "base_path":"/opt/ml/models/model2",
+            "batch_size": "auto"
          }
       },
       {
@@ -244,13 +250,15 @@ optional arguments:
 
 ## Batch Processing
 
-Inference processing can be executed in batches when the OpenVINO&trade; model are exported by the model optimizer with batch size >1 or the size of first dimension is >1.
+`batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer.
+When that parameter is set to numerical value, it is changing the model batch size at service start up. 
+It accepts also a value `auto` - this special phrase make the served model to set the batch size automatically based on the incoming data at run time.
+Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
+This feature is useful for sequential inference requests of the same batch size.
 
-Generally OpenVINO&trade; model server determines the batch size based on the size of the first dimension in the first input.
+OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
+For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
 **Note:** Dynamic batch size _is not_ supported.
 
-For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
-
-From the performance point of view, processing a batch of requests is usually more efficient than executing sequentially.
-The side effect of increased throughput will be higher latency.
+Processing bigger batches of requests increases the throughput but the side effect is higher latency.

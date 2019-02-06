@@ -21,4 +21,7 @@ INVALID_SHAPE = 'The input data is incorrect. Obtained shape {}, ' \
                 'required shape {}'
 INVALID_METADATA_FIELD = 'Metadata field {} is not supported'
 
+INVALID_BATCHSIZE = 'Input batch size is incorrect. Obtained batch size {}, ' \
+                    'required batch size {}'
+
 SIGNATURE_NAME = "serving_default"

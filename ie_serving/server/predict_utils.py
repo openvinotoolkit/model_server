@@ -22,7 +22,8 @@ from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
 import tensorflow.contrib.util as tf_contrib_util
 # import tensorflow.contrib.util as tf_contrib_util
-from ie_serving.server.constants import INVALID_INPUT_KEY, INVALID_SHAPE
+from ie_serving.server.constants import \
+    INVALID_INPUT_KEY, INVALID_SHAPE, INVALID_BATCHSIZE
 from ie_serving.logger import get_logger
 
 logger = get_logger(__name__)
@@ -55,15 +56,25 @@ def prepare_input_data(models, model_name, version, data):
 
         shape_required_in_model = models[model_name].engines[version] \
             .input_tensors[tensor_name].shape
+        # check if input batch size match the model only if not auto mode
+        if models[model_name].engines[version].batch_size != 0 \
+                and shape_required_in_model[0] != tensor_input.shape[0]:
+            code = StatusCode.INVALID_ARGUMENT
+            message = INVALID_BATCHSIZE.format(
+                tensor_input.shape[0],
+                models[model_name].engines[version].batch_size)
+            logger.debug("PREDICT error,Invalid batchsize:{}".format(message))
+            return True, message, None, code
+
         # check requested shape and model shape
-        if shape_required_in_model != list(tensor_input.shape):
+        if shape_required_in_model[1:] != list(tensor_input.shape)[1:]:
             code = StatusCode.INVALID_ARGUMENT
             message = INVALID_SHAPE.format(list(tensor_input.shape),
                                            shape_required_in_model)
             logger.debug("PREDICT error: {}".format(message))
             return True, message, None, code
         inference_input[tensor_name] = tensor_input
-        batch_size = shape_required_in_model[0]
+        batch_size = list(tensor_input.shape)[0]
     return False, inference_input, batch_size, None
 
 

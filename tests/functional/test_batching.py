@@ -51,7 +51,7 @@ class TestBatchModelInference():
         # Starting docker with ie-serving
         result = start_server_batch_model
         print("docker starting status:", result)
-        time.sleep(40)  # Waiting for inference service to load models
+        time.sleep(15)  # Waiting for inference service to load models
         assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service
@@ -66,6 +66,65 @@ class TestBatchModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1000), ERROR_SHAPE
 
+    def test_run_inference_bs4(self, resnet_8_batch_model_downloader,
+                               input_data_downloader_v1_224,
+                               start_server_batch_model_bs4,
+                               create_channel_for_batching_server_bs4):
+
+        print("Downloaded model files:", resnet_8_batch_model_downloader)
+
+        # Starting docker with ie-serving
+        result = start_server_batch_model_bs4
+        print("docker starting status:", result)
+        time.sleep(15)  # Waiting for inference service to load models
+        assert result == 0, "docker container was not started successfully"
+
+        # Connect to grpc service
+        stub = create_channel_for_batching_server_bs4
+
+        batch_input = input_data_downloader_v1_224[:4, :, :, :]
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        output = infer_batch(batch_input=batch_input, input_tensor='input',
+                             grpc_stub=stub, model_spec_name='resnet',
+                             model_spec_version=None,
+                             output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (4, 1000), ERROR_SHAPE
+
+    def test_run_inference_auto(self, resnet_8_batch_model_downloader,
+                                input_data_downloader_v1_224,
+                                start_server_batch_model_auto,
+                                create_channel_for_batching_server_auto):
+
+        print("Downloaded model files:", resnet_8_batch_model_downloader)
+
+        # Starting docker with ie-serving
+        result = start_server_batch_model_auto
+        print("docker starting status:", result)
+        time.sleep(15)  # Waiting for inference service to load models
+        assert result == 0, "docker container was not started successfully"
+
+        # Connect to grpc service
+        stub = create_channel_for_batching_server_auto
+
+        batch_input = input_data_downloader_v1_224[:6, :, :, :]
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        output = infer_batch(batch_input=batch_input, input_tensor='input',
+                             grpc_stub=stub, model_spec_name='resnet',
+                             model_spec_version=None,
+                             output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (6, 1000), ERROR_SHAPE
+
+        batch_input = input_data_downloader_v1_224[:1, :, :, :]
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        output = infer_batch(batch_input=batch_input, input_tensor='input',
+                             grpc_stub=stub, model_spec_name='resnet',
+                             model_spec_version=None,
+                             output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
     def test_get_model_metadata(self, resnet_8_batch_model_downloader,
                                 start_server_batch_model,
                                 create_channel_for_batching_server):
@@ -73,7 +132,7 @@ class TestBatchModelInference():
         print("Downloaded model files:", resnet_8_batch_model_downloader)
         result = start_server_batch_model
         print("docker starting status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
+        time.sleep(15)  # Waiting for inference service to load models
         assert result == 0, "docker container was not started successfully"
 
         stub = create_channel_for_batching_server

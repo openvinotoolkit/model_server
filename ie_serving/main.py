@@ -64,16 +64,22 @@ def parse_config(args):
     check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
+        if 'batch_size' in config['config'].keys():
+            batch_size = config['config']['batch_size']
+        else:
+            batch_size = None
         model = ModelBuilder.build(model_name=config['config']['name'],
-                                   model_directory=config['config'][
-                                       'base_path'])
+                                   model_directory=config
+                                   ['config']['base_path'],
+                                   batch_size=batch_size)
         models[config['config']['name']] = model
     start_server(models=models, max_workers=1, port=args.port)
 
 
 def parse_one_model(args):
     model = ModelBuilder.build(model_name=args.model_name,
-                               model_directory=args.model_path)
+                               model_directory=args.model_path,
+                               batch_size=args.batch_size)
     start_server(models={args.model_name: model},
                  max_workers=1, port=args.port)
 
@@ -100,6 +106,9 @@ def main():
     parser_b.add_argument('--model_path', type=str,
                           help='absolute path to model,as in tf serving',
                           required=True)
+    parser_b.add_argument('--batch_size', type=str,
+                          help='sets models batchsize, int value or auto',
+                          required=False)
     parser_b.add_argument('--port', type=int, help='server port',
                           required=False, default=9000)
     parser_b.set_defaults(func=parse_one_model)

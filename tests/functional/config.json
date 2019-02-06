@@ -3,13 +3,15 @@
     {
       "config":{
         "name":"resnet_V1_50",
-        "base_path":"/opt/ml/resnet_V1_50"
+        "base_path":"/opt/ml/resnet_V1_50",
+        "batch_size":"auto"
       }
     },
     {
       "config": {
         "name": "pnasnet_large",
-        "base_path": "/opt/ml/pnasnet_large"
+        "base_path": "/opt/ml/pnasnet_large",
+        "batch_size":"4"
       }
     },
     {

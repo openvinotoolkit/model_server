@@ -75,7 +75,7 @@ class PredictionServiceServicer(prediction_service_pb2.
 
         inference_start_time = datetime.datetime.now()
         inference_output = self.models[model_name].engines[version] \
-            .infer(inference_input)
+            .infer(inference_input, batch_size)
         inference_end_time = datetime.datetime.now()
         duration = (inference_end_time - inference_start_time)\
             .total_seconds() * 1000

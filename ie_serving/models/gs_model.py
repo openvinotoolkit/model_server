@@ -111,7 +111,8 @@ class GSModel(Model):
         logger.info('Downloaded files from GCS')
         engine = IrEngine.build(model_xml=local_xml_file,
                                 model_bin=local_bin_file,
-                                mapping_config=local_mapping_config)
+                                mapping_config=local_mapping_config,
+                                batch_size=version_attributes['batch_size'])
         cls.delete_local_mirror([local_xml_file, local_bin_file,
                                  local_mapping_config])
         logger.info('Deleted temporary files')
