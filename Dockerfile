@@ -34,13 +34,13 @@ RUN apt-get update && apt-get install -y \
             gstreamer1.0-plugins-base \
             libusb-1.0-0-dev \
             libopenblas-dev
-ARG DLDT_DIR=/dldt-2018_R4
-RUN git clone --depth=1 -b 2018_R4 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
+ARG DLDT_DIR=/dldt-2018_R5
+RUN git clone --depth=1 -b 2018_R5 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
     cd ${DLDT_DIR} && git submodule init && git submodule update --recursive && \
     rm -Rf .git && rm -Rf model-optimizer
 
 WORKDIR ${DLDT_DIR}
-RUN curl -L -o ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz https://github.com/intel/mkl-dnn/releases/download/v0.17/mklml_lnx_2019.0.1.20180928.tgz && \
+RUN curl -L -o ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz https://github.com/intel/mkl-dnn/releases/download/v0.17.2/mklml_lnx_2019.0.1.20180928.tgz && \
     tar -xzf ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz && rm ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz
 WORKDIR ${DLDT_DIR}/inference-engine
 RUN mkdir build && cd build && cmake -DGEMM=MKL  -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.1.20180928 -DENABLE_MKL_DNN=ON  -DCMAKE_BUILD_TYPE=Release ..
@@ -56,22 +56,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
             ca-certificates \
             python3-pip \
             python3-dev \
-            vim \
-            virtualenv
+            virtualenv \
+            libgomp1
 WORKDIR /ie-serving-py
 
 COPY requirements.txt /ie-serving-py/
 RUN virtualenv -p python3 .venv && \
-    . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
+    . .venv/bin/activate && pip3 install -r requirements.txt
 
 COPY start_server.sh setup.py requirements.txt version /ie-serving-py/
 COPY ie_serving /ie-serving-py/ie_serving
 
 RUN . .venv/bin/activate && pip3 install .
 
-COPY --from=DEV /dldt-2018_R4/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
-COPY --from=DEV /dldt-2018_R4/inference-engine/ie_bridges/python/build/ /usr/local/lib/openvino/
-COPY --from=DEV /dldt-2018_R4/mklml_lnx_2019.0.1.20180928/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /dldt-2018_R5/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
+COPY --from=DEV /dldt-2018_R5/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
+COPY --from=DEV /dldt-2018_R5/mklml_lnx_2019.0.1.20180928/lib/lib*.so /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
