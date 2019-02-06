@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models.ir_engine import IrEngine, _set_batch_size
 from unittest import mock
 import json
 import pytest
@@ -181,3 +181,21 @@ def test_set_keys(get_fake_ir_engine, mocker):
     output = engine.set_keys('mapping_config.json')
     keys_from_config_mocker.assert_called_once_with('something')
     assert 'config' == output
+
+
+@pytest.mark.parametrize(('in_conf_bs', 'in_model_bs',
+                          'exp_engine_bs', 'exp_net_bs', 'exp_effective_bs'), [
+    ('auto', 1, 0, None, 'auto'),
+    ('invalid', 1, None, None, '1'),
+    ('0', 2, None, None, '2'),
+    ('8', 1, 8, 8, '8'),
+    (None, 4, None, None, '4')
+])
+def test_set_batch_size(in_conf_bs, in_model_bs,
+                        exp_engine_bs, exp_net_bs, exp_effective_bs):
+    e_bs, net_bs, effective_bs = \
+        _set_batch_size(in_conf_bs, in_model_bs)
+
+    assert e_bs == exp_engine_bs
+    assert net_bs == exp_net_bs
+    assert effective_bs == exp_effective_bs

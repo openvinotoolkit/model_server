@@ -23,6 +23,33 @@ from ie_serving.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _set_batch_size(config_batch_size, model_batch_size):
+    if config_batch_size is not None:
+        if config_batch_size.isdigit():
+            config_batch_size = int(config_batch_size)
+            if config_batch_size > 0:
+                net_batch_size = config_batch_size
+                engine_batch_size = config_batch_size
+                effective_batch_size = str(config_batch_size)
+            else:  # zero is ignored as invalid value
+                effective_batch_size = str(model_batch_size)
+                engine_batch_size = None
+                net_batch_size = None
+        elif config_batch_size == 'auto':
+            engine_batch_size = 0
+            net_batch_size = None
+            effective_batch_size = "auto"
+        else:  # invalid value in config_batch_size to be ignored
+            effective_batch_size = str(model_batch_size)
+            engine_batch_size = None
+            net_batch_size = None
+    else:  # empty config_batch_size - default
+        effective_batch_size = str(model_batch_size)
+        engine_batch_size = None
+        net_batch_size = None
+    return engine_batch_size, net_batch_size, effective_batch_size
+
+
 class IrEngine():
 
     def __init__(self, model_xml, model_bin, net, plugin, mapping_config,
@@ -47,31 +74,19 @@ class IrEngine():
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork.from_ir(model=model_xml, weights=model_bin)
-        if batch_size is not None:
-            if batch_size.isdigit():
-                batch_size = int(batch_size)
-                if batch_size > 0:
-                    net.batch_size = batch_size
-                    logger.debug("effective batch size - {}".
-                                 format(batch_size))
-                else:
-                    logger.debug("effective batch size - auto")
-            elif batch_size == 'auto':
-                batch_size = 0
-                logger.debug("effective batch size - auto")
-            else:
-                logger.debug("effective batch size - {}".
-                             format(net.batch_size))
-        else:
-            logger.debug("effective batch size - {}".format(net.batch_size))
 
+        engine_batch_size, net_batch_size, effective_batch_size = \
+            _set_batch_size(batch_size, net.batch_size)
+        if net_batch_size is not None:
+            net.batch_size = net_batch_size
+        logger.debug("effective batch size - {}".format(effective_batch_size))
         inputs = net.inputs
         outputs = net.outputs
         exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs,
-                        batch_size=batch_size)
+                        batch_size=engine_batch_size)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):

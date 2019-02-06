@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='ie_serving',
-    version=0.1,
+    version=0.4,
     description="DLDT inference server",
     long_description="""DLDT inference server""",
     keywords='',
