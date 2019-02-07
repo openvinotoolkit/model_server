@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
 #
 
 import sys
-import time
 sys.path.append(".")
-from conftest import infer_batch, get_model_metadata, \
+from conftest import infer_batch, get_model_metadata, wait_endpoint_setup, \
     model_metadata_response, ERROR_SHAPE # noqa
 
 
@@ -49,10 +48,10 @@ class TestBatchModelInference():
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Starting docker with ie-serving
-        result = start_server_batch_model
-        print("docker starting status:", result)
-        time.sleep(15)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_batch_model
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_batching_server
@@ -74,10 +73,10 @@ class TestBatchModelInference():
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Starting docker with ie-serving
-        result = start_server_batch_model_bs4
-        print("docker starting status:", result)
-        time.sleep(15)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_batch_model_bs4
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_batching_server_bs4
@@ -99,10 +98,10 @@ class TestBatchModelInference():
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Starting docker with ie-serving
-        result = start_server_batch_model_auto
-        print("docker starting status:", result)
-        time.sleep(15)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_batch_model_auto
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_batching_server_auto
@@ -130,10 +129,10 @@ class TestBatchModelInference():
                                 create_channel_for_batching_server):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
-        result = start_server_batch_model
-        print("docker starting status:", result)
-        time.sleep(15)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_batch_model
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         stub = create_channel_for_batching_server
 

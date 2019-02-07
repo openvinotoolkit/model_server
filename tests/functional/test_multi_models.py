@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,10 @@
 #
 
 import numpy as np
-import time
 import sys
 sys.path.append(".")
-from conftest import infer, infer_batch, get_model_metadata,\
-    model_metadata_response, ERROR_SHAPE # noqa
+from conftest import infer, infer_batch, get_model_metadata, \
+    model_metadata_response, wait_endpoint_setup, ERROR_SHAPE # noqa
 
 
 class TestMuiltModelInference():
@@ -54,10 +53,10 @@ class TestMuiltModelInference():
 
         # Starting docker with ie-serving
 
-        result = start_server_multi_model
-        print("docker starting multi model server status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_multi_model
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_port_multi_server
@@ -133,10 +132,10 @@ class TestMuiltModelInference():
         print("Downloaded model files:", download_two_models)
 
         # Starting docker with ie-serving
-        result = start_server_multi_model
-        print("docker starting multi model server status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_multi_model
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_port_multi_server

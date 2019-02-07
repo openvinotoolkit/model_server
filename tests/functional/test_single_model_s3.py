@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 import numpy as np
 import sys
-import time
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE # noqa
+    wait_endpoint_setup, ERROR_SHAPE # noqa
 
 
-class TestSingleModelInferenceGc():
+class TestSingleModelInferenceS3():
 
     def test_run_inference(self, input_data_downloader_v1_224,
                            start_server_single_model_from_s3,
@@ -47,10 +46,10 @@ class TestSingleModelInferenceGc():
         """
 
         # Starting docker with ie-serving
-        result = start_server_single_model_from_s3
-        print("docker starting status:", result)
-        time.sleep(40)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_single_model_from_s3
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_port_single_server
@@ -69,10 +68,10 @@ class TestSingleModelInferenceGc():
     def test_get_model_metadata(self, start_server_single_model_from_s3,
                                 create_channel_for_port_single_server):
 
-        result = start_server_single_model_from_s3
-        print("docker starting status:", result)
-        time.sleep(40)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
+        container = start_server_single_model_from_s3
+        running, logs = wait_endpoint_setup(container)
+        print("Logs from container: ", logs)
+        assert running is True, "docker container was not started successfully"
 
         stub = create_channel_for_port_single_server
 

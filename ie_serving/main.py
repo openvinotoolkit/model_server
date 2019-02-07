@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import sys
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
+from jsonschema.exceptions import ValidationError
 import os
 
 logger = get_logger(__name__)
@@ -64,22 +65,36 @@ def parse_config(args):
     check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
-        if 'batch_size' in config['config'].keys():
-            batch_size = config['config']['batch_size']
-        else:
-            batch_size = None
-        model = ModelBuilder.build(model_name=config['config']['name'],
-                                   model_directory=config
-                                   ['config']['base_path'],
-                                   batch_size=batch_size)
-        models[config['config']['name']] = model
+        try:
+            batch_size = config['config'].get('batch_size', None)
+            model_ver_policy = config['config'].get(
+                'model_version_policy', None)
+            model = ModelBuilder.build(model_name=config['config']['name'],
+                                       model_directory=config['config'][
+                                           'base_path'],
+                                       batch_size=batch_size,
+                                       model_version_policy=model_ver_policy)
+            models[config['config']['name']] = model
+        except Exception as e:
+            logger.warning(e)
     start_server(models=models, max_workers=1, port=args.port)
 
 
 def parse_one_model(args):
-    model = ModelBuilder.build(model_name=args.model_name,
-                               model_directory=args.model_path,
-                               batch_size=args.batch_size)
+    try:
+        model_version_policy = json.loads(args.model_version_policy)
+        model = ModelBuilder.build(model_name=args.model_name,
+                                   model_directory=args.model_path,
+                                   batch_size=args.batch_size,
+                                   model_version_policy=model_version_policy)
+    except ValidationError as e:
+        logger.error("Problem with model_version_policy. "
+                     "Exception: {}".format(e))
+        sys.exit()
+    except Exception as e:
+        logger.error("model_version_policy must be in json format. "
+                     "Exception: {}".format(e))
+        sys.exit()
     start_server(models={args.model_name: model},
                  max_workers=1, port=args.port)
 
@@ -111,6 +126,10 @@ def main():
                           required=False)
     parser_b.add_argument('--port', type=int, help='server port',
                           required=False, default=9000)
+    parser_b.add_argument('--model_version_policy', type=str,
+                          help='model version policy',
+                          required=False,
+                          default='{"latest": { "num_versions":1 }}')
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))

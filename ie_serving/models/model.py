@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
 #
 from ie_serving.logger import get_logger
 from abc import ABC, abstractmethod
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
+from ie_serving.schemas import latest_schema, all_schema, versions_schema
 import re
+
 
 logger = get_logger(__name__)
 
@@ -37,10 +41,19 @@ class Model(ABC):
                                                 self.default_version))
 
     @classmethod
-    def build(cls, model_name: str, model_directory: str, batch_size):
+    def build(cls, model_name: str, model_directory: str, batch_size,
+              model_version_policy: dict = None):
         logger.info("Server start loading model: {}".format(model_name))
         versions_attributes = cls.get_versions_attributes(model_directory,
                                                           batch_size)
+        available_versions = [version_attributes['version_number'] for
+                              version_attributes in versions_attributes]
+        model_version_policy = cls.get_model_version_policy(
+            model_version_policy)
+        available_versions.sort()
+        available_versions = model_version_policy(available_versions)
+        versions_attributes = [x for x in versions_attributes
+                               if x['version_number'] in available_versions]
         engines = cls.get_engines_for_model(versions_attributes)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
@@ -73,6 +86,26 @@ class Model(ABC):
     def get_version_number(version):
         version_number = re.search(r'/\d+/$', version).group(0)[1:-1]
         return int(version_number)
+
+    @staticmethod
+    def get_model_version_policy(model_version_policy: dict):
+        if model_version_policy is None:
+            return lambda ver: ver[-1:]
+        if "all" in model_version_policy:
+            validate(model_version_policy, all_schema)
+            return lambda ver: ver[:]
+        elif "specific" in model_version_policy:
+            validate(model_version_policy, versions_schema)
+            return lambda ver: [x for x in ver
+                                if x in model_version_policy['specific']
+                                ['versions']]
+        elif "latest" in model_version_policy:
+            validate(model_version_policy, latest_schema)
+            latest_number = model_version_policy['latest'].get('num_versions',
+                                                               1)
+            return lambda ver: ver[-latest_number:]
+        raise ValidationError("ModelVersionPolicy {} is not "
+                              "valid.".format(model_version_policy))
 
     @classmethod
     def get_engines_for_model(cls, versions_attributes):

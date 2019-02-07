@@ -123,7 +123,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
 
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
-                        [--batch_size BATCH_SIZE] [--port PORT]
+                        [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT] 
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -133,6 +133,8 @@ optional arguments:
                         absolute path to model,as in tf serving
   --batch_size BATCH_SIZE
                         sets models batchsize, int value or auto
+  --model_version_policy MODEL_VERSION_POLICY 
+                        sets model version policy for model, as in tf serving
   --port PORT           server port
 
 ```
@@ -173,7 +175,7 @@ docker run --rm -d  -p 9001:9001 ie-serving-py:latest \
 -e AWS_REGION=“${AWS_REGION}”  \
 -e S3_ENDPOINT=“${S3_ENDPOINT}”  \
 /ie-serving-py/start_server.sh ie_serving model --model_path 
-s3://bucket/model_path --model_name my_model --port 9001 --batch_size auto
+s3://bucket/model_path --model_name my_model --port 9001 --batch_size auto --model_version_policy '{"all": {}}'
 ```
 
 
@@ -198,13 +200,15 @@ It uses `json` format as shown in the example below:
          "config":{
             "name":"model_name2",
             "base_path":"/opt/ml/models/model2",
-            "batch_size": "auto"
+            "batch_size": "auto",
+            "model_version_policy": {"all": {}}
          }
       },
       {
          "config":{
             "name":"model_name3",
-            "base_path":"gs://bucket/models/model3"
+            "base_path":"gs://bucket/models/model3",
+            "model_version_policy": {"specific": { "versions":[1, 3] }}
          }
       },
       {
@@ -262,3 +266,13 @@ For example with the input shape (1, 3, 225, 225), the batch size is set to 1. W
 **Note:** Dynamic batch size _is not_ supported.
 
 Processing bigger batches of requests increases the throughput but the side effect is higher latency.
+
+## Model Version Policy
+
+`model_version_policy` parameter is optional. By default server serves only latest version for model. Accepted format for parameter in CLI and in config is `json`.
+Examples:
+```
+{"latest": { "num_versions":2 } # server will serve only 2 latest versions of model
+{"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
+{"all": {}} # server will serve all available versions of given model
+```
