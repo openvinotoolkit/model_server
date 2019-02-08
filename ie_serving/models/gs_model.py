@@ -20,7 +20,7 @@ from ie_serving.models.model import Model
 import os
 import re
 from urllib.parse import urlparse, urlunparse
-
+from google.auth import exceptions
 from google.cloud import storage
 
 logger = get_logger(__name__)
@@ -51,9 +51,9 @@ class GSModel(Model):
         try:
             gs_client = storage.Client()
             bucket = gs_client.get_bucket(bucket_name)
-        except:
+        except exceptions.DefaultCredentialsError:
             gs_client = storage.Client.create_anonymous_client()
-            bucket = gs_client.bucket(bucket_name, user_project=None)        
+            bucket = gs_client.bucket(bucket_name, user_project=None)
         blob = bucket.blob(file_path)
         tmp_path = os.path.join('/tmp', file_path.split(os.sep)[-1])
         blob.download_to_filename(tmp_path)
