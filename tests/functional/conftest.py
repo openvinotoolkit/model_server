@@ -435,6 +435,10 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                     get_test_dir +
                     '/saved_models/model_ver_policy_config.json')
 
+    shutil.copyfile('tests/functional/mapping_config.json',
+                    get_test_dir + '/saved_models/model_ver/3/'
+                                   'mapping_config.json')
+
     client = get_docker_context
     volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
