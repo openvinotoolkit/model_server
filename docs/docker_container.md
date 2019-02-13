@@ -134,7 +134,7 @@ optional arguments:
   --batch_size BATCH_SIZE
                         sets models batchsize, int value or auto
   --model_version_policy MODEL_VERSION_POLICY 
-                        sets model version policy for model, as in tf serving
+                        sets model version policy for model
   --port PORT           server port
 
 ```
@@ -268,8 +268,15 @@ For example with the input shape (1, 3, 225, 225), the batch size is set to 1. W
 Processing bigger batches of requests increases the throughput but the side effect is higher latency.
 
 ## Model Version Policy
-
+Model version policy let to decide with versions of model has to be served by OVMS. this parameter allows you to control the memory consumption of the server and 
+decide which version will be used regardless of what is located under the path given when the server is started.
 `model_version_policy` parameter is optional. By default server serves only latest version for model. Accepted format for parameter in CLI and in config is `json`.
+Accepted values:
+```
+{"all": {}}
+{"latest": { "num_versions": Integer}
+{"specific": { "versions": List }}
+```
 Examples:
 ```
 {"latest": { "num_versions":2 } # server will serve only 2 latest versions of model
