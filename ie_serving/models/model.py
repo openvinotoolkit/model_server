@@ -98,8 +98,9 @@ class Model(ABC):
         elif "specific" in model_version_policy:
             validate(model_version_policy, versions_schema)
             return lambda versions: [version for version in versions
-                                if version in model_version_policy['specific']
-                                ['versions']]
+                                     if version in
+                                     model_version_policy['specific']
+                                     ['versions']]
         elif "latest" in model_version_policy:
             validate(model_version_policy, latest_schema)
             latest_number = model_version_policy['latest'].get('num_versions',

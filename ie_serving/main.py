@@ -77,7 +77,7 @@ def parse_config(args):
             models[config['config']['name']] = model
         except ValidationError as e_val:
             logger.warning("Problem with model_version_policy in {} model. "
-                           "Exception: {}".format(config['config']['name'], 
+                           "Exception: {}".format(config['config']['name'],
                                                   e_val))
         except Exception as e:
             logger.warning("Unexpected error occurred in {} model. "
