@@ -57,12 +57,16 @@ def test_open_config_wrong_json(mocker):
     open_mocker.assert_called_once_with(fake_file_path, 'r')
 
 
-@pytest.mark.parametrize("should_fail, model_version_policy, exceptions, unexpected_exception", [
-    (False, '{"specific": { "versions":[1,2] }}', None, False),
-    (True, '{"specific": { "test": }}', (SystemExit, json.decoder.JSONDecodeError), False),
-    (True, '{"specific": { "ver":[1,2] }}', (SystemExit, main.ValidationError), False),
-    (False, '{"specific": { "versions":[1,2] }}', (SystemExit, Exception), True),
-])
+@pytest.mark.parametrize("should_fail, model_version_policy, "
+                         "exceptions, unexpected_exception",
+                         [(False, '{"specific": { "versions":[1,2] }}',
+                           None, False),
+                          (True, '{"specific": { "test": }}',
+                           (SystemExit, json.decoder.JSONDecodeError), False),
+                          (True, '{"specific": { "ver":[1,2] }}',
+                           (SystemExit, main.ValidationError), False),
+                          (False, '{"specific": { "versions":[1,2] }}',
+                           (SystemExit, Exception), True)])
 def test_parse_one_model(mocker, should_fail, model_version_policy,
                          exceptions, unexpected_exception):
     args = collections.namedtuple('args',
@@ -71,7 +75,8 @@ def test_parse_one_model(mocker, should_fail, model_version_policy,
     arguments = args('test', 'test', None, model_version_policy, 9000)
     if should_fail:
         if unexpected_exception:
-            builder_mocker = mocker.patch('ie_serving.main.ModelBuilder.build')
+            builder_mocker = mocker.patch('ie_serving.main.'
+                                          'ModelBuilder.build')
             builder_mocker.side_effect = Exception
             with pytest.raises(exceptions):
                 main.parse_one_model(arguments)
