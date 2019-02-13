@@ -75,8 +75,14 @@ def parse_config(args):
                                        batch_size=batch_size,
                                        model_version_policy=model_ver_policy)
             models[config['config']['name']] = model
+        except ValidationError as e_val:
+            logger.warning("Problem with model_version_policy in {} model. "
+                           "Exception: {}".format(config['config']['name'], 
+                                                  e_val))
         except Exception as e:
-            logger.warning(e)
+            logger.warning("Unexpected error occurred in {} model. "
+                           "Exception: {}".format(config['config']['name'],
+                                                  e))
     start_server(models=models, max_workers=1, port=args.port)
 
 
@@ -87,12 +93,16 @@ def parse_one_model(args):
                                    model_directory=args.model_path,
                                    batch_size=args.batch_size,
                                    model_version_policy=model_version_policy)
-    except ValidationError as e:
+    except ValidationError as e_val:
         logger.error("Problem with model_version_policy. "
-                     "Exception: {}".format(e))
+                     "Exception: {}".format(e_val))
+        sys.exit()
+    except json.decoder.JSONDecodeError as e_json:
+        logger.error("model_version_policy must be in json format. "
+                     "Exception: {}".format(e_json))
         sys.exit()
     except Exception as e:
-        logger.error("model_version_policy must be in json format. "
+        logger.error("Unexpected error occurred. "
                      "Exception: {}".format(e))
         sys.exit()
     start_server(models={args.model_name: model},

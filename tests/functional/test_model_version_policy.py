@@ -35,7 +35,7 @@ class TestModelVerPolicy():
                                 model_name, throw_error):
         """
         <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
+        Execute GetModelMetadata request using gRPC interface hosting multiple models
 
         <b>input data</b>
         - directory with 2 models in IR format
