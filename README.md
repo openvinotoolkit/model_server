@@ -31,7 +31,9 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 
 [Custom CPU extensions](docs/cpu_extension.md)
 
-Using FPGA and Movidius (TBD)
+[Using NCS and NCS2](docs/ncs_usage.md)
+
+Using FPGA (TBD)
 
 
 ## API documentation

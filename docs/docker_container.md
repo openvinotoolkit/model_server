@@ -248,6 +248,55 @@ optional arguments:
   --port PORT           server port
 ```
 
+## Starting docker container with NCS
+
+Loading models on Neural Compute Sticks is possible only with binary built docker image. 
+According to [DLDT Github](https://github.com/opencv/dldt/tree/2018/inference-engine):
+
+__"Inference Engine plugins for Intel® FPGA and Intel® Movidius™ Neural Compute Stick are distributed only in a binary form as a part of Intel® Distribution of OpenVINO™."__
+
+NCS stick must be visible and accessible on host machine. You may need to update udev rules:
+<details>
+<summary><i>Updating udev rules</i></summary>
+</br>
+
+1. Create file __97-usbboot.rules__ and fill it with:
+
+```
+   SUBSYSTEM=="usb", ATTRS{idProduct}=="2150", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1" 
+   SUBSYSTEM=="usb", ATTRS{idProduct}=="2485", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
+   SUBSYSTEM=="usb", ATTRS{idProduct}=="f63b", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
+```   
+2. In the same directory execute following: 
+ ```
+   sudo cp 97-usbboot.rules /etc/udev/rules.d/
+   sudo udevadm control --reload-rules
+   sudo udevadm trigger
+   sudo ldconfig
+   rm 97-usbboot.rules
+```
+
+</details>
+</br>
+
+To start server with NCS you can use command similar to:
+
+```
+docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=MYRIAD -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+```
+
+`--net=host` and `--privileged` parameters are required for USB connection to work properly. 
+
+`-v /dev:/dev` mounts USB drives.
+ 
+ <i>DEVICE</i> environment variable indicates that model will
+ be loaded on Neural Compute Stick.
+
+
+Single stick can handle single model. If there are more sticks plugged in, OpenVINO Toolkit 
+chooses where the model is loaded. In case of serving multiple NCS models, one model is loaded on
+ one stick. Again OpenVINO Toolkit decides which model will be handled by which stick. 
+
 ## Batch Processing
 
 `batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer.
