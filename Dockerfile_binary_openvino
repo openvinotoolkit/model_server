@@ -9,7 +9,7 @@ ARG https_proxy
 
 ENV TEMP_DIR $TEMP_DIR
 
-RUN apt-get update && apt-get install -y --no-install-recommends cpio usbutils lsb-release \
+RUN apt-get update && apt-get install -y --no-install-recommends cpio usbutils \
     python3-pip python3-venv python3-dev virtualenv
 
 
@@ -39,5 +39,3 @@ RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 install -r requi
 COPY ie_serving /ie-serving-py/ie_serving
 
 RUN . .venv/bin/activate && pip3 install .
-
-RUN /bin/bash -c "source /opt/intel/computer_vision_sdk/bin/setupvars.sh"
