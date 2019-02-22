@@ -30,8 +30,8 @@ from ie_serving.models.model import Model
 def test_get_model_policy(model_ver_policy, throw_error, expected_output):
     if throw_error:
         with pytest.raises(Exception):
-            Model.get_model_version_policy(model_ver_policy)
+            Model.get_model_version_policy_filter(model_ver_policy)
     else:
         example_array = [1, 2, 3, 4]
-        output_lambda = Model.get_model_version_policy(model_ver_policy)
+        output_lambda = Model.get_model_version_policy_filter(model_ver_policy)
         assert expected_output == output_lambda(example_array)

@@ -18,8 +18,7 @@ import sys
 import pytest
 from grpc.framework.interfaces.face.face import AbortionError
 sys.path.append(".")
-from conftest import get_model_metadata, model_metadata_response,\
-    wait_endpoint_setup  # noqa
+from conftest import get_model_metadata, model_metadata_response  # noqa
 
 
 class TestModelVerPolicy():
@@ -56,11 +55,7 @@ class TestModelVerPolicy():
         """
         print("Downloaded model files:", model_version_policy_models)
 
-        # Starting docker with ie-serving
-        container = start_server_model_ver_policy
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+        print("Start Ovms image: ", start_server_model_ver_policy)
 
         # Connect to grpc service
         stub = create_channel_for_model_ver_pol_server

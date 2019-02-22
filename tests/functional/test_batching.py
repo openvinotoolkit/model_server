@@ -16,7 +16,7 @@
 
 import sys
 sys.path.append(".")
-from conftest import infer_batch, get_model_metadata, wait_endpoint_setup, \
+from conftest import infer_batch, get_model_metadata, \
     model_metadata_response, ERROR_SHAPE # noqa
 
 
@@ -47,11 +47,7 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        # Starting docker with ie-serving
-        container = start_server_batch_model
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+        print("Start Ovms image: ", start_server_batch_model)
 
         # Connect to grpc service
         stub = create_channel_for_batching_server
@@ -72,11 +68,7 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        # Starting docker with ie-serving
-        container = start_server_batch_model_bs4
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+        print("Start Ovms image: ", start_server_batch_model_bs4)
 
         # Connect to grpc service
         stub = create_channel_for_batching_server_bs4
@@ -97,11 +89,7 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        # Starting docker with ie-serving
-        container = start_server_batch_model_auto
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+        print("Start Ovms image: ", start_server_batch_model_auto)
 
         # Connect to grpc service
         stub = create_channel_for_batching_server_auto
@@ -129,10 +117,8 @@ class TestBatchModelInference():
                                 create_channel_for_batching_server):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
-        container = start_server_batch_model
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+
+        print("Start Ovms image: ", start_server_batch_model)
 
         stub = create_channel_for_batching_server
 

@@ -48,7 +48,7 @@ class Model(ABC):
                                                           batch_size)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
-        version_policy_filter = cls.get_model_version_policy(
+        version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
         available_versions.sort()
         available_versions = version_policy_filter(available_versions)
@@ -89,7 +89,7 @@ class Model(ABC):
         return int(version_number)
 
     @staticmethod
-    def get_model_version_policy(model_version_policy: dict):
+    def get_model_version_policy_filter(model_version_policy: dict):
         if model_version_policy is None:
             return lambda versions: versions[-1:]
         if "all" in model_version_policy:

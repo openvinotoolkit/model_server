@@ -76,7 +76,7 @@ def parse_config(args):
                                        model_version_policy=model_ver_policy)
             models[config['config']['name']] = model
         except ValidationError as e_val:
-            logger.warning("Problem with model_version_policy in {} model. "
+            logger.warning("Model version policy for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
                                                   e_val))
         except Exception as e:
@@ -94,11 +94,11 @@ def parse_one_model(args):
                                    batch_size=args.batch_size,
                                    model_version_policy=model_version_policy)
     except ValidationError as e_val:
-        logger.error("Problem with model_version_policy. "
+        logger.error("Model version policy is invalid. "
                      "Exception: {}".format(e_val))
         sys.exit()
     except json.decoder.JSONDecodeError as e_json:
-        logger.error("model_version_policy must be in json format. "
+        logger.error("model_version_policy value must be in json format. "
                      "Exception: {}".format(e_json))
         sys.exit()
     except Exception as e:

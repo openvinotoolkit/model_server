@@ -14,18 +14,19 @@
 # limitations under the License.
 #
 
-import pytest
-import os
-import requests
-import numpy as np
-import shutil
-import time
 import docker
+import numpy as np
+import os
+import pytest
+import requests
+import shutil
+import sys
+import time
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
 from grpc.beta import implementations
-import sys
+
 sys.path.append(".")
 from ie_serving.tensorflow_serving_api import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2  # noqa
@@ -245,6 +246,10 @@ def start_server_single_model(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
+
     return container
 
 
@@ -270,6 +275,10 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       environment=envs,
                                       command=command)
     request.addfinalizer(container.kill)
+
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
 
     return container
 
@@ -298,6 +307,10 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
+
     return container
 
 
@@ -322,6 +335,10 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
+
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
 
     return container
 
@@ -359,6 +376,10 @@ def start_server_multi_model(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
+
     return container
 
 
@@ -379,6 +400,10 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
+
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
 
     return container
 
@@ -402,6 +427,10 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
+
     return container
 
 
@@ -423,6 +452,10 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
+
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
 
     return container
 
@@ -451,6 +484,10 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
+
+    running, logs = wait_endpoint_setup(container)
+    print("Logs from container: ", logs)
+    assert running is True, "docker container was not started successfully"
 
     return container
 

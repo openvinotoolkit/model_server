@@ -18,7 +18,7 @@ import numpy as np
 import sys
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    wait_endpoint_setup, ERROR_SHAPE # noqa
+    ERROR_SHAPE  # noqa
 
 
 class TestSingleModelInference():
@@ -48,11 +48,7 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
-        # Starting docker with ie-serving
-        container = start_server_single_model
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+        print("Start Ovms image: ", start_server_single_model)
 
         # Connect to grpc service
         stub = create_channel_for_port_single_server
@@ -73,10 +69,8 @@ class TestSingleModelInference():
                                 create_channel_for_port_single_server):
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
-        container = start_server_single_model
-        running, logs = wait_endpoint_setup(container)
-        print("Logs from container: ", logs)
-        assert running is True, "docker container was not started successfully"
+
+        print("Start Ovms image: ", start_server_single_model)
 
         stub = create_channel_for_port_single_server
 
