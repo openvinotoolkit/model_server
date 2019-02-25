@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 import boto3
+from botocore.client import Config
+from botocore import UNSIGNED
+from botocore import exceptions
 from ie_serving.config import MAPPING_CONFIG_FILENAME
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
@@ -42,13 +45,19 @@ class S3Model(Model):
         if path is None:
             return None
         s3_endpoint = os.getenv('S3_ENDPOINT')
-        s3_client = boto3.client('s3', endpoint_url=s3_endpoint)
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         file_path = parsed_path.path[1:]
         tmp_path = os.path.join('/tmp', file_path.split(os.sep)[-1])
-        s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
-        s3_transfer.download_file(bucket_name, file_path, tmp_path)
+        try:
+            s3_client = boto3.client('s3', endpoint_url=s3_endpoint)
+            s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
+            s3_transfer.download_file(bucket_name, file_path, tmp_path)
+        except exceptions.ClientError:
+            s3_client = boto3.client('s3', endpoint_url=s3_endpoint,
+                                     config=Config(signature_version=UNSIGNED))
+            s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
+            s3_transfer.download_file(bucket_name, file_path, tmp_path)
         return tmp_path
 
     @classmethod
