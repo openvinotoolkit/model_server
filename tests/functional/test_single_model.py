@@ -48,8 +48,6 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
-        print("Start Ovms image: ", start_server_single_model)
-
         # Connect to grpc service
         stub = create_channel_for_port_single_server
 
@@ -69,8 +67,6 @@ class TestSingleModelInference():
                                 create_channel_for_port_single_server):
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
-
-        print("Start Ovms image: ", start_server_single_model)
 
         stub = create_channel_for_port_single_server
 

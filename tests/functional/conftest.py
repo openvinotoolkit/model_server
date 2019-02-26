@@ -246,8 +246,7 @@ def start_server_single_model(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -276,8 +275,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -307,8 +305,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -336,8 +333,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -376,8 +372,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -401,8 +396,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -427,8 +421,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -453,8 +446,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -485,8 +477,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running, logs = wait_endpoint_setup(container)
-    print("Logs from container: ", logs)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container
@@ -506,7 +497,8 @@ def wait_endpoint_setup(container):
                 break
         except Exception as e:
             time.sleep(1)
-    return running, logs
+    print("Logs from container: ", logs)
+    return running
 
 
 def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,

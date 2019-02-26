@@ -51,8 +51,6 @@ class TestMuiltModelInference():
 
         print("Downloaded model files:", download_two_models)
 
-        print("Start Ovms image: ", start_server_multi_model)
-
         # Connect to grpc service
         stub = create_channel_for_port_multi_server
 
@@ -125,8 +123,6 @@ class TestMuiltModelInference():
 
         """
         print("Downloaded model files:", download_two_models)
-
-        print("Start Ovms image: ", start_server_multi_model)
 
         # Connect to grpc service
         stub = create_channel_for_port_multi_server

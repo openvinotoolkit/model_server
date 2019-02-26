@@ -47,8 +47,6 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        print("Start Ovms image: ", start_server_batch_model)
-
         # Connect to grpc service
         stub = create_channel_for_batching_server
 
@@ -89,8 +87,6 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        print("Start Ovms image: ", start_server_batch_model_auto)
-
         # Connect to grpc service
         stub = create_channel_for_batching_server_auto
 
@@ -117,8 +113,6 @@ class TestBatchModelInference():
                                 create_channel_for_batching_server):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
-
-        print("Start Ovms image: ", start_server_batch_model)
 
         stub = create_channel_for_batching_server
 

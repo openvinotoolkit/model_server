@@ -45,8 +45,6 @@ class TestSingleModelInferenceGc():
 
         """
 
-        print("Start Ovms image: ", start_server_single_model_from_gc)
-
         # Connect to grpc service
         stub = create_channel_for_port_single_server
 
@@ -63,8 +61,6 @@ class TestSingleModelInferenceGc():
 
     def test_get_model_metadata(self, start_server_single_model_from_gc,
                                 create_channel_for_port_single_server):
-
-        print("Start Ovms image: ", start_server_single_model_from_gc)
 
         stub = create_channel_for_port_single_server
 

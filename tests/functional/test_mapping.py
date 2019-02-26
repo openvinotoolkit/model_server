@@ -48,8 +48,6 @@ class TestSingleModelMappingInference():
 
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
-        print("Start Ovms image: ", start_server_with_mapping)
-
         # Connect to grpc service
         stub = create_channel_for_port_mapping_server
 
@@ -71,8 +69,6 @@ class TestSingleModelMappingInference():
                                 start_server_with_mapping):
 
         print("Downloaded model files:", resnet_2_out_model_downloader)
-
-        print("Start Ovms image: ", start_server_with_mapping)
 
         stub = create_channel_for_port_mapping_server
 

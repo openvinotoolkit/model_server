@@ -45,8 +45,6 @@ class TestSingleModelInferenceS3():
 
         """
 
-        print("Start Ovms image: ", start_server_single_model_from_s3)
-
         # Connect to grpc service
         stub = create_channel_for_port_single_server
 
@@ -63,8 +61,6 @@ class TestSingleModelInferenceS3():
 
     def test_get_model_metadata(self, start_server_single_model_from_s3,
                                 create_channel_for_port_single_server):
-
-        print("Start Ovms image: ", start_server_single_model_from_s3)
 
         stub = create_channel_for_port_single_server
 

@@ -55,8 +55,6 @@ class TestModelVerPolicy():
         """
         print("Downloaded model files:", model_version_policy_models)
 
-        print("Start Ovms image: ", start_server_model_ver_policy)
-
         # Connect to grpc service
         stub = create_channel_for_model_ver_pol_server
 

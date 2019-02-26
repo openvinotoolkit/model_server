@@ -98,7 +98,7 @@ def parse_one_model(args):
                      "Exception: {}".format(e_val))
         sys.exit()
     except json.decoder.JSONDecodeError as e_json:
-        logger.error("model_version_policy value must be in json format. "
+        logger.error("model_version_policy field must be in json format. "
                      "Exception: {}".format(e_json))
         sys.exit()
     except Exception as e:
