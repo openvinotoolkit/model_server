@@ -66,8 +66,6 @@ class TestBatchModelInference():
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        print("Start Ovms image: ", start_server_batch_model_bs4)
-
         # Connect to grpc service
         stub = create_channel_for_batching_server_bs4
 
