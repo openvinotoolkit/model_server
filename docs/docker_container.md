@@ -250,12 +250,12 @@ optional arguments:
 
 ## Starting docker container with NCS
 
-Loading models on Neural Compute Sticks is possible only with binary built docker image. 
-According to [DLDT Github](https://github.com/opencv/dldt/tree/2018/inference-engine):
+Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick) 
+is distributed only in a binary form, so
+loading models on NCS is possible __only with binary built docker image__.
 
-__"Inference Engine plugins for Intel® FPGA and Intel® Movidius™ Neural Compute Stick are distributed only in a binary form as a part of Intel® Distribution of OpenVINO™."__
-
-NCS stick must be visible and accessible on host machine. You may need to update udev rules:
+Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
+rules:
 <details>
 <summary><i>Updating udev rules</i></summary>
 </br>
@@ -294,8 +294,8 @@ docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/de
 
 
 Single stick can handle single model. If there are more sticks plugged in, OpenVINO Toolkit 
-chooses where the model is loaded. In case of serving multiple NCS models, one model is loaded on
- one stick. Again OpenVINO Toolkit decides which model will be handled by which stick. 
+chooses where the model is loaded. In case of serving multiple models for NCS, one model is 
+loaded on one stick. Again OpenVINO Toolkit decides which model will be handled by which stick. 
 
 ## Batch Processing
 
