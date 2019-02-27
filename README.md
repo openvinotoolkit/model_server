@@ -21,7 +21,7 @@ inference engine over gRPC network interface.
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
 It's possible to use AI accelerators [Intel® Movidius™ Neural Compute Sticks](https://software.intel.com/en-us/neural-compute-stick) with OpenVINO Model 
-Server [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or [in Docker container](docker_container.md#starting-docker-container-with-ncs).
+Server [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or [in Docker container](docs/docker_container.md#starting-docker-container-with-ncs).
 
 ## Getting it up and running
 
