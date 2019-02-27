@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,7 @@ from ie_serving import config
 
 def test_config_default_values():
     assert config.DEVICE is "CPU"
-    assert config.CPU_EXTENSION == "/opt/intel/computer_vision_sdk/" \
-                                   "deployment_tools/inference_engine/lib/" \
-                                   "ubuntu_16.04/intel64/" \
-                                   "libcpu_extension_avx2.so"
+    assert config.CPU_EXTENSION == config.default_cpu_extension
     assert config.PLUGIN_DIR is None
 
 

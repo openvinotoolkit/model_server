@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ class IrEngine():
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
-        net = IENetwork.from_ir(model=model_xml, weights=model_bin)
+        net = IENetwork(model=model_xml, weights=model_bin)
 
         engine_batch_size, net_batch_size, effective_batch_size = \
             _set_batch_size(batch_size, net.batch_size)

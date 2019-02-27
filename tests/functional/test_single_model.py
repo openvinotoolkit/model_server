@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 
 import numpy as np
 import sys
-import time
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE # noqa
+    ERROR_SHAPE  # noqa
 
 
 class TestSingleModelInference():
@@ -49,12 +48,6 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
-        # Starting docker with ie-serving
-        result = start_server_single_model
-        print("docker starting status:", result)
-        time.sleep(20)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
-
         # Connect to grpc service
         stub = create_channel_for_port_single_server
 
@@ -74,10 +67,6 @@ class TestSingleModelInference():
                                 create_channel_for_port_single_server):
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
-        result = start_server_single_model
-        print("docker starting status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
 
         stub = create_channel_for_port_single_server
 

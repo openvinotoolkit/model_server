@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
 #
 
 import numpy as np
-import time
 import sys
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response # noqa
+from conftest import infer, get_model_metadata, model_metadata_response  # noqa
 
 
 class TestModelVersionHandling():
@@ -53,12 +52,6 @@ class TestModelVersionHandling():
         """
 
         print("Downloaded model files:", download_two_model_versions)
-
-        # Starting docker with ie-serving
-        result = start_server_multi_model
-        print("docker starting status:", result)
-        time.sleep(60)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_port_multi_server
@@ -110,12 +103,6 @@ class TestModelVersionHandling():
 
         """
         print("Downloaded model files:", download_two_models)
-
-        # Starting docker with ie-serving
-        result = start_server_multi_model
-        print("docker starting multi model server status:", result)
-        time.sleep(30)  # Waiting for inference service to load models
-        assert result == 0, "docker container was not started successfully"
 
         # Connect to grpc service
         stub = create_channel_for_port_multi_server

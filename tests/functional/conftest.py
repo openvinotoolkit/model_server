@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,19 @@
 # limitations under the License.
 #
 
-import pytest
-import os
-import requests
+import docker
 import numpy as np
-import subprocess
+import os
+import pytest
+import requests
 import shutil
+import sys
+import time
+from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
 from grpc.beta import implementations
-import sys
+
 sys.path.append(".")
 from ie_serving.tensorflow_serving_api import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2  # noqa
@@ -51,6 +54,11 @@ def get_image(request):
 @pytest.fixture(scope="session")
 def get_test_dir(request):
     return request.config.getoption("--test_dir")
+
+
+@pytest.fixture(scope="session")
+def get_docker_context():
+    return docker.from_env()
 
 
 def download_model(model_name, model_folder, model_version_folder, dir):
@@ -115,6 +123,33 @@ def download_two_model_versions(get_test_dir):
     model2_info = download_model('resnet_V2_50', 'resnet/', '2/',
                                  get_test_dir+'/saved_models/')
     return [model1_info, model2_info]
+
+
+def create_symlink(source_dir, destination_dir):
+    if not os.path.exists(destination_dir):
+        os.symlink(source_dir, destination_dir)
+    return destination_dir
+
+
+@pytest.fixture(autouse=True, scope="session")
+def model_version_policy_models(get_test_dir,
+                                download_two_model_versions,
+                                resnet_2_out_model_downloader):
+    model_ver_dir = os.path.join(get_test_dir, 'saved_models', 'model_ver')
+    resnets = download_two_model_versions
+    resnet_1 = os.path.dirname(resnets[0][0])
+    resnet_1_dir = os.path.join(model_ver_dir, '1')
+    resnet_2 = os.path.dirname(resnets[1][0])
+    resnet_2_dir = os.path.join(model_ver_dir, '2')
+    resnet_2_out = os.path.dirname(resnet_2_out_model_downloader[0])
+    resnet_2_out_dir = os.path.join(model_ver_dir, '3')
+    if not os.path.exists(model_ver_dir):
+        os.makedirs(model_ver_dir)
+        copy_tree(resnet_1, resnet_1_dir)
+        copy_tree(resnet_2, resnet_2_dir)
+        copy_tree(resnet_2_out, resnet_2_out_dir)
+
+    return resnet_1_dir, resnet_2_dir, resnet_2_out_dir
 
 
 def input_data_downloader(numpy_url, get_test_dir):
@@ -186,156 +221,127 @@ def create_channel_for_batching_server_auto():
     return stub
 
 
-@pytest.fixture(scope="class")
-def start_server_single_model(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-single',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-p', '9000:9000',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', '/opt/ml/resnet_V1_50',
-           '--port', '9000'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
-
-    def stop_docker():
-
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-single' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
-
-    return subprocess.check_call(cmd)
+@pytest.fixture(scope="session")
+def create_channel_for_model_ver_pol_server():
+    channel = implementations.insecure_channel('localhost', 9006)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_gc(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
+def start_server_single_model(request, get_image, get_test_dir,
+                              get_docker_context):
+    client = get_docker_context
+    path_to_mount = get_test_dir+'/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
+              "--port 9000"
+
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-single',
+                                      ports={'9000/tcp': 9000},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
+
+
+@pytest.fixture(scope="class")
+def start_server_single_model_from_gc(request, get_image, get_test_dir,
+                                      get_docker_context):
     GOOGLE_APPLICATION_CREDENTIALS = \
         os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-single',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir + '/saved_models/'),
-           '-v', GOOGLE_APPLICATION_CREDENTIALS + ':/etc/gcp.json',
-           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
-           '-p', '9000:9000',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', 'gs://inference-eu/ml-test',
-           '--port', '9000'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
 
-    def stop_docker():
+    client = get_docker_context
+    envs = ['GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json']
+    volumes_dict = {GOOGLE_APPLICATION_CREDENTIALS: {'bind': '/etc/gcp.json',
+                                                     'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet " \
+              "--model_path gs://inference-eu/ml-test " \
+              "--port 9000"
 
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-single' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-single-gs',
+                                      ports={'9000/tcp': 9000},
+                                      remove=True, volumes=volumes_dict,
+                                      environment=envs,
+                                      command=command)
+    request.addfinalizer(container.kill)
 
-    return subprocess.check_call(cmd)
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_s3(request, get_image, get_test_dir):
+def start_server_single_model_from_s3(request, get_image, get_test_dir,
+                                      get_docker_context):
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
 
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-single',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-e', 'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
-           '-e', 'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
-           '-e', 'AWS_REGION=' + AWS_REGION,
-           '-p', '9000:9000',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', 's3://inference-test-aipg/resnet_v1_50',
-           '--port', '9000'
-           ]
+    client = get_docker_context
+    envs = ['AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+            'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
+            'AWS_REGION=' + AWS_REGION]
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet " \
+              "--model_path s3://inference-test-aipg/resnet_v1_50 " \
+              "--port 9000"
 
-    def stop_docker():
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-single-s3',
+                                      ports={'9000/tcp': 9000},
+                                      remove=True,
+                                      environment=envs,
+                                      command=command)
+    request.addfinalizer(container.kill)
 
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-single' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
 
-    return subprocess.check_call(cmd)
+    return container
 
 
 @pytest.fixture(scope="class")
-def start_server_with_mapping(request, get_image, get_test_dir):
+def start_server_with_mapping(request, get_image, get_test_dir,
+                              get_docker_context):
 
     shutil.copyfile('tests/functional/mapping_config.json',
                     get_test_dir + '/saved_models/resnet_2_out/1/'
                                    'mapping_config.json')
+    client = get_docker_context
+    path_to_mount = get_test_dir+'/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
+              "--port 9002"
 
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-2-out',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-p', '9002:9002',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet_2_out',
-           '--model_path', '/opt/ml/resnet_2_out',
-           '--port', '9002'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-2-out',
+                                      ports={'9002/tcp': 9002},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
 
-    def stop_docker():
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
 
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-2-out' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
-
-    return subprocess.check_call(cmd)
+    return container
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_image, get_test_dir):
+def start_server_multi_model(request, get_image, get_test_dir,
+                             get_docker_context):
 
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
@@ -345,138 +351,154 @@ def start_server_multi_model(request, get_image, get_test_dir):
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-multi',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir + '/saved_models/'),
-           '-v', GOOGLE_APPLICATION_CREDENTIALS+':/etc/gcp.json',
-           '-e', 'GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
-           '-e', 'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
-           '-e', 'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
-           '-e', 'AWS_REGION=' + AWS_REGION,
-           '-p', '9001:9001',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'config',
-           '--config_path', '/opt/ml/config.json',
-           '--port', '9001'
-           ]
 
-    def stop_docker():
+    client = get_docker_context
+    envs = ['GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
+            'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+            'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
+            'AWS_REGION=' + AWS_REGION]
+    volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
+                    {'bind': '/opt/ml', 'mode': 'ro'},
+                    GOOGLE_APPLICATION_CREDENTIALS:
+                        {'bind': '/etc/gcp.json', 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving config " \
+              "--config_path /opt/ml/config.json --port 9001"
 
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-multi' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-multi',
+                                      ports={'9001/tcp': 9001},
+                                      remove=True, volumes=volumes_dict,
+                                      environment=envs,
+                                      command=command)
+    request.addfinalizer(container.kill)
 
-    return subprocess.check_call(cmd)
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-batch',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-p', '9003:9003',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', '/opt/ml/resnet_V1_50_batch8',
-           '--port', '9003'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
+def start_server_batch_model(request, get_image, get_test_dir,
+                             get_docker_context):
+    client = get_docker_context
+    path_to_mount = get_test_dir+'/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
+              "--port 9003"
 
-    def stop_docker():
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-batch',
+                                      ports={'9003/tcp': 9003},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
 
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-batch' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
 
-    return subprocess.check_call(cmd)
+    return container
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-autobatch',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-p', '9005:9005',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', '/opt/ml/resnet_V1_50_batch8',
-           '--port', '9005',
-           '--batch_size', 'auto'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
+def start_server_batch_model_auto(request, get_image, get_test_dir,
+                                  get_docker_context):
 
-    def stop_docker():
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-autobatch' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    client = get_docker_context
+    path_to_mount = get_test_dir+'/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
+              "--port 9005 --batch_size auto"
 
-    return subprocess.check_call(cmd)
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-autobatch',
+                                      ports={'9005/tcp': 9005},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_bs4(request, get_image, get_test_dir):
-    CYAN_COLOR = '\033[36m'
-    END_COLOR = '\033[0m'
-    cmd = ['docker',
-           'run',
-           '--rm',
-           '-d',
-           '--name', 'ie-serving-py-test-batch4',
-           '-v', '{}:/opt/ml:ro'.format(get_test_dir+'/saved_models/'),
-           '-p', '9004:9004',
-           get_image, '/ie-serving-py/start_server.sh', 'ie_serving',
-           'model',
-           '--model_name', 'resnet',
-           '--model_path', '/opt/ml/resnet_V1_50_batch8',
-           '--port', '9004',
-           '--batch_size', '4'
-           ]
-    print('executing docker command:, {}{}{}'.format(CYAN_COLOR, ' '.join(cmd),
-                                                     END_COLOR))
+def start_server_batch_model_bs4(request, get_image, get_test_dir,
+                                 get_docker_context):
 
-    def stop_docker():
-        print("stopping docker container...")
-        return_code = subprocess.call(
-            "for I in `docker ps -f 'name=ie-serving-py-test-batch4' -q` ;"
-            "do echo $I; docker stop $I; done",
-            shell=True)
-        if return_code == 0:
-            print("docker container removed")
-    request.addfinalizer(stop_docker)
+    client = get_docker_context
+    path_to_mount = get_test_dir+'/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
+              "--port 9004 --batch_size 4"
 
-    return subprocess.check_call(cmd)
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-batch4',
+                                      ports={'9004/tcp': 9004},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
+
+
+@pytest.fixture(scope="class")
+def start_server_model_ver_policy(request, get_image, get_test_dir,
+                                  get_docker_context):
+
+    shutil.copyfile('tests/functional/model_version_policy_config.json',
+                    get_test_dir +
+                    '/saved_models/model_ver_policy_config.json')
+
+    shutil.copyfile('tests/functional/mapping_config.json',
+                    get_test_dir + '/saved_models/model_ver/3/'
+                                   'mapping_config.json')
+
+    client = get_docker_context
+    volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
+                    {'bind': '/opt/ml', 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving config " \
+              "--config_path /opt/ml/model_ver_policy_config.json --port 9006"
+
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-policy',
+                                      ports={'9006/tcp': 9006},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
+
+
+def wait_endpoint_setup(container):
+    start_time = time.time()
+    tick = start_time
+    running = False
+    logs = ""
+    while tick - start_time < 300:
+        tick = time.time()
+        try:
+            logs = str(container.logs())
+            if "Server listens on port" in logs:
+                running = True
+                break
+        except Exception as e:
+            time.sleep(1)
+    print("Logs from container: ", logs)
+    return running
 
 
 def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,

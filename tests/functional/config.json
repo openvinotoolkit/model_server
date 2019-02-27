@@ -17,7 +17,8 @@
     {
       "config": {
         "name": "resnet",
-        "base_path": "/opt/ml/resnet"
+        "base_path": "/opt/ml/resnet",
+        "model_version_policy": {"all": {}}
       }
     },
     {
