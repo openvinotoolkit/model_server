@@ -9,8 +9,9 @@ ARG https_proxy
 
 ENV TEMP_DIR $TEMP_DIR
 
-RUN apt-get update && apt-get install -y --no-install-recommends cpio \
+RUN apt-get update && apt-get install -y --no-install-recommends cpio usbutils \
     python3-pip python3-venv python3-dev virtualenv
+
 
 COPY l_openvino_toolkit*.tgz $TEMP_DIR/
 RUN cd $TEMP_DIR && pwd && ls && \
@@ -18,7 +19,7 @@ RUN cd $TEMP_DIR && pwd && ls && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     pwd | grep -q openvino_toolkit_p ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg; fi && \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_vpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg; fi && \
     pwd | grep -q openvino_toolkit_fpga ; \
     if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg; fi && \
     ./install.sh -s silent.cfg --ignore-signature && \
@@ -33,10 +34,8 @@ ENV HTTPS_PROXY $https_proxy
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements.txt /ie-serving-py/
-RUN virtualenv -p python3 .venv && \
-    . .venv/bin/activate && pip3 install -r requirements.txt
+RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 install -r requirements.txt
 
 COPY ie_serving /ie-serving-py/ie_serving
 
 RUN . .venv/bin/activate && pip3 install .
-

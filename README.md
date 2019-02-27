@@ -20,6 +20,9 @@ inference engine over gRPC network interface.
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
+OpenVINO Model Server, beside CPU, can employ [Intel® Movidius™ Neural Compute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
+It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or [in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
+
 ## Getting it up and running
 
 [Using a docker container](docs/docker_container.md)
@@ -31,7 +34,7 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 
 [Custom CPU extensions](docs/cpu_extension.md)
 
-Using FPGA and Movidius (TBD)
+Using FPGA (TBD)
 
 
 ## API documentation
