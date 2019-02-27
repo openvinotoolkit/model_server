@@ -66,17 +66,15 @@ Refer to [docker_container.md](docker_container.md) to get more details.
 
 ## Using Neural Compute Sticks
 
-OpenVINO Model Server supports AI accelerators Intel® Neural Compute Stick and Intel® Neural 
-Compute Stick 2. __[Learn more about Neural Compute Sticks](https://software.intel.com/en-us/neural-compute-stick).__
+OpenVINO Model Server can employ AI accelerators [Intel® Neural Compute Stick and Intel® Neural  Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick).
 
 To use Movidus Neural Compute Sticks with OpenVINO Model Server you need to have OpenVINO Toolkit 
 with Movidius VPU support installed.
 In order to do that follow [OpenVINO installation instruction](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux).
 Don't forget about [additional steps for NCS](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux#inpage-nav-4-2).
 
-After successfully completing these steps you can try running OpenVINO Model Server with NCS or 
-NCS2. Before starting server, you need to specify that you want to load model on Neural Compute 
-Stick. You can do that by setting environment variable <i>DEVICE</i> to <i>MYRIAD</i>. If it's not 
+Before starting server, you need to specify that you want to load model on Neural Compute 
+Stick for inference execution. You can do that by setting environment variable <i>DEVICE</i> to <i>MYRIAD</i>. If it's not 
 specified, OpenVINO will try to load model on CPU.
 
 Example:

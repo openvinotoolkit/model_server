@@ -293,9 +293,8 @@ docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/de
  be loaded on Neural Compute Stick.
 
 
-Single stick can handle single model. If there are more sticks plugged in, OpenVINO Toolkit 
-chooses where the model is loaded. In case of serving multiple models for NCS, one model is 
-loaded on one stick. Again OpenVINO Toolkit decides which model will be handled by which stick. 
+A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
+chooses to which one the model is loaded. 
 
 ## Batch Processing
 
