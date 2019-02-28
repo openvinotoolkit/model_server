@@ -44,7 +44,7 @@ def serve(models, max_workers: int=1, port: int=9000):
                                   ('grpc.max_receive_message_length', GIGABYTE)
                                   ])
     prediction_service_pb2.add_PredictionServiceServicer_to_server(
-        PredictionServiceServicer(models=models), server)
+        PredictionServiceServicer(models=models, workers_number=max_workers), server)
     server.add_insecure_port('[::]:{}'.format(port))
     server.start()
     logger.info("Server listens on port {port} and will be "

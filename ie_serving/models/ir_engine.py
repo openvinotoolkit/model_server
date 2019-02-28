@@ -19,6 +19,7 @@ from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
 from ie_serving.logger import get_logger
+import threading
 
 logger = get_logger(__name__)
 
@@ -82,7 +83,7 @@ class IrEngine():
         logger.debug("effective batch size - {}".format(effective_batch_size))
         inputs = net.inputs
         outputs = net.outputs
-        exec_net = plugin.load(network=net, num_requests=1)
+        exec_net = plugin.load(network=net, num_requests=2)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs,
@@ -139,9 +140,15 @@ class IrEngine():
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-    def infer(self, data: dict, batch_size=None):
-        if batch_size is not self.net.batch_size and self.batch_size == 0:
-            self.net.batch_size = batch_size
-            self.exec_net = self.plugin.load(network=self.net)
-        results = self.exec_net.infer(inputs=data)
+    def infer(self, data: dict, ir_index: int, batch_size=None):
+        #if batch_size is not self.net.batch_size and self.batch_size == 0:
+         #   self.net.batch_size = batch_size
+         #   self.exec_net = self.plugin.load(network=self.net)
+
+        out_blob = list(self.model_keys['outputs'].keys())[0]
+        print(out_blob)
+        infer_request_handle = self.exec_net.start_async(request_id=ir_index,
+                                                         inputs=data)
+        infer_request_handle.wait()
+        results = infer_request_handle.outputs
         return results

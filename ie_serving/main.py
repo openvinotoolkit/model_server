@@ -106,7 +106,7 @@ def parse_one_model(args):
                      "Exception: {}".format(e))
         sys.exit()
     start_server(models={args.model_name: model},
-                 max_workers=1, port=args.port)
+                 max_workers=2, port=args.port)
 
 
 def main():

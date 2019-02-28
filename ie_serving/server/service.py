@@ -28,6 +28,7 @@ from ie_serving.server.constants import WRONG_MODEL_METADATA, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME
 from ie_serving.logger import get_logger
 import datetime
+import queue
 
 logger = get_logger(__name__)
 
@@ -35,8 +36,10 @@ logger = get_logger(__name__)
 class PredictionServiceServicer(prediction_service_pb2.
                                 PredictionServiceServicer):
 
-    def __init__(self, models):
+    def __init__(self, models, workers_number):
         self.models = models
+        self.inference_requests_queue = queue.Queue()
+        [self.inference_requests_queue.put(ir_index) for ir_index in range(workers_number)]
 
     def Predict(self, request, context):
         """
@@ -74,8 +77,12 @@ class PredictionServiceServicer(prediction_service_pb2.
             return predict_pb2.PredictResponse()
 
         inference_start_time = datetime.datetime.now()
+
+        ir_index = self.inference_requests_queue.get()
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input, batch_size)
+        self.inference_requests_queue.put(ir_index)
+
         inference_end_time = datetime.datetime.now()
         duration = (inference_end_time - inference_start_time)\
             .total_seconds() * 1000
