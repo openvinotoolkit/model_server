@@ -73,7 +73,8 @@ def parse_config(args):
                                        model_directory=config['config'][
                                            'base_path'],
                                        batch_size=batch_size,
-                                       model_version_policy=model_ver_policy)
+                                       model_version_policy=model_ver_policy,
+                                       num_workers=args.num_workers)
             models[config['config']['name']] = model
         except ValidationError as e_val:
             logger.warning("Model version policy for model {} is invalid. "
@@ -83,7 +84,7 @@ def parse_config(args):
             logger.warning("Unexpected error occurred in {} model. "
                            "Exception: {}".format(config['config']['name'],
                                                   e))
-    start_server(models=models, max_workers=1, port=args.port)
+    start_server(models=models, max_workers=args.num_workers, port=args.port)
 
 
 def parse_one_model(args):
@@ -92,7 +93,8 @@ def parse_one_model(args):
         model = ModelBuilder.build(model_name=args.model_name,
                                    model_directory=args.model_path,
                                    batch_size=args.batch_size,
-                                   model_version_policy=model_version_policy)
+                                   model_version_policy=model_version_policy,
+                                   num_workers=args.num_workers)
     except ValidationError as e_val:
         logger.error("Model version policy is invalid. "
                      "Exception: {}".format(e_val))
@@ -106,7 +108,7 @@ def parse_one_model(args):
                      "Exception: {}".format(e))
         sys.exit()
     start_server(models={args.model_name: model},
-                 max_workers=2, port=args.port)
+                 max_workers=args.num_workers, port=args.port)
 
 
 def main():
@@ -140,6 +142,8 @@ def main():
                           help='model version policy',
                           required=False,
                           default='{"latest": { "num_versions":1 }}')
+    parser_b.add_argument('--num_workers', type=int, help='number of worker for parallel '
+                                                          'processing', required=False, default=1)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))

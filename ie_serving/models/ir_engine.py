@@ -70,7 +70,7 @@ class IrEngine():
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod
-    def build(cls, model_xml, model_bin, mapping_config, batch_size):
+    def build(cls, model_xml, model_bin, mapping_config, batch_size, num_workers):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
@@ -83,7 +83,8 @@ class IrEngine():
         logger.debug("effective batch size - {}".format(effective_batch_size))
         inputs = net.inputs
         outputs = net.outputs
-        exec_net = plugin.load(network=net, num_requests=2)
+        exec_net = plugin.load(network=net, num_requests=num_workers, config={
+            'CPU_THROUGHPUT_STREAMS': str(num_workers)})
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs,
@@ -145,8 +146,6 @@ class IrEngine():
          #   self.net.batch_size = batch_size
          #   self.exec_net = self.plugin.load(network=self.net)
 
-        out_blob = list(self.model_keys['outputs'].keys())[0]
-        print(out_blob)
         infer_request_handle = self.exec_net.start_async(request_id=ir_index,
                                                          inputs=data)
         infer_request_handle.wait()

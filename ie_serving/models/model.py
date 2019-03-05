@@ -42,7 +42,7 @@ class Model(ABC):
 
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size,
-              model_version_policy: dict = None):
+              model_version_policy: dict = None, num_workers: int = 1):
         logger.info("Server start loading model: {}".format(model_name))
         versions_attributes = cls.get_versions_attributes(model_directory,
                                                           batch_size)
@@ -55,7 +55,7 @@ class Model(ABC):
         versions_attributes = [version for version in versions_attributes
                                if version['version_number']
                                in available_versions]
-        engines = cls.get_engines_for_model(versions_attributes)
+        engines = cls.get_engines_for_model(versions_attributes, num_workers)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         model = cls(model_name=model_name, model_directory=model_directory,
@@ -110,7 +110,7 @@ class Model(ABC):
                               "valid.".format(model_version_policy))
 
     @classmethod
-    def get_engines_for_model(cls, versions_attributes):
+    def get_engines_for_model(cls, versions_attributes, num_workers):
         inference_engines = {}
         failures = []
         for version_attributes in versions_attributes:
@@ -119,7 +119,7 @@ class Model(ABC):
                             "for version: {}".format(
                              version_attributes['version_number']))
                 inference_engines[version_attributes['version_number']] = \
-                    cls.get_engine_for_version(version_attributes)
+                    cls.get_engine_for_version(version_attributes, num_workers)
             except Exception as e:
                 logger.error("Error occurred while loading model "
                              "version: {}".format(version_attributes))
@@ -149,5 +149,5 @@ class Model(ABC):
 
     @classmethod
     @abstractmethod
-    def get_engine_for_version(cls, version_attributes):
+    def get_engine_for_version(cls, version_attributes, num_workers):
         pass
