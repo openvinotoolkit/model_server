@@ -27,6 +27,6 @@ CPU_EXTENSION = os.environ.get('CPU_EXTENSION', default_cpu_extension)
 PLUGIN_DIR = os.environ.get('PLUGIN_DIR', None)
 LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_PATH = os.getenv('LOG_PATH', None)
-
+INFERENCE_STATE_CHECK_INTERVAL = 0.001
 
 MAPPING_CONFIG_FILENAME = 'mapping_config.json'

@@ -40,8 +40,6 @@ class PredictionServiceServicer(prediction_service_pb2.
         self.models = models
         self.inference_requests_queue = queue.Queue()
         [self.inference_requests_queue.put(ir_index) for ir_index in range(workers_number)]
-        self.predictions_count = 0
-        self.full_parallel_count = 0
 
     def Predict(self, request, context):
         """
@@ -78,20 +76,12 @@ class PredictionServiceServicer(prediction_service_pb2.
                          .format(code))
             return predict_pb2.PredictResponse()
 
-        self.predictions_count += 1
         inference_start_time = datetime.datetime.now()
-
         ir_index = self.inference_requests_queue.get()
-        if self.inference_requests_queue.empty():
-            self.full_parallel_count += 1
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input, ir_index)
         self.inference_requests_queue.put(ir_index)
-
         inference_end_time = datetime.datetime.now()
-
-        if self.predictions_count % 100 == 0:
-            logger.info((self.full_parallel_count/self.predictions_count) * 100)
 
         duration = (inference_end_time - inference_start_time)\
             .total_seconds() * 1000
