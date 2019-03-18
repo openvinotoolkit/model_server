@@ -123,6 +123,9 @@ def main():
                           required=True)
     parser_a.add_argument('--port', type=int, help='server port',
                           required=False, default=9000)
+    parser_a.add_argument('--num_workers', type=int,
+                          help='number of workers for parallel '
+                               'processing', required=False, default=1)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model',
