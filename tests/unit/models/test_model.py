@@ -15,6 +15,8 @@
 #
 import pytest
 import json
+import threading
+import time
 from ie_serving.models.model import Model
 
 
@@ -35,3 +37,51 @@ def test_get_model_policy(model_ver_policy, throw_error, expected_output):
         example_array = [1, 2, 3, 4]
         output_lambda = Model.get_model_version_policy_filter(model_ver_policy)
         assert expected_output == output_lambda(example_array)
+
+
+@pytest.mark.parametrize("new_versions, expected_to_delete, expected_to_create", [
+    ([1, 2, 3], [], []),
+    ([1, 2], [3], []),
+    ([1, 3, 4], [2], [4])
+])
+def test_mark_differences(get_fake_model, new_versions, expected_to_delete, expected_to_create):
+    model = get_fake_model
+    to_create, to_delete = model._mark_differences(new_versions)
+    assert expected_to_create == to_create
+    assert expected_to_delete == to_delete
+
+
+def test_delete_engine(get_fake_model):
+    model = get_fake_model
+    version = 2
+    assert version in model.engines
+    model.engines[version].in_use = True
+    process_thread = threading.Thread(target=model._delete_engine, args=[version])
+    process_thread.start()
+    time.sleep(1)
+    assert version in model.engines
+    model.engines[version].in_use = False
+    time.sleep(2)
+    assert version not in model.engines
+
+
+@pytest.mark.parametrize("input, expected_output", [
+    ('/test/test/2/', 2),
+    ('/test/test/test/', -1)
+])
+def test_get_version_number(input, expected_output):
+    output = Model.get_version_number(input)
+    assert expected_output == output
+
+
+def test_get_version_metadata(mocker):
+    test_attributes = [{'xml_file': 'test', 'bin_file': 'test', 'mapping_config': 'test', 'version_number': 1, 'batch_size': 'test'}]
+    attributes_mock = mocker.patch(
+        "ie_serving.models.model.Model.get_versions_attributes")
+    attributes_mock.return_value = test_attributes
+    output_attributes, output_versions = Model.get_version_metadata('test', None, lambda versions: versions[:])
+    assert output_attributes == test_attributes
+    assert output_versions == [1]
+
+
+

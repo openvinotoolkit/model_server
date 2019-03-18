@@ -57,6 +57,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
+        self.models[model_name].engines[version].in_use = True
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
@@ -71,6 +72,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_details(inference_input)
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
+            self.models[model_name].engines[version].in_use = False
             return predict_pb2.PredictResponse()
 
         inference_start_time = datetime.datetime.now()
@@ -93,6 +95,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             .total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
+        self.models[model_name].engines[version].in_use = False
         return response
 
     def GetModelMetadata(self, request, context):
@@ -112,7 +115,7 @@ class PredictionServiceServicer(prediction_service_pb2.
                                                             requested_version))
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
-
+        self.models[model_name].engines[version].in_use = True
         metadata_signature_requested = request.metadata_field[0]
         if 'signature_def' != metadata_signature_requested:
             context.set_code(StatusCode.INVALID_ARGUMENT)
@@ -139,4 +142,5 @@ class PredictionServiceServicer(prediction_service_pb2.
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
+        self.models[model_name].engines[version].in_use = False
         return response

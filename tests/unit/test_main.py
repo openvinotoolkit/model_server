@@ -38,7 +38,8 @@ def test_open_config(mocker):
     (True, {'model_config_list': [{'config': {'base_path': '', 'test': ''}}]}),
     (True, {'model_config_list': [{'config': ''}]}),
     (True, {'model_config_list': 'test'}),
-    (True, {'model_config_list': 5})])
+    (True, {'model_config_list': 5}),
+    (True, {'test': 5})])
 def test_check_config_structure(should_exit, test_config):
     if should_exit:
         with pytest.raises(SystemExit):
@@ -65,7 +66,7 @@ def test_open_config_wrong_json(mocker):
                            (SystemExit, json.decoder.JSONDecodeError), False),
                           (True, '{"specific": { "ver":[1,2] }}',
                            (SystemExit, main.ValidationError), False),
-                          (False, '{"specific": { "versions":[1,2] }}',
+                          (True, '{"specific": { "versions":[1,2] }}',
                            (SystemExit, Exception), True)])
 def test_parse_one_model(mocker, should_fail, model_version_policy,
                          exceptions, unexpected_exception):
