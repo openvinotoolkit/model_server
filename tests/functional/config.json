@@ -4,7 +4,7 @@
       "config":{
         "name":"resnet_V1_50",
         "base_path":"/opt/ml/resnet_V1_50",
-        "batch_size":"auto"
+        "batch_size":"2"
       }
     },
     {
