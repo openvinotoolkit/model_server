@@ -51,7 +51,7 @@ def test_get_engines_for_model(mocker):
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size': None}]
     output = LocalModel.get_engines_for_model(
-        versions_attributes=available_versions)
+        versions_attributes=available_versions, num_workers=1)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[4]
@@ -74,7 +74,7 @@ def test_get_engines_for_model_with_ir_raises(mocker):
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size': None}]
     output = LocalModel.get_engines_for_model(
-        versions_attributes=available_versions)
+        versions_attributes=available_versions, num_workers=1)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[3]

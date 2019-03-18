@@ -83,7 +83,8 @@ def get_fake_ir_engine():
 @pytest.fixture
 def get_grpc_service_for_predict(get_fake_model):
     _real_time = grpc_testing.strict_real_time()
-    servicer = PredictionServiceServicer(models={'test': get_fake_model})
+    servicer = PredictionServiceServicer(models={'test': get_fake_model},
+                                         num_workers=1)
     descriptors_to_servicers = {
         PREDICT_SERVICE: servicer
     }

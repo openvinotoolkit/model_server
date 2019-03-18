@@ -71,8 +71,8 @@ def test_parse_one_model(mocker, should_fail, model_version_policy,
                          exceptions, unexpected_exception):
     args = collections.namedtuple('args',
                                   'model_name model_path batch_size'
-                                  ' model_version_policy port')
-    arguments = args('test', 'test', None, model_version_policy, 9000)
+                                  ' model_version_policy port num_workers')
+    arguments = args('test', 'test', None, model_version_policy, 9000, 1)
     if should_fail:
         if unexpected_exception:
             builder_mocker = mocker.patch('ie_serving.main.'

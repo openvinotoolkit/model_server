@@ -78,34 +78,6 @@ class TestBatchModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (4, 1000), ERROR_SHAPE
 
-    def test_run_inference_auto(self, resnet_8_batch_model_downloader,
-                                input_data_downloader_v1_224,
-                                start_server_batch_model_auto,
-                                create_channel_for_batching_server_auto):
-
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
-
-        # Connect to grpc service
-        stub = create_channel_for_batching_server_auto
-
-        batch_input = input_data_downloader_v1_224[:6, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (6, 1000), ERROR_SHAPE
-
-        batch_input = input_data_downloader_v1_224[:1, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-
     def test_get_model_metadata(self, resnet_8_batch_model_downloader,
                                 start_server_batch_model,
                                 create_channel_for_batching_server):

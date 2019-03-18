@@ -15,11 +15,11 @@
 #
 
 
-from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR, INFERENCE_STATE_CHECK_INTERVAL
+from ie_serving.config import CPU_EXTENSION, DEVICE, \
+    PLUGIN_DIR, INFERENCE_STATE_CHECK_INTERVAL
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
 from ie_serving.logger import get_logger
-import threading
 import time
 
 logger = get_logger(__name__)
@@ -71,7 +71,8 @@ class IrEngine():
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod
-    def build(cls, model_xml, model_bin, mapping_config, batch_size, num_workers):
+    def build(cls, model_xml, model_bin, mapping_config, batch_size,
+              num_workers):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
@@ -85,8 +86,10 @@ class IrEngine():
         inputs = net.inputs
         outputs = net.outputs
         if 'CPU' in DEVICE:
-            exec_net = plugin.load(network=net, num_requests=num_workers, config={
-                'CPU_THROUGHPUT_STREAMS': str(num_workers)})
+            exec_net = plugin.load(network=net, num_requests=num_workers,
+                                   config={
+                                       'CPU_THROUGHPUT_STREAMS': str(
+                                           num_workers)})
         else:
             exec_net = plugin.load(network=net, num_requests=num_workers)
         ir_engine = cls(model_xml=model_xml, model_bin=model_bin,
@@ -148,7 +151,7 @@ class IrEngine():
     def infer(self, data: dict, ir_index: int):
         infer_request_handle = self.exec_net.start_async(request_id=ir_index,
                                                          inputs=data)
-        while infer_request_handle.wait(0):
+        while infer_request_handle.wait(0) != 0:
             time.sleep(INFERENCE_STATE_CHECK_INTERVAL)
         infer_request_handle.wait(-1)
         results = infer_request_handle.outputs

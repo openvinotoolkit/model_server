@@ -142,8 +142,9 @@ def main():
                           help='model version policy',
                           required=False,
                           default='{"latest": { "num_versions":1 }}')
-    parser_b.add_argument('--num_workers', type=int, help='number of workers for parallel '
-                                                          'processing', required=False, default=1)
+    parser_b.add_argument('--num_workers', type=int,
+                          help='number of workers for parallel '
+                          'processing', required=False, default=1)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))
