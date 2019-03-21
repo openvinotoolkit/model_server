@@ -87,7 +87,7 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 print('Getting model metadata for model:',args.get('model_name'))
 
-metadata_field: str="signature_def"
+metadata_field = "signature_def"
 request = get_model_metadata_pb2.GetModelMetadataRequest()
 request.model_spec.name = args.get('model_name')
 if args.get('model_version') is not None:
