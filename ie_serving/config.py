@@ -30,3 +30,11 @@ LOG_PATH = os.getenv('LOG_PATH', None)
 
 
 MAPPING_CONFIG_FILENAME = 'mapping_config.json'
+
+
+class S3_Config:
+    S3_ENDPOINT = os.environ.get('S3_ENDPOINT', None)
+    S3_REGION = os.environ.get('AWS_REGION', None)
+    S3_SIGNATURE = os.environ.get('S3_SIGNATURE', None)
+    S3_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'default')
+    S3_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'default')

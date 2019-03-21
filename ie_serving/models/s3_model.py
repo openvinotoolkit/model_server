@@ -17,7 +17,7 @@ import boto3
 from botocore.client import Config
 from botocore import UNSIGNED
 from botocore import exceptions
-from ie_serving.config import MAPPING_CONFIG_FILENAME
+from ie_serving.config import MAPPING_CONFIG_FILENAME, S3_Config
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
@@ -31,8 +31,12 @@ logger = get_logger(__name__)
 class S3Model(Model):
     @classmethod
     def s3_list_content(cls, path):
-        s3_endpoint = os.getenv('S3_ENDPOINT')
-        s3_resource = boto3.resource('s3', endpoint_url=s3_endpoint)
+        s3_resource = boto3.resource(
+            's3', endpoint_url=S3_Config.S3_ENDPOINT,
+            aws_access_key_id=S3_Config.S3_ACCESS_KEY_ID,
+            aws_secret_access_key=S3_Config.S3_SECRET_ACCESS_KEY,
+            config=Config(signature_version=S3_Config.S3_SIGNATURE),
+            region_name=S3_Config.S3_REGION)
         parsed_path = urlparse(path)
         my_bucket = s3_resource.Bucket(parsed_path.netloc)
         content_list = []
@@ -44,18 +48,26 @@ class S3Model(Model):
     def s3_download_file(cls, path):
         if path is None:
             return None
-        s3_endpoint = os.getenv('S3_ENDPOINT')
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         file_path = parsed_path.path[1:]
         tmp_path = os.path.join('/tmp', file_path.split(os.sep)[-1])
         try:
-            s3_client = boto3.client('s3', endpoint_url=s3_endpoint)
+            s3_client = boto3.client(
+                's3', endpoint_url=S3_Config.S3_ENDPOINT,
+                aws_access_key_id=S3_Config.S3_ACCESS_KEY_ID,
+                aws_secret_access_key=S3_Config.S3_SECRET_ACCESS_KEY,
+                config=Config(signature_version=S3_Config.S3_SIGNATURE),
+                region_name=S3_Config.S3_REGION)
             s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
             s3_transfer.download_file(bucket_name, file_path, tmp_path)
         except exceptions.ClientError:
-            s3_client = boto3.client('s3', endpoint_url=s3_endpoint,
-                                     config=Config(signature_version=UNSIGNED))
+            s3_client = boto3.client(
+                's3', endpoint_url=S3_Config.S3_ENDPOINT,
+                aws_access_key_id=S3_Config.S3_ACCESS_KEY_ID,
+                aws_secret_access_key=S3_Config.S3_SECRET_ACCESS_KEY,
+                config=Config(signature_version=UNSIGNED),
+                region_name=S3_Config.S3_REGION)
             s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
             s3_transfer.download_file(bucket_name, file_path, tmp_path)
         return tmp_path
