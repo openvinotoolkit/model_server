@@ -15,8 +15,6 @@
 #
 
 
-import pytest
-
 class TestSingleModelInference():
 
     def test_run_inference(self,
