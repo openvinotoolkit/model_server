@@ -72,6 +72,7 @@ print('\tImages list file: {}'.format(args.get('images_list')))
 
 i = 0
 matched = 0
+processing_times = np.zeros((0),int)
 imgs = np.zeros((0,3,size, size), np.dtype('<f'))
 lbs = np.zeros((0), int)
 
@@ -95,6 +96,7 @@ for line in lines:
             print(Y)
         exit(1)
     duration = (end_time - start_time).total_seconds() * 1000
+    processing_times = np.append(processing_times,np.array([int(duration)]))
     output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
     nu = np.array(output)
     # for object classification models show imagenet class
@@ -106,7 +108,12 @@ for line in lines:
         matched += 1
     i += 1
     print("Detected:", ma, " Should be:", label)
-print("\nOverall accuracy=",matched/i*100)
+
+latency = np.average(processing_times)
+accuracy = matched/i
+
+print("Overall accuracy=",accuracy*100,"%")
+print("Average latency=",latency,"ms")
 
 # np.save('imgs.npy', imgs)
 # np.save('lbs.npy', lbs)
