@@ -29,7 +29,8 @@ logger = get_logger(__name__)
 class Model(ABC):
 
     def __init__(self, model_name: str, model_directory: str, batch_size,
-                 available_versions: list, engines: dict, version_policy_filter):
+                 available_versions: list, engines: dict,
+                 version_policy_filter):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
@@ -49,7 +50,8 @@ class Model(ABC):
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
-        versions_attributes, available_versions = cls.get_version_metadata(model_directory, batch_size, version_policy_filter)
+        versions_attributes, available_versions = cls.get_version_metadata(
+            model_directory, batch_size, version_policy_filter)
         versions_attributes = [version for version in versions_attributes
                                if version['version_number']
                                in available_versions]
@@ -58,18 +60,22 @@ class Model(ABC):
                               version_attributes in versions_attributes]
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
-                    batch_size=batch_size, version_policy_filter=version_policy_filter)
+                    batch_size=batch_size,
+                    version_policy_filter=version_policy_filter)
         return model
 
     def update(self):
-        versions_attributes, available_versions = self.get_version_metadata(self.model_directory, self.batch_size, self.version_policy_filter)
+        versions_attributes, available_versions = self.get_version_metadata(
+            self.model_directory, self.batch_size, self.version_policy_filter)
         if available_versions == self.versions:
             return
         logger.info("Server start updating model: {}".format(self.model_name))
         to_create, to_delete = self._mark_differences(available_versions)
         logger.debug("Server will try to add {} versions".format(to_create))
         logger.debug("Server will try to delete {} versions".format(to_delete))
-        attributes_to_create = [attribute for attribute in versions_attributes if attribute['version_number'] in to_create]
+        attributes_to_create = [
+            attribute for attribute in versions_attributes if
+            attribute['version_number'] in to_create]
         created_engines = self.get_engines_for_model(attributes_to_create)
         created_versions = [attributes_to_create['version_number'] for
                             attributes_to_create in attributes_to_create]
@@ -83,25 +89,33 @@ class Model(ABC):
                     "for {} model is {}".format(self.model_name,
                                                 self.default_version))
         for version in to_delete:
-            process_thread = threading.Thread(target=self._delete_engine, args=[version])
+            process_thread = threading.Thread(target=self._delete_engine,
+                                              args=[version])
             process_thread.start()
 
     def _mark_differences(self, new_versions):
-        to_delete = [version for version in self.versions if version not in new_versions]
-        to_create = [version for version in new_versions if version not in self.versions]
+        to_delete = [version for version in self.versions if
+                     version not in new_versions]
+        to_create = [version for version in new_versions if
+                     version not in self.versions]
         return to_create, to_delete
 
     def _delete_engine(self, version):
-        while True:
+        start_time = time.time()
+        tick = start_time
+        while tick - start_time < 120:
             time.sleep(1)
             if not self.engines[version].in_use:
                 logger.debug("Delete version: {}".format(version))
                 del self.engines[version]
                 break
+            tick = time.time()
 
     @classmethod
-    def get_version_metadata(cls, model_directory, batch_size, version_policy_filter):
-        versions_attributes = cls.get_versions_attributes(model_directory, batch_size)
+    def get_version_metadata(cls, model_directory, batch_size,
+                             version_policy_filter):
+        versions_attributes = cls.get_versions_attributes(model_directory,
+                                                          batch_size)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()

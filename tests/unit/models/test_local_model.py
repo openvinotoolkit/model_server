@@ -21,7 +21,8 @@ from ie_serving.models.local_model import LocalModel
 def test_model_init():
     new_model = LocalModel(model_name="test", model_directory='fake_path',
                            available_versions=[1, 2, 3], engines={},
-                           batch_size=None, version_policy_filter=lambda versions: versions[:])
+                           batch_size=None,
+                           version_policy_filter=lambda versions: versions[:])
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
@@ -43,9 +44,9 @@ def test_get_versions_files(mocker, mocker_values, expected_output):
     glob_mocker.side_effect = mocker_values
 
     xml_f, bin_f, mapping = LocalModel.get_version_files('/data/model/3/')
-    assert expected_output[0] == xml_f and \
-           expected_output[1] == bin_f and \
-           expected_output[2] is mapping
+    assert expected_output[0] == xml_f
+    assert expected_output[1] == bin_f
+    assert expected_output[2] is mapping
 
 
 def test_get_engines_for_model(mocker):

@@ -331,3 +331,11 @@ Examples:
 {"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
 {"all": {}} # server will serve all available versions of given model
 ```
+
+## Update server state
+
+Server is able to update his status while running. You can both add new versions and delete old ones.
+The server is unable to update the replaced version. In order to achieve such a state, first remove the old version and then add its upgraded version
+
+In default mode server is searching updates of model in 1 second interval. It's can be changed by setting env `FILE_SYSTEM_POLL_WAIT_SECONDS`.
+

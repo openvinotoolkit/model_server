@@ -136,8 +136,6 @@ You can parse the logs to analyze: volume of requests, processing statistics and
 
 * Currently, only *Predict* and *GetModelMetadata* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
-* Currently, model versions are detected at server start time. Adding new versions requires service restart or
- starting new docker container. There are plans to add online detection of new model versions and config file changes.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
 
 ## Contribution

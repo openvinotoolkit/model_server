@@ -125,22 +125,13 @@ def download_two_model_versions(get_test_dir):
     return [model1_info, model2_info]
 
 
-@pytest.fixture(autouse=True, scope="session")
-def prepare_models_for_update_tests(get_test_dir, download_two_model_versions, resnet_2_out_model_downloader):
-    dir = get_test_dir + '/saved_models/' + 'update/'
-    resnet_v1, resnet_v2 = download_two_model_versions
-    resnet_2_out = resnet_2_out_model_downloader
-    copy_model(resnet_v1, 1, dir)
-    copy_model(resnet_v2, 2, dir)
-    copy_model(resnet_2_out, 3, dir)
-
-
 def copy_model(model, version, destination_path):
     dir_to_cpy = destination_path + str(version)
     if not os.path.exists(dir_to_cpy):
         os.makedirs(dir_to_cpy)
         shutil.copy(model[0], dir_to_cpy + '/model.bin')
         shutil.copy(model[1], dir_to_cpy + '/model.xml')
+    return dir_to_cpy
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -236,6 +227,20 @@ def create_channel_for_batching_server_auto():
 @pytest.fixture(scope="session")
 def create_channel_for_model_ver_pol_server():
     channel = implementations.insecure_channel('localhost', 9006)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_update_flow_latest():
+    channel = implementations.insecure_channel('localhost', 9007)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_update_flow_specific():
+    channel = implementations.insecure_channel('localhost', 9008)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
     return stub
 
@@ -497,7 +502,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 
 @pytest.fixture(scope="class")
 def start_server_update_flow_latest(request, get_image, get_test_dir,
-                              get_docker_context):
+                                    get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir+'/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -507,7 +512,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
               "--port 9007"
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single',
+                                      name='ie-serving-py-test-update-latest',
                                       ports={'9007/tcp': 9007},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
@@ -521,18 +526,20 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
 
 @pytest.fixture(scope="class")
 def start_server_update_flow_specific(request, get_image, get_test_dir,
-                                    get_docker_context):
+                                      get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir+'/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007"
+    command = '/ie-serving-py/start_server.sh ie_serving model ' \
+              '--model_name resnet --model_path /opt/ml/update ' \
+              '--port 9008 --model_version_policy' \
+              ' \'{"specific": { "versions":[1, 3, 4] }}\' '
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single',
-                                      ports={'9007/tcp': 9007},
+                                      name='ie-serving-py-test-'
+                                           'update-specific',
+                                      ports={'9008/tcp': 9008},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)

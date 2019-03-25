@@ -27,7 +27,7 @@ CPU_EXTENSION = os.environ.get('CPU_EXTENSION', default_cpu_extension)
 PLUGIN_DIR = os.environ.get('PLUGIN_DIR', None)
 LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_PATH = os.getenv('LOG_PATH', None)
-UPDATE_INTERVAL = os.getenv('UPDATE_INTERVAL', 1)
+FILE_SYSTEM_POLL_WAIT_SECONDS = float(os.getenv('FILE_SYSTEM_POLL_WAIT_SECONDS', 1))
 
 
 MAPPING_CONFIG_FILENAME = 'mapping_config.json'

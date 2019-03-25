@@ -55,7 +55,8 @@ def get_fake_model():
     new_model = LocalModel(model_name="test",
                            model_directory='fake_path/model/',
                            available_versions=[1, 2, 3], engines=new_engines,
-                           batch_size=batch_size, version_policy_filter=lambda versions: versions[:])
+                           batch_size=batch_size,
+                           version_policy_filter=lambda versions: versions[:])
     return new_model
 
 
