@@ -73,12 +73,12 @@ class Model(ABC):
         to_create, to_delete = self._mark_differences(available_versions)
         logger.debug("Server will try to add {} versions".format(to_create))
         logger.debug("Server will try to delete {} versions".format(to_delete))
-        attributes_to_create = [
+        new_versions_attributes = [
             attribute for attribute in versions_attributes if
             attribute['version_number'] in to_create]
-        created_engines = self.get_engines_for_model(attributes_to_create)
+        created_engines = self.get_engines_for_model(new_versions_attributes)
         created_versions = [attributes_to_create['version_number'] for
-                            attributes_to_create in attributes_to_create]
+                            attributes_to_create in new_versions_attributes]
         self.engines.update(created_engines)
         self.versions.extend(created_versions)
         self.versions = [x for x in self.versions if x not in to_delete]
@@ -106,8 +106,10 @@ class Model(ABC):
         while tick - start_time < 120:
             time.sleep(1)
             if not self.engines[version].in_use:
-                logger.debug("Delete version: {}".format(version))
                 del self.engines[version]
+                logger.debug("Version {} of the {} model "
+                             "has been removed".format(version,
+                                                       self.model_name))
                 break
             tick = time.time()
 
