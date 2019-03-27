@@ -23,6 +23,7 @@ import numpy as np
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.server.service import PredictionServiceServicer
 from ie_serving.logger import get_logger
+from ie_serving.config import FILE_SYSTEM_POLL_WAIT_SECONDS
 
 logger = get_logger(__name__)
 
@@ -52,6 +53,8 @@ def serve(models, max_workers: int=1, port: int=9000):
                                                   models=list(models.keys())))
     try:
         while True:
-            time.sleep(_ONE_DAY_IN_SECONDS)
+            time.sleep(FILE_SYSTEM_POLL_WAIT_SECONDS)
+            for model in models:
+                models[model].update()
     except KeyboardInterrupt:
         server.stop(0)

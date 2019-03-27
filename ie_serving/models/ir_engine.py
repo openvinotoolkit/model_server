@@ -66,6 +66,7 @@ class IrEngine():
         self.output_tensors = outputs
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
+        self.in_use = False
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod

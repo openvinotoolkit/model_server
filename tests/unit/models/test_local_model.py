@@ -13,29 +13,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
+import pytest
 from ie_serving.models.local_model import LocalModel
 
 
 def test_model_init():
     new_model = LocalModel(model_name="test", model_directory='fake_path',
                            available_versions=[1, 2, 3], engines={},
-                           batch_size=None)
+                           batch_size=None,
+                           version_policy_filter=lambda versions: versions[:])
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
     assert new_model.engines == {}
 
 
-def test_get_versions_files(mocker):
+@pytest.mark.parametrize("mocker_values, expected_output", [
+    ([['/data/model/3/model.bin'], ['/data/model/3/model.xml'], []],
+     ['/data/model/3/model.xml', '/data/model/3/model.bin', None]),
+    ([[], ['/data/model/3/model.xml'], []],
+     [None, None, None]),
+    ([['/data/model/3/model.bin'], [], []],
+     [None, None, None]),
+    ([[], [], []],
+     [None, None, None])
+])
+def test_get_versions_files(mocker, mocker_values, expected_output):
     glob_mocker = mocker.patch('glob.glob')
-    glob_mocker.side_effect = [['/data/model/3/model.bin'],
-                               ['/data/model/3/model.xml'],
-                               []]
+    glob_mocker.side_effect = mocker_values
 
-    xml, bin, mapping = LocalModel.get_version_files('/data/model/3/')
-    assert xml == '/data/model/3/model.xml' and \
-        bin == '/data/model/3/model.bin' and \
-        mapping is None
+    xml_f, bin_f, mapping = LocalModel.get_version_files('/data/model/3/')
+    assert expected_output[0] == xml_f
+    assert expected_output[1] == bin_f
+    assert expected_output[2] is mapping
 
 
 def test_get_engines_for_model(mocker):
@@ -78,3 +89,13 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[3]
+
+
+def test_get_versions():
+    model = LocalModel
+    file_path = os.path.realpath(__file__)
+    unit_tests_path = os.path.dirname(os.path.dirname(file_path))
+    output = model.get_versions(unit_tests_path)
+    assert 3 == len(output)
+    output = model.get_versions(unit_tests_path + os.sep)
+    assert 3 == len(output)
