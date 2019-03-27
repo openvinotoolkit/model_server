@@ -332,10 +332,14 @@ Examples:
 {"all": {}} # server will serve all available versions of given model
 ```
 
-## Update server state
+## Updating model versions
 
-Server is able to update his status while running. You can both add new versions and delete old ones.
-The server is unable to update the replaced version. In order to achieve such a state, first remove the old version and then add its upgraded version
+Served versions are updated online by monitoring file system changes in the model storage. OpenVINO Model Server
+will add new version to the serving list when new numerical subfolder with the model files is added. The default served version
+will be switched to the one with the highest number.
+When the model version is deleted from the file system, it will become unavailable on the server and it will release RAM allocation.
+Updates in the model version files will not be detected and they will not trigger changes in serving.
 
-In default mode server is searching updates of model in 1 second interval. It's can be changed by setting env `FILE_SYSTEM_POLL_WAIT_SECONDS`.
+By default model server is detecting new and deleted versions in 1 second intervals. 
+The frequency can be changed by setting environment variable `FILE_SYSTEM_POLL_WAIT_SECONDS`.
 
