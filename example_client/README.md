@@ -206,3 +206,5 @@ Inputs metadata:
 Outputs metadata:
 	Output name: prob; shape: [1, 1000]; dtype: DT_FLOAT
 ```
+
+Refer also to the usage demo in the [jupyter notebook](../example_k8s/OVMS_demo.ipynb).
