@@ -21,7 +21,7 @@ def check_availability_of_requested_model(models, model_name,
     valid_model_spec = False
     requested_version = int(requested_version)
     if model_name in models:
-        if requested_version == 0:
+        if requested_version == 0 and models[model_name].default_version != -1:
             version = models[model_name].default_version
             valid_model_spec = True
         elif requested_version in models[model_name].versions:

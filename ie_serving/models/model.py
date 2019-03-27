@@ -17,6 +17,8 @@ from ie_serving.logger import get_logger
 from abc import ABC, abstractmethod
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+import threading
+import time
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
 import re
 
@@ -27,13 +29,15 @@ logger = get_logger(__name__)
 class Model(ABC):
 
     def __init__(self, model_name: str, model_directory: str, batch_size,
-                 available_versions: list, engines: dict):
+                 available_versions: list, engines: dict,
+                 version_policy_filter):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
         self.engines = engines
-        self.default_version = max(self.versions)
+        self.default_version = max(self.versions, default=-1)
         self.batch_size = batch_size
+        self.version_policy_filter = version_policy_filter
         logger.info("List of available versions "
                     "for {} model: {}".format(self.model_name, self.versions))
         logger.info("Default version "
@@ -44,14 +48,10 @@ class Model(ABC):
     def build(cls, model_name: str, model_directory: str, batch_size,
               model_version_policy: dict = None):
         logger.info("Server start loading model: {}".format(model_name))
-        versions_attributes = cls.get_versions_attributes(model_directory,
-                                                          batch_size)
-        available_versions = [version_attributes['version_number'] for
-                              version_attributes in versions_attributes]
         version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
-        available_versions.sort()
-        available_versions = version_policy_filter(available_versions)
+        versions_attributes, available_versions = cls.get_version_metadata(
+            model_directory, batch_size, version_policy_filter)
         versions_attributes = [version for version in versions_attributes
                                if version['version_number']
                                in available_versions]
@@ -60,17 +60,78 @@ class Model(ABC):
                               version_attributes in versions_attributes]
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
-                    batch_size=batch_size)
+                    batch_size=batch_size,
+                    version_policy_filter=version_policy_filter)
         return model
+
+    def update(self):
+        versions_attributes, available_versions = self.get_version_metadata(
+            self.model_directory, self.batch_size, self.version_policy_filter)
+        if available_versions == self.versions:
+            return
+        logger.info("Server start updating model: {}".format(self.model_name))
+        to_create, to_delete = self._mark_differences(available_versions)
+        logger.debug("Server will try to add {} versions".format(to_create))
+        logger.debug("Server will try to delete {} versions".format(to_delete))
+        new_versions_attributes = [
+            attribute for attribute in versions_attributes if
+            attribute['version_number'] in to_create]
+        created_engines = self.get_engines_for_model(new_versions_attributes)
+        created_versions = [attributes_to_create['version_number'] for
+                            attributes_to_create in new_versions_attributes]
+        self.engines.update(created_engines)
+        self.versions.extend(created_versions)
+        self.versions = [x for x in self.versions if x not in to_delete]
+        self.default_version = max(self.versions, default=-1)
+        logger.info("List of available versions after update"
+                    "for {} model: {}".format(self.model_name, self.versions))
+        logger.info("Default version after update"
+                    "for {} model is {}".format(self.model_name,
+                                                self.default_version))
+        for version in to_delete:
+            process_thread = threading.Thread(target=self._delete_engine,
+                                              args=[version])
+            process_thread.start()
+
+    def _mark_differences(self, new_versions):
+        to_delete = [version for version in self.versions if
+                     version not in new_versions]
+        to_create = [version for version in new_versions if
+                     version not in self.versions]
+        return to_create, to_delete
+
+    def _delete_engine(self, version):
+        start_time = time.time()
+        tick = start_time
+        while tick - start_time < 120:
+            time.sleep(1)
+            if not self.engines[version].in_use:
+                del self.engines[version]
+                logger.debug("Version {} of the {} model "
+                             "has been removed".format(version,
+                                                       self.model_name))
+                break
+            tick = time.time()
+
+    @classmethod
+    def get_version_metadata(cls, model_directory, batch_size,
+                             version_policy_filter):
+        versions_attributes = cls.get_versions_attributes(model_directory,
+                                                          batch_size)
+        available_versions = [version_attributes['version_number'] for
+                              version_attributes in versions_attributes]
+        available_versions.sort()
+        available_versions = version_policy_filter(available_versions)
+        return versions_attributes, available_versions
 
     @classmethod
     def get_versions_attributes(cls, model_directory, batch_size):
         versions = cls.get_versions(model_directory)
-        logger.info(versions)
+        logger.debug(versions)
         versions_attributes = []
         for version in versions:
             version_number = cls.get_version_number(version=version)
-            if version_number != 0:
+            if version_number >= 0:
                 xml_file, bin_file, mapping_config = \
                     cls.get_version_files(version)
                 if xml_file is not None and bin_file is not None:
@@ -85,8 +146,10 @@ class Model(ABC):
 
     @staticmethod
     def get_version_number(version):
-        version_number = re.search(r'/\d+/$', version).group(0)[1:-1]
-        return int(version_number)
+        version_finder = re.search(r'/\d+/$', version)
+        if version_finder is None:
+            return -1
+        return int(version_finder.group(0)[1:-1])
 
     @staticmethod
     def get_model_version_policy_filter(model_version_policy: dict):
