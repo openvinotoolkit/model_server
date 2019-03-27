@@ -74,6 +74,9 @@ Refer to the example client code to learn how to use this API and submit the req
 
 [gRPC](https://grpc.io/)
 
+[Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
+
+[OpenVINO Model Server boosts AI](https://www.intel.ai/openvino-model-server-boosts-ai-inference-operations/)
 
 ## Troubleshooting
 ### Server logging
