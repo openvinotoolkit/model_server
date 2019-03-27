@@ -8,8 +8,8 @@ Below are described simple examples which are using NFS and GCS (Google Cloud St
 
 ## Jupyter notebook demo
 
-In the [jupyter notebook](OVMS_demo.ipynb) is demonstrated OpenVINO Model Server deployment in Kubernetes including
-the evaluation from gRPC client. It enables serving of a pre-trained ResNet50 model quantized to INT8 precision.  
+OpenVINO Model Server deployment in Kubernetes including
+the evaluation from gRPC client is demonstrated in the [jupyter notebook demo](OVMS_demo.ipynb). It enables serving of a pre-trained ResNet50 model quantized to INT8 precision.  
 
 
 ## NFS server deployment
@@ -130,7 +130,7 @@ kubectl apply -f openvino_model_server_service.yaml
 By default Kubernetes starts assinging requests to the service pods when they are in `Running` state. In some cases
 when the models are stored remotely, more time is needed to download and import the model.
 
-To avoid risk of requests passed to not fully initialized pods, it is recommended to add Kubernetes readiness checks:
+To avoid risk of requests being passed to not fully initialized pods, it is recommended to add Kubernetes readiness checks:
 
 ```yaml
     readinessProbe:
