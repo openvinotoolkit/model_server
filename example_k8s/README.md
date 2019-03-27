@@ -6,6 +6,12 @@ and ensures high availability.
 
 Below are described simple examples which are using NFS and GCS (Google Cloud Storage) and S3 as the storage for the models.
 
+## Jupyter notebook demo
+
+In the [jupyter notebook](OVMS_demo.ipynb) is demonstrated OpenVINO Model Server deployment in Kubernetes including
+the evaluation from gRPC client. It enables serving of a pre-trained ResNet50 model quantized to INT8 precision.  
+
+
 ## NFS server deployment
 
 There are many possible ways to arrange NFS storage for kubernetes pods. In this example it used a procedure described on 
@@ -119,6 +125,21 @@ kubectl apply -f openvino_model_server_s3_rc.yaml
 kubectl apply -f openvino_model_server_service.yaml
 ```
 
+## Readiness checks
+
+By default Kubernetes starts assinging requests to the service pods when they are in `Running` state. In some cases
+when the models are stored remotely, more time is needed to download and import the model.
+
+To avoid risk of requests passed to not fully initialized pods, it is recommended to add Kubernetes readiness checks:
+
+```yaml
+    readinessProbe:
+      tcpSocket:
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 10
+```
+The port number should match the one configured as the pod exposed port.
 
 ## Testing
 

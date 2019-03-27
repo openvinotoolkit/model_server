@@ -39,7 +39,7 @@ Using FPGA (TBD)
 
 ## API documentation
 
-OpenVINO&trade; model server API is documented in proto buffer files  in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
+OpenVINO&trade; model server API is documented in proto buffer files in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
 **Note:** The implementations for *Predict* and *GetModelMetadata* function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
 [predict Function Spec](ie_serving/tensorflow_serving_api/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
@@ -58,6 +58,8 @@ Refer to the example client code to learn how to use this API and submit the req
 [Sagemaker](example_sagemaker)
 
 [Client Code Example](example_client)
+
+[Jupyter notebook demo](example_k8s/OVMS_demo.ipynb)
 
 
 ## Benchmarking results
@@ -175,6 +177,6 @@ To run tests limited to models to locally downloaded models use command:
 
 ## Contact
 
-Submit Github issue to ask question, submit a request or report a bug.
+Submit Github issue to ask question, request a feature or report a bug.
 
 
