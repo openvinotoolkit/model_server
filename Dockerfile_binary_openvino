@@ -1,9 +1,9 @@
 FROM ubuntu:16.04
 
-ARG INSTALL_DIR=/opt/intel/computer_vision_sdk
+ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 
-ARG DL_INSTALL_DIR=/opt/intel/computer_vision_sdk/deployment_tools
+ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG https_proxy
 
@@ -19,14 +19,14 @@ RUN cd $TEMP_DIR && pwd && ls && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     pwd | grep -q openvino_toolkit_p ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_vpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg; fi && \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-base-pset/g' silent.cfg; fi && \
     pwd | grep -q openvino_toolkit_fpga ; \
-    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-ism__noarch;intel-cv-sdk-full-shared__noarch;intel-cv-sdk-full-l-setupvars__noarch;intel-cv-sdk-full-l-inference-engine__noarch;intel-cv-sdk-full-gfx-install__noarch;intel-cv-sdk-full-shared-pset/g' silent.cfg; fi && \
+    if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=intel-openvino-full__noarch;intel-openvino-dldt-full__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-base-pset/g' silent.cfg; fi && \
     ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
-ENV PYTHONPATH="$INSTALL_DIR/python/python3.5/ubuntu16:$INSTALL_DIR/python/python3.5"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/gna/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/ubuntu_16.04/intel64:$DL_INSTALL_DIR/inference_engine/external/omp/lib"
+ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64"
 
 ENV https_proxy $https_proxy
 ENV HTTPS_PROXY $https_proxy
