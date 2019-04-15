@@ -44,10 +44,10 @@ RUN curl -L -o ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz https://github.com/in
     tar -xzf ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz && rm ${DLDT_DIR}/mklml_lnx_2019.0.1.20180928.tgz
 WORKDIR ${DLDT_DIR}/inference-engine
 RUN mkdir build && cd build && cmake -DGEMM=MKL  -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.1.20180928 -DENABLE_MKL_DNN=ON  -DCMAKE_BUILD_TYPE=Release ..
-RUN cd build && make -j4
+RUN cd build && make -j$(nproc)
 RUN pip3 install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/python/build && \
-    cmake -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build -DPYTHON_EXECUTABLE=`which python3` -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m .. && \
-    make -j4
+    cmake -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build -DPYTHON_EXECUTABLE=$(which python3) -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m .. && \
+    make -j$(nproc)
 
 FROM ubuntu:16.04 as PROD
 
