@@ -9,14 +9,16 @@ ARG https_proxy
 
 ENV TEMP_DIR $TEMP_DIR
 
-RUN apt-get update && apt-get install -y --no-install-recommends cpio usbutils \
-    python3-pip python3-venv python3-dev virtualenv
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cpio \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    usbutils \
+    virtualenv
 
-
-COPY l_openvino_toolkit*.tgz $TEMP_DIR/
-RUN cd $TEMP_DIR && pwd && ls && \
-    tar xf l_openvino_toolkit*.tgz && \
-    cd l_openvino_toolkit* && \
+ADD l_openvino_toolkit*.tgz $TEMP_DIR/
+RUN cd $TEMP_DIR/l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     pwd | grep -q openvino_toolkit_p ; \
     if [ $? = 0 ];then sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_vpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg; fi && \
