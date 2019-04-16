@@ -1,39 +1,36 @@
 FROM ubuntu:16.04 as DEV
 RUN apt-get update && apt-get install -y \
-            curl \
-            ca-certificates \
-            python3-pip \
-            python-dev \
-            libgfortran3 \
-            vim \
+            autoconf \
+            automake \
             build-essential \
+            ca-certificates \
             cmake \
             curl \
-            wget \
-            libssl-dev \
-            ca-certificates \
-            git \
-            libboost-regex-dev \
             gcc-multilib \
+            git \
             g++-multilib \
-            libgtk2.0-dev \
-            pkg-config \
-            unzip \
-            automake \
-            libtool \
-            autoconf \
-            libpng12-dev \
-            libcairo2-dev \
-            libpango1.0-dev \
-            libglib2.0-dev \
-            libgtk2.0-dev \
-            libswscale-dev \
+            gstreamer1.0-plugins-base \
             libavcodec-dev \
             libavformat-dev \
+            libboost-regex-dev \
+            libcairo2-dev \
+            libgfortran3 \
+            libglib2.0-dev \
             libgstreamer1.0-0 \
-            gstreamer1.0-plugins-base \
+            libgtk2.0-dev \
+            libopenblas-dev \
+            libpango1.0-dev \
+            libpng12-dev \
+            libssl-dev \
+            libswscale-dev \
+            libtool \
             libusb-1.0-0-dev \
-            libopenblas-dev
+            pkg-config \
+            python3-pip \
+            python-dev \
+            unzip \
+            vim \
+            wget
 ARG DLDT_DIR=/dldt-2018_R5
 RUN git clone --depth=1 -b 2018_R5 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
     cd ${DLDT_DIR} && git submodule init && git submodule update --recursive && \
@@ -51,12 +48,12 @@ RUN pip3 install cython numpy && mkdir ie_bridges/python/build && cd ie_bridges/
 FROM ubuntu:16.04 as PROD
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-            curl \
             ca-certificates \
-            python3-pip \
+            curl \
+            libgomp1 \
             python3-dev \
-            virtualenv \
-            libgomp1
+            python3-pip \
+            virtualenv
 WORKDIR /ie-serving-py
 
 COPY requirements.txt /ie-serving-py/
