@@ -5,7 +5,6 @@ RUN apt-get update && apt-get install -y \
             build-essential \
             ca-certificates \
             cmake \
-            curl \
             gcc-multilib \
             git \
             g++-multilib \
@@ -30,9 +29,18 @@ RUN apt-get update && apt-get install -y \
             python-dev \
             unzip \
             vim \
-            wget
-ARG DLDT_DIR=/dldt-2018_R5
-RUN git clone --depth=1 -b 2018_R5 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
+            wget \
+            curl
+
+RUN wget https://cmake.org/files/v3.14/cmake-3.14.3.tar.gz && \
+    tar -xvzf cmake-3.14.3.tar.gz && \
+    cd cmake-3.14.3/  && \
+    ./configure && \
+    make -j$(nproc) && \
+    make install
+
+ARG DLDT_DIR=/2019_R1.0.1
+RUN git clone --depth=1 -b 2019_R1.0.1 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
     cd ${DLDT_DIR} && git submodule init && git submodule update --recursive && \
     rm -Rf .git && rm -Rf model-optimizer
 
@@ -65,9 +73,10 @@ COPY ie_serving /ie-serving-py/ie_serving
 
 RUN . .venv/bin/activate && pip3 install .
 
-COPY --from=DEV /dldt-2018_R5/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
-COPY --from=DEV /dldt-2018_R5/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
-COPY --from=DEV /dldt-2018_R5/mklml_lnx_2019.0.1.20180928/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.0.1/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.0.1/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
+COPY --from=DEV /2019_R1.0.1/mklml_lnx_2019.0.1.20180928/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.0.1/inference-engine/temp/tbb/lib/lib* /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
