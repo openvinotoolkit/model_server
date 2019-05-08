@@ -5,9 +5,7 @@ RUN apt-get update && apt-get install -y \
             build-essential \
             ca-certificates \
             curl \
-            gcc-multilib \
             git \
-            g++-multilib \
             gstreamer1.0-plugins-base \
             libavcodec-dev \
             libavformat-dev \
@@ -35,6 +33,12 @@ RUN wget https://cmake.org/files/v3.14/cmake-3.14.3.tar.gz && \
     ./configure && \
     make -j$(nproc) && \
     make install
+
+RUN echo "deb http://ftp.us.debian.org/debian/ jessie main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb-src http://ftp.us.debian.org/debian/ jessie main contrib non-free" >> /etc/apt/sources.list && \
+    apt update && \
+    apt-get install -y g++-4.9
+ENV CXX=/usr/bin/g++-4.9
 
 ARG DLDT_DIR=/dldt-2019_R1.0.1
 RUN git clone --depth=1 -b 2019_R1.0.1 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
