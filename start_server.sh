@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copyright (c) 2018 Intel Corporation
 #
@@ -15,5 +15,5 @@
 # limitations under the License.
 #
 cd /ie-serving-py
-source /ie-serving-py/.venv/bin/activate
+. /ie-serving-py/.venv/bin/activate
 exec "$@"
