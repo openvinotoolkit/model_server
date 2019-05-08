@@ -31,10 +31,14 @@ parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape 
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
-parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1', help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
+parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
+                    help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
 parser.add_argument('--transpose_input', choices=["False", "True"], default="True",
-                    help='Set to False to skip NHWC->NCHW input transposing. default: True',
+                    help='Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True',
                     dest="transpose_input")
+parser.add_argument('--transpose_method', choices=["nchw2nhwc","nhwc2nchw"], default="nhwc2nchw",
+                    help="How the input transposition should be executed: nhwc2nchw or nhwc2nchw",
+                    dest="transpose_method")
 parser.add_argument('--iterations', default=0,
                     help='Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)',
                     dest='iterations', type=int)
@@ -81,7 +85,10 @@ print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
 print('\tImages in shape: {}\n'.format(imgs.shape))
 
 if args.get('transpose_input') == "True":
-    imgs = imgs.transpose((0,3,1,2))
+    if args.get('transpose_method') == "nhwc2nchw":
+        imgs = imgs.transpose((0,3,1,2))
+    if args.get('transpose_method') == "nchw2nhwc":
+        imgs = imgs.transpose((0,2,3,1))
 iteration = 0
 
 while iteration <= iterations:
@@ -91,6 +98,7 @@ while iteration <= iterations:
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.get('model_name')
         img = imgs[x:(x + batch_size)]
+        print(img.shape)
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
         request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
