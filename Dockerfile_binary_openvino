@@ -31,7 +31,8 @@ RUN cd $TEMP_DIR/l_openvino_toolkit* && \
             COMPONENTS=DEFAULTS \
             ;; \
     esac ; \
-    sed -i "s/COMPONENTS=DEFAULTS/COMPONENTS=$COMPONENTS/g" silent.cfg && \    ./install.sh -s silent.cfg --ignore-signature && \
+    sed -i "s/COMPONENTS=DEFAULTS/COMPONENTS=$COMPONENTS/g" silent.cfg && \    
+    ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
