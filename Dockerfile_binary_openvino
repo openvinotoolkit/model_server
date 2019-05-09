@@ -38,9 +38,6 @@ RUN cd $TEMP_DIR/l_openvino_toolkit* && \
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
 ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64"
 
-ENV https_proxy $https_proxy
-ENV HTTPS_PROXY $https_proxy
-
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements.txt /ie-serving-py/

@@ -4,7 +4,6 @@ RUN apt-get update && apt-get install -y \
             automake \
             build-essential \
             ca-certificates \
-            cmake \
             curl \
             gcc-multilib \
             git \
