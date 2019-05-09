@@ -44,9 +44,9 @@ RUN git clone --depth=1 -b 2019_R1.0.1 https://github.com/opencv/dldt.git ${DLDT
     rm -Rf .git && rm -Rf model-optimizer
 
 WORKDIR ${DLDT_DIR}
-RUN curl -L https://github.com/intel/mkl-dnn/releases/download/v0.17.2/mklml_lnx_2019.0.1.20180928.tgz | tar -xz
+RUN curl -L https://github.com/intel/mkl-dnn/releases/download/v0.18/mklml_lnx_2019.0.3.20190220.tgz | tar -xz
 WORKDIR ${DLDT_DIR}/inference-engine/build
-RUN cmake -DGEMM=MKL  -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.1.20180928 -DENABLE_MKL_DNN=ON -DTHREADING=OMP -DCMAKE_BUILD_TYPE=Release ..
+RUN cmake -DGEMM=MKL  -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.3.20190220 -DENABLE_MKL_DNN=ON -DTHREADING=OMP -DCMAKE_BUILD_TYPE=Release ..
 RUN make -j$(nproc)
 WORKDIR ${DLDT_DIR}/inference-engine/ie_bridges/python/build
 RUN cmake -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build -DPYTHON_EXECUTABLE=$(which python3) -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m ${DLDT_DIR}/inference-engine/ie_bridges/python && \
@@ -74,7 +74,7 @@ RUN . .venv/bin/activate && pip3 install .
 
 COPY --from=DEV /2019_R1.0.1/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
 COPY --from=DEV /2019_R1.0.1/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
-COPY --from=DEV /2019_R1.0.1/mklml_lnx_2019.0.1.20180928/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.0.1/mklml_lnx_2019.0.3.20190220/lib/lib*.so /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
