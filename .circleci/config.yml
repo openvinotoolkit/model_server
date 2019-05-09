@@ -11,9 +11,9 @@ jobs:
     docker:
       - image: ubuntu:16.04
         environment:
-          PYTHONPATH: /opt/intel/computer_vision_sdk/python/python3.5/ubuntu16:/opt/intel/computer_vision_sdk/python/python3.5
+          PYTHONPATH: /opt/intel/openvino/python/python3.5
           LD_LIBRARY_PATH: >-
-            /opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/gna/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/omp/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64
+            /opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib:/opt/intel/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64
     environment:
       TEMP_DIR: /tmp/openvino_installer
     steps:
@@ -25,11 +25,11 @@ jobs:
             cd $TEMP_DIR &&
             apt-get update &&
             apt-get install -y --no-install-recommends cpio wget cpio cmake sudo python3-pip python3-venv python3-dev python3-setuptools virtualenv build-essential &&
-            wget -c $OPENVINO_DOWNLOAD_LINK_R5 &&
+            wget -c $OPENVINO_DOWNLOAD_LINK_R1 &&
             tar xf l_openvino_toolkit*.tgz &&
             cd l_openvino_toolkit* &&
             sed -i 's/decline/accept/g' silent.cfg &&
-            sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=;intel-openvino_base__noarch;intel-dldt_base__noarch;intel-setupvars__noarch;intel-inference_engine_sdk__noarch;intel-inference_engine_rt__noarch;intel-inference_engine_cpu__noarch;intel-inference_engine_gna__noarch;intel-inference_engine_dlia__noarch;intel-openvino_base-pset/g' silent.cfg &&
+            sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-base-pset/g' silent.cfg &&
             ./install.sh -s silent.cfg --ignore-signature
       - run:
           name: Install ie-serving-py
@@ -48,7 +48,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: wget -c $OPENVINO_DOWNLOAD_LINK_R5 && make docker_build_bin
+          command: wget -c $OPENVINO_DOWNLOAD_LINK_R1 && make docker_build_bin
       - run:
           name: Get Google Cloud credentials
           command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
