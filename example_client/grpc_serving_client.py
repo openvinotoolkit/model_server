@@ -82,13 +82,13 @@ print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 print('\tIterations: {}'.format(iterations))
 print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
-print('\tImages in shape: {}\n'.format(imgs.shape))
-
 if args.get('transpose_input') == "True":
     if args.get('transpose_method') == "nhwc2nchw":
         imgs = imgs.transpose((0,3,1,2))
     if args.get('transpose_method') == "nchw2nhwc":
         imgs = imgs.transpose((0,2,3,1))
+print('\tImages in shape: {}\n'.format(imgs.shape))
+
 iteration = 0
 
 while iteration <= iterations:
@@ -98,7 +98,6 @@ while iteration <= iterations:
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.get('model_name')
         img = imgs[x:(x + batch_size)]
-        print(img.shape)
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
         request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
