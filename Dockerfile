@@ -35,7 +35,7 @@ RUN wget https://cmake.org/files/v3.14/cmake-3.14.3.tar.gz && \
     tar -xvzf cmake-3.14.3.tar.gz && \
     cd cmake-3.14.3/  && \
     ./configure && \
-    make -j$(nproc) && \
+    make -j && \
     make install
 RUN pip3 install cython numpy
 ARG DLDT_DIR=/2019_R1.0.1
@@ -47,10 +47,10 @@ WORKDIR ${DLDT_DIR}
 RUN curl -L https://github.com/intel/mkl-dnn/releases/download/v0.18/mklml_lnx_2019.0.3.20190220.tgz | tar -xz
 WORKDIR ${DLDT_DIR}/inference-engine/build
 RUN cmake -DGEMM=MKL  -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.3.20190220 -DENABLE_MKL_DNN=ON -DTHREADING=OMP -DCMAKE_BUILD_TYPE=Release ..
-RUN make -j$(nproc)
+RUN make -j
 WORKDIR ${DLDT_DIR}/inference-engine/ie_bridges/python/build
 RUN cmake -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build -DPYTHON_EXECUTABLE=$(which python3) -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m ${DLDT_DIR}/inference-engine/ie_bridges/python && \
-    make -j$(nproc)
+    make -j
 
 FROM ubuntu:16.04 as PROD
 
