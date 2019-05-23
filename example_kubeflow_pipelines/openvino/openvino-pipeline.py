@@ -17,7 +17,7 @@ def tf_slim_optimize(
 
     slim = dsl.ContainerOp(
         name='Create_model',
-        image='gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1',
+        image='intelaipg/kubeflow-pipeline-openvino:0.1',
         command=['python', 'slim_model.py'],
         arguments=[
             '--model_name', model_name,
@@ -30,7 +30,7 @@ def tf_slim_optimize(
 
     mo = dsl.ContainerOp(
         name='Optimize_model',
-        image='gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1',
+        image='intelaipg/kubeflow-pipeline-openvino:0.1',
         command=['python','convert_model.py'],
         arguments=[
             '--input_path', '%s/saved_model.pb' % slim.output,
@@ -40,7 +40,7 @@ def tf_slim_optimize(
 
     dsl.ContainerOp(
         name='openvino-predict',
-        image='gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1',
+        image='intelaipg/kubeflow-pipeline-openvino:0.1',
         command=['python', 'predict.py'],
         arguments=[
             '--model_bin', mo.outputs['bin'],

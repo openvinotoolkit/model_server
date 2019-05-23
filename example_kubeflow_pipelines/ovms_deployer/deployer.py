@@ -22,7 +22,7 @@ def openvino_predict(
     """A one-step pipeline."""
     deploy = dsl.ContainerOp(
         name='Deploy OpenVINO Model Server',
-        image='gcr.io/constant-cubist-173123/inference_server/ml_deployer:14',
+        image='intelaipg/kubeflow-pipeline-ovms-deployer:0.1',
         command=['./deploy.sh'],
         arguments=[
             '--model-export-path', model_export_path,
@@ -35,7 +35,7 @@ def openvino_predict(
 
     dsl.ContainerOp(
         name='Evaluate OpenVINO Model Server',
-        image='gcr.io/constant-cubist-173123/inference_server/ml_deployer:14',
+        image='intelaipg/kubeflow-pipeline-ovms-deployer:0.1',
         command=['./evaluate.py'],
         arguments=[
             '--images_list', images_list,
