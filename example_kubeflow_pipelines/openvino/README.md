@@ -54,7 +54,7 @@ so it can be passed between components.
 
 ```bash
 model-name - resnet_v1_50
-model-name - 1000
+num_classes - 1000
 checkpoint-url - http://download.tensorflow.org/models/resnet_v1_50_2016_08_28.tar.gz
 batch-size - 1
 tf-export-dir = /tmp/export
