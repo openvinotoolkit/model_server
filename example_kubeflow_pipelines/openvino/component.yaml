@@ -24,7 +24,7 @@ outputs:
 
 implementation:
   container:
-    image: gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
     command: ['python', 'slim_model.py']
     args: [
       --model_name, {inputValue: model_name},
@@ -37,10 +37,10 @@ implementation:
     fileOutputs:
       generated-model-dir: '/tmp/saved_model_dir.txt'
   container:
-    image: gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
     command: [convert_model.py]
     args: [
-      --input_path, {outputPath: generated-model-dir}/saved_model.pb,
+      --input_path, {outputPath: generated-model-dir},
       --mo_options, {inputValue: mo_options},
       --output_path, {outputPath: generated-model-dir}
     ]
@@ -48,11 +48,11 @@ implementation:
       bin: '/tmp/bin_path.txt'
       xml: '/tmp/xml_path.txt'
   container:
-    image: gcr.io/constant-cubist-173123/inference_server/openviono-pipeline:1
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
     command: ['python', 'predict.py']
     args: [
       --model_bin, {outputPath: bin},
-      --model_xml {outputPath: xml},
+      --model_xml, {outputPath: xml},
       --input_numpy_file, {inputValue: input_numpy_file},
       --label_numpy_file, {inputValue: label_numpy_file}
     ]

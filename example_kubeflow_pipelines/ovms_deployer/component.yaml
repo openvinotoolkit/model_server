@@ -30,7 +30,7 @@ metrics:
   - name: accuracy
 implementation:
   container:
-    image: gcr.io/constant-cubist-173123/inference_server/ml_deployer:14
+    image: intelaipg/kubeflow-pipeline-ovms-deployer:0.1
     command: [./deploy.sh]
     args: [
       --model-export-path, {inputValue: Model export path},
@@ -44,7 +44,7 @@ implementation:
     fileOutputs:
       server_endpoint: '/tmp/server_endpoint'
   container:
-    image: gcr.io/constant-cubist-173123/inference_server/ml_deployer:14
+    image: intelaipg/kubeflow-pipeline-ovms-deployer:0.1
     command: [./evaluate.py]
     args: [
       --images_list, {inputValue: Evaluation images list},

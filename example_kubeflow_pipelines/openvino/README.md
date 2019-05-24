@@ -43,7 +43,7 @@ so it can be passed between components.
 -batch_size - batch size for the generated IR model
 - export_dir - location for storing auxiliary model formats
 - generated_model_dir - location for storing pipeline results - google storage path. If set to a numerical subfolder 
- it could be used by TensorFlow Serving or OpenVINO Model Server 
+ it could be used by TensorFlow Serving or OpenVINO Model Server. The target folder in the path can not exist.
 - mo_options -  a list of options to be passed to model optimizer, it assumes the source model in saved_model folder
  will be downloaed to the 'current directory' so use `--saved_model_dir .` to point to the model generated in first step.
  Refer to [mo.py --help](container/mo.md) for details.
@@ -53,7 +53,7 @@ so it can be passed between components.
 ## Examples of the parameters
 
 ```bash
-model-name - resnet_v1_50<br />
+model-name - resnet_v1_50
 model-name - 1000
 checkpoint-url - http://download.tensorflow.org/models/resnet_v1_50_2016_08_28.tar.gz
 batch-size - 1
