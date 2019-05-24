@@ -1,0 +1,59 @@
+name: OpenVINO model optimization pipeline
+description: Generate slim models and optimize them with OpenVINO
+inputs:
+  - name: model-name
+    default: resnet_v1_50
+  - name: num-classes
+    default: 1000
+  - name: checkpoint-url
+    default: 'http://download.tensorflow.org/models/resnet_v1_50_2016_08_28.tar.gz'
+  - name: batch-size
+    default: 1
+  - name: tf-export-dir
+    default: '/tmp/export'
+  - name: generated-model-dir
+    default: 'gs://your-bucket/folder'
+  - name: mo-option
+    default: '--saved_model_dir .'
+  - name: input-numpy-file
+    default: 'gs://intelai_public_models/images/imgs.npy'
+  - name: 'label-numpy-file'
+    default: 'gs://intelai_public_models/images/lbs.npy'
+outputs:
+  - name: generated-model-dir
+
+implementation:
+  container:
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
+    command: ['python', 'slim_model.py']
+    args: [
+      --model_name, {inputValue: model_name},
+      --batch_size, {inputValue: batch_size},
+      --checkpoint_url, {inputValue: checkpoint_url},
+      --num_classes, {inputValue: num_classes},
+      --saved_model_dir, {inputValue: generated_model_dir},
+      --export_dir, {inputValue: export_dir}
+    ]
+    fileOutputs:
+      generated-model-dir: '/tmp/saved_model_dir.txt'
+  container:
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
+    command: [convert_model.py]
+    args: [
+      --input_path, {outputPath: generated-model-dir},
+      --mo_options, {inputValue: mo_options},
+      --output_path, {outputPath: generated-model-dir}
+    ]
+    fileOutputs:
+      bin: '/tmp/bin_path.txt'
+      xml: '/tmp/xml_path.txt'
+  container:
+    image: intelaipg/kubeflow-pipeline-openvino:0.1
+    command: ['python', 'predict.py']
+    args: [
+      --model_bin, {outputPath: bin},
+      --model_xml, {outputPath: xml},
+      --input_numpy_file, {inputValue: input_numpy_file},
+      --label_numpy_file, {inputValue: label_numpy_file}
+    ]
+
