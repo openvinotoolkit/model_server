@@ -127,5 +127,5 @@ def create_rest_api(models):
     app.add_route('/v1/models/{model_name}/metadata', things)
     app.add_route('/v1/models/{model_name}/versions/{model_version}/metadata', things)
     app.add_route('/v1/models/{model_name}/predict', things2)
-    app.add_route('/v1/models/{model_name}/versions/{model_version}:predict', things2)
+    app.add_route('/v1/models/{model_name}/versions/{model_version}/predict', things2)
     return app
