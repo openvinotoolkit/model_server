@@ -20,6 +20,8 @@ import tensorflow.contrib.util as tf_contrib_util
 import classes
 import datetime
 import argparse
+import json
+import requests
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
@@ -49,10 +51,13 @@ parser.add_argument('--batchsize', default=1,
                     dest='batchsize')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+parser.add_argument('--rest', choices=["False", "True"], default="False",
+                    help='dasdsadas',
+                    dest="rest")
 args = vars(parser.parse_args())
-
-channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+if args.get('rest') is "False":
+    channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
 
@@ -102,17 +107,33 @@ while iteration <= iterations:
             lb = lbs[x:(x + batch_size)]
         request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
         start_time = datetime.datetime.now()
-        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        if args.get('rest') is "False":
+            result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        else:
+            data_obj = {'inputs': {args['input_name']: img.tolist()}}
+            result = requests.post("{}:{}/v1/models/resnet/predict".format('http://127.0.0.1', 5555), data=json.dumps(data_obj))
+            result = json.loads(result.text)
         end_time = datetime.datetime.now()
-        if args['output_name'] not in result.outputs:
-            print("Invalid output name", args['output_name'])
-            print("Available outputs:")
-            for Y in result.outputs:
-                print(Y)
-            exit(1)
+        if args.get('rest') is "False":
+            if args['output_name'] not in result.outputs:
+                print("Invalid output name", args['output_name'])
+                print("Available outputs:")
+                for Y in result.outputs:
+                    print(Y)
+                exit(1)
+        else:
+            if args['output_name'] not in result['outputs']:
+                print("Invalid output name", args['output_name'])
+                print("Available outputs:")
+                for Y in result['outputs']:
+                    print(Y)
+                exit(1)
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+        if args.get('rest') is "False":
+            output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+        else:
+            output = result['outputs'][args['output_name']]
 
         nu = np.array(output)
         # for object classification models show imagenet class

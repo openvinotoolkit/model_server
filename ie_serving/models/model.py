@@ -103,9 +103,14 @@ class Model(ABC):
     def _delete_engine(self, version):
         start_time = time.time()
         tick = start_time
+        lock_counter = 0
         while tick - start_time < 120:
             time.sleep(1)
-            if not self.engines[version].in_use:
+            if self.engines[version].in_use.locked():
+                lock_counter += 1
+            else:
+                lock_counter = 0
+            if lock_counter >= 10:
                 del self.engines[version]
                 logger.debug("Version {} of the {} model "
                              "has been removed".format(version,
