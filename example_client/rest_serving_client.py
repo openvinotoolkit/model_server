@@ -20,16 +20,37 @@ import tensorflow.contrib.util as tf_contrib_util
 import classes
 import datetime
 import argparse
+import json
+import requests
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
+def create_request(img, request_format):
+    if request_format == "row_name":
+        instances = []
+        instance = {}
+        for i in range(0,img.shape[0]-1,1):
+            instance[args['input_name']] = img[i].tolist()
+            instances.append(instance)
+        data_obj = {"signature_name": "serving_default","instances": instances }
+    elif request_format == "row_noname":
+        data_obj = {"signature_name": "serving_default",'instances': img.tolist() }
+    elif request_format == "column_name":
+        data_obj = {"signature_name": "serving_default",'inputs': {args['input_name']: img.tolist()}}
+    elif request_format == "column_noname":
+        data_obj = {"signature_name": "serving_default",'inputs':  img.tolist()}
+    else:
+        print("invalid request format defined")
+        exit(1)
+    data_json = json.dumps(data_obj)
+    return data_json
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
                                              'It displays performance statistics and optionally the model accuracy')
 parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
 parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
-parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
+parser.add_argument('--rest_url',required=False, default='http://localhost',  help='Specify url to REST API service. default: http://localhost')
+parser.add_argument('--rest_port',required=False, default=5555, help='Specify port to grpc service. default: 5555')
 parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
 parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
                     help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
@@ -49,10 +70,11 @@ parser.add_argument('--batchsize', default=1,
                     dest='batchsize')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+parser.add_argument('--request_format', default='row_noname', help='Request format according to TF Serving API: row_noname,row_name,column_noname,column_name',
+                    choices=["row_noname","row_name","column_noname","column_name"],dest='request_format')
+parser.add_argument('--model_version', help='Model version to be used. Default: LATEST',
+                    type=int,dest='model_version')
 args = vars(parser.parse_args())
-
-channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
 
@@ -82,6 +104,7 @@ print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 print('\tIterations: {}'.format(iterations))
 print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
+
 if args.get('transpose_input') == "True":
     if args.get('transpose_method') == "nhwc2nchw":
         imgs = imgs.transpose((0,3,1,2))
@@ -95,30 +118,55 @@ while iteration <= iterations:
     for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
         iteration += 1
         if iteration > iterations: break
-        request = predict_pb2.PredictRequest()
-        request.model_spec.name = args.get('model_name')
+
         img = imgs[x:(x + batch_size)]
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
-        request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+
+        data_json = create_request(img, args.get('request_format'))
         start_time = datetime.datetime.now()
-        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        version = ""
+        if args.get('model_version') is not None:
+            version =  "/versions/{}".format(args.get('model_version'))
+        result = requests.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'],args['model_name'],version), data=data_json)
         end_time = datetime.datetime.now()
-        if args['output_name'] not in result.outputs:
-            print("Invalid output name", args['output_name'])
-            print("Available outputs:")
-            for Y in result.outputs:
-                print(Y)
+
+        try:
+            result_dic = json.loads(result.text)
+        except TypeError:
+            print("The server response is not json format")
             exit(1)
+        if "error" in result_dic:
+            print('Server returned error: {}'.format(result_dic))
+            exit(1)
+        if "outputs" in result_dic:
+            keyname = "outputs"
+        elif "predictions" in result_dic:
+            keyname = "predictions"
+        else:
+            print("Missing required response in {}".format(result_dic))
+            exit(1)
+
+        if type(result_dic[keyname]) is list:  # no named output
+            output = result_dic[keyname]
+        else: # dictionary with named outputs
+            if args['output_name'] not in result_dic[keyname]:
+                print("Invalid output name", args['output_name'])
+                print("Available outputs:")
+                for Y in result_dic[keyname]:
+                    print(Y)
+                exit(1)
+            output = result_dic[keyname][args['output_name']]
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
 
-        nu = np.array(output)
+
+        nu = np.array(output) # numpy array with inference results
+
         # for object classification models show imagenet class
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
-                                                                                  round(1000 * batch_size / np.average(duration), 2)
-                                                                                  ))
+                                                                round(1000 * batch_size / np.average(duration), 2)
+                                                                ))
         # Comment out this section for non imagenet datasets
         print("imagenet top results in a single batch:")
         for i in range(nu.shape[0]):
@@ -137,16 +185,16 @@ while iteration <= iterations:
 
 print('\nprocessing time for all iterations')
 print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.average(processing_times), 2),
-                                                                  round(1000 * batch_size / np.average(processing_times), 2)))
+                                                                    round(1000 * batch_size / np.average(processing_times), 2)))
 
 print('median time: {:.2f} ms; median speed: {:.2f} fps'.format(round(np.median(processing_times), 2),
-                                                                round(1000 * batch_size / np.median(processing_times), 2)))
+                                                                  round(1000 * batch_size / np.median(processing_times), 2)))
 
 print('max time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
-                                                          round(1000 * batch_size / np.max(processing_times), 2)))
+                                                            round(1000 * batch_size / np.max(processing_times), 2)))
 
 print('min time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
-                                                          round(1000 * batch_size / np.min(processing_times), 2)))
+                                                            round(1000 * batch_size / np.min(processing_times), 2)))
 
 print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
     round(np.percentile(processing_times, 90), 2),
@@ -155,7 +203,7 @@ print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
 print('time percentile 50: {:.2f} ms; speed percentile 50: {:.2f} fps'.format(
     round(np.percentile(processing_times, 50), 2),
     round(1000 * batch_size / np.percentile(processing_times, 50), 2)
-))
+    ))
 print('time standard deviation: {:.2f}'.format(round(np.std(processing_times), 2)))
 print('time variance: {:.2f}'.format(round(np.var(processing_times), 2)))
 
