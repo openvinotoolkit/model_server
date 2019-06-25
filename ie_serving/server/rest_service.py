@@ -1,6 +1,10 @@
 import datetime
 import falcon
 import json
+
+from ie_serving.server.rest_msg_processing import preprocess_json_request, \
+    prepare_json_response
+from ie_serving.server.rest_msg_validation import get_input_format
 from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
 from google.protobuf.json_format import MessageToJson
 
@@ -9,9 +13,9 @@ from ie_serving.server.service_utils import \
     check_availability_of_requested_model
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
-from ie_serving.server.constants import WRONG_MODEL_METADATA
-from ie_serving.server.predict_utils import prepare_input_data,\
-    prepare_json_response, preprocess_json_request
+from ie_serving.server.constants import WRONG_MODEL_METADATA, INVALID_FORMAT, \
+    OUTPUT_REPRESENTATION
+from ie_serving.server.predict_utils import prepare_input_data
 
 logger = get_logger(__name__)
 
@@ -84,7 +88,32 @@ class Predict():
             resp.body = json.dumps(err_out_json)
             return
         body = req.media
-        inputs = preprocess_json_request(body)
+        if type(body) is not dict:
+            resp.status = falcon.HTTP_400
+            resp.body = json.dumps({'error': 'Provided data is not JSON'})
+            return
+        start_time = datetime.datetime.now()
+        input_format = get_input_format(body, self.models[
+            model_name].engines[version].input_key_names)
+        if input_format == INVALID_FORMAT:
+            resp.status = falcon.HTTP_400
+            resp.body = json.dumps({'error': 'Not valid inputs in request '
+                                             'body'})
+            return
+        format_check_end_time = datetime.datetime.now()
+        duration = \
+            (format_check_end_time - start_time).total_seconds() * 1000
+        logger.debug("PREDICT;[REST] input format check completed; "
+                     "{}; {}; {}ms".format(model_name, version, duration))
+
+        start_time = datetime.datetime.now()
+        inputs = preprocess_json_request(body, input_format, self.models[
+            model_name].engines[version].input_key_names)
+        input_preprocess_end_time = datetime.datetime.now()
+        duration = \
+            (input_preprocess_end_time - start_time).total_seconds() * 1000
+        logger.debug("PREDICT;[REST] input preprocess completed; {}; {}; {}ms"
+                     .format(model_name, version, duration))
 
         self.models[model_name].engines[version].in_use.acquire()
         start_time = datetime.datetime.now()
@@ -106,8 +135,17 @@ class Predict():
             return
 
         inference_start_time = datetime.datetime.now()
-        inference_output = self.models[model_name].engines[version] \
-            .infer(inference_input, batch_size)
+        try:
+            inference_output = self.models[model_name].engines[version] \
+                .infer(inference_input, batch_size)
+        except ValueError as error:
+            resp.status = falcon.HTTP_400
+            err_out_json = {'error': 'Corrupted input data'}
+            logger.debug("PREDICT, problem with inference. "
+                         "Corrupted input: {}".format(error))
+            self.models[model_name].engines[version].in_use.release()
+            resp.body = json.dumps(err_out_json)
+            return
         inference_end_time = datetime.datetime.now()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
@@ -116,9 +154,8 @@ class Predict():
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
 
-        response = prepare_json_response(
-            body, inference_output, self.models
-            [model_name].engines[version].model_keys['outputs'])
+        response = prepare_json_response(OUTPUT_REPRESENTATION[input_format],
+                                         inference_output)
 
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
