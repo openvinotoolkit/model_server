@@ -22,8 +22,7 @@ import threading
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
-from ie_serving.server.gunicorn_app import OVMSGunicorn
-from ie_serving.server.rest_service import cheryyyy
+from ie_serving.server.rest_service import start_web_rest_server
 from jsonschema.exceptions import ValidationError
 import os
 
@@ -87,12 +86,9 @@ def parse_config(args):
                            "Exception: {}".format(config['config']['name'],
                                                   e))
     if args.rest_port > 0:
-        rest_options = {
-            'bind': '0.0.0.0:{}'.format(args.rest_port)
-        }
-        resnet_service = OVMSGunicorn(models=models,
-                                      options=rest_options)
-        process_thread = threading.Thread(target=resnet_service.run)
+        process_thread = threading.Thread(target=start_web_rest_server,
+                                          args=[models])
+        process_thread.setDaemon(True)
         process_thread.start()
     start_server(models=models, max_workers=1, port=args.port)
 
@@ -118,10 +114,11 @@ def parse_one_model(args):
         sys.exit()
     models = {args.model_name: model}
     if args.rest_port > 0:
-        process_thread = threading.Thread(target=cheryyyy,
+        process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models])
+        process_thread.setDaemon(True)
         process_thread.start()
-        start_server(models=models,
+        start_server(models=models, rest_thread=process_thread,
                      max_workers=1, port=args.port)
     else:
         start_server(models=models,

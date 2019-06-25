@@ -6,5 +6,4 @@ google-cloud-storage==1.13.2
 boto3==1.9.80
 jsonschema==2.6.0
 falcon==2.0.0
-gunicorn==19.9.0
 cheroot==6.5.5

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,14 +31,21 @@ from ie_serving.logger import get_logger
 logger = get_logger(__name__)
 
 
+statusCodes = {
+    'invalid_arg': {'grpc': StatusCode.INVALID_ARGUMENT,
+                    'rest': falcon.HTTP_BAD_REQUEST},
+    }
+
+
 def prepare_input_data(models, model_name, version, data, rest):
     model_inputs_in_input_request = list(dict(data).keys())
     input_keys = models[model_name].engines[version].input_key_names
     inference_input = {}
+    request_type = 'grpc' if not rest else 'rest'
 
     for requested_input_blob in model_inputs_in_input_request:
         if requested_input_blob not in input_keys:
-            code = StatusCode.INVALID_ARGUMENT if not rest else falcon.HTTP_BAD_REQUEST
+            code = statusCodes['invalid_arg'][request_type]
             message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
                                            input_keys)
             logger.debug("PREDICT error: {}".format(message))
@@ -51,10 +58,10 @@ def prepare_input_data(models, model_name, version, data, rest):
                 tensor_input = tf_contrib_util. \
                     make_ndarray(data[requested_input_blob])
             except Exception as e:
-                code = StatusCode.INVALID_ARGUMENT
+                code = statusCodes['invalid_arg'][request_type]
                 message = str(e)
-                logger.debug("PREDICT prepare_input_data make_ndarray error: {}"
-                             .format(message))
+                logger.debug("PREDICT prepare_input_data make_ndarray error: "
+                             "{}".format(message))
                 return True, message, None, code
         else:
             tensor_input = np.asarray(data[requested_input_blob])
@@ -64,7 +71,7 @@ def prepare_input_data(models, model_name, version, data, rest):
         # check if input batch size match the model only if not auto mode
         if models[model_name].engines[version].batch_size != 0 \
                 and shape_required_in_model[0] != tensor_input.shape[0]:
-            code = StatusCode.INVALID_ARGUMENT if not rest else falcon.HTTP_BAD_REQUEST
+            code = statusCodes['invalid_arg'][request_type]
             message = INVALID_BATCHSIZE.format(
                 tensor_input.shape[0],
                 models[model_name].engines[version].batch_size)
@@ -73,7 +80,7 @@ def prepare_input_data(models, model_name, version, data, rest):
 
         # check requested shape and model shape
         if shape_required_in_model[1:] != list(tensor_input.shape)[1:]:
-            code = StatusCode.INVALID_ARGUMENT if not rest else falcon.HTTP_BAD_REQUEST
+            code = statusCodes['invalid_arg'][request_type]
             message = INVALID_SHAPE.format(list(tensor_input.shape),
                                            shape_required_in_model)
             logger.debug("PREDICT error: {}".format(message))

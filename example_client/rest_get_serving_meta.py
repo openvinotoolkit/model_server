@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ if args.get('model_version') is not None:
     version = "/versions/{}".format(args.get('model_version'))
 result = requests.get("{}:{}/v1/models/{}{}/metadata".format(args['rest_url'], args['rest_port'], args['model_name'], version))
 
-print(result.text)
 try:
     result_dic = json.loads(result.text)
 except ValueError:
