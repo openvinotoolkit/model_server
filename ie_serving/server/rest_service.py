@@ -3,6 +3,7 @@ import falcon
 import json
 from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
 from google.protobuf.json_format import MessageToJson
+from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 
 from ie_serving.logger import get_logger
 from ie_serving.server.service_utils import \
@@ -129,3 +130,13 @@ def create_rest_api(models):
     app.add_route('/v1/models/{model_name}/predict', predict)
     app.add_route('/v1/models/{model_name}/versions/{model_version}:predict', predict)
     return app
+
+
+def cheryyyy(models):
+    d = PathInfoDispatcher({'/': create_rest_api(models)})
+    server = WSGIServer(('0.0.0.0', 5555), d)
+
+    try:
+        server.start()
+    except KeyboardInterrupt:
+        server.stop()
