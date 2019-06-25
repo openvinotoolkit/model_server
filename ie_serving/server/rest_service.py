@@ -122,10 +122,10 @@ class Predict():
 
 def create_rest_api(models):
     app = falcon.API()
-    things = GetModelMetadata(models)
-    things2 = Predict(models)
-    app.add_route('/v1/models/{model_name}/metadata', things)
-    app.add_route('/v1/models/{model_name}/versions/{model_version}/metadata', things)
-    app.add_route('/v1/models/{model_name}/predict', things2)
-    app.add_route('/v1/models/{model_name}/versions/{model_version}/predict', things2)
+    get_model_meta = GetModelMetadata(models)
+    predict = Predict(models)
+    app.add_route('/v1/models/{model_name}/metadata', get_model_meta)
+    app.add_route('/v1/models/{model_name}/versions/{model_version}/metadata', get_model_meta)
+    app.add_route('/v1/models/{model_name}/predict', predict)
+    app.add_route('/v1/models/{model_name}/versions/{model_version}:predict', predict)
     return app
