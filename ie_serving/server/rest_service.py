@@ -10,7 +10,8 @@ from ie_serving.server.service_utils import \
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.constants import WRONG_MODEL_METADATA
-from ie_serving.server.predict_utils import prepare_input_data
+from ie_serving.server.predict_utils import prepare_input_data, row_to_column, column_to_row, is_list_of_dicts, extract_list, \
+    prepare_json_response
 
 
 logger = get_logger(__name__)
@@ -83,11 +84,19 @@ class Predict():
             resp.body = json.dumps(err_out_json)
             return
         body = req.media
+        if "instances" in body.keys():
+            if is_list_of_dicts(body['instances']):
+                inputs = row_to_column(body['instances'])
+            else:
+                inputs = body['instances']
+        else:
+            inputs = body['inputs']
+
         self.models[model_name].engines[version].in_use.acquire()
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=body['inputs'], rest=True)
+                               version=version, data=inputs, rest=True)
         deserialization_end_time = datetime.datetime.now()
         duration = (deserialization_end_time - start_time)\
             .total_seconds() * 1000
@@ -112,7 +121,9 @@ class Predict():
                      .format(model_name, version, duration))
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
-        response = {'outputs': inference_output}
+
+        response = prepare_json_response(body, inference_output)
+
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
         serialization_end_time = datetime.datetime.now()
