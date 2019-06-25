@@ -135,8 +135,8 @@ while iteration <= iterations:
 
         try:
             result_dic = json.loads(result.text)
-        except TypeError:
-            print("The server response is not json format")
+        except ValueError:
+            print("The server response is not json format: {}",format(result.text))
             exit(1)
         if "error" in result_dic:
             print('Server returned error: {}'.format(result_dic))
