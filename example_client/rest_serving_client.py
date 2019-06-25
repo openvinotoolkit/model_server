@@ -46,12 +46,12 @@ def create_request(img, request_format):
     return data_json
 
 
-parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
+parser = argparse.ArgumentParser(description='Sends requests via TensorFlow Serving RESTfull API using images in numpy format. '
                                              'It displays performance statistics and optionally the model accuracy')
 parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
 parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
 parser.add_argument('--rest_url', required=False, default='http://localhost',  help='Specify url to REST API service. default: http://localhost')
-parser.add_argument('--rest_port', required=False, default=5555, help='Specify port to grpc service. default: 5555')
+parser.add_argument('--rest_port', required=False, default=5555, help='Specify port to REST API service. default: 5555')
 parser.add_argument('--input_name', required=False, default='input', help='Specify input tensor name. default: input')
 parser.add_argument('--output_name', required=False, default='resnet_v1_50/predictions/Reshape_1',
                     help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')

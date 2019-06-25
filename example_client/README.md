@@ -208,3 +208,112 @@ Outputs metadata:
 ```
 
 Refer also to the usage demo in the [jupyter notebook](../example_k8s/OVMS_demo.ipynb).
+
+## REST API client to predict function
+```bash
+python rest_serving_client.py --help
+usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
+                              [--labels_numpy_path LABELS_NUMPY_PATH]
+                              [--rest_url REST_URL] [--rest_port REST_PORT]
+                              [--input_name INPUT_NAME]
+                              [--output_name OUTPUT_NAME]
+                              [--transpose_input {False,True}]
+                              [--transpose_method {nchw2nhwc,nhwc2nchw}]
+                              [--iterations ITERATIONS]
+                              [--batchsize BATCHSIZE]
+                              [--model_name MODEL_NAME]
+                              [--request_format {row_noname,row_name,column_noname,column_name}]
+                              [--model_version MODEL_VERSION]
+
+Sends requests via TensorFlow Serving RESTfull API using images in numpy
+format. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_numpy_path IMAGES_NUMPY_PATH
+                        numpy in shape [n,w,h,c] or [n,c,h,w]
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model
+                        accuracy
+  --rest_url REST_URL   Specify url to REST API service. default:
+                        http://localhost
+  --rest_port REST_PORT
+                        Specify port to REST API service. default: 5555
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default:
+                        resnet_v1_50/predictions/Reshape_1
+  --transpose_input {False,True}
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input
+                        transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed:
+                        nhwc2nchw or nhwc2nchw
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number
+                        of images in numpy memmap. default: 0 (consume all
+                        frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service.
+                        default: resnet
+  --request_format {row_noname,row_name,column_noname,column_name}
+                        Request format according to TF Serving API:
+                        row_noname,row_name,column_noname,column_name
+  --model_version MODEL_VERSION
+                        Model version to be used. Default: LATEST
+```
+   
+```bash
+python rest_serving_client.py --images_numpy_path imgs.npy --output_name outputs --input_name in --transpose_input True --labels_numpy_path lbs.npy --rest_port 8500  --batchsize 1 --request_format row_noname
+Image data range: 0.0 : 255.0
+Start processing:
+	Model name: resnet
+	Iterations: 10
+	Images numpy path: imgs.npy
+	Images in shape: (10, 224, 224, 3)
+
+Iteration 1; Processing time: 100.51 ms; speed 9.95 fps
+imagenet top results in a single batch:
+	 0 space shuttle 812 ; Incorrect match. Should be 404 airliner
+Iteration 2; Processing time: 95.58 ms; speed 10.46 fps
+imagenet top results in a single batch:
+	 0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 103.17 ms; speed 9.69 fps
+imagenet top results in a single batch:
+	 0 hair slide 584 ; Incorrect match. Should be 309 bee
+Iteration 4; Processing time: 90.85 ms; speed 11.01 fps
+imagenet top results in a single batch:
+	 0 clumber, clumber spaniel 216 ; Incorrect match. Should be 207 golden retriever
+Iteration 5; Processing time: 89.56 ms; speed 11.17 fps
+imagenet top results in a single batch:
+	 0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 96.82 ms; speed 10.33 fps
+imagenet top results in a single batch:
+	 0 analog clock 409 ; Incorrect match. Should be 635 magnetic compass
+Iteration 7; Processing time: 90.46 ms; speed 11.06 fps
+imagenet top results in a single batch:
+	 0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 101.48 ms; speed 9.85 fps
+imagenet top results in a single batch:
+	 0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 89.02 ms; speed 11.23 fps
+imagenet top results in a single batch:
+	 0 snail 113 ; Correct match.
+Iteration 10; Processing time: 100.40 ms; speed 9.96 fps
+imagenet top results in a single batch:
+	 0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 95.30 ms; average speed: 10.49 fps
+median time: 95.50 ms; median speed: 10.47 fps
+max time: 103.00 ms; max speed: 9.71 fps
+min time: 89.00 ms; min speed: 11.24 fps
+time percentile 90: 101.20 ms; speed percentile 90: 9.88 fps
+time percentile 50: 95.50 ms; speed percentile 50: 10.47 fps
+time standard deviation: 5.22
+time variance: 27.21
+Classification accuracy: 60.00
+```
