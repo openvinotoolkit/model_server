@@ -317,3 +317,25 @@ time standard deviation: 5.22
 time variance: 27.21
 Classification accuracy: 60.00
 ```
+
+```bash
+python rest_get_serving_meta.py --help
+usage: rest_get_serving_meta.py [-h] [--rest_url REST_URL]
+                                [--rest_port REST_PORT]
+                                [--model_name MODEL_NAME]
+                                [--model_version MODEL_VERSION]
+
+Get information about served models
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --rest_url REST_URL   Specify url to REST API service. default:
+                        http://localhost
+  --rest_port REST_PORT
+                        Specify port to REST API service. default: 5555
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service.
+                        default: resnet
+  --model_version MODEL_VERSION
+                        Define model version - must be numerical
+```
