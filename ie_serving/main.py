@@ -22,7 +22,7 @@ import threading
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
-from ie_serving.server.rest_service import start_web_rest_server
+from ie_serving.server.start import start_web_rest_server
 from jsonschema.exceptions import ValidationError
 import os
 
@@ -87,7 +87,7 @@ def parse_config(args):
                                                   e))
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
-                                          args=[models])
+                                          args=[models, args.rest_port])
         process_thread.setDaemon(True)
         process_thread.start()
     start_server(models=models, max_workers=1, port=args.port)
@@ -115,7 +115,7 @@ def parse_one_model(args):
     models = {args.model_name: model}
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
-                                          args=[models])
+                                          args=[models, args.rest_port])
         process_thread.setDaemon(True)
         process_thread.start()
         start_server(models=models, rest_thread=process_thread,
