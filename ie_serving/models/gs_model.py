@@ -33,8 +33,12 @@ class GSModel(Model):
         parsed_path = urlparse(path)
         bucket_name = parsed_path.netloc
         model_directory = parsed_path.path[1:]
-        gs_client = storage.Client()
-        bucket = gs_client.get_bucket(bucket_name)
+        try:
+            gs_client = storage.Client()
+            bucket = gs_client.get_bucket(bucket_name)
+        except exceptions.DefaultCredentialsError:
+            gs_client = storage.Client.create_anonymous_client()
+            bucket = gs_client.bucket(bucket_name, user_project=None)
         blobs = bucket.list_blobs(prefix=model_directory)
         contents_list = []
         for blob in blobs:
@@ -52,6 +56,7 @@ class GSModel(Model):
             gs_client = storage.Client()
             bucket = gs_client.get_bucket(bucket_name)
         except exceptions.DefaultCredentialsError:
+            logger.info('Switching to anonymous google storage client')
             gs_client = storage.Client.create_anonymous_client()
             bucket = gs_client.bucket(bucket_name, user_project=None)
         blob = bucket.blob(file_path)
