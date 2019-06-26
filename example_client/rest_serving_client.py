@@ -28,15 +28,14 @@ def create_request(img, request_format):
     signature = "serving_default"
     if request_format == "row_name":
         instances = []
-        instance = {}
-        for i in range(0, img.shape[0]-1, 1):
-            instance[args['input_name']] = img[i].tolist()
-            instances.append(instance)
+        for i in range(0, img.shape[0], 1):
+            instances.append({args['input_name']: img[i].tolist()})
         data_obj = {"signature_name": signature, "instances": instances}
     elif request_format == "row_noname":
         data_obj = {"signature_name": signature, 'instances': img.tolist()}
     elif request_format == "column_name":
-        data_obj = {'inputs': {args['input_name']: img.tolist()}}
+        data_obj = {"signature_name": signature,
+                    'inputs': {args['input_name']: img.tolist()}}
     elif request_format == "column_noname":
         data_obj = {"signature_name": signature, 'inputs':  img.tolist()}
     else:
