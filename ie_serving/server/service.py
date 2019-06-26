@@ -61,7 +61,8 @@ class PredictionServiceServicer(prediction_service_pb2.
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=request.inputs, rest=False)
+                               version=version, data=request.inputs,
+                               rest=False)
         deserialization_end_time = datetime.datetime.now()
         duration = (deserialization_end_time - start_time)\
             .total_seconds() * 1000

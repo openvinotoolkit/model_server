@@ -29,7 +29,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=["grpcio", "numpy", "protobuf",
-                      "tensorflow", "google-cloud-storage", "boto3"],
+                      "tensorflow", "google-cloud-storage", "boto3",
+                      "jsonschema", "falcon", "cheroot"],
     entry_points={
         'console_scripts': [
             'ie_serving = ie_serving.main:main',

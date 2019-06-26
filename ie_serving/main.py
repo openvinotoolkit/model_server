@@ -18,12 +18,11 @@ import argparse
 import json
 import sys
 import threading
-from waitress import serve
 
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
-from ie_serving.server.rest_service import create_rest_api
+from ie_serving.server.start import start_web_rest_server
 from jsonschema.exceptions import ValidationError
 import os
 
@@ -87,8 +86,9 @@ def parse_config(args):
                            "Exception: {}".format(config['config']['name'],
                                                   e))
     if args.rest_port > 0:
-        process_thread = threading.Thread(target=serve, args=[create_rest_api(models)],
-                                          kwargs={'host': '0.0.0.0', 'port': 5555, 'threads': 1})
+        process_thread = threading.Thread(target=start_web_rest_server,
+                                          args=[models, args.rest_port])
+        process_thread.setDaemon(True)
         process_thread.start()
     start_server(models=models, max_workers=1, port=args.port)
 
@@ -114,11 +114,15 @@ def parse_one_model(args):
         sys.exit()
     models = {args.model_name: model}
     if args.rest_port > 0:
-        process_thread = threading.Thread(target=serve, args=[create_rest_api(models)],
-                                          kwargs={'host': '0.0.0.0', 'port': 5555, 'threads': 1})
+        process_thread = threading.Thread(target=start_web_rest_server,
+                                          args=[models, args.rest_port])
+        process_thread.setDaemon(True)
         process_thread.start()
-    start_server(models=models,
-                 max_workers=1, port=args.port)
+        start_server(models=models, rest_thread=process_thread,
+                     max_workers=1, port=args.port)
+    else:
+        start_server(models=models,
+                     max_workers=1, port=args.port)
 
 
 def main():
