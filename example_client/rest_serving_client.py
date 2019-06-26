@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,16 +21,15 @@ import datetime
 import argparse
 import json
 import requests
+from client_utils import print_statistics
 
 
 def create_request(img, request_format):
     signature = "serving_default"
     if request_format == "row_name":
         instances = []
-        instance = {}
-        for i in range(0, img.shape[0]-1, 1):
-            instance[args['input_name']] = img[i].tolist()
-            instances.append(instance)
+        for i in range(0, img.shape[0], 1):
+            instances.append({args['input_name']: img[i].tolist()})
         data_obj = {"signature_name": signature, "instances": instances}
     elif request_format == "row_noname":
         data_obj = {"signature_name": signature, 'instances': img.tolist()}
@@ -126,39 +125,38 @@ while iteration <= iterations:
             lb = lbs[x:(x + batch_size)]
 
         data_json = create_request(img, args.get('request_format'))
-        start_time = datetime.datetime.now()
         version = ""
         if args.get('model_version') is not None:
             version = "/versions/{}".format(args.get('model_version'))
+        start_time = datetime.datetime.now()
         result = requests.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json)
         end_time = datetime.datetime.now()
-
         try:
-            result_dic = json.loads(result.text)
+            result_dict = json.loads(result.text)
         except ValueError:
             print("The server response is not json format: {}",format(result.text))
             exit(1)
-        if "error" in result_dic:
-            print('Server returned error: {}'.format(result_dic))
+        if "error" in result_dict:
+            print('Server returned error: {}'.format(result_dict))
             exit(1)
-        if "outputs" in result_dic:
+        if "outputs" in result_dict:
             keyname = "outputs"
-        elif "predictions" in result_dic:
+        elif "predictions" in result_dict:
             keyname = "predictions"
         else:
-            print("Missing required response in {}".format(result_dic))
+            print("Missing required response in {}".format(result_dict))
             exit(1)
 
-        if type(result_dic[keyname]) is list:  # no named output
-            output = result_dic[keyname]
+        if type(result_dict[keyname]) is list:  # no named output
+            output = result_dict[keyname]
         else:  # dictionary with named outputs
-            if args['output_name'] not in result_dic[keyname]:
+            if args['output_name'] not in result_dict[keyname]:
                 print("Invalid output name", args['output_name'])
                 print("Available outputs:")
-                for Y in result_dic[keyname]:
+                for Y in result_dict[keyname]:
                     print(Y)
                 exit(1)
-            output = result_dic[keyname][args['output_name']]
+            output = result_dict[keyname][args['output_name']]
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times, np.array([int(duration)]))
 
@@ -183,29 +181,7 @@ while iteration <= iterations:
             print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
         # Comment out this section for non imagenet datasets
 
-print('\nprocessing time for all iterations')
-print('average time: {:.2f} ms; average speed: {:.2f} fps'.format(round(np.average(processing_times), 2),
-                                                                  round(1000 * batch_size / np.average(processing_times), 2)))
-
-print('median time: {:.2f} ms; median speed: {:.2f} fps'.format(round(np.median(processing_times), 2),
-                                                                round(1000 * batch_size / np.median(processing_times), 2)))
-
-print('max time: {:.2f} ms; max speed: {:.2f} fps'.format(round(np.max(processing_times), 2),
-                                                          round(1000 * batch_size / np.max(processing_times), 2)))
-
-print('min time: {:.2f} ms; min speed: {:.2f} fps'.format(round(np.min(processing_times), 2),
-                                                          round(1000 * batch_size / np.min(processing_times), 2)))
-
-print('time percentile 90: {:.2f} ms; speed percentile 90: {:.2f} fps'.format(
-    round(np.percentile(processing_times, 90), 2),
-    round(1000 * batch_size / np.percentile(processing_times, 90), 2)
-))
-print('time percentile 50: {:.2f} ms; speed percentile 50: {:.2f} fps'.format(
-    round(np.percentile(processing_times, 50), 2),
-    round(1000 * batch_size / np.percentile(processing_times, 50), 2)
-    ))
-print('time standard deviation: {:.2f}'.format(round(np.std(processing_times), 2)))
-print('time variance: {:.2f}'.format(round(np.var(processing_times), 2)))
+print_statistics(processing_times, batch_size)
 
 if args.get('labels_numpy_path') is not None:
     print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
