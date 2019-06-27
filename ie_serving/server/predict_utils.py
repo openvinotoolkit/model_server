@@ -88,14 +88,12 @@ def preprocess_json_request(request_body):
 
 def prepare_json_response(request_body, inference_output):
     if "instances" in request_body.keys():
-        if is_row_name_formatted(request_body['instances']) and \
-                len(request_body['instances'][0].keys()) > 1:
+        if len(inference_output.keys()) > 1:
             response = {'predictions': column_to_row(inference_output)}
         else:
             response = {'predictions': extract_noname_output(inference_output)}
     else:
-        if type(request_body['inputs']) is dict and \
-                len(request_body['inputs'].keys()) > 1:
+        if len(inference_output.keys()) > 1:
             response = {'outputs': inference_output}
         else:
             response = {'outputs': extract_noname_output(inference_output)}
