@@ -83,6 +83,7 @@ imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
 imgs = imgs - np.min(imgs)  # Normalization 0-255
 imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
 # imgs = imgs[:,:,:,::-1] # RGB to BGR
+# imgs = imgs.astype(np.uint8)
 print('Image data range:', np.amin(imgs), ':', np.amax(imgs))
 # optional preprocessing depending on the model
 
@@ -139,28 +140,36 @@ while iteration <= iterations:
         if "error" in result_dict:
             print('Server returned error: {}'.format(result_dict))
             exit(1)
-        if "outputs" in result_dict:
+
+        if "outputs" in result_dict:  # is column format
             keyname = "outputs"
-        elif "predictions" in result_dict:
+            if type(result_dict[keyname]) is dict:
+                if args['output_name'] not in result_dict[keyname]:
+                    print("Invalid output name", args['output_name'])
+                    print("Available outputs:")
+                    for Y in result_dict[keyname]:
+                        print(Y)
+                    exit(1)
+                output = result_dict[keyname][args['output_name']]
+            else:
+                output = result_dict[keyname]
+        elif "predictions" in result_dict:  # is row format
             keyname = "predictions"
+            if type(result_dict[keyname][0]) is dict:  # are multiple outputs
+                output = []
+                for row in result_dict[keyname]:  # iternate over all results in the batch
+                    output.append(row[args['output_name']])
+            else:
+                output = result_dict[keyname]
         else:
             print("Missing required response in {}".format(result_dict))
             exit(1)
 
-        if type(result_dict[keyname]) is list:  # no named output
-            output = result_dict[keyname]
-        else:  # dictionary with named outputs
-            if args['output_name'] not in result_dict[keyname]:
-                print("Invalid output name", args['output_name'])
-                print("Available outputs:")
-                for Y in result_dict[keyname]:
-                    print(Y)
-                exit(1)
-            output = result_dict[keyname][args['output_name']]
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times, np.array([int(duration)]))
-
+        # print(output)
         nu = np.array(output)  # numpy array with inference results
+        print("output shape: {}".format(nu.shape))
 
         # for object classification models show imagenet class
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration, round(np.average(duration), 2),
