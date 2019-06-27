@@ -36,13 +36,13 @@ statusCodes = {
 }
 
 
-def extract_noname_output(dictionary):
-    # Extracting noname output from map in name format
+def extract_noname_output(inference_output: dict):
+    # Extracting noname output from inference output dict
     # Takes dict, returns list
-    # { 'input_name': [0,0,0,0] } -> [0,0,0,0]
-
-    if len(dictionary.values()) == 1:
-        return dictionary.values()[0]
+    # { 'output_name': [0,0,0,0] } -> [0,0,0,0]
+    outputs = list(inference_output.values())
+    if len(outputs) == 1:
+        return outputs[0]
     return None
 
 
