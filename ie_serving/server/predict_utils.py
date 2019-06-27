@@ -30,11 +30,10 @@ from ie_serving.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 statusCodes = {
     'invalid_arg': {'grpc': StatusCode.INVALID_ARGUMENT,
                     'rest': falcon.HTTP_BAD_REQUEST},
-    }
+}
 
 
 def extract_list(dictionary):
@@ -91,7 +90,8 @@ def prepare_json_response(request_body, inference_output):
 
 def prepare_input_data(models, model_name, version, data, rest):
     if type(data) is list:
-        model_inputs_in_input_request = models[model_name].engines[version].input_key_names
+        model_inputs_in_input_request = models[model_name].engines[
+            version].input_key_names
         data = {model_inputs_in_input_request[0]: data}
     else:
         model_inputs_in_input_request = list(dict(data).keys())
