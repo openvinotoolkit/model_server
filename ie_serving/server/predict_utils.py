@@ -36,13 +36,20 @@ statusCodes = {
 }
 
 
-def extract_list(dictionary):
-    for value in dictionary.values():
-        return value
+def extract_noname_output(dictionary):
+    # Extracting noname output from map in name format
+    # Takes dict, returns list
+    # { 'input_name': [0,0,0,0] } -> [0,0,0,0]
+
+    if len(dictionary.values()) == 1:
+        return dictionary.values()[0]
+    return None
 
 
-def is_list_of_dicts(list_of_objects):
-    if type(list_of_objects[0]) is dict:
+def is_row_name_formatted(instances):
+    # If in first element in instances is a dictionary, it is row_name format
+    # Else it's row_noname format
+    if type(instances[0]) is dict:
         return True
     else:
         return False
@@ -68,23 +75,30 @@ def column_to_row(dict_of_lists):
     return output_list
 
 
+def preprocess_json_request(request_body):
+    if "instances" in request_body.keys():
+        if is_row_name_formatted(request_body['instances']):
+            inputs = row_to_column(request_body['instances'])
+        else:
+            inputs = request_body['instances']
+    else:
+        inputs = request_body['inputs']
+    return inputs
+
+
 def prepare_json_response(request_body, inference_output):
     if "instances" in request_body.keys():
-        if is_list_of_dicts(request_body['instances']):
-            if len(request_body['instances'][0].keys()) > 1:
-                response = {'predictions': column_to_row(inference_output)}
-            else:
-                response = {'predictions': extract_list(inference_output)}
+        if is_row_name_formatted(request_body['instances']) and \
+                len(request_body['instances'][0].keys()) > 1:
+            response = {'predictions': column_to_row(inference_output)}
         else:
-            response = {'predictions': extract_list(inference_output)}
+            response = {'predictions': extract_noname_output(inference_output)}
     else:
-        if type(request_body['inputs']) is dict:
-            if len(request_body['inputs'].keys()) > 1:
-                response = {'outputs': inference_output}
-            else:
-                response = {'outputs': extract_list(inference_output)}
+        if type(request_body['inputs']) is dict and \
+                len(request_body['inputs'].keys()) > 1:
+            response = {'outputs': inference_output}
         else:
-            response = {'outputs': extract_list(inference_output)}
+            response = {'outputs': extract_noname_output(inference_output)}
     return response
 
 
