@@ -1,11 +1,12 @@
 # OpenVINO&trade; model server
 
-Inference model server implementation with gRPC interface, compatible with TensorFlow serving API and OpenVINO&trade; as the execution backend.
+Inference model server implementation, compatible with TensorFlow Serving API and OpenVINO&trade; as the execution backend.
+It provides both gRPC and RESTfull API interfaces.
 
 
 ## Project overview
 
-“OpenVINO&trade; model server” is a flexible, high-performance inference serving component for artificial intelligence models.  
+“OpenVINO&trade; Model Server” is a flexible, high-performance inference serving component for artificial intelligence models.  
 The software makes it easy to deploy new algorithms and AI experiments, 
 while keeping the same server architecture and APIs like in [TensorFlow Serving](https://github.com/tensorflow/serving). 
 
@@ -14,14 +15,15 @@ and allows frameworks such as [AWS Sagemaker](https://github.com/aws/sagemaker-t
 
 OpenVINO Model Server supports for the models storage, beside local filesystem, also GCS, S3 and Minio. 
 
-It is implemented as a python service using gRPC library interface; data serialization and deserialization 
+It is implemented as a python service using gRPC library interface; falcon REST API framework;  data serialization and deserialization 
 using TensorFlow; and OpenVINO&trade; for inference execution. It acts as an integrator and a bridge exposing CPU optimized 
-inference engine over gRPC network interface. 
+inference engine over network interfaces. 
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
 OpenVINO Model Server, beside CPU, can employ [Intel® Movidius™ Neural Compute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
-It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or [in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
+It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or 
+[in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
 
 ## Getting it up and running
 
@@ -37,19 +39,38 @@ It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-s
 Using FPGA (TBD)
 
 
-## API documentation
+## gRPC API documentation
 
-OpenVINO&trade; model server API is documented in proto buffer files in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
-**Note:** The implementations for *Predict* and *GetModelMetadata* function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
+OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
+**Note:** The implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+These are the most generic function calls and should address most of the usage scenarios.
 
 [predict Function Spec](ie_serving/tensorflow_serving_api/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
-* *PredictRequest* specifies information about the model spec, a map of input data serialized via [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format and an optional output filter.
-* *PredictResponse* includes a map of outputs serialized by [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
+* *PredictRequest* specifies information about the model spec, a map of input data serialized via 
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format and an optional output filter.
+* *PredictResponse* includes a map of outputs serialized by 
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
  
-
-[get_model_metadata Function spec](ie_serving/tensorflow_serving_api/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
+[get_model_metadata Function spec](ie_serving/tensorflow_serving_api/get_model_metadata.proto) has three message definitions:
+ *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
+ A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
 
 Refer to the example client code to learn how to use this API and submit the requests using gRPC interface.
+
+gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization. 
+
+## RESTful API documentation 
+
+OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
+
+There is implemented both row and column format of the requests. 
+**Note:** Just like with gRPC, only the implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+
+Only the numerical data types are supported. 
+
+Review the exemplary clients below to find out more how to connect and run inference requests.
+
+REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
 
 ## Usage examples
 
@@ -59,7 +80,9 @@ Refer to the example client code to learn how to use this API and submit the req
 
 [Client Code Example](example_client)
 
-[Jupyter notebook demo](example_k8s/OVMS_demo.ipynb)
+[Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
+
+[Jupyter notebook - REST API client](example_client/REST_age_gender.ipynb)
 
 
 ## Benchmarking results
@@ -73,6 +96,8 @@ Refer to the example client code to learn how to use this API and submit the req
 [TensorFlow Serving](https://github.com/tensorflow/serving)
 
 [gRPC](https://grpc.io/)
+
+[RESTful API](https://restfulapi.net/)
 
 [Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
 
@@ -92,7 +117,8 @@ The default setting is **INFO**, which can be altered by setting environment var
 The captured logs will be displayed on the model server console. While using docker containers or kubernetes the logs
 can be examined using `docker logs` or `kubectl logs` commands respectively.
 
-It is also possible to save the logs to a local file system by configuring an environment variable `LOG_PATH` with the absolute path pointing to a log file. Please see example below for usage details.
+It is also possible to save the logs to a local file system by configuring an environment variable `LOG_PATH` with the absolute path pointing to a log file. 
+Please see example below for usage details.
 
 ```
 docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 --env LOG_LEVEL=DEBUG --env LOG_PATH=/var/log/ie_serving.log \
@@ -124,7 +150,8 @@ The possible issues could be:
 * Incorrectly serialized data on the client side.
 
 ### Resource allocation
-RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
+RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, 
+however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
 
 OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or 
