@@ -134,8 +134,8 @@ def main():
     parser_a.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
     parser_a.add_argument('--rest-port', type=int,
-                          help='REST server port, the REST server will not be started '
-                               'if rest-port is blank or set to 0',
+                          help='REST server port, the REST server will not be'
+                               ' started if rest-port is blank or set to 0',
                           required=False, default=0)
     parser_a.set_defaults(func=parse_config)
 
@@ -153,8 +153,8 @@ def main():
     parser_b.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
     parser_b.add_argument('--rest-port', type=int,
-                          help='REST server port, the REST server will not be started '
-                               'if rest-port is blank or set to 0',
+                          help='REST server port, the REST server will not be'
+                               ' started if rest-port is blank or set to 0',
                           required=False, default=0)
     parser_b.add_argument('--model_version_policy', type=str,
                           help='model version policy',
