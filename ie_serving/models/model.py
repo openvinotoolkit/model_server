@@ -105,8 +105,8 @@ class Model(ABC):
         tick = start_time
         lock_counter = 0
         while tick - start_time < 120:
-            time.sleep(1)
-            if self.engines[version].in_use.locked():
+            time.sleep(0.1)
+            if not self.engines[version].in_use.locked():
                 lock_counter += 1
             else:
                 lock_counter = 0

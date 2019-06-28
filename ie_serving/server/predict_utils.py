@@ -30,15 +30,83 @@ from ie_serving.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 statusCodes = {
     'invalid_arg': {'grpc': StatusCode.INVALID_ARGUMENT,
                     'rest': falcon.HTTP_BAD_REQUEST},
-    }
+}
+
+
+def extract_noname_output(inference_output: dict):
+    # Extracting noname output from inference output dict
+    # Takes dict, returns list
+    # { 'output_name': [0,0,0,0] } -> [0,0,0,0]
+    outputs = list(inference_output.values())
+    if len(outputs) == 1:
+        return outputs[0]
+    return None
+
+
+def is_row_name_formatted(instances):
+    # If in first element in instances is a dictionary, it is row_name format
+    # Else it's row_noname format
+    if type(instances[0]) is dict:
+        return True
+    else:
+        return False
+
+
+def row_to_column(list_of_dicts):
+    output_dict = dict()
+    for dictionary in list_of_dicts:
+        for key, value in dictionary.items():
+            if key not in output_dict.keys():
+                output_dict[key] = []
+            output_dict[key].append(value)
+    return output_dict
+
+
+def column_to_row(dict_of_lists):
+    output_list = []
+    for values in zip(*dict_of_lists.values()):
+        dictionary = dict()
+        for (key, value) in zip(dict_of_lists.keys(), values):
+            dictionary[key] = value
+        output_list.append(dictionary)
+    return output_list
+
+
+def preprocess_json_request(request_body):
+    if "instances" in request_body.keys():
+        if is_row_name_formatted(request_body['instances']):
+            inputs = row_to_column(request_body['instances'])
+        else:
+            inputs = request_body['instances']
+    else:
+        inputs = request_body['inputs']
+    return inputs
+
+
+def prepare_json_response(request_body, inference_output):
+    if "instances" in request_body.keys():
+        if len(inference_output.keys()) > 1:
+            response = {'predictions': column_to_row(inference_output)}
+        else:
+            response = {'predictions': extract_noname_output(inference_output)}
+    else:
+        if len(inference_output.keys()) > 1:
+            response = {'outputs': inference_output}
+        else:
+            response = {'outputs': extract_noname_output(inference_output)}
+    return response
 
 
 def prepare_input_data(models, model_name, version, data, rest):
-    model_inputs_in_input_request = list(dict(data).keys())
+    if type(data) is list:
+        model_inputs_in_input_request = models[model_name].engines[
+            version].input_key_names
+        data = {model_inputs_in_input_request[0]: data}
+    else:
+        model_inputs_in_input_request = list(dict(data).keys())
     input_keys = models[model_name].engines[version].input_key_names
     inference_input = {}
     request_type = 'grpc' if not rest else 'rest'

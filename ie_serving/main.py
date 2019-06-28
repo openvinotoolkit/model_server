@@ -118,11 +118,7 @@ def parse_one_model(args):
                                           args=[models, args.rest_port])
         process_thread.setDaemon(True)
         process_thread.start()
-        start_server(models=models, rest_thread=process_thread,
-                     max_workers=1, port=args.port)
-    else:
-        start_server(models=models,
-                     max_workers=1, port=args.port)
+    start_server(models=models, max_workers=1, port=args.port)
 
 
 def main():

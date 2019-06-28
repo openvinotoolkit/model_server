@@ -10,8 +10,8 @@ from ie_serving.server.service_utils import \
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.constants import WRONG_MODEL_METADATA
-from ie_serving.server.predict_utils import prepare_input_data
-
+from ie_serving.server.predict_utils import prepare_input_data,\
+    prepare_json_response, preprocess_json_request
 
 logger = get_logger(__name__)
 
@@ -51,7 +51,8 @@ class GetModelMetadata(object):
         response = get_model_metadata_pb2.GetModelMetadataResponse()
 
         model_data_map = get_model_metadata_pb2.SignatureDefMap()
-        model_data_map.signature_def['serving_default'].CopyFrom(signature_def)
+        model_data_map.signature_def['serving_default'].CopyFrom(
+            signature_def)
         response.metadata['signature_def'].Pack(model_data_map)
         response.model_spec.name = model_name
         response.model_spec.version.value = version
@@ -83,14 +84,16 @@ class Predict():
             resp.body = json.dumps(err_out_json)
             return
         body = req.media
+        inputs = preprocess_json_request(body)
+
         self.models[model_name].engines[version].in_use.acquire()
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=body['inputs'], rest=True)
+                               version=version, data=inputs, rest=True)
         deserialization_end_time = datetime.datetime.now()
-        duration = (deserialization_end_time - start_time)\
-            .total_seconds() * 1000
+        duration = \
+            (deserialization_end_time - start_time).total_seconds() * 1000
         logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         if occurred_problem:
@@ -106,18 +109,21 @@ class Predict():
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input, batch_size)
         inference_end_time = datetime.datetime.now()
-        duration = (inference_end_time - inference_start_time)\
-            .total_seconds() * 1000
+        duration = \
+            (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
-        response = {'outputs': inference_output}
+
+        response = prepare_json_response(body, inference_output)
+
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
         serialization_end_time = datetime.datetime.now()
-        duration = (serialization_end_time - inference_end_time) \
-            .total_seconds() * 1000
+        duration = \
+            (serialization_end_time -
+             inference_end_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
         self.models[model_name].engines[version].in_use.release()
