@@ -13,7 +13,7 @@ format and Inference Engine component which executes the graphs operations.
 ![architecture chart](serving.png)
 
 OpenVINO&trade; model server requires the models to be present in the local file system or they could be hosted 
-remotely on object storage services. Both google storage and S3 storage is supported. 
+remotely on object storage services. Both Google Cloud Storage and S3 compatible storage are supported. 
 
 OpenVINO&trade; model server can be hosted on a bare metal server, virtual machine or inside a docker container. 
 It is also suitable for landing in Kubernetes environment. 
