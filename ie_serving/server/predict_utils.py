@@ -86,7 +86,13 @@ def preprocess_json_request(request_body):
     return inputs
 
 
-def prepare_json_response(request_body, inference_output):
+def prepare_json_response(request_body, inference_output,
+                          model_available_outputs):
+
+    for key, value in model_available_outputs.items():
+        if value in inference_output:
+            inference_output[key] = inference_output.pop(value)
+
     if "instances" in request_body.keys():
         if len(inference_output.keys()) > 1:
             response = {'predictions': column_to_row(inference_output)}
