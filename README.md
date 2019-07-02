@@ -63,7 +63,7 @@ gRPC interface is recommended for performance reasons because it has faster impl
 
 OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
 
-There is implemented both row and column format of the requests. 
+Both row and column format of the requests are implemented. 
 **Note:** Just like with gRPC, only the implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
 
 Only the numerical data types are supported. 
