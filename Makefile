@@ -58,7 +58,7 @@ unit: venv
 
 coverage: venv
 	@echo "Computing unit test coverage..."
-	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
+	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=60
 
 test: venv
 	@echo "Executing functional tests..."
