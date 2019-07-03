@@ -154,8 +154,9 @@ class Predict():
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
 
-        response = prepare_json_response(OUTPUT_REPRESENTATION[input_format],
-                                         inference_output)
+        response = prepare_json_response(
+            OUTPUT_REPRESENTATION[input_format], inference_output,
+            self.models[model_name].engines[version].model_keys['outputs'])
 
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)

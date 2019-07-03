@@ -49,7 +49,12 @@ def preprocess_json_request(request_body, input_format, model_input_keys):
     return inputs
 
 
-def prepare_json_response(output_representation, inference_output):
+def prepare_json_response(output_representation, inference_output,
+                          model_available_outputs):
+    for key, value in model_available_outputs.items():
+        if value in inference_output:
+            inference_output[key] = inference_output.pop(value)
+
     if len(inference_output.keys()) > 1:
         response = responses[output_representation]['full'](inference_output)
     else:
