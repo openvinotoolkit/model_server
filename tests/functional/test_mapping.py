@@ -18,7 +18,7 @@ import numpy as np
 import sys
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE  # noqa
+    ERROR_SHAPE, infer_rest  # noqa
 
 
 class TestSingleModelMappingInference():
@@ -88,3 +88,42 @@ class TestSingleModelMappingInference():
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
+
+    def test_run_inference_rest(self, resnet_2_out_model_downloader,
+                                input_data_downloader_v1_224,
+                                create_channel_for_port_mapping_server,
+                                start_server_with_mapping):
+        """
+            <b>Description</b>
+            Submit request to gRPC interface serving a single resnet model
+
+            <b>input data</b>
+            - directory with the model in IR format
+            - docker image with ie-serving-py service
+            - input data in numpy format
+
+            <b>fixtures used</b>
+            - model downloader
+            - input data downloader
+            - service launching
+
+            <b>Expected results</b>
+            - response contains proper numpy shape
+
+        """
+
+        print("Downloaded model files:", resnet_2_out_model_downloader)
+
+        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        rest_url = 'http://localhost:5556/v1/models/resnet_2_out:predict'
+        for x in range(0, 10):
+            output = infer_rest(imgs_v1_224, slice_number=x,
+                                input_tensor='new_key', rest_url=rest_url,
+                                model_spec_name='resnet_2_out',
+                                model_spec_version=None,
+                                output_tensors=['mask', 'output'],
+                                request_format='row_name')
+            print("output shape", output['mask'].shape)
+            print("output shape", output['output'].shape)
+            assert output['mask'].shape == (1, 2048, 7, 7), ERROR_SHAPE
+            assert output['output'].shape == (1, 2048, 7, 7), ERROR_SHAPE

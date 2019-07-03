@@ -16,6 +16,7 @@
 
 import docker
 import numpy as np
+import json
 import os
 import pytest
 import requests
@@ -62,7 +63,7 @@ def get_docker_context():
 
 
 def download_model(model_name, model_folder, model_version_folder, dir):
-    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/"\
+    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/" \
                      + model_name + "/frozen_" + model_name
 
     if not os.path.exists(dir + model_folder + model_version_folder):
@@ -71,16 +72,16 @@ def download_model(model_name, model_folder, model_version_folder, dir):
         os.makedirs(dir + model_folder + model_version_folder)
         response = requests.get(model_url_base + '.bin', stream=True)
         with open(
-            dir + model_folder + model_version_folder + model_name + '.bin',
+                dir + model_folder + model_version_folder + model_name + '.bin',
                 'wb') as output:
             output.write(response.content)
         response = requests.get(model_url_base + '.xml', stream=True)
         with open(
-            dir + model_folder + model_version_folder + model_name + '.xml',
+                dir + model_folder + model_version_folder + model_name + '.xml',
                 'wb') as output:
             output.write(response.content)
-    return dir + model_folder + model_version_folder + model_name + '.bin',\
-        dir + model_folder + model_version_folder + model_name + '.xml'
+    return dir + model_folder + model_version_folder + model_name + '.bin', \
+           dir + model_folder + model_version_folder + model_name + '.xml'
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -254,11 +255,12 @@ def start_server_single_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000"
+              "--port 9000 --rest-port 5555"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'9000/tcp': 9000,
+                                             '5555/tcp': 5555},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -341,11 +343,12 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
-              "--port 9002"
+              "--port 9002 --rest-port 5556"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-2-out',
-                                      ports={'9002/tcp': 9002},
+                                      ports={'9002/tcp': 9002,
+                                             '5556/tcp': 5556},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -375,7 +378,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
     volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
-                    {'bind': '/opt/ml', 'mode': 'ro'},
+                        {'bind': '/opt/ml', 'mode': 'ro'},
                     GOOGLE_APPLICATION_CREDENTIALS:
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
@@ -483,7 +486,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 
     client = get_docker_context
     volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
-                    {'bind': '/opt/ml', 'mode': 'ro'}}
+                        {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json --port 9006"
 
@@ -598,6 +601,68 @@ def infer_batch(batch_input, input_tensor, grpc_stub, model_spec_name,
     data = {}
     for output_tensor in output_tensors:
         data[output_tensor] = make_ndarray(result.outputs[output_tensor])
+    return data
+
+
+def prepare_body_format(img, request_format, input_name):
+    signature = "serving_default"
+    if request_format == "row_name":
+        instances = []
+        for i in range(0, img.shape[0], 1):
+            instances.append({input_name: img[i].tolist()})
+        data_obj = {"signature_name": signature, "instances": instances}
+    elif request_format == "row_noname":
+        data_obj = {"signature_name": signature, 'instances': img.tolist()}
+    elif request_format == "column_name":
+        data_obj = {"signature_name": signature,
+                    'inputs': {input_name: img.tolist()}}
+    elif request_format == "column_noname":
+        data_obj = {"signature_name": signature, 'inputs':  img.tolist()}
+    data_json = json.dumps(data_obj)
+    return data_json
+
+
+def process_json_output(result_dict, output_tensors):
+    output = {}
+    if "outputs" in result_dict:
+        keyname = "outputs"
+        if type(result_dict[keyname]) is dict:
+            for output_tensor in output_tensors:
+                output[output_tensor] = np.asarray(result_dict[keyname][output_tensor])
+        else:
+            output[output_tensors[0]] = np.asarray(result_dict[keyname])
+    elif "predictions" in result_dict:
+        keyname = "predictions"
+        if type(result_dict[keyname][0]) is dict:
+            for row in result_dict[keyname]:
+                print(row.keys())
+                for output_tensor in output_tensors:
+                    if output_tensor not in output:
+                        output[output_tensor] = []
+                    output[output_tensor].append(row[output_tensor])
+            for output_tensor in output_tensors:
+                output[output_tensor] = np.asarray(output[output_tensor])
+        else:
+            output[output_tensors[0]] = np.asarray(result_dict[keyname])
+    else:
+        print("Missing required response in {}".format(result_dict))
+
+    return output
+
+
+def infer_rest(imgs, slice_number, input_tensor, rest_url, model_spec_name,
+               model_spec_version, output_tensors, request_format):
+    signature = "serving_default"
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = model_spec_name
+    if model_spec_version is not None:
+        request.model_spec.version.value = model_spec_version
+    img = imgs[slice_number:slice_number + 1]
+    print("input shape", img.shape)
+    data_json = prepare_body_format(img, request_format, input_tensor)
+    result = requests.post(rest_url, data=data_json)
+    output_json = json.loads(result.text)
+    data = process_json_output(output_json, output_tensors)
     return data
 
 
