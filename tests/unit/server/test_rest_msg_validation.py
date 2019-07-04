@@ -26,14 +26,14 @@ def test_get_input_format(mocker, body, expected_format, evaluation):
     input_format = get_input_format(body, [DEFAULT_INPUT_KEY])
 
     if evaluation == INPUTS_EVALUATION:
-        evaluate_instances_mock.assert_not_called()
-        evaluate_inputs_mock.assert_called_once()
+        assert not evaluate_instances_mock.called
+        assert evaluate_inputs_mock.called
     elif evaluation == INSTANCES_EVALUATION:
-        evaluate_instances_mock.assert_called_once()
-        evaluate_inputs_mock.assert_not_called()
+        assert evaluate_instances_mock.called
+        assert not evaluate_inputs_mock.called
     else:
-        evaluate_instances_mock.assert_not_called()
-        evaluate_inputs_mock.assert_not_called()
+        assert not evaluate_instances_mock.called
+        assert not evaluate_inputs_mock.called
 
     assert input_format == expected_format
 
