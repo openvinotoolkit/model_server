@@ -13,9 +13,9 @@ def _evaluate_inputs(inputs):
 def _evaluate_instances(instances, model_input_key_names):
     if type(instances) is list and instances:
         for instance in instances:
-            # if any instance is not non-empty dict, treat instances as
+            # if any instance is not dict, treat instances as
             # simple formatted
-            if not (type(instance) is dict and instance.keys()):
+            if not type(instance) is dict:
                 return ROW_SIMPLIFIED
             # keys of every instance in full row format must match model's
             # inputs keys names, otherwise it's invalid
@@ -26,6 +26,10 @@ def _evaluate_instances(instances, model_input_key_names):
 
 
 def get_input_format(request_body, model_input_key_names):
+    if 'inputs' in request_body.keys() and  'instances' in \
+            request_body.keys():
+        return INVALID_FORMAT
+
     if 'inputs' in request_body.keys():
         return _evaluate_inputs(request_body['inputs'])
     elif 'instances' in request_body.keys():

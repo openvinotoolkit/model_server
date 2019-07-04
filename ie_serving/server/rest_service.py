@@ -90,14 +90,14 @@ class Predict():
         body = req.media
         if type(body) is not dict:
             resp.status = falcon.HTTP_400
-            resp.body = json.dumps({'error': 'Provided data is not JSON'})
+            resp.body = json.dumps({'error': 'Invalid JSON in request body'})
             return
         start_time = datetime.datetime.now()
         input_format = get_input_format(body, self.models[
             model_name].engines[version].input_key_names)
         if input_format == INVALID_FORMAT:
             resp.status = falcon.HTTP_400
-            resp.body = json.dumps({'error': 'Not valid inputs in request '
+            resp.body = json.dumps({'error': 'Invalid inputs in request '
                                              'body'})
             return
         format_check_end_time = datetime.datetime.now()

@@ -14,19 +14,22 @@
 # limitations under the License.
 #
 from ie_serving.models.local_model import LocalModel
+from ie_serving.server.rest_service import create_rest_api
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.tensorflow_serving_api import predict_pb2
 from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
 from ie_serving.server.service import PredictionServiceServicer
 from ie_serving.models.ir_engine import IrEngine
 from tensorflow.contrib.util import make_tensor_proto
+from falcon import testing
 import grpc_testing
 import numpy as np
 import pytest
 
 PREDICT_SERVICE = prediction_service_pb2.\
                   DESCRIPTOR.services_by_name['PredictionService']
-
+DEFAULT_INPUT_KEY = 'input'
+DEFAULT_OUTPUT_KEY = 'output'
 
 class Layer:
     def __init__(self, precision, shape, layout):
@@ -44,9 +47,10 @@ def get_fake_model():
     net = None
     plugin = None
     batch_size = None
-    input_key = 'input'
+    input_key = DEFAULT_INPUT_KEY
+    output_key = DEFAULT_OUTPUT_KEY
     inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
-    outputs = {'output': Layer('FP32', [1, 1, 1], 'NCHW')}
+    outputs = {output_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
                       mapping_config=mapping_config, exec_net=exec_net,
                       inputs=inputs, outputs=outputs, net=net, plugin=plugin,
@@ -69,8 +73,8 @@ def get_fake_ir_engine():
     net = None
     batch_size = None
     plugin = None
-    input_key = 'input'
-    output_key = 'output'
+    input_key = DEFAULT_INPUT_KEY
+    output_key = DEFAULT_OUTPUT_KEY
     inputs = {input_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     outputs = {output_key: Layer('FP32', [1, 1, 1], 'NCHW')}
     engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
@@ -112,3 +116,9 @@ def get_fake_model_metadata_request(model_name, metadata_field, version=None):
         request.model_spec.version.value = version
     request.metadata_field.append(metadata_field)
     return request
+
+@pytest.fixture()
+def client(get_fake_model):
+    rest_api = create_rest_api(models={"test":
+                                           get_fake_model})
+    return testing.TestClient(rest_api)
