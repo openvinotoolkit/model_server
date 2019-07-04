@@ -1,6 +1,10 @@
 from ie_serving.server.constants import INVALID_FORMAT, COLUMN_FORMAT, \
     COLUMN_SIMPLIFIED, ROW_FORMAT, ROW_SIMPLIFIED
 
+DEFAULT_INPUT_KEY = 'input'
+DEFAULT_OUTPUT_KEY = 'output'
+
+
 JSON_CHECK_TEST_CASES = [
     "just_text", "1234", "[]",
     "{\"key\": \"value\"", "\"key\": \"value\"}", "\"key\": \"value\"",

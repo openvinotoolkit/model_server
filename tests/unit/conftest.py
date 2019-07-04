@@ -26,10 +26,10 @@ import grpc_testing
 import numpy as np
 import pytest
 
+from config import DEFAULT_INPUT_KEY, DEFAULT_OUTPUT_KEY
+
 PREDICT_SERVICE = prediction_service_pb2. \
     DESCRIPTOR.services_by_name['PredictionService']
-DEFAULT_INPUT_KEY = 'input'
-DEFAULT_OUTPUT_KEY = 'output'
 
 
 class Layer:

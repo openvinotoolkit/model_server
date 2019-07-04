@@ -3,7 +3,6 @@ import pytest
 from ie_serving.server.rest_msg_validation import get_input_format, \
     _evaluate_inputs, _evaluate_instances
 from config import INPUT_FORMAT_CHECK_TEST_CASES, \
-    JSON_CHECK_TEST_CASES, \
     EVALUATE_INPUTS_TEST_CASES, EVALUATE_INSTANCES_TEST_CASES, \
     INPUTS_EVALUATION, INSTANCES_EVALUATION
 # TO DO: Move to another file. Only tests for validation functions here.
