@@ -7,19 +7,7 @@ from config import INPUT_FORMAT_CHECK_TEST_CASES, \
     EVALUATE_INPUTS_TEST_CASES, EVALUATE_INSTANCES_TEST_CASES, \
     INPUTS_EVALUATION, INSTANCES_EVALUATION
 # TO DO: Move to another file. Only tests for validation functions here.
-from tests.unit.conftest import DEFAULT_INPUT_KEY
-
-
-@pytest.mark.parametrize(
-    "body", JSON_CHECK_TEST_CASES
-)
-def test_predict_invalid_json(client, body):
-    result = client.simulate_request(method='POST',
-                                     path='/v1/models/test:predict',
-                                     headers={
-                                         "Content-Type": "application/json"},
-                                     body=body)
-    assert "Invalid JSON" in result.text
+from conftest import DEFAULT_INPUT_KEY
 
 
 @pytest.mark.parametrize(
