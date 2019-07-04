@@ -26,14 +26,15 @@ import grpc_testing
 import numpy as np
 import pytest
 
-PREDICT_SERVICE = prediction_service_pb2.\
-                  DESCRIPTOR.services_by_name['PredictionService']
+PREDICT_SERVICE = prediction_service_pb2. \
+    DESCRIPTOR.services_by_name['PredictionService']
 DEFAULT_INPUT_KEY = 'input'
 DEFAULT_OUTPUT_KEY = 'output'
 
+
 class Layer:
     def __init__(self, precision, shape, layout):
-        self. precision = precision
+        self.precision = precision
         self.shape = shape
         self.layout = layout
 
@@ -117,8 +118,8 @@ def get_fake_model_metadata_request(model_name, metadata_field, version=None):
     request.metadata_field.append(metadata_field)
     return request
 
+
 @pytest.fixture()
 def client(get_fake_model):
-    rest_api = create_rest_api(models={"test":
-                                           get_fake_model})
+    rest_api = create_rest_api(models={"test": get_fake_model})
     return testing.TestClient(rest_api)

@@ -26,7 +26,7 @@ def _evaluate_instances(instances, model_input_key_names):
 
 
 def get_input_format(request_body, model_input_key_names):
-    if 'inputs' in request_body.keys() and  'instances' in \
+    if 'inputs' in request_body.keys() and 'instances' in \
             request_body.keys():
         return INVALID_FORMAT
 

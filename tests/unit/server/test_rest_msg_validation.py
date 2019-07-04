@@ -1,16 +1,11 @@
 import pytest
-import falcon
-import json
 
-from ie_serving.server.constants import INVALID_FORMAT, COLUMN_FORMAT, \
-    COLUMN_SIMPLIFIED, ROW_FORMAT, ROW_SIMPLIFIED
 from ie_serving.server.rest_msg_validation import get_input_format, \
     _evaluate_inputs, _evaluate_instances
-from tests.unit.config import INPUT_FORMAT_CHECK_TEST_CASES, \
+from config import INPUT_FORMAT_CHECK_TEST_CASES, \
     JSON_CHECK_TEST_CASES, \
     EVALUATE_INPUTS_TEST_CASES, EVALUATE_INSTANCES_TEST_CASES, \
     INPUTS_EVALUATION, INSTANCES_EVALUATION
-
 # TO DO: Move to another file. Only tests for validation functions here.
 from tests.unit.conftest import DEFAULT_INPUT_KEY
 
@@ -21,8 +16,11 @@ from tests.unit.conftest import DEFAULT_INPUT_KEY
 def test_predict_invalid_json(client, body):
     result = client.simulate_request(method='POST',
                                      path='/v1/models/test:predict',
-                                     headers={"Content-Type": "application/json"}, body=body)
+                                     headers={
+                                         "Content-Type": "application/json"},
+                                     body=body)
     assert "Invalid JSON" in result.text
+
 
 @pytest.mark.parametrize(
     "body, expected_format, evaluation", INPUT_FORMAT_CHECK_TEST_CASES
@@ -52,6 +50,7 @@ def test_get_input_format(mocker, body, expected_format, evaluation):
 
     assert input_format == expected_format
 
+
 @pytest.mark.parametrize(
     "inputs, expected_format", EVALUATE_INPUTS_TEST_CASES
 )
@@ -59,10 +58,10 @@ def test_evaluate_inputs(inputs, expected_format):
     input_format = _evaluate_inputs(inputs)
     assert input_format == expected_format
 
+
 @pytest.mark.parametrize(
     "instances, expected_format", EVALUATE_INSTANCES_TEST_CASES
 )
 def test_evaluate_instances(instances, expected_format):
     input_format = _evaluate_instances(instances, [DEFAULT_INPUT_KEY])
     assert input_format == expected_format
-
