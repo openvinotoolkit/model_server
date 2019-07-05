@@ -4,7 +4,6 @@ from ie_serving.server.constants import INVALID_FORMAT, COLUMN_FORMAT, \
 DEFAULT_INPUT_KEY = 'input'
 DEFAULT_OUTPUT_KEY = 'output'
 
-
 JSON_CHECK_TEST_CASES = [
     "just_text", "1234", "[]",
     "{\"key\": \"value\"", "\"key\": \"value\"}", "\"key\": \"value\"",
@@ -91,6 +90,82 @@ EVALUATE_INSTANCES_TEST_CASES = [
     (["abc"], ROW_SIMPLIFIED),
     ([1, [2, 3], 4], ROW_SIMPLIFIED),
 
+]
+
+FORMAT_TRANSLATION_TEST_CASES = [
+    (
+        [
+            {
+                "in1": [1, 2, 3],
+                "in2": ["a", "b", "c"],
+                "in3": [[4, 5], [6, 7]]
+            },
+            {
+                "in1": [8, 9, 10],
+                "in2": ["d", "e", "f"],
+                "in3": [[11, 12], [13, 14]]
+            },
+            {
+                "in1": [15, 16, 17],
+                "in2": ["g", "h", "i"],
+                "in3": [[18, 19], [20, 21]]
+            },
+        ],
+        {
+            "in1": [[1, 2, 3], [8, 9, 10], [15, 16, 17]],
+            "in2": [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]],
+            "in3": [[[4, 5], [6, 7]], [[11, 12], [13, 14]],
+                    [[18, 19], [20, 21]]]
+        }
+    ),
+    (
+        [
+            {
+                "in1": [1, 2, 3],
+                "in2": ["a", "b", "c"],
+                "in3": [[4, 5], [6, 7]]
+            }
+        ],
+        {
+            "in1": [[1, 2, 3]],
+            "in2": [["a", "b", "c"]],
+            "in3": [[[4, 5], [6, 7]]]
+        }
+    ),
+    (
+        [
+            {
+                "in": [1, 2, 3]
+            }
+        ],
+        {
+            "in": [[1, 2, 3]]
+        }
+    ),
+]
+
+PREPROCESS_JSON_TEST_CASES = [
+    (ROW_FORMAT, {"instances": FORMAT_TRANSLATION_TEST_CASES[0][0]},
+     FORMAT_TRANSLATION_TEST_CASES[0][1]),
+    (ROW_SIMPLIFIED, {"instances": [[1, 2, 3, 4]]},
+     {DEFAULT_INPUT_KEY: [[1, 2, 3, 4]]}),
+    (COLUMN_FORMAT, {"inputs": FORMAT_TRANSLATION_TEST_CASES[1][1]},
+     FORMAT_TRANSLATION_TEST_CASES[1][1]),
+    (COLUMN_SIMPLIFIED, {"inputs": [[1, 2, 3, 4]]},
+     {DEFAULT_INPUT_KEY: [[1, 2, 3, 4]]})
+]
+
+PREPARE_JSON_RESPONSE_TEST_CASES = [
+    ("row", {"output": [1, 2, 3, 4]}, {"output": "output"},
+     {"predictions": [1, 2, 3, 4]}),
+    ("row", {"out1": [[1, 2]], "out2": [[3, 4]]},
+     {"output1": "out1", "output2": "out2"},
+     {"predictions": [{"output1": [1, 2], "output2": [3, 4]}]}),
+    ("column", {"output": [1, 2, 3, 4]}, {"output": "output"},
+     {"outputs": [1, 2, 3, 4]}),
+    ("column", {"out1": [1, 2], "out2": [3, 4]},
+     {"output1": "out1", "output2": "out2"},
+     {"outputs": {"output1": [1, 2], "output2": [3, 4]}}),
 ]
 
 """
