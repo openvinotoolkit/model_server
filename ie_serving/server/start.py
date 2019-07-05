@@ -66,7 +66,8 @@ def serve(models, max_workers: int=1, port: int=9000):
 
 def start_web_rest_server(models, rest_port):
     d = PathInfoDispatcher({'/': create_rest_api(models)})
-    server = WSGIServer(('0.0.0.0', rest_port), d, numthreads=1, request_queue_size=50)
+    server = WSGIServer(('0.0.0.0', rest_port), d,
+                        numthreads=1, request_queue_size=50)
 
     try:
         server.start()
