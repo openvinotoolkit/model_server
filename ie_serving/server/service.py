@@ -73,7 +73,6 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_details(inference_input)
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
-            self.models[model_name].engines[version].in_use.release()
             return predict_pb2.PredictResponse()
         self.models[model_name].engines[version].in_use.acquire()
         inference_start_time = datetime.datetime.now()
