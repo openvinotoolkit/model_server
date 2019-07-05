@@ -83,7 +83,7 @@ imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
 imgs = imgs - np.min(imgs)  # Normalization 0-255
 imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
 # imgs = imgs[:,:,:,::-1] # RGB to BGR
-# imgs = imgs.astype(np.uint8)
+imgs = imgs.astype(np.uint8)
 print('Image data range:', np.amin(imgs), ':', np.amax(imgs))
 # optional preprocessing depending on the model
 
@@ -124,7 +124,6 @@ while iteration <= iterations:
         img = imgs[x:(x + batch_size)]
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
-
         data_json = create_request(img, args.get('request_format'))
         version = ""
         if args.get('model_version') is not None:
