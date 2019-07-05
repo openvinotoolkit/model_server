@@ -129,7 +129,6 @@ class Predict():
             err_out_json = {'error': inference_input}
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
-            self.models[model_name].engines[version].in_use.release()
             resp.body = json.dumps(err_out_json)
             return
         self.models[model_name].engines[version].in_use.acquire()
