@@ -1,12 +1,11 @@
 import pytest
-
-from ie_serving.server.constants import ROW_FORMAT, ROW_SIMPLIFIED, \
-    COLUMN_FORMAT, COLUMN_SIMPLIFIED
-from ie_serving.server.rest_msg_processing import _row_to_column, \
-    _column_to_row, preprocess_json_request, prepare_json_response
 from config import FORMAT_TRANSLATION_TEST_CASES, \
     PREPROCESS_JSON_TEST_CASES, PREPARE_JSON_RESPONSE_TEST_CASES, \
     DEFAULT_INPUT_KEY
+
+from ie_serving.server.constants import ROW_FORMAT
+from ie_serving.server.rest_msg_processing import _row_to_column, \
+    _column_to_row, preprocess_json_request, prepare_json_response
 
 
 @pytest.mark.parametrize(

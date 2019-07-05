@@ -8,7 +8,7 @@ JSON_CHECK_TEST_CASES = [
     "just_text", "1234", "[]",
     "{\"key\": \"value\"", "\"key\": \"value\"}", "\"key\": \"value\"",
     "{key: value}", "{1: \"value\"}", "{\"value\"}",
-    "{\"key\": 1 \"key2\": \"value\"}",
+    "{\"key\": 1 \"key2\": \"value\"}"
 ]
 
 NO_EVALUATION = 0
@@ -167,33 +167,3 @@ PREPARE_JSON_RESPONSE_TEST_CASES = [
      {"output1": "out1", "output2": "out2"},
      {"outputs": {"output1": [1, 2], "output2": [3, 4]}}),
 ]
-
-"""
-Body as string:
-
-@pytest.mark.parametrize(
-    "body",
-    [
-        "{}",
-        "{\"key\": 1, \"key2\": \"value\"}",
-        "{\"inputs\": [1,2,3], \"instances\": [\"a\",\"b\",\"c\"]}",
-        "{\"inputs\": []}",
-        "{\"inputs\": {}}",
-        "{\"instances\": []}",
-        "{\"instances\": {}}",
-        "{\"instances\": {\"input\": [1,2,3]}}",
-        "{\"inputs\": 1}",
-        "{\"inputs\": \"value\"}",
-        "{\"instances\": 1}",
-        "{\"instances\": \"value\"}",
-        "{\"instances\": [{\"wrong_key\": [1,2,3]}]}",
-        "{\"instances\": [{\"input\": [1,2,3], \"wrong_key\": [4,5,6]}]}",
-        "{\"instances\": [{\"input\": [1,2,3]},{\"wrong_key\": [4,5,6]}]}",
-        "{\"instances\": [{\"input\": [1,2,3]},"
-            "{\"input\": [1,2,3]," "\"wrong_key\": [4,5,6]}]}",
-        "{\"instances\": [{\"input\": [1,2,3]}, {}]}",
-
-    ]
-)
-
-"""
