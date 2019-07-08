@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-
+from threading import Lock
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
@@ -66,7 +66,7 @@ class IrEngine():
         self.output_tensors = outputs
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
-        self.in_use = False
+        self.in_use = Lock()
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
     @classmethod

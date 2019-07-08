@@ -25,3 +25,13 @@ INVALID_BATCHSIZE = 'Input batch size is incorrect. Obtained batch size {}, ' \
                     'required batch size {}'
 
 SIGNATURE_NAME = "serving_default"
+
+INVALID_FORMAT, ROW_FORMAT, ROW_SIMPLIFIED, COLUMN_FORMAT, COLUMN_SIMPLIFIED \
+    = 0, 1, 2, 3, 4
+
+OUTPUT_REPRESENTATION = {
+    ROW_FORMAT: 'row',
+    ROW_SIMPLIFIED: 'row',
+    COLUMN_FORMAT: 'column',
+    COLUMN_SIMPLIFIED: 'column'
+}

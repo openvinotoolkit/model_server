@@ -17,13 +17,16 @@
 from concurrent import futures
 import time
 import grpc
+import sys
 import tensorflow.contrib.util as tf_contrib_util
 from tensorflow.core.framework import types_pb2
+from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import numpy as np
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.server.service import PredictionServiceServicer
 from ie_serving.logger import get_logger
 from ie_serving.config import FILE_SYSTEM_POLL_WAIT_SECONDS
+from ie_serving.server.rest_service import create_rest_api
 
 logger = get_logger(__name__)
 
@@ -58,3 +61,15 @@ def serve(models, max_workers: int=1, port: int=9000):
                 models[model].update()
     except KeyboardInterrupt:
         server.stop(0)
+        sys.exit(0)
+
+
+def start_web_rest_server(models, rest_port):
+    d = PathInfoDispatcher({'/': create_rest_api(models)})
+    server = WSGIServer(('0.0.0.0', rest_port), d,
+                        numthreads=1, request_queue_size=50)
+
+    try:
+        server.start()
+    except KeyboardInterrupt:
+        server.stop()

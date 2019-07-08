@@ -17,7 +17,8 @@
 import numpy as np
 import sys
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response  # noqa
+from conftest import infer, get_model_metadata, model_metadata_response,\
+    infer_rest, get_model_metadata_response_rest  # noqa
 
 
 class TestModelVersionHandling():
@@ -124,6 +125,110 @@ class TestModelVersionHandling():
             request = get_model_metadata(model_name='resnet',
                                          version=versions[x])
             response = stub.GetModelMetadata(request, 10)
+            input_metadata, output_metadata = model_metadata_response(
+                response=response)
+
+            print(output_metadata)
+            assert model_name == response.model_spec.name
+            assert expected_input_metadata == input_metadata
+            assert expected_output_metadata == output_metadata
+
+    def test_run_inference_rest(self, download_two_model_versions,
+                                input_data_downloader_v1_224,
+                                start_server_multi_model):
+        """
+        <b>Description</b>
+        Execute inference request using gRPC interface with version specified
+        and without version set on the client.
+        When version is not set server should use the latest version model 2
+        When version 1 is selected the model from folder 1 should be used
+        and model 2 should be ignored
+
+        <b>input data</b>
+        - directory with the model in IR format
+        - docker image with ie-serving-py service
+        - input data in numpy format
+
+        <b>fixtures used</b>
+        - model downloader
+        - input data downloader
+        - service launching
+
+        <b>Expected results</b>
+        - latest model version serves resnet_v2_50 model - [1,1001]
+        output resnet_v2_50/predictions/Reshape_1
+        - first model version serves resnet_v1_50 model - [1,1000]
+        output resnet_v1_50/predictions/Reshape_1
+        """
+
+        print("Downloaded model files:", download_two_model_versions)
+
+        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
+        out_name_v2 = 'resnet_v2_50/predictions/Reshape_1'
+        print("Starting inference using latest version - no version set")
+        rest_url = 'http://localhost:5561/v1/models/resnet:predict'
+        for x in range(0, 10):
+            output = infer_rest(imgs_v1_224, slice_number=x,
+                                input_tensor='input', rest_url=rest_url,
+                                output_tensors=[out_name_v2],
+                                request_format='column_name')
+            print("output shape", output[out_name_v2].shape)
+            assert output[out_name_v2].shape == (1, 1001), \
+                'resnet model with version 1 has invalid output'
+
+        # both model versions use the same input data shape
+        rest_url = 'http://localhost:5561/v1/models/resnet/versions/1:predict'
+        for x in range(0, 10):
+            output = infer_rest(imgs_v1_224, slice_number=x,
+                                input_tensor='input', rest_url=rest_url,
+                                output_tensors=[out_name_v1],
+                                request_format='column_name')
+            print("output shape", output[out_name_v1].shape)
+            assert output[out_name_v1].shape == (1, 1000), \
+                'resnet model with latest version has invalid output'
+
+    def test_get_model_metadata_rest(self, download_two_models,
+                                     start_server_multi_model):
+        """
+        <b>Description</b>
+        Execute inference request using gRPC interface hosting multiple models
+
+        <b>input data</b>
+        - directory with 2 models in IR format
+        - docker image
+
+        <b>fixtures used</b>
+        - model downloader
+        - input data downloader
+        - service launching
+
+        <b>Expected results</b>
+        - response contains proper response about model metadata for both
+        models set in config file:
+        model resnet_v1_50, pnasnet_large
+        - both served models handles appropriate input formats
+
+        """
+        print("Downloaded model files:", download_two_models)
+
+        urls = ['http://localhost:5561/v1/models/resnet/metadata',
+                'http://localhost:5561/v1/models/resnet/versions/1/metadata']
+
+        expected_outputs_metadata = \
+            [{'resnet_v2_50/predictions/Reshape_1':
+                {'dtype': 1, 'shape': [1, 1001]}},
+             {'resnet_v1_50/predictions/Reshape_1':
+                {'dtype': 1, 'shape': [1, 1000]}}
+             ]
+        for x in range(len(urls)):
+            print("Getting info about resnet model version:".format(
+                urls[x]))
+            model_name = 'resnet'
+            expected_input_metadata = {'input': {'dtype': 1,
+                                                 'shape': [1, 3, 224, 224]}}
+            expected_output_metadata = expected_outputs_metadata[x]
+            response = get_model_metadata_response_rest(urls[x])
             input_metadata, output_metadata = model_metadata_response(
                 response=response)
 

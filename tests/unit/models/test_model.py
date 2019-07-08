@@ -56,13 +56,13 @@ def test_delete_engine(get_fake_model):
     model = get_fake_model
     version = 2
     assert version in model.engines
-    model.engines[version].in_use = True
+    model.engines[version].in_use.acquire()
     process_thread = threading.Thread(target=model._delete_engine,
                                       args=[version])
     process_thread.start()
     time.sleep(1)
     assert version in model.engines
-    model.engines[version].in_use = False
+    model.engines[version].in_use.release()
     time.sleep(2)
     assert version not in model.engines
 

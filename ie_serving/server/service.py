@@ -57,14 +57,15 @@ class PredictionServiceServicer(prediction_service_pb2.
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
-        self.models[model_name].engines[version].in_use = True
+
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=request.inputs)
+                               version=version, data=request.inputs,
+                               rest=False)
         deserialization_end_time = datetime.datetime.now()
-        duration = (deserialization_end_time - start_time)\
-            .total_seconds() * 1000
+        duration = \
+            (deserialization_end_time - start_time).total_seconds() * 1000
         logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         if occurred_problem:
@@ -72,15 +73,15 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_details(inference_input)
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
-            self.models[model_name].engines[version].in_use = False
             return predict_pb2.PredictResponse()
-
+        self.models[model_name].engines[version].in_use.acquire()
         inference_start_time = datetime.datetime.now()
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input, batch_size)
         inference_end_time = datetime.datetime.now()
-        duration = (inference_end_time - inference_start_time)\
-            .total_seconds() * 1000
+        self.models[model_name].engines[version].in_use.release()
+        duration = \
+            (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         response = prepare_output_as_list(inference_output=inference_output,
@@ -91,18 +92,19 @@ class PredictionServiceServicer(prediction_service_pb2.
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
         serialization_end_time = datetime.datetime.now()
-        duration = (serialization_end_time - inference_end_time)\
-            .total_seconds() * 1000
+        duration = \
+            (serialization_end_time -
+             inference_end_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
-        self.models[model_name].engines[version].in_use = False
+
         return response
 
     def GetModelMetadata(self, request, context):
 
         # check if model with was requested
         # is available on server with proper version
-        logger.debug("MODEL_METADATA, get request: {}". format(request))
+        logger.debug("MODEL_METADATA, get request: {}".format(request))
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
         valid_model_spec, version = check_availability_of_requested_model(
@@ -115,7 +117,7 @@ class PredictionServiceServicer(prediction_service_pb2.
                                                             requested_version))
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
-        self.models[model_name].engines[version].in_use = True
+        self.models[model_name].engines[version].in_use.acquire()
         metadata_signature_requested = request.metadata_field[0]
         if 'signature_def' != metadata_signature_requested:
             context.set_code(StatusCode.INVALID_ARGUMENT)
@@ -136,11 +138,12 @@ class PredictionServiceServicer(prediction_service_pb2.
         response = get_model_metadata_pb2.GetModelMetadataResponse()
 
         model_data_map = get_model_metadata_pb2.SignatureDefMap()
-        model_data_map.signature_def['serving_default'].CopyFrom(signature_def)
+        model_data_map.signature_def['serving_default'].CopyFrom(
+            signature_def)
         response.metadata['signature_def'].Pack(model_data_map)
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        self.models[model_name].engines[version].in_use = False
+        self.models[model_name].engines[version].in_use.release()
         return response
