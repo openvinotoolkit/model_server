@@ -92,7 +92,6 @@ class Predict():
             resp.status = falcon.HTTP_400
             resp.body = json.dumps({'error': 'Invalid JSON in request body'})
             return
-        start_time = datetime.datetime.now()
         input_format = get_input_format(body, self.models[
             model_name].engines[version].input_key_names)
         if input_format == INVALID_FORMAT:
@@ -100,20 +99,9 @@ class Predict():
             resp.body = json.dumps({'error': 'Invalid inputs in request '
                                              'body'})
             return
-        format_check_end_time = datetime.datetime.now()
-        duration = \
-            (format_check_end_time - start_time).total_seconds() * 1000
-        logger.debug("PREDICT;[REST] input format check completed; "
-                     "{}; {}; {}ms".format(model_name, version, duration))
 
-        start_time = datetime.datetime.now()
         inputs = preprocess_json_request(body, input_format, self.models[
             model_name].engines[version].input_key_names)
-        input_preprocess_end_time = datetime.datetime.now()
-        duration = \
-            (input_preprocess_end_time - start_time).total_seconds() * 1000
-        logger.debug("PREDICT;[REST] input preprocess completed; {}; {}; {}ms"
-                     .format(model_name, version, duration))
 
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
@@ -138,7 +126,7 @@ class Predict():
                 .infer(inference_input, batch_size)
         except ValueError as error:
             resp.status = falcon.HTTP_400
-            err_out_json = {'error': 'Corrupted input data'}
+            err_out_json = {'error': 'Malformed input data'}
             logger.debug("PREDICT, problem with inference. "
                          "Corrupted input: {}".format(error))
             self.models[model_name].engines[version].in_use.release()
