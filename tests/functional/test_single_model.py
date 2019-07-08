@@ -16,9 +16,11 @@
 
 import numpy as np
 import sys
+import pytest
+
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE, infer_rest  # noqa
+    ERROR_SHAPE, infer_rest, get_model_metadata_response_rest  # noqa
 
 
 class TestSingleModelInference():
@@ -85,10 +87,13 @@ class TestSingleModelInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
+    @pytest.mark.parametrize("request_format",
+                             [('row_name'), ('row_noname'),
+                              ('column_name'), ('column_noname')])
     def test_run_inference_rest(self, resnet_v1_50_model_downloader,
                                 input_data_downloader_v1_224,
                                 start_server_single_model,
-                                create_channel_for_port_single_server):
+                                request_format):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -116,9 +121,27 @@ class TestSingleModelInference():
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
-                                model_spec_name='resnet',
-                                model_spec_version=None,
                                 output_tensors=[out_name],
-                                request_format='row_name')
+                                request_format=request_format)
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+    def test_get_model_metadata_rest(self, resnet_v1_50_model_downloader,
+                                     start_server_single_model):
+
+        print("Downloaded model files:", resnet_v1_50_model_downloader)
+
+        model_name = 'resnet'
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        expected_input_metadata = {'input': {'dtype': 1,
+                                             'shape': [1, 3, 224, 224]}}
+        expected_output_metadata = {out_name: {'dtype': 1,
+                                               'shape': [1, 1000]}}
+        rest_url = 'http://localhost:5555/v1/models/resnet/metadata'
+        response = get_model_metadata_response_rest(rest_url)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+        print(output_metadata)
+        assert model_name == response.model_spec.name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata

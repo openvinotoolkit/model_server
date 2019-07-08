@@ -5,3 +5,4 @@ pytest-mock==1.10.0
 requests==2.19.1
 grpcio-testing==1.14.1
 docker==3.7.0
+protobuf==3.6.1

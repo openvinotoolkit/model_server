@@ -16,9 +16,11 @@
 
 import numpy as np
 import sys
+import pytest
+
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE, infer_rest  # noqa
+    ERROR_SHAPE, infer_rest, get_model_metadata_response_rest  # noqa
 
 
 class TestSingleModelMappingInference():
@@ -89,10 +91,13 @@ class TestSingleModelMappingInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
+    @pytest.mark.parametrize("request_format",
+                             [('row_name'), ('row_noname'),
+                              ('column_name'), ('column_noname')])
     def test_run_inference_rest(self, resnet_2_out_model_downloader,
                                 input_data_downloader_v1_224,
                                 create_channel_for_port_mapping_server,
-                                start_server_with_mapping):
+                                start_server_with_mapping, request_format):
         """
             <b>Description</b>
             Submit request to gRPC interface serving a single resnet model
@@ -119,11 +124,31 @@ class TestSingleModelMappingInference():
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='new_key', rest_url=rest_url,
-                                model_spec_name='resnet_2_out',
-                                model_spec_version=None,
                                 output_tensors=['mask', 'output'],
-                                request_format='row_name')
+                                request_format=request_format)
             print("output shape", output['mask'].shape)
             print("output shape", output['output'].shape)
             assert output['mask'].shape == (1, 2048, 7, 7), ERROR_SHAPE
             assert output['output'].shape == (1, 2048, 7, 7), ERROR_SHAPE
+
+    def test_get_model_metadata_rest(self, resnet_2_out_model_downloader,
+                                     start_server_with_mapping):
+
+        print("Downloaded model files:", resnet_2_out_model_downloader)
+
+        model_name = 'resnet_2_out'
+        expected_input_metadata = {'new_key': {'dtype': 1,
+                                               'shape': [1, 3, 224, 224]}}
+        expected_output_metadata = {'mask': {'dtype': 1,
+                                             'shape': [1, 2048, 7, 7]},
+                                    'output': {'dtype': 1,
+                                               'shape': [1, 2048, 7, 7]}}
+        rest_url = 'http://localhost:5556/v1/models/resnet_2_out/metadata'
+        response = get_model_metadata_response_rest(rest_url)
+        print("response", response)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+
+        assert model_name == response.model_spec.name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata

@@ -18,7 +18,8 @@ import numpy as np
 import sys
 sys.path.append(".")
 from conftest import infer, infer_batch, get_model_metadata, \
-    model_metadata_response, ERROR_SHAPE # noqa
+    model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
+    infer_rest, get_model_metadata_response_rest  # noqa
 
 
 class TestMuiltModelInference():
@@ -148,6 +149,135 @@ class TestMuiltModelInference():
         out_name = 'final_layer/predictions'
         request = get_model_metadata(model_name='pnasnet_large')
         response = stub.GetModelMetadata(request, 10)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+
+        expected_input_metadata = {'input': {'dtype': 1,
+                                             'shape': [4, 3, 331, 331]}}
+        expected_output_metadata = {out_name: {'dtype': 1,
+                                               'shape': [4, 1001]}}
+        print(output_metadata)
+        assert model_name == response.model_spec.name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata
+
+    def test_run_inference_rest(self, download_two_models,
+                                input_data_downloader_v1_224,
+                                input_data_downloader_v3_331,
+                                start_server_multi_model):
+        """
+        <b>Description</b>
+        Execute inference request using gRPC interface hosting multiple models
+
+        <b>input data</b>
+        - directory with 2 models in IR format
+        - docker image
+        - input data in numpy format
+
+        <b>fixtures used</b>
+        - model downloader
+        - input data downloader
+        - service launching
+
+        <b>Expected results</b>
+        - response contains proper numpy shape for both models set in config
+        file: model resnet_v1_50, pnasnet_large
+        - both served models handles appropriate input formats
+
+        """
+
+        print("Downloaded model files:", download_two_models)
+
+        input_data = input_data_downloader_v1_224[:2, :, :, :]
+        print("Starting inference using resnet model")
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        rest_url = 'http://localhost:5561/v1/models/resnet_V1_50:predict'
+        for x in range(0, 10):
+            output = infer_batch_rest(input_data,
+                                      input_tensor='input', rest_url=rest_url,
+                                      output_tensors=[out_name],
+                                      request_format='column_name')
+            print("output shape", output[out_name].shape)
+            assert output[out_name].shape == (2, 1000), ERROR_SHAPE
+
+        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        rest_url = 'http://localhost:5561/v1/models/resnet_gs:predict'
+        for x in range(0, 10):
+            output = infer_rest(imgs_v1_224, slice_number=x,
+                                input_tensor='input', rest_url=rest_url,
+                                output_tensors=[out_name],
+                                request_format='column_noname')
+            print("output shape", output[out_name].shape)
+            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        rest_url = 'http://localhost:5561/v1/models/resnet_s3:predict'
+        for x in range(0, 10):
+            output = infer_rest(imgs_v1_224, slice_number=x,
+                                input_tensor='input', rest_url=rest_url,
+                                output_tensors=[out_name],
+                                request_format='row_name')
+            print("output shape", output[out_name].shape)
+            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+        input_data = input_data_downloader_v3_331[:4, :, :, :]
+        print("Starting inference using pnasnet_large model")
+        out_name = 'final_layer/predictions'
+        rest_url = 'http://localhost:5561/v1/models/pnasnet_large:predict'
+        for x in range(0, 10):
+            output = infer_batch_rest(input_data,
+                                      input_tensor='input', rest_url=rest_url,
+                                      output_tensors=[out_name],
+                                      request_format='row_noname')
+            print("output shape", output[out_name].shape)
+            assert output[out_name].shape == (4, 1001), ERROR_SHAPE
+
+    def test_get_model_metadata_rest(self, download_two_models,
+                                     start_server_multi_model):
+        """
+        <b>Description</b>
+        Execute inference request using gRPC interface hosting multiple models
+
+        <b>input data</b>
+        - directory with 2 models in IR format
+        - docker image
+
+        <b>fixtures used</b>
+        - model downloader
+        - input data downloader
+        - service launching
+
+        <b>Expected results</b>
+        - response contains proper response about model metadata for both
+        models set in config file:
+        model resnet_v1_50, pnasnet_large
+        - both served models handles appropriate input formats
+
+        """
+        print("Downloaded model files:", download_two_models)
+
+        print("Getting info about resnet model")
+        model_name = 'resnet_V1_50'
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        expected_input_metadata = {'input': {'dtype': 1,
+                                             'shape': [1, 3, 224, 224]}}
+        expected_output_metadata = {out_name: {'dtype': 1,
+                                               'shape': [1, 1000]}}
+        rest_url = 'http://localhost:5561/v1/models/resnet_V1_50/metadata'
+        response = get_model_metadata_response_rest(rest_url)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+
+        print(output_metadata)
+        assert model_name == response.model_spec.name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata
+
+        model_name = 'pnasnet_large'
+        out_name = 'final_layer/predictions'
+        rest_url = 'http://localhost:5561/v1/models/pnasnet_large/metadata'
+        response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
