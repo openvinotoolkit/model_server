@@ -64,7 +64,7 @@ class GetModelMetadata(object):
                      .format(model_name, version))
         self.models[model_name].engines[version].in_use.release()
         resp.status = falcon.HTTP_200
-        resp.body = json.dumps((MessageToJson(response)))
+        resp.body = MessageToJson(response)
 
 
 class Predict():
