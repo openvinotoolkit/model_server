@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import json
 import sys
 import requests
 import pytest
