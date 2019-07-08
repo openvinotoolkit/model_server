@@ -16,6 +16,7 @@
 
 import docker
 import numpy as np
+import json
 import os
 import pytest
 import requests
@@ -26,6 +27,7 @@ from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
 from grpc.beta import implementations
+from google.protobuf.json_format import Parse
 
 sys.path.append(".")
 from ie_serving.tensorflow_serving_api import predict_pb2, \
@@ -79,7 +81,7 @@ def download_model(model_name, model_folder, model_version_folder, dir):
             dir + model_folder + model_version_folder + model_name + '.xml',
                 'wb') as output:
             output.write(response.content)
-    return dir + model_folder + model_version_folder + model_name + '.bin',\
+    return dir + model_folder + model_version_folder + model_name + '.bin', \
         dir + model_folder + model_version_folder + model_name + '.xml'
 
 
@@ -254,11 +256,12 @@ def start_server_single_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000"
+              "--port 9000 --rest-port 5555"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'9000/tcp': 9000,
+                                             '5555/tcp': 5555},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -341,11 +344,12 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
-              "--port 9002"
+              "--port 9002 --rest-port 5556"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-2-out',
-                                      ports={'9002/tcp': 9002},
+                                      ports={'9002/tcp': 9002,
+                                             '5556/tcp': 5556},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -379,11 +383,13 @@ def start_server_multi_model(request, get_image, get_test_dir,
                     GOOGLE_APPLICATION_CREDENTIALS:
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
-              "--config_path /opt/ml/config.json --port 9001"
+              "--config_path /opt/ml/config.json --port 9001 " \
+              "--rest-port 5561"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi',
-                                      ports={'9001/tcp': 9001},
+                                      ports={'9001/tcp': 9001,
+                                             '5561/tcp': 5561},
                                       remove=True, volumes=volumes_dict,
                                       environment=envs,
                                       command=command)
@@ -404,11 +410,12 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9003"
+              "--port 9003 --rest-port 5557"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch',
-                                      ports={'9003/tcp': 9003},
+                                      ports={'9003/tcp': 9003,
+                                             '5557/tcp': 5557},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -429,11 +436,12 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9005 --batch_size auto"
+              "--port 9005 --batch_size auto --rest-port 5559"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch',
-                                      ports={'9005/tcp': 9005},
+                                      ports={'9005/tcp': 9005,
+                                             '5559/tcp': 5559},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -454,11 +462,12 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9004 --batch_size 4"
+              "--port 9004 --batch_size 4 --rest-port 5558"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4',
-                                      ports={'9004/tcp': 9004},
+                                      ports={'9004/tcp': 9004,
+                                             '5558/tcp': 5558},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -485,11 +494,13 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
-              "--config_path /opt/ml/model_ver_policy_config.json --port 9006"
+              "--config_path /opt/ml/model_ver_policy_config.json " \
+              "--port 9006 --rest-port 5560"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-policy',
-                                      ports={'9006/tcp': 9006},
+                                      ports={'9006/tcp': 9006,
+                                             '5560/tcp': 5560},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -509,11 +520,12 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007"
+              "--port 9007 --rest-port 5562"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-latest',
-                                      ports={'9007/tcp': 9007},
+                                      ports={'9007/tcp': 9007,
+                                             '5562/tcp': 5562},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -534,12 +546,14 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
     command = '/ie-serving-py/start_server.sh ie_serving model ' \
               '--model_name resnet --model_path /opt/ml/update ' \
               '--port 9008 --model_version_policy' \
-              ' \'{"specific": { "versions":[1, 3, 4] }}\' '
+              ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
+              '--rest-port 5563'
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-'
                                            'update-specific',
-                                      ports={'9008/tcp': 9008},
+                                      ports={'9008/tcp': 9008,
+                                             '5563/tcp': 5563},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -601,6 +615,73 @@ def infer_batch(batch_input, input_tensor, grpc_stub, model_spec_name,
     return data
 
 
+def prepare_body_format(img, request_format, input_name):
+    signature = "serving_default"
+    if request_format == "row_name":
+        instances = []
+        for i in range(0, img.shape[0], 1):
+            instances.append({input_name: img[i].tolist()})
+        data_obj = {"signature_name": signature, "instances": instances}
+    elif request_format == "row_noname":
+        data_obj = {"signature_name": signature, 'instances': img.tolist()}
+    elif request_format == "column_name":
+        data_obj = {"signature_name": signature,
+                    'inputs': {input_name: img.tolist()}}
+    elif request_format == "column_noname":
+        data_obj = {"signature_name": signature, 'inputs':  img.tolist()}
+    data_json = json.dumps(data_obj)
+    return data_json
+
+
+def process_json_output(result_dict, output_tensors):
+    output = {}
+    if "outputs" in result_dict:
+        keyname = "outputs"
+        if type(result_dict[keyname]) is dict:
+            for output_tensor in output_tensors:
+                output[output_tensor] = np.asarray(
+                    result_dict[keyname][output_tensor])
+        else:
+            output[output_tensors[0]] = np.asarray(result_dict[keyname])
+    elif "predictions" in result_dict:
+        keyname = "predictions"
+        if type(result_dict[keyname][0]) is dict:
+            for row in result_dict[keyname]:
+                print(row.keys())
+                for output_tensor in output_tensors:
+                    if output_tensor not in output:
+                        output[output_tensor] = []
+                    output[output_tensor].append(row[output_tensor])
+            for output_tensor in output_tensors:
+                output[output_tensor] = np.asarray(output[output_tensor])
+        else:
+            output[output_tensors[0]] = np.asarray(result_dict[keyname])
+    else:
+        print("Missing required response in {}".format(result_dict))
+
+    return output
+
+
+def infer_rest(imgs, slice_number, input_tensor, rest_url,
+               output_tensors, request_format):
+    img = imgs[slice_number:slice_number + 1]
+    print("input shape", img.shape)
+    data_json = prepare_body_format(img, request_format, input_tensor)
+    result = requests.post(rest_url, data=data_json)
+    output_json = json.loads(result.text)
+    data = process_json_output(output_json, output_tensors)
+    return data
+
+
+def infer_batch_rest(batch_input, input_tensor, rest_url,
+                     output_tensors, request_format):
+    data_json = prepare_body_format(batch_input, request_format, input_tensor)
+    result = requests.post(rest_url, data=data_json)
+    output_json = json.loads(result.text)
+    data = process_json_output(output_json, output_tensors)
+    return data
+
+
 def get_model_metadata(model_name, metadata_field: str="signature_def",
                        version=None):
     request = get_model_metadata_pb2.GetModelMetadataRequest()
@@ -609,6 +690,14 @@ def get_model_metadata(model_name, metadata_field: str="signature_def",
         request.model_spec.version.value = version
     request.metadata_field.append(metadata_field)
     return request
+
+
+def get_model_metadata_response_rest(rest_url):
+    result = requests.get(rest_url)
+    output_json = json.loads(result.text)
+    metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
+    response = Parse(output_json, metadata_pb, ignore_unknown_fields=False)
+    return response
 
 
 def model_metadata_response(response):
