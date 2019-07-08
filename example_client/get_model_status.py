@@ -22,7 +22,7 @@ import grpc
 def print_status_response(response):
     version_status = response.model_version_status
     for i in version_status:
-        print("\nMddel version: {}".format(i.version))
+        print("\nModel version: {}".format(i.version))
         print("State",state_names[i.state])
         print("Error code: ",i.status.error_code)
         print("Error message: ",i.status.error_message)
@@ -42,9 +42,9 @@ state_names = {
 parser = argparse.ArgumentParser(description='Get information about the status of served models')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
+parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
-parser.add_argument('--model_version', type=int, help='Model version to query for status',
+parser.add_argument('--model_version', type=int, help='Model version to query. Lists all versions if not specified',
                     dest='model_version')
 args = vars(parser.parse_args())
 

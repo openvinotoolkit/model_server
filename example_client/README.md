@@ -208,3 +208,41 @@ Outputs metadata:
 ```
 
 Refer also to the usage demo in the [jupyter notebook](../example_k8s/OVMS_demo.ipynb).
+
+## Getting model served status
+
+```bash
+python get_model_status.py --help
+usage: get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
+                           [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
+                           [--model_version MODEL_VERSION]
+
+Get information about the status of served models
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service. default: 9000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. Lists all versions if not
+                        specified
+```
+
+```bash
+python get_model_status.py --grpc_port 9000 --model_name resnet
+Getting model status for model: resnet
+
+Model version: 2
+State AVAILABLE
+Error code:  0
+Error message:
+
+Model version: 1
+State AVAILABLE
+Error code:  0
+Error message:
+```
