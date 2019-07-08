@@ -115,7 +115,6 @@ class Predict():
         logger.debug("PREDICT;[REST] input preprocess completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
 
-        self.models[model_name].engines[version].in_use.acquire()
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
@@ -130,10 +129,9 @@ class Predict():
             err_out_json = {'error': inference_input}
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
-            self.models[model_name].engines[version].in_use.release()
             resp.body = json.dumps(err_out_json)
             return
-
+        self.models[model_name].engines[version].in_use.acquire()
         inference_start_time = datetime.datetime.now()
         try:
             inference_output = self.models[model_name].engines[version] \
@@ -147,6 +145,7 @@ class Predict():
             resp.body = json.dumps(err_out_json)
             return
         inference_end_time = datetime.datetime.now()
+        self.models[model_name].engines[version].in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
@@ -166,7 +165,6 @@ class Predict():
              inference_end_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
-        self.models[model_name].engines[version].in_use.release()
         return
 
 

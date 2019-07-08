@@ -57,7 +57,7 @@ class PredictionServiceServicer(prediction_service_pb2.
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
-        self.models[model_name].engines[version].in_use.acquire()
+
         start_time = datetime.datetime.now()
         occurred_problem, inference_input, batch_size, code = \
             prepare_input_data(models=self.models, model_name=model_name,
@@ -73,13 +73,13 @@ class PredictionServiceServicer(prediction_service_pb2.
             context.set_details(inference_input)
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
-            self.models[model_name].engines[version].in_use.release()
             return predict_pb2.PredictResponse()
-
+        self.models[model_name].engines[version].in_use.acquire()
         inference_start_time = datetime.datetime.now()
         inference_output = self.models[model_name].engines[version] \
             .infer(inference_input, batch_size)
         inference_end_time = datetime.datetime.now()
+        self.models[model_name].engines[version].in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
@@ -97,7 +97,7 @@ class PredictionServiceServicer(prediction_service_pb2.
              inference_end_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
-        self.models[model_name].engines[version].in_use.release()
+
         return response
 
     def GetModelMetadata(self, request, context):
