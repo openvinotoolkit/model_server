@@ -7,12 +7,13 @@ ubuntu base image [Dockerfile](../Dockerfile), intelpython base image [Dockerfil
 or with Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 via [Dockerfile_binary_openvino](../Dockerfile_binary_openvino).
 
-The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
+The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) 
+and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
 It is recommended to use online installation package because this way the resultant image will be smaller. 
 An example file looks like: `l_openvino_toolkit_p_2019.1.094_online.tgz`.
 
 
-From the root of the git repository, execute the command:
+From the root of the git repository, execute the commands:
 
 ```bash
 cp (download path)/l_openvino_toolkit_p_2019.1.094_online.tgz . 
@@ -98,17 +99,19 @@ tensor names.
 OpenVINO&trade; model server is enabling all the versions present in the configured model folder. To limit 
 the versions exposed, for example to reduce the mount of RAM, you need to delete the subfolders representing unnecessary model versions.
 
-While the client _is not_ defining the model version in the request specification, OpenVINO&trade; model server will use the latest one stored in the subfolder of the highest number.
+While the client _is not_ defining the model version in the request specification, OpenVINO&trade; model server will use the latest one 
+stored in the subfolder of the highest number.
 
 
 ## Starting Docker Container with a Single Model
 
 When the models are ready and stored in correct folders structure, you are ready to start the Docker container with the 
-OpenVINO&trade; model server. To enable just a single model, you _do not_ need any extra configuration file, so this process can be completed with just one command like below:
+OpenVINO&trade; model server. To enable just a single model, you _do not_ need any extra configuration file, so this process can be 
+completed with just one command like below:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-py:latest \
+/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest-port 8001
 ```
 
 * option `-v` defines how the models folder should be mounted inside the docker container.
@@ -123,7 +126,8 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
 
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
-                        [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT] 
+                        [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT]
+                        [--rest-port PORT] 
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -135,7 +139,8 @@ optional arguments:
                         sets models batchsize, int value or auto
   --model_version_policy MODEL_VERSION_POLICY 
                         sets model version policy for model
-  --port PORT           server port
+  --port PORT           gRPC server port
+  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
 
 ```
 
@@ -231,25 +236,26 @@ file above contains both GCS and S3 paths so starting docker container
 supporting all those models can be done with:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 ie-serving-py:latest \
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-py:latest \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}  \
 -e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
 -e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
 -e AWS_REGION=“${AWS_REGION}”  \
 -e S3_ENDPOINT=“${S3_ENDPOINT}”  \
-/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
+/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --rest-port 8001
 ```
 
 Below is the explanation of the `ie_serving config` parameters
 ```bash
-usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT]
+usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest-port PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
   --config_path CONFIG_PATH
                         absolute path to json configuration file
-  --port PORT           server port
+  --port PORT           gRPC server port
+  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
 ```
 
 ## Starting docker container with NCS
@@ -286,7 +292,8 @@ rules:
 To start server with NCS you can use command similar to:
 
 ```
-docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=MYRIAD -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=MYRIAD -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
@@ -316,9 +323,11 @@ For example with the input shape (1, 3, 225, 225), the batch size is set to 1. W
 Processing bigger batches of requests increases the throughput but the side effect is higher latency.
 
 ## Model Version Policy
-Model version policy makes it possible to decide which versions of model will be served by OVMS. This parameter allows you to control the memory consumption of the server and 
+Model version policy makes it possible to decide which versions of model will be served by OVMS. This parameter allows 
+you to control the memory consumption of the server and 
 decide which versions will be used regardless of what is located under the path given when the server is started.
-`model_version_policy` parameter is optional. By default server serves only latest version for model. Accepted format for parameter in CLI and in config is `json`.
+`model_version_policy` parameter is optional. By default server serves only latest version for model. 
+Accepted format for parameter in CLI and in config is `json`.
 Accepted values:
 ```
 {"all": {}}

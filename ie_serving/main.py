@@ -17,10 +17,12 @@
 import argparse
 import json
 import sys
+import threading
 
 from ie_serving.models.model_builder import ModelBuilder
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
+from ie_serving.server.start import start_web_rest_server
 from jsonschema.exceptions import ValidationError
 import os
 
@@ -83,6 +85,11 @@ def parse_config(args):
             logger.warning("Unexpected error occurred in {} model. "
                            "Exception: {}".format(config['config']['name'],
                                                   e))
+    if args.rest_port > 0:
+        process_thread = threading.Thread(target=start_web_rest_server,
+                                          args=[models, args.rest_port])
+        process_thread.setDaemon(True)
+        process_thread.start()
     start_server(models=models, max_workers=1, port=args.port)
 
 
@@ -105,8 +112,13 @@ def parse_one_model(args):
         logger.error("Unexpected error occurred. "
                      "Exception: {}".format(e))
         sys.exit()
-    start_server(models={args.model_name: model},
-                 max_workers=1, port=args.port)
+    models = {args.model_name: model}
+    if args.rest_port > 0:
+        process_thread = threading.Thread(target=start_web_rest_server,
+                                          args=[models, args.rest_port])
+        process_thread.setDaemon(True)
+        process_thread.start()
+    start_server(models=models, max_workers=1, port=args.port)
 
 
 def main():
@@ -119,8 +131,12 @@ def main():
     parser_a.add_argument('--config_path', type=str,
                           help='absolute path to json configuration file',
                           required=True)
-    parser_a.add_argument('--port', type=int, help='server port',
+    parser_a.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
+    parser_a.add_argument('--rest-port', type=int,
+                          help='REST server port, the REST server will not be'
+                               ' started if rest-port is blank or set to 0',
+                          required=False, default=0)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model',
@@ -134,8 +150,12 @@ def main():
     parser_b.add_argument('--batch_size', type=str,
                           help='sets models batchsize, int value or auto',
                           required=False)
-    parser_b.add_argument('--port', type=int, help='server port',
+    parser_b.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
+    parser_b.add_argument('--rest-port', type=int,
+                          help='REST server port, the REST server will not be'
+                               ' started if rest-port is blank or set to 0',
+                          required=False, default=0)
     parser_b.add_argument('--model_version_policy', type=str,
                           help='model version policy',
                           required=False,
