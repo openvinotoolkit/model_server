@@ -694,7 +694,7 @@ def get_model_metadata(model_name, metadata_field: str="signature_def",
 
 def get_model_metadata_response_rest(rest_url):
     result = requests.get(rest_url)
-    output_json = json.loads(result.text)
+    output_json = result.text
     metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
     response = Parse(output_json, metadata_pb, ignore_unknown_fields=False)
     return response

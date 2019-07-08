@@ -149,7 +149,7 @@ class TestModelVerPolicy():
             result = requests.get(rest_url)
             print(result.text)
             if not throw_error[x]:
-                output_json = json.loads(result.text)
+                output_json = result.text
                 metadata_pb = get_model_metadata_pb2.\
                     GetModelMetadataResponse()
                 response = Parse(output_json, metadata_pb,
