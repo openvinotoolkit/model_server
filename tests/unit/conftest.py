@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 from ie_serving.models.local_model import LocalModel
+from ie_serving.models.models_utils import ModelVersionStatus
 from ie_serving.server.rest_service import create_rest_api
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.tensorflow_serving_api import predict_pb2
@@ -57,11 +58,16 @@ def get_fake_model():
                       inputs=inputs, outputs=outputs, net=net, plugin=plugin,
                       batch_size=batch_size)
     new_engines = {1: engine, 2: engine, 3: engine}
+    available_versions = [1, 2, 3]
+    versions_statuses = {}
+    for version in available_versions:
+        versions_statuses[version] = ModelVersionStatus(version)
     new_model = LocalModel(model_name="test",
                            model_directory='fake_path/model/',
                            available_versions=[1, 2, 3], engines=new_engines,
                            batch_size=batch_size,
-                           version_policy_filter=lambda versions: versions[:])
+                           version_policy_filter=lambda versions: versions[:],
+                           versions_statuses=versions_statuses)
     return new_model
 
 

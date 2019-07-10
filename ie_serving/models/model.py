@@ -13,17 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ie_serving.logger import get_logger
-from abc import ABC, abstractmethod
-from jsonschema import validate
-from jsonschema.exceptions import ValidationError
+import re
 import threading
 import time
+from abc import ABC, abstractmethod
 
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
+
+from ie_serving.logger import get_logger
 from ie_serving.models.models_utils import ModelVersionStatus, \
-    ModelVersionState, ErrorCode
+    ErrorCode
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
-import re
 
 logger = get_logger(__name__)
 

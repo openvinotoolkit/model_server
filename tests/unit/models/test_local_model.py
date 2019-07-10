@@ -16,13 +16,19 @@
 import os
 import pytest
 from ie_serving.models.local_model import LocalModel
+from ie_serving.models.models_utils import ModelVersionStatus
 
 
 def test_model_init():
+    available_versions = [1, 2, 3]
+    versions_statuses = {}
+    for version in available_versions:
+        versions_statuses[version] = ModelVersionStatus(version)
     new_model = LocalModel(model_name="test", model_directory='fake_path',
-                           available_versions=[1, 2, 3], engines={},
+                           available_versions=available_versions, engines={},
                            batch_size=None,
-                           version_policy_filter=lambda versions: versions[:])
+                           version_policy_filter=lambda versions: versions[:],
+                           versions_statuses=versions_statuses)
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
@@ -61,8 +67,13 @@ def test_get_engines_for_model(mocker):
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size': None}]
+    versions_statuses = {}
+    for version in available_versions:
+        version_number = version['version_number']
+        versions_statuses[version_number] = ModelVersionStatus(version_number)
     output = LocalModel.get_engines_for_model(
-        versions_attributes=available_versions)
+        versions_attributes=available_versions,
+        versions_statuses=versions_statuses)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[4]
@@ -84,8 +95,13 @@ def test_get_engines_for_model_with_ir_raises(mocker):
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size': None}]
+    versions_statuses = {}
+    for version in available_versions:
+        version_number = version['version_number']
+        versions_statuses[version_number] = ModelVersionStatus(version_number)
     output = LocalModel.get_engines_for_model(
-        versions_attributes=available_versions)
+        versions_attributes=available_versions,
+        versions_statuses=versions_statuses)
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[3]
