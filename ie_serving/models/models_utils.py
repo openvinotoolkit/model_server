@@ -30,22 +30,54 @@ class ModelVersionState:
 
 
 _ERROR_MESSAGE = {
-    ModelVersionState.AVAILABLE: {
-        ErrorCode.OK: "Version available"
-    },
     ModelVersionState.START: {
-        ErrorCode.OK: "Version detected"
+        ErrorCode.OK: "",   # "Version detected"
     },
     ModelVersionState.LOADING: {
-        ErrorCode.OK: "Version is being loaded",
+        ErrorCode.OK: "",   # "Version is being loaded",
         ErrorCode.UNKNOWN: "Error occurred while loading version"
     },
+    ModelVersionState.AVAILABLE: {
+        ErrorCode.OK: "",   # "Version available"
+    },
     ModelVersionState.UNLOADING: {
-        ErrorCode.OK: "Version is scheduled to be deleted"
+        ErrorCode.OK: "",   # "Version is scheduled to be deleted"
     },
     ModelVersionState.END: {
-        ErrorCode.OK: "Version has been removed"
+        ErrorCode.OK: "",   # "Version has been removed"
     },
+}
+
+_STATE_NAME = {
+    ModelVersionState.UNKNOWN: "UNKNOWN",
+    ModelVersionState.START: "START",
+    ModelVersionState.LOADING: "LOADING",
+    ModelVersionState.AVAILABLE: "AVAILABLE",
+    ModelVersionState.UNLOADING: "UNLOADING",
+    ModelVersionState.END: "END",
+}
+
+_ERROR_CODE_NAME = {
+    ErrorCode.OK: "OK",
+    ErrorCode.CANCELLED: "CANCELLED",
+    ErrorCode.UNKNOWN : "UNKNOWN",
+    ErrorCode.INVALID_ARGUMENT: "INVALID_ARGUMENT",
+    ErrorCode.DEADLINE_EXCEEDED: "DEADLINE_EXCEEDED",
+    ErrorCode.NOT_FOUND: "NOT_FOUND",
+    ErrorCode.ALREADY_EXISTS: "ALREADY_EXISTS",
+    ErrorCode.PERMISSION_DENIED: "PERMISSION_DENIED",
+    ErrorCode.UNAUTHENTICATED: "UNAUTHENTICATED",
+    ErrorCode.RESOURCE_EXHAUSTED: "RESOURCE_EXHAUSTED",
+    ErrorCode.FAILED_PRECONDITION: "FAILED_PRECONDITION",
+    ErrorCode.ABORTED: "ABORTED",
+    ErrorCode.OUT_OF_RANGE: "OUT_OF_RANGE",
+    ErrorCode.UNIMPLEMENTED: "UNIMPLEMENTED",
+    ErrorCode.INTERNAL: "INTERNAL",
+    ErrorCode.UNAVAILABLE: "UNAVAILABLE",
+    ErrorCode.DATA_LOSS: "DATA_LOSS",
+    ErrorCode
+        .DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_: # noqa
+        "DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_" # noqa
 }
 
 
@@ -81,15 +113,18 @@ class ModelVersionStatus:
         self.status["error_message"] = _ERROR_MESSAGE[
             ModelVersionState.END][error_code]
 
-    def to_dict(self):
+    def prepare_response(self):
         return {
             "version": self.version,
-            "state": self.state,
-            "status": self.status
+            "state": _STATE_NAME[self.state],
+            "status": {
+                "error_code": _ERROR_CODE_NAME[self.status['error_code']],
+                "error_message": self.status['error_message']
+            }
         }
 
 
-def statuses_as_dicts(statuses: list):
+def prepare_statuses(statuses: list):
     result = []
-    [result.append(status.to_dict()) for status in statuses]
+    [result.append(status.prepare_response()) for status in statuses]
     return result

@@ -24,7 +24,7 @@ from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output_as_list, \
     prepare_input_data, StatusCode
-from ie_serving.server.constants import WRONG_MODEL_METADATA, \
+from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME
 from ie_serving.logger import get_logger
 import datetime
@@ -52,8 +52,8 @@ class PredictionServiceServicer(prediction_service_pb2.
 
         if not valid_model_spec:
             context.set_code(StatusCode.NOT_FOUND)
-            context.set_details(WRONG_MODEL_METADATA.format(model_name,
-                                                            requested_version))
+            context.set_details(WRONG_MODEL_SPEC.format(model_name,
+                                                        requested_version))
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
@@ -113,8 +113,8 @@ class PredictionServiceServicer(prediction_service_pb2.
 
         if not valid_model_spec:
             context.set_code(StatusCode.NOT_FOUND)
-            context.set_details(WRONG_MODEL_METADATA.format(model_name,
-                                                            requested_version))
+            context.set_details(WRONG_MODEL_SPEC.format(model_name,
+                                                        requested_version))
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
         self.models[model_name].engines[version].in_use.acquire()

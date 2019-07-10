@@ -23,7 +23,6 @@ from tensorflow.core.framework import types_pb2
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import numpy as np
 
-from ie_serving.models.models_utils import statuses_as_dicts
 from ie_serving.tensorflow_serving_api import prediction_service_pb2
 from ie_serving.server.service import PredictionServiceServicer
 from ie_serving.logger import get_logger
@@ -61,8 +60,6 @@ def serve(models, max_workers: int=1, port: int=9000):
             time.sleep(FILE_SYSTEM_POLL_WAIT_SECONDS)
             for model in models:
                 models[model].update()
-                logger.info(statuses_as_dicts(
-                    models[model].versions_statuses.values()))
     except KeyboardInterrupt:
         server.stop(0)
         sys.exit(0)
