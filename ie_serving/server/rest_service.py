@@ -2,7 +2,6 @@ import datetime
 import falcon
 import json
 
-from ie_serving.models.models_utils import prepare_statuses
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format

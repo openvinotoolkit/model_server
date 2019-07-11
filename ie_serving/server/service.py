@@ -169,10 +169,10 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                                           state=version_status.state,
                                           status=status_proto)
 
-        #model_version_status = get_model_status_pb2.ModelVersionStatus()
-        #model_version_status.version = version_status.version
-        #model_version_status.state = version_status.state
-        #model_version_status.status.CopyFrom(status_proto)
+        #   model_version_status = get_model_status_pb2.ModelVersionStatus()
+        #   model_version_status.version = version_status.version
+        #   model_version_status.state = version_status.state
+        #   model_version_status.status.CopyFrom(status_proto)
 
     def GetModelStatus(self, request, context):
 

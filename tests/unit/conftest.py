@@ -16,7 +16,7 @@
 from ie_serving.models.local_model import LocalModel
 from ie_serving.models.models_utils import ModelVersionStatus
 from ie_serving.server.rest_service import create_rest_api
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+from tensorflow_serving.apis import prediction_service_pb2
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import get_model_metadata_pb2
 from ie_serving.server.service import PredictionServiceServicer
@@ -29,7 +29,7 @@ import pytest
 
 from config import DEFAULT_INPUT_KEY, DEFAULT_OUTPUT_KEY
 
-PREDICT_SERVICE = prediction_service_pb2_grpc. \
+PREDICT_SERVICE = prediction_service_pb2. \
     DESCRIPTOR.services_by_name['PredictionService']
 
 
