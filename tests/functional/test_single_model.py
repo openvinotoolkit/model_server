@@ -96,7 +96,7 @@ class TestSingleModelInference():
                                 request_format):
         """
         <b>Description</b>
-        Submit request to gRPC interface serving a single resnet model
+        Submit request to REST API interface serving a single resnet model
 
         <b>input data</b>
         - directory with the model in IR format

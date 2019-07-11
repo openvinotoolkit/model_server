@@ -167,7 +167,7 @@ class TestMuiltModelInference():
                                 start_server_multi_model):
         """
         <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
+        Execute inference request using REST API interface hosting multiple models
 
         <b>input data</b>
         - directory with 2 models in IR format
@@ -237,7 +237,7 @@ class TestMuiltModelInference():
                                      start_server_multi_model):
         """
         <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
+        Execute inference request using REST API interface hosting multiple models
 
         <b>input data</b>
         - directory with 2 models in IR format
