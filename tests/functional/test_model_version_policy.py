@@ -18,7 +18,6 @@ import sys
 import requests
 import pytest
 from google.protobuf.json_format import Parse
-from grpc.framework.interfaces.face.face import AbortionError
 sys.path.append(".")
 from conftest import get_model_metadata, model_metadata_response  # noqa
 from tensorflow_serving.apis import get_model_metadata_pb2  # noqa
