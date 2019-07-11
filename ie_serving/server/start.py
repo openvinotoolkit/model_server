@@ -23,8 +23,8 @@ from tensorflow.core.framework import types_pb2
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import numpy as np
 
-from tensorflow_serving.apis import prediction_service_pb2
-from tensorflow_serving.apis import model_service_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc
+from tensorflow_serving.apis import model_service_pb2_grpc
 from ie_serving.server.service import PredictionServiceServicer, \
     ModelServiceServicer
 from ie_serving.logger import get_logger
@@ -50,9 +50,9 @@ def serve(models, max_workers: int=1, port: int=9000):
                          options=[('grpc.max_send_message_length', GIGABYTE),
                                   ('grpc.max_receive_message_length', GIGABYTE)
                                   ])
-    prediction_service_pb2.add_PredictionServiceServicer_to_server(
+    prediction_service_pb2_grpc.add_PredictionServiceServicer_to_server(
         PredictionServiceServicer(models=models), server)
-    model_service_pb2.add_ModelServiceServicer_to_server(
+    model_service_pb2_grpc.add_ModelServiceServicer_to_server(
         ModelServiceServicer(models=models), server)
     server.add_insecure_port('[::]:{}'.format(port))
     server.start()

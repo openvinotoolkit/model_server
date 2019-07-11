@@ -6,10 +6,12 @@ from ie_serving.models.models_utils import prepare_statuses
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
-from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
+from tensorflow_serving.apis import get_model_metadata_pb2, \
+    get_model_status_pb2
 from google.protobuf.json_format import MessageToJson
 
 from ie_serving.logger import get_logger
+from ie_serving.server.service import ModelServiceServicer
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
     check_availability_of_requested_status
@@ -44,17 +46,23 @@ class GetModelStatus(object):
             resp.body = json.dumps(err_out_json)
             return
         requested_version = int(requested_version)
+
+        response = get_model_status_pb2.GetModelStatusResponse()
         if requested_version:
-            response = [self.models[model_name].versions_statuses[
-                requested_version].prepare_response()]
+            version_status = self.models[model_name].versions_statuses[
+                requested_version]
+            ModelServiceServicer.add_status_to_response(version_status,
+                                                        response)
         else:
-            response = prepare_statuses(
-                self.models[model_name].versions_statuses.values())
-        response = {"model_version_status": response}
-        logger.debug("MODEL_METADATA created a response for {} - {}"
+            for version_status in self.models[model_name].versions_statuses. \
+                    values():
+                ModelServiceServicer.add_status_to_response(version_status,
+                                                            response)
+        logger.debug("MODEL_STATUS created a response for {} - {}"
                      .format(model_name, requested_version))
+        logger.info("response: {}".format(response))
         resp.status = falcon.HTTP_200
-        resp.body = json.dumps(response)
+        resp.body = MessageToJson(response)
 
 
 class GetModelMetadata(object):

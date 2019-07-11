@@ -30,7 +30,7 @@ from grpc.beta import implementations
 from google.protobuf.json_format import Parse
 
 sys.path.append(".")
-from ie_serving.tensorflow_serving_api import predict_pb2, \
+from tensorflow_serving.apis import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2  # noqa
 
 

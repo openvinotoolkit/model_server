@@ -24,12 +24,12 @@ setup(
     long_description="""DLDT inference server""",
     keywords='',
     author_email='',
-    packages=['ie_serving', 'ie_serving.server', 'ie_serving.models',
-              'ie_serving.tensorflow_serving_api'],
+    packages=['ie_serving', 'ie_serving.server', 'ie_serving.models'],
     include_package_data=True,
     zip_safe=False,
     install_requires=["grpcio", "numpy", "protobuf",
-                      "tensorflow", "google-cloud-storage", "boto3",
+                      "tensorflow-serving-api", "google-cloud-storage",
+                      "boto3",
                       "jsonschema", "falcon", "cheroot"],
     entry_points={
         'console_scripts': [

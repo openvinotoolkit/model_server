@@ -14,10 +14,11 @@
 # limitations under the License.
 #
 
-from tensorflow_serving.apis import prediction_service_pb2, \
-    model_service_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc, \
+    model_service_pb2_grpc
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import get_model_metadata_pb2
+from tensorflow_serving.util import status_pb2
 
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
@@ -35,7 +36,7 @@ import datetime
 logger = get_logger(__name__)
 
 
-class PredictionServiceServicer(prediction_service_pb2.
+class PredictionServiceServicer(prediction_service_pb2_grpc.
                                 PredictionServiceServicer):
 
     def __init__(self, models):
@@ -152,10 +153,26 @@ class PredictionServiceServicer(prediction_service_pb2.
         return response
 
 
-class ModelServiceServicer(model_service_pb2.ModelServiceServicer):
+class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
 
     def __init__(self, models):
         self.models = models
+
+    @staticmethod
+    def add_status_to_response(version_status, response):
+        logger.info("VersionStatus: {}".format(version_status.status))
+        status_proto = status_pb2.StatusProto()
+        status_proto.error_code = version_status.status['error_code']
+        status_proto.error_message = version_status.status['error_message']
+        logger.info("StatusProto: {}".format(status_proto))
+        response.model_version_status.add(version=version_status.version,
+                                          state=version_status.state,
+                                          status=status_proto)
+
+        #model_version_status = get_model_status_pb2.ModelVersionStatus()
+        #model_version_status.version = version_status.version
+        #model_version_status.state = version_status.state
+        #model_version_status.status.CopyFrom(status_proto)
 
     def GetModelStatus(self, request, context):
 
@@ -175,13 +192,15 @@ class ModelServiceServicer(model_service_pb2.ModelServiceServicer):
             logger.debug("MODEL_STATUS, invalid model spec from request")
             return get_model_status_pb2.GetModelStatusResponse()
 
-        status = self.models[model_name].versions_statuses[requested_version]
         response = get_model_status_pb2.GetModelStatusResponse()
-        response.model_version_status.version = status.version
-        response.model_version_status.state = status.state
-        response.model_version_status.status.error_code = \
-            status.status.error_code
-        response.model_version_status.status.error_message = \
-            status.status.error_message
-
+        if requested_version:
+            version_status = self.models[model_name].versions_statuses[
+                requested_version]
+            ModelServiceServicer.add_status_to_response(version_status,
+                                                        response)
+        else:
+            for version_status in self.models[model_name].versions_statuses. \
+                    values():
+                ModelServiceServicer.add_status_to_response(version_status,
+                                                            response)
         return response
