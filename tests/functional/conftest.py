@@ -256,7 +256,7 @@ def start_server_single_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000 --rest-port 5555"
+              "--port 9000 --rest_port 5555"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single',
@@ -344,7 +344,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
-              "--port 9002 --rest-port 5556"
+              "--port 9002 --rest_port 5556"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-2-out',
@@ -384,7 +384,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port 9001 " \
-              "--rest-port 5561"
+              "--rest_port 5561"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi',
@@ -410,7 +410,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9003 --rest-port 5557"
+              "--port 9003 --rest_port 5557"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch',
@@ -436,7 +436,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9005 --batch_size auto --rest-port 5559"
+              "--port 9005 --batch_size auto --rest_port 5559"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch',
@@ -462,7 +462,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9004 --batch_size 4 --rest-port 5558"
+              "--port 9004 --batch_size 4 --rest_port 5558"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4',
@@ -495,7 +495,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                     {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
-              "--port 9006 --rest-port 5560"
+              "--port 9006 --rest_port 5560"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-policy',
@@ -520,7 +520,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007 --rest-port 5562"
+              "--port 9007 --rest_port 5562"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-latest',
@@ -547,7 +547,7 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
               '--model_name resnet --model_path /opt/ml/update ' \
               '--port 9008 --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
-              '--rest-port 5563'
+              '--rest_port 5563'
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-'
