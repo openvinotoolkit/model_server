@@ -78,15 +78,22 @@ REST API is recommended when the primary goal is in reducing the number of clien
 
 ## Usage examples
 
-[Kubernetes](example_k8s)
+[Kubernetes deployments](example_k8s)
 
-[Sagemaker](example_sagemaker)
+[Sagemaker integration](example_sagemaker)
 
-[Client Code Example](example_client)
+Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
+and [RESTful API](example_client/#rest-api-client-to-predict-function) with numpy data input
+
+[Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
+
+[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#rest-api-client-to-predict-function)
+
+[Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
 
 [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
 
-[Jupyter notebook - REST API client](example_client/REST_age_gender.ipynb)
+[Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
 
 ## Benchmarking results
