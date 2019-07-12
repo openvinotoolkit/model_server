@@ -85,6 +85,21 @@ jobs:
       - run:
           name: Start functional tests
           command: pyenv global 3.5.2 && make test
+  functional_tests_clearlinux:
+    machine:
+      enabled: true
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Build docker image
+          command: make docker_build_clearlinux
+      - run:
+          name: Get Google Cloud credentials
+          command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
+      - run:
+          name: Start functional tests
+          command: pyenv global 3.5.2 && make test
 workflows:
   version: 2
   build-and-deploy:
@@ -94,4 +109,5 @@ workflows:
       - functional_tests_bin
       - functional_tests_src_ubuntu
       - functional_tests_src_intelpython
+      - functional_tests_clearlinux
       
