@@ -21,7 +21,7 @@ from ie_serving.models.models_utils import ModelVersionStatus
 
 def test_model_init():
     available_versions = [1, 2, 3]
-    model_name="test"
+    model_name = "test"
     versions_statuses = {}
     for version in available_versions:
         versions_statuses[version] = ModelVersionStatus(model_name, version)
