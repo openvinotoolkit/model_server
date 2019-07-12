@@ -18,10 +18,9 @@ import sys
 import requests
 import pytest
 from google.protobuf.json_format import Parse
-from grpc.framework.interfaces.face.face import AbortionError
 sys.path.append(".")
 from conftest import get_model_metadata, model_metadata_response  # noqa
-from ie_serving.tensorflow_serving_api import get_model_metadata_pb2  # noqa
+from tensorflow_serving.apis import get_model_metadata_pb2  # noqa
 
 
 class TestModelVerPolicy():
@@ -91,8 +90,9 @@ class TestModelVerPolicy():
                 assert expected_input_metadata == input_metadata
                 assert expected_output_metadata == output_metadata
             else:
-                with pytest.raises(AbortionError):
+                with pytest.raises(Exception) as e:
                     response = stub.GetModelMetadata(request, 10)
+                assert "Servable not found for request" in str(e.value)
 
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
@@ -104,7 +104,7 @@ class TestModelVerPolicy():
                                      model_name, throw_error):
         """
         <b>Description</b>
-        Execute GetModelMetadata request using gRPC interface
+        Execute GetModelMetadata request using REST API interface
         hosting multiple models
 
         <b>input data</b>

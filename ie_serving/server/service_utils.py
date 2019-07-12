@@ -19,7 +19,12 @@ def check_availability_of_requested_model(models, model_name,
                                           requested_version):
     version = 0
     valid_model_spec = False
-    requested_version = int(requested_version)
+
+    try:
+        requested_version = int(requested_version)
+    except ValueError:
+        return valid_model_spec, version
+
     if model_name in models:
         if requested_version == 0 and models[model_name].default_version != -1:
             version = models[model_name].default_version
@@ -28,3 +33,17 @@ def check_availability_of_requested_model(models, model_name,
             version = requested_version
             valid_model_spec = True
     return valid_model_spec, version
+
+
+def check_availability_of_requested_status(models, model_name,
+                                           requested_version):
+    try:
+        requested_version = int(requested_version)
+    except ValueError:
+        return False
+    if model_name in models:
+        if not requested_version:
+            return True
+        if requested_version in models[model_name].versions_statuses.keys():
+            return True
+    return False
