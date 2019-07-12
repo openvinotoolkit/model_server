@@ -184,11 +184,13 @@ def input_data_downloader_v3_331(get_test_dir):
         'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy', # noqa
         get_test_dir)
 
+
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_single_server_status():
     channel = grpc.insecure_channel('localhost:9000')
     stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
+
 
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_single_server():
