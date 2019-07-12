@@ -409,7 +409,7 @@ time variance: 6.81
 Classification accuracy: 100.00
 ```
 
-## Getting model served status
+## Getting model serving status
 
 ```bash
 python get_model_status.py --help

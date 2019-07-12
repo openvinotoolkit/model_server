@@ -87,7 +87,7 @@ and [RESTful API](example_client/#rest-api-client-to-predict-function) with nump
 
 [Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
 
-[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#rest-api-client-to-predict-function)
+[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
 
 [Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
 
