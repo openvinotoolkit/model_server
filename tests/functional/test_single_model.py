@@ -167,9 +167,7 @@ class TestSingleModelInference():
         assert expected_output_metadata == output_metadata
 
     def test_get_model_status_rest(self, resnet_v1_50_model_downloader,
-                                   start_server_single_model,
-                                   create_channel_for_port_single_server_status
-                                   ):
+                                   start_server_single_model):
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
