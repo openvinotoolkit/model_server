@@ -31,7 +31,8 @@ from google.protobuf.json_format import Parse
 
 sys.path.append(".")
 from tensorflow_serving.apis import predict_pb2, \
-    get_model_metadata_pb2, prediction_service_pb2_grpc # noqa
+    get_model_metadata_pb2, prediction_service_pb2_grpc, \
+    get_model_status_pb2, model_service_pb2_grpc  # noqa
 
 
 ERROR_SHAPE = 'response has invalid output'
@@ -183,6 +184,11 @@ def input_data_downloader_v3_331(get_test_dir):
         'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy', # noqa
         get_test_dir)
 
+@pytest.fixture(autouse=True, scope="session")
+def create_channel_for_port_single_server_status():
+    channel = grpc.insecure_channel('localhost:9000')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
 
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_single_server():
@@ -726,3 +732,11 @@ def model_metadata_response(response):
         output_blobs_keys[output_blob].update({'dtype': tensor_dtype})
 
     return input_blobs_keys, output_blobs_keys
+
+
+def get_model_status(model_name, version=None):
+    request = get_model_status_pb2.GetModelStatusRequest()
+    request.model_spec.name = model_name
+    if version is not None:
+        request.model_spec.version.value = version
+    return request

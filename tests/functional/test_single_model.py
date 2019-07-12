@@ -18,6 +18,9 @@ import numpy as np
 import sys
 import pytest
 
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE
+
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
     ERROR_SHAPE, infer_rest, get_model_metadata_response_rest  # noqa
@@ -86,6 +89,23 @@ class TestSingleModelInference():
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
+
+    def test_get_model_status(self, resnet_v1_50_model_downloader,
+                                start_server_single_model,
+                              create_channel_for_port_single_server_status):
+
+        print("Downloaded model files:", resnet_v1_50_model_downloader)
+
+        stub = create_channel_for_port_single_server_status
+        request = get_model_metadata(model_name='resnet')
+        response = stub.GetModelStatus(request, 10)
+        versions_statuses = response.model_version_status
+        version_status = versions_statuses[0]
+        assert version_status.version == 1
+        assert version_status.state == ModelVersionState.AVAILABLE
+        assert version_status.status.error_code == ErrorCode.OK
+        assert version_status.status.error_message == _ERROR_MESSAGE[
+            ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
