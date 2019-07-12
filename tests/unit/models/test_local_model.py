@@ -16,24 +16,45 @@
 import os
 import pytest
 from ie_serving.models.local_model import LocalModel
-from ie_serving.models.models_utils import ModelVersionStatus
+from ie_serving.models.models_utils import ModelVersionStatus, \
+    ModelVersionState, ErrorCode
 
 
-def test_model_init():
+@pytest.mark.parametrize("engines", [
+    {1: None, 2: None, 3: None},
+    {1: None, 2: None},
+    {}
+])
+def test_model_init(engines):
     available_versions = [1, 2, 3]
     model_name = "test"
     versions_statuses = {}
     for version in available_versions:
         versions_statuses[version] = ModelVersionStatus(model_name, version)
+
+    for version_status in versions_statuses.values():
+        assert version_status.state == ModelVersionState.START
+
     new_model = LocalModel(model_name=model_name, model_directory='fake_path',
-                           available_versions=available_versions, engines={},
+                           available_versions=available_versions,
+                           engines=engines,
                            batch_size=None,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses)
+
+    not_available_versions = list(set(available_versions) ^
+                                  set(engines.keys()))
+    for loaded_version in engines.keys():
+        assert new_model.versions_statuses[loaded_version].state == \
+               ModelVersionState.AVAILABLE
+    for not_available_version in not_available_versions:
+        assert new_model.versions_statuses[not_available_version].state != \
+               ModelVersionState.AVAILABLE
+
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
     assert new_model.model_directory == 'fake_path'
-    assert new_model.engines == {}
+    assert new_model.engines == engines
 
 
 @pytest.mark.parametrize("mocker_values, expected_output", [
@@ -56,9 +77,11 @@ def test_get_versions_files(mocker, mocker_values, expected_output):
     assert expected_output[2] is mapping
 
 
-def test_get_engines_for_model(mocker):
+@pytest.mark.parametrize("is_error", [False, True])
+def test_get_engines_for_model(mocker, is_error):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
                                   'build')
+
     engines_mocker.side_effect = ['modelv2', 'modelv4']
     available_versions = [{'xml_file': 'modelv2.xml',
                            'bin_file': 'modelv2.bin',
@@ -73,12 +96,28 @@ def test_get_engines_for_model(mocker):
         version_number = version['version_number']
         versions_statuses[version_number] = ModelVersionStatus("test",
                                                                version_number)
+    if is_error:
+        get_engine_for_version_mocker = mocker.patch(
+            'ie_serving.models.local_model.LocalModel.get_engine_for_version')
+        get_engine_for_version_mocker.side_effect = Exception()
+
     output = LocalModel.get_engines_for_model(
         versions_attributes=available_versions,
         versions_statuses=versions_statuses)
-    assert 2 == len(output)
-    assert 'modelv2' == output[2]
-    assert 'modelv4' == output[4]
+
+    for version_status in versions_statuses.values():
+        assert version_status.state == ModelVersionState.LOADING
+        if is_error:
+            assert version_status.status['error_code'] == ErrorCode.UNKNOWN
+            assert get_engine_for_version_mocker.called
+        else:
+            assert version_status.status['error_code'] == ErrorCode.OK
+    if is_error:
+        assert 0 == len(output)
+    else:
+        assert 2 == len(output)
+        assert 'modelv2' == output[2]
+        assert 'modelv4' == output[4]
 
 
 def test_get_engines_for_model_with_ir_raises(mocker):

@@ -18,6 +18,7 @@ import json
 import threading
 import time
 from ie_serving.models.model import Model
+from ie_serving.models.models_utils import ModelVersionState
 
 
 @pytest.mark.parametrize("model_ver_policy, throw_error, expected_output", [
@@ -48,6 +49,14 @@ def test_mark_differences(get_fake_model, new_versions, expected_to_delete,
                           expected_to_create):
     model = get_fake_model
     to_create, to_delete = model._mark_differences(new_versions)
+
+    for new_version in to_create:
+        assert model.versions_statuses[new_version].state == \
+               ModelVersionState.START
+    for old_version in to_delete:
+        assert model.versions_statuses[old_version].state == \
+               ModelVersionState.UNLOADING
+
     assert expected_to_create == to_create
     assert expected_to_delete == to_delete
 
@@ -65,6 +74,7 @@ def test_delete_engine(get_fake_model):
     model.engines[version].in_use.release()
     time.sleep(2)
     assert version not in model.engines
+    assert model.versions_statuses[version].state == ModelVersionState.END
 
 
 @pytest.mark.parametrize("input, expected_output", [
