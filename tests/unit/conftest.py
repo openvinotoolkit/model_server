@@ -59,10 +59,11 @@ def get_fake_model():
                       batch_size=batch_size)
     new_engines = {1: engine, 2: engine, 3: engine}
     available_versions = [1, 2, 3]
+    model_name = "test"
     versions_statuses = {}
     for version in available_versions:
-        versions_statuses[version] = ModelVersionStatus(version)
-    new_model = LocalModel(model_name="test",
+        versions_statuses[version] = ModelVersionStatus(model_name, version)
+    new_model = LocalModel(model_name=model_name,
                            model_directory='fake_path/model/',
                            available_versions=[1, 2, 3], engines=new_engines,
                            batch_size=batch_size,

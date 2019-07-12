@@ -21,10 +21,11 @@ from ie_serving.models.models_utils import ModelVersionStatus
 
 def test_model_init():
     available_versions = [1, 2, 3]
+    model_name="test"
     versions_statuses = {}
     for version in available_versions:
-        versions_statuses[version] = ModelVersionStatus(version)
-    new_model = LocalModel(model_name="test", model_directory='fake_path',
+        versions_statuses[version] = ModelVersionStatus(model_name, version)
+    new_model = LocalModel(model_name=model_name, model_directory='fake_path',
                            available_versions=available_versions, engines={},
                            batch_size=None,
                            version_policy_filter=lambda versions: versions[:],
@@ -70,7 +71,8 @@ def test_get_engines_for_model(mocker):
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']
-        versions_statuses[version_number] = ModelVersionStatus(version_number)
+        versions_statuses[version_number] = ModelVersionStatus("test",
+                                                               version_number)
     output = LocalModel.get_engines_for_model(
         versions_attributes=available_versions,
         versions_statuses=versions_statuses)
@@ -98,7 +100,8 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']
-        versions_statuses[version_number] = ModelVersionStatus(version_number)
+        versions_statuses[version_number] = ModelVersionStatus(
+            "test", version_number)
     output = LocalModel.get_engines_for_model(
         versions_attributes=available_versions,
         versions_statuses=versions_statuses)
