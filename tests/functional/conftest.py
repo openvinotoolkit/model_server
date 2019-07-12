@@ -740,3 +740,11 @@ def get_model_status(model_name, version=None):
     if version is not None:
         request.model_spec.version.value = version
     return request
+
+
+def get_model_status_response_rest(rest_url):
+    result = requests.get(rest_url)
+    output_json = result.text
+    status_pb = get_model_status_pb2.GetModelStatusResponse()
+    response = Parse(output_json, status_pb, ignore_unknown_fields=False)
+    return response
