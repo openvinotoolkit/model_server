@@ -185,15 +185,15 @@ def input_data_downloader_v3_331(get_test_dir):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_multi_server():
+def create_channel_for_port_single_server():
     channel = grpc.insecure_channel('localhost:9000')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_single_server():
-    channel = grpc.insecure_channel('localhost:9000')
+def create_channel_for_port_multi_server():
+    channel = grpc.insecure_channel('localhost:9001')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
