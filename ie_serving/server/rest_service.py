@@ -59,9 +59,9 @@ class GetModelStatus(object):
                                                             response)
         logger.debug("MODEL_STATUS created a response for {} - {}"
                      .format(model_name, requested_version))
-        logger.info("response: {}".format(response))
         resp.status = falcon.HTTP_200
-        resp.body = MessageToJson(response)
+        resp.body = MessageToJson(response,
+                                  including_default_value_fields=True)
 
 
 class GetModelMetadata(object):

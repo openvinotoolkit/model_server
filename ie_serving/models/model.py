@@ -105,9 +105,9 @@ class Model(ABC):
         [self.versions_statuses[version].set_available() for version in
          created_versions]
 
-        logger.info("List of available versions after update"
+        logger.info("List of available versions after update "
                     "for {} model: {}".format(self.model_name, self.versions))
-        logger.info("Default version after update"
+        logger.info("Default version after update "
                     "for {} model is {}".format(self.model_name,
                                                 self.default_version))
         for version in to_delete:

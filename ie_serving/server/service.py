@@ -160,24 +160,14 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
 
     @staticmethod
     def add_status_to_response(version_status, response):
-        logger.info("VersionStatus: {}".format(version_status.status))
         status_proto = status_pb2.StatusProto()
         status_proto.error_code = version_status.status['error_code']
         status_proto.error_message = version_status.status['error_message']
-        logger.info("StatusProto: {}".format(status_proto))
         response.model_version_status.add(version=version_status.version,
                                           state=version_status.state,
                                           status=status_proto)
 
-        #   model_version_status = get_model_status_pb2.ModelVersionStatus()
-        #   model_version_status.version = version_status.version
-        #   model_version_status.state = version_status.state
-        #   model_version_status.status.CopyFrom(status_proto)
-
     def GetModelStatus(self, request, context):
-
-        # check if model version status
-        # is available on server with proper version
         logger.debug("MODEL_STATUS, get request: {}".format(request))
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
