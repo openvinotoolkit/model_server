@@ -67,7 +67,8 @@ class Model(ABC):
                               version_attributes in versions_attributes]
         versions_statuses = dict()
         for version in available_versions:
-            versions_statuses[version] = ModelVersionStatus(version)
+            versions_statuses[version] = ModelVersionStatus(model_name,
+                                                            version)
 
         engines = cls.get_engines_for_model(versions_attributes,
                                             versions_statuses)
@@ -127,7 +128,8 @@ class Model(ABC):
         for version in new_versions:
             if version not in self.versions:
                 to_create.append(version)
-                self.versions_statuses[version] = ModelVersionStatus(version)
+                self.versions_statuses[version] = ModelVersionStatus(
+                    self.model_name, version)
 
         return to_create, to_delete
 

@@ -193,4 +193,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                     values():
                 ModelServiceServicer.add_status_to_response(version_status,
                                                             response)
+
+        logger.debug("MODEL_STATUS created a response for {} - {}"
+                     .format(model_name, requested_version))
         return response
