@@ -26,12 +26,12 @@ import time
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
-from grpc.beta import implementations
+import grpc
 from google.protobuf.json_format import Parse
 
 sys.path.append(".")
 from tensorflow_serving.apis import predict_pb2, \
-    get_model_metadata_pb2, prediction_service_pb2  # noqa
+    get_model_metadata_pb2, prediction_service_pb2_grpc # noqa
 
 
 ERROR_SHAPE = 'response has invalid output'
@@ -186,64 +186,64 @@ def input_data_downloader_v3_331(get_test_dir):
 
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_multi_server():
-    channel = implementations.insecure_channel('localhost', 9001)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9000')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_single_server():
-    channel = implementations.insecure_channel('localhost', 9000)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9000')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_port_mapping_server():
-    channel = implementations.insecure_channel('localhost', 9002)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9002')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server():
-    channel = implementations.insecure_channel('localhost', 9003)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9003')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_bs4():
-    channel = implementations.insecure_channel('localhost', 9004)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9004')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_auto():
-    channel = implementations.insecure_channel('localhost', 9005)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9005')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_model_ver_pol_server():
-    channel = implementations.insecure_channel('localhost', 9006)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9006')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_update_flow_latest():
-    channel = implementations.insecure_channel('localhost', 9007)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9007')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_update_flow_specific():
-    channel = implementations.insecure_channel('localhost', 9008)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9008')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
