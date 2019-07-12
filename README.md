@@ -15,7 +15,7 @@ and allows frameworks such as [AWS Sagemaker](https://github.com/aws/sagemaker-t
 
 OpenVINO Model Server supports for the models storage, beside local filesystem, also GCS, S3 and Minio. 
 
-It is implemented as a python service using gRPC library interface; falcon REST API framework;  data serialization and deserialization 
+It is implemented as a python service using gRPC interface library; falcon REST API framework;  data serialization and deserialization 
 using TensorFlow; and OpenVINO&trade; for inference execution. It acts as an integrator and a bridge exposing CPU optimized 
 inference engine over network interfaces. 
 
@@ -41,30 +41,34 @@ Using FPGA (TBD)
 
 ## gRPC API documentation
 
-OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
-**Note:** The implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis).
+**Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
 
-[predict Function Spec](ie_serving/tensorflow_serving_api/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
+[predict function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
 * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
-[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format and an optional output filter.
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format.
 * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
  
-[get_model_metadata Function spec](ie_serving/tensorflow_serving_api/get_model_metadata.proto) has three message definitions:
+[get_model_metadata function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions:
  *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
  A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
 
-Refer to the example client code to learn how to use this API and submit the requests using gRPC interface.
+[get model status function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/get_model_status.proto) can be used to report
+all exposed versions including their state in their lifecycle. 
 
-gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization. 
+Refer to the [example client code](example_client) to learn how to use this API and submit the requests using gRPC interface.
+
+gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization.
+It can achieve shorter latency especially for big input messages like images. 
 
 ## RESTful API documentation 
 
 OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
 
 Both row and column format of the requests are implemented. 
-**Note:** Just like with gRPC, only the implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+**Note:** Just like with gRPC, only the implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 
 Only the numerical data types are supported. 
 
@@ -74,15 +78,22 @@ REST API is recommended when the primary goal is in reducing the number of clien
 
 ## Usage examples
 
-[Kubernetes](example_k8s)
+[Kubernetes deployments](example_k8s)
 
-[Sagemaker](example_sagemaker)
+[Sagemaker integration](example_sagemaker)
 
-[Client Code Example](example_client)
+Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
+and [RESTful API](example_client/#rest-api-client-to-predict-function) with numpy data input
+
+[Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
+
+[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
+
+[Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
 
 [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
 
-[Jupyter notebook - REST API client](example_client/REST_age_gender.ipynb)
+[Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
 
 ## Benchmarking results
@@ -192,7 +203,7 @@ You can parse the logs to analyze: volume of requests, processing statistics and
 
 ## Known limitations and plans
 
-* Currently, only *Predict* and *GetModelMetadata* calls are implemented using Tensorflow Serving API. 
+* Currently, *Predict*, *GetModelMetadata* and *GetModelStatus* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
 
@@ -212,8 +223,7 @@ Docker image with OpenVINO Model Server can be built with several options:
 - `make docker_build_src_ubuntu` - using OpenVINO source code with ubuntu base image
 - `make docker_build_src_intelpython` - using OpenVINO source code with 'intelpython/intelpython3_core' base image 
 (Intel optimized python distribution with conda and debian)
-- `make docker_build_clearlinux` - using ClearLinux base image and 
-[computer vision bundle](https://github.com/clearlinux/clr-bundles/blob/master/bundles/computer-vision-basic) 
+
 
 ### Testing
 

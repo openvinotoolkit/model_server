@@ -42,8 +42,11 @@ optional arguments:
                         Specify output name. default:
                         resnet_v1_50/predictions/Reshape_1
   --transpose_input {False,True}
-                        Set to False to skip NHWC->NCHW input transposing.
-                        default: True
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input
+                        transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed:
+                        nhwc2nchw or nchw2nhwc
   --iterations ITERATIONS
                         Number of requests iterations, as default use number
                         of images in numpy memmap. default: 0 (consume all
@@ -406,7 +409,7 @@ time variance: 6.81
 Classification accuracy: 100.00
 ```
 
-## Getting model served status
+## Getting model serving status
 
 ```bash
 python get_model_status.py --help
