@@ -138,8 +138,8 @@ class TestModelVersionHandling():
                                 start_server_multi_model):
         """
         <b>Description</b>
-        Execute inference request using gRPC interface with version specified
-        and without version set on the client.
+        Execute inference request using REST API interface with version
+        specified and without version set on the client.
         When version is not set server should use the latest version model 2
         When version 1 is selected the model from folder 1 should be used
         and model 2 should be ignored
@@ -192,7 +192,8 @@ class TestModelVersionHandling():
                                      start_server_multi_model):
         """
         <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
+        Execute inference request using REST API interface hosting multiple
+        models
 
         <b>input data</b>
         - directory with 2 models in IR format

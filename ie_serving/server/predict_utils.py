@@ -19,7 +19,7 @@ import numpy as np
 from grpc import StatusCode
 from tensorflow.core.framework import tensor_pb2
 from tensorflow.python.framework import tensor_shape
-from ie_serving.tensorflow_serving_api import predict_pb2
+from tensorflow_serving.apis import predict_pb2
 from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
 import tensorflow.contrib.util as tf_contrib_util

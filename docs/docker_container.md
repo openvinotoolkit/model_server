@@ -111,7 +111,7 @@ completed with just one command like below:
 
 ```bash
 docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest-port 8001
+/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest_port 8001
 ```
 
 * option `-v` defines how the models folder should be mounted inside the docker container.
@@ -127,7 +127,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
                         [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT]
-                        [--rest-port PORT] 
+                        [--rest_port PORT] 
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -140,7 +140,7 @@ optional arguments:
   --model_version_policy MODEL_VERSION_POLICY 
                         sets model version policy for model
   --port PORT           gRPC server port
-  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
+  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
 
 ```
 
@@ -243,19 +243,19 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 -e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
 -e AWS_REGION=“${AWS_REGION}”  \
 -e S3_ENDPOINT=“${S3_ENDPOINT}”  \
-/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --rest-port 8001
+/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --rest_port 8001
 ```
 
 Below is the explanation of the `ie_serving config` parameters
 ```bash
-usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest-port PORT]
+usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest_port PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
   --config_path CONFIG_PATH
                         absolute path to json configuration file
   --port PORT           gRPC server port
-  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
+  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
 ```
 
 ## Starting docker container with NCS

@@ -5,19 +5,63 @@ import json
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
-from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
+from tensorflow_serving.apis import get_model_metadata_pb2, \
+    get_model_status_pb2
 from google.protobuf.json_format import MessageToJson
 
 from ie_serving.logger import get_logger
+from ie_serving.server.service import ModelServiceServicer
 from ie_serving.server.service_utils import \
-    check_availability_of_requested_model
+    check_availability_of_requested_model, \
+    check_availability_of_requested_status
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
-from ie_serving.server.constants import WRONG_MODEL_METADATA, INVALID_FORMAT, \
+from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
     OUTPUT_REPRESENTATION
 from ie_serving.server.predict_utils import prepare_input_data
 
 logger = get_logger(__name__)
+
+
+class GetModelStatus(object):
+
+    def __init__(self, models):
+        self.models = models
+
+    def on_get(self, req, resp, model_name, requested_version=0):
+        logger.debug("MODEL_STATUS, get request: {}, {}"
+                     .format(model_name, requested_version))
+        valid_model_status = check_availability_of_requested_status(
+            models=self.models, requested_version=requested_version,
+            model_name=model_name)
+
+        if not valid_model_status:
+            resp.status = falcon.HTTP_NOT_FOUND
+            logger.debug("MODEL_STATUS, invalid model spec from request")
+            err_out_json = {
+                'error': WRONG_MODEL_SPEC.format(model_name,
+                                                 requested_version)
+            }
+            resp.body = json.dumps(err_out_json)
+            return
+        requested_version = int(requested_version)
+
+        response = get_model_status_pb2.GetModelStatusResponse()
+        if requested_version:
+            version_status = self.models[model_name].versions_statuses[
+                requested_version]
+            ModelServiceServicer.add_status_to_response(version_status,
+                                                        response)
+        else:
+            for version_status in self.models[model_name].versions_statuses. \
+                    values():
+                ModelServiceServicer.add_status_to_response(version_status,
+                                                            response)
+        logger.debug("MODEL_STATUS created a response for {} - {}"
+                     .format(model_name, requested_version))
+        resp.status = falcon.HTTP_200
+        resp.body = MessageToJson(response,
+                                  including_default_value_fields=True)
 
 
 class GetModelMetadata(object):
@@ -36,8 +80,8 @@ class GetModelMetadata(object):
             resp.status = falcon.HTTP_NOT_FOUND
             logger.debug("MODEL_METADATA, invalid model spec from request")
             err_out_json = {
-                'error': WRONG_MODEL_METADATA.format(model_name,
-                                                     requested_version)
+                'error': WRONG_MODEL_SPEC.format(model_name,
+                                                 requested_version)
             }
             resp.body = json.dumps(err_out_json)
             return
@@ -82,8 +126,8 @@ class Predict():
             logger.debug("PREDICT, invalid model spec from request, "
                          "{} - {}".format(model_name, requested_version))
             err_out_json = {
-                'error': WRONG_MODEL_METADATA.format(model_name,
-                                                     requested_version)
+                'error': WRONG_MODEL_SPEC.format(model_name,
+                                                 requested_version)
             }
             resp.body = json.dumps(err_out_json)
             return
@@ -158,12 +202,20 @@ class Predict():
 
 def create_rest_api(models):
     app = falcon.API()
+    get_model_status = GetModelStatus(models)
     get_model_meta = GetModelMetadata(models)
     predict = Predict(models)
+
+    app.add_route('/v1/models/{model_name}', get_model_status)
+    app.add_route('/v1/models/{model_name}/'
+                  'versions/{requested_version}',
+                  get_model_status)
+
     app.add_route('/v1/models/{model_name}/metadata', get_model_meta)
     app.add_route('/v1/models/{model_name}/'
                   'versions/{requested_version}/metadata',
                   get_model_meta)
+
     app.add_route('/v1/models/{model_name}:predict', predict)
     app.add_route('/v1/models/{model_name}/versions/'
                   '{requested_version}:predict',

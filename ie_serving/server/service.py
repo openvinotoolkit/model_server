@@ -14,25 +14,29 @@
 # limitations under the License.
 #
 
-from ie_serving.tensorflow_serving_api import prediction_service_pb2
-from ie_serving.tensorflow_serving_api import predict_pb2
-from ie_serving.tensorflow_serving_api import get_model_metadata_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc, \
+    model_service_pb2_grpc
+from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis import get_model_metadata_pb2
+from tensorflow_serving.util import status_pb2
 
 from ie_serving.server.service_utils import \
-    check_availability_of_requested_model
+    check_availability_of_requested_model, \
+    check_availability_of_requested_status
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output_as_list, \
     prepare_input_data, StatusCode
-from ie_serving.server.constants import WRONG_MODEL_METADATA, \
+from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME
+from tensorflow_serving.apis import get_model_status_pb2
 from ie_serving.logger import get_logger
 import datetime
 
 logger = get_logger(__name__)
 
 
-class PredictionServiceServicer(prediction_service_pb2.
+class PredictionServiceServicer(prediction_service_pb2_grpc.
                                 PredictionServiceServicer):
 
     def __init__(self, models):
@@ -52,8 +56,8 @@ class PredictionServiceServicer(prediction_service_pb2.
 
         if not valid_model_spec:
             context.set_code(StatusCode.NOT_FOUND)
-            context.set_details(WRONG_MODEL_METADATA.format(model_name,
-                                                            requested_version))
+            context.set_details(WRONG_MODEL_SPEC.format(model_name,
+                                                        requested_version))
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
@@ -113,8 +117,8 @@ class PredictionServiceServicer(prediction_service_pb2.
 
         if not valid_model_spec:
             context.set_code(StatusCode.NOT_FOUND)
-            context.set_details(WRONG_MODEL_METADATA.format(model_name,
-                                                            requested_version))
+            context.set_details(WRONG_MODEL_SPEC.format(model_name,
+                                                        requested_version))
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
         self.models[model_name].engines[version].in_use.acquire()
@@ -146,4 +150,50 @@ class PredictionServiceServicer(prediction_service_pb2.
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
         self.models[model_name].engines[version].in_use.release()
+        return response
+
+
+class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
+
+    def __init__(self, models):
+        self.models = models
+
+    @staticmethod
+    def add_status_to_response(version_status, response):
+        status_proto = status_pb2.StatusProto()
+        status_proto.error_code = version_status.status['error_code']
+        status_proto.error_message = version_status.status['error_message']
+        response.model_version_status.add(version=version_status.version,
+                                          state=version_status.state,
+                                          status=status_proto)
+
+    def GetModelStatus(self, request, context):
+        logger.debug("MODEL_STATUS, get request: {}".format(request))
+        model_name = request.model_spec.name
+        requested_version = request.model_spec.version.value
+        valid_model_status = check_availability_of_requested_status(
+            models=self.models, requested_version=requested_version,
+            model_name=model_name)
+
+        if not valid_model_status:
+            context.set_code(StatusCode.NOT_FOUND)
+            context.set_details(WRONG_MODEL_SPEC.format(model_name,
+                                                        requested_version))
+            logger.debug("MODEL_STATUS, invalid model spec from request")
+            return get_model_status_pb2.GetModelStatusResponse()
+
+        response = get_model_status_pb2.GetModelStatusResponse()
+        if requested_version:
+            version_status = self.models[model_name].versions_statuses[
+                requested_version]
+            ModelServiceServicer.add_status_to_response(version_status,
+                                                        response)
+        else:
+            for version_status in self.models[model_name].versions_statuses. \
+                    values():
+                ModelServiceServicer.add_status_to_response(version_status,
+                                                            response)
+
+        logger.debug("MODEL_STATUS created a response for {} - {}"
+                     .format(model_name, requested_version))
         return response

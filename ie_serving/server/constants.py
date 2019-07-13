@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-WRONG_MODEL_METADATA = 'Servable not found for request: Specific({}, {})'
+WRONG_MODEL_SPEC = 'Servable not found for request: Specific({}, {})'
 INVALID_INPUT_KEY = 'input tensor alias not found in signature: %s. ' \
                     'Inputs expected to be in the set {%s}.'
 INVALID_SHAPE = 'The input data is incorrect. Obtained shape {}, ' \

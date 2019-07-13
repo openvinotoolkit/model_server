@@ -1,7 +1,7 @@
-grpcio==1.14.1
+grpcio==1.18.0
 numpy==1.16.1
 protobuf==3.6.1
-tensorflow==1.13.1
+tensorflow-serving-api==1.14.0
 google-cloud-storage==1.13.2
 boto3==1.9.80
 jsonschema==2.6.0
