@@ -16,10 +16,12 @@
 from ie_serving.models.local_model import LocalModel
 from ie_serving.models.models_utils import ModelVersionStatus
 from ie_serving.server.rest_service import create_rest_api
-from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow_serving.apis import prediction_service_pb2, \
+    get_model_status_pb2, model_service_pb2
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import get_model_metadata_pb2
-from ie_serving.server.service import PredictionServiceServicer
+from ie_serving.server.service import PredictionServiceServicer, \
+    ModelServiceServicer
 from ie_serving.models.ir_engine import IrEngine
 from tensorflow.contrib.util import make_tensor_proto
 from falcon import testing
@@ -31,6 +33,9 @@ from config import DEFAULT_INPUT_KEY, DEFAULT_OUTPUT_KEY
 
 PREDICT_SERVICE = prediction_service_pb2. \
     DESCRIPTOR.services_by_name['PredictionService']
+
+MODEL_SERVICE = model_service_pb2. \
+    DESCRIPTOR.services_by_name['ModelService']
 
 
 class Layer:
@@ -106,6 +111,19 @@ def get_grpc_service_for_predict(get_fake_model):
     return _real_time_server
 
 
+@pytest.fixture
+def get_grpc_service_for_model_status(get_fake_model):
+    _real_time = grpc_testing.strict_real_time()
+    servicer = ModelServiceServicer(models={'test': get_fake_model})
+    descriptors_to_servicers = {
+        MODEL_SERVICE: servicer
+    }
+    _real_time_server = grpc_testing.server_from_dictionary(
+        descriptors_to_servicers, _real_time)
+
+    return _real_time_server
+
+
 def get_fake_request(model_name, data_shape, input_blob, version=None):
     request = predict_pb2.PredictRequest()
     request.model_spec.name = model_name
@@ -123,6 +141,14 @@ def get_fake_model_metadata_request(model_name, metadata_field, version=None):
     if version is not None:
         request.model_spec.version.value = version
     request.metadata_field.append(metadata_field)
+    return request
+
+
+def get_fake_model_status_request(model_name, version=None):
+    request = get_model_status_pb2.GetModelStatusRequest()
+    request.model_spec.name = model_name
+    if version is not None:
+        request.model_spec.version.value = version
     return request
 
 
