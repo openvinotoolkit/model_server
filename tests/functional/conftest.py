@@ -200,6 +200,13 @@ def create_channel_for_port_single_server():
 
 
 @pytest.fixture(autouse=True, scope="session")
+def create_channel_for_port_multi_server_status():
+    channel = grpc.insecure_channel('localhost:9001')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_multi_server():
     channel = grpc.insecure_channel('localhost:9001')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -231,6 +238,13 @@ def create_channel_for_batching_server_bs4():
 def create_channel_for_batching_server_auto():
     channel = grpc.insecure_channel('localhost:9005')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_model_ver_pol_server_status():
+    channel = grpc.insecure_channel('localhost:9006')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
