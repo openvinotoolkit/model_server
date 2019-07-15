@@ -61,9 +61,10 @@ def serve(models, max_workers: int=1, port: int=9000):
                                                   models=list(models.keys())))
     try:
         while True:
-            time.sleep(FILE_SYSTEM_POLL_WAIT_SECONDS)
-            for model in models:
-                models[model].update()
+            if FILE_SYSTEM_POLL_WAIT_SECONDS > 0:
+                time.sleep(FILE_SYSTEM_POLL_WAIT_SECONDS)
+                for model in models:
+                    models[model].update()
     except KeyboardInterrupt:
         server.stop(0)
         sys.exit(0)
