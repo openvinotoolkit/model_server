@@ -351,4 +351,5 @@ Updates in the model version files will not be detected and they will not trigge
 
 By default model server is detecting new and deleted versions in 1 second intervals. 
 The frequency can be changed by setting environment variable `FILE_SYSTEM_POLL_WAIT_SECONDS`.
+If set to negative or zero, updates will be disabled.
 
