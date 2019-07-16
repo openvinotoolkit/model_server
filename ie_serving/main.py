@@ -76,7 +76,8 @@ def parse_config(args):
                                            'base_path'],
                                        batch_size=batch_size,
                                        model_version_policy=model_ver_policy)
-            models[config['config']['name']] = model
+            if model is not None:
+                models[config['config']['name']] = model
         except ValidationError as e_val:
             logger.warning("Model version policy for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
@@ -112,7 +113,10 @@ def parse_one_model(args):
         logger.error("Unexpected error occurred. "
                      "Exception: {}".format(e))
         sys.exit()
-    models = {args.model_name: model}
+    models = {}
+    if model is not None:
+        models[args.model_name] = model
+
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port])
