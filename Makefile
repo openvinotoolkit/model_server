@@ -70,6 +70,7 @@ test_local_only: venv
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_batching.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_mapping.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_single_model.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_update.py
 
 style: venv
 	@echo "Style-checking codebase..."
