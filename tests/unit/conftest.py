@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 from ie_serving.models.local_model import LocalModel
-from ie_serving.models.models_utils import ModelVersionStatus
+from ie_serving.models.model_version_status import ModelVersionStatus
 from ie_serving.server.rest_service import create_rest_api
 from tensorflow_serving.apis import prediction_service_pb2, \
     get_model_status_pb2, model_service_pb2
