@@ -260,9 +260,12 @@ optional arguments:
 
 ## Starting docker container with NCS
 
-Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick) 
-is distributed only in a binary form, so
-loading models on NCS is possible __only with binary built docker image__.
+Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
+version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
+You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
+- `make docker_build_bin` 
+- `make docker_build_src_ubuntu`
+- `make docker_build_src_intelpython`
 
 Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
 rules:
