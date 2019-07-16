@@ -38,8 +38,8 @@ RUN wget https://cmake.org/files/v3.14/cmake-3.14.3.tar.gz && \
     make -j$(nproc) && \
     make install
 RUN pip3 install cython numpy
-ARG DLDT_DIR=/2019_R1.0.1
-RUN git clone --depth=1 -b 2019_R1.0.1 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
+ARG DLDT_DIR=/2019_R1.1
+RUN git clone --depth=1 -b 2019_R1.1 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
     cd ${DLDT_DIR} && git submodule init && git submodule update --recursive && \
     rm -Rf .git && rm -Rf model-optimizer
 
@@ -72,9 +72,9 @@ COPY ie_serving /ie-serving-py/ie_serving
 
 RUN . .venv/bin/activate && pip3 install .
 
-COPY --from=DEV /2019_R1.0.1/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
-COPY --from=DEV /2019_R1.0.1/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
-COPY --from=DEV /2019_R1.0.1/mklml_lnx_2019.0.3.20190220/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.1/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
+COPY --from=DEV /2019_R1.1/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.5/openvino/ /usr/local/lib/openvino/
+COPY --from=DEV /2019_R1.1/mklml_lnx_2019.0.3.20190220/lib/lib*.so /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
