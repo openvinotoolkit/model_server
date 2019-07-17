@@ -16,8 +16,8 @@
 import os
 import pytest
 from ie_serving.models.local_model import LocalModel
-from ie_serving.models.models_utils import ModelVersionStatus, \
-    ModelVersionState, ErrorCode
+from ie_serving.models.model_version_status import ModelVersionStatus
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode
 
 
 @pytest.mark.parametrize("engines", [

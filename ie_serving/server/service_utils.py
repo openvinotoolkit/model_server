@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from tensorflow_serving.util import status_pb2
 
 
 def check_availability_of_requested_model(models, model_name,
@@ -47,3 +48,12 @@ def check_availability_of_requested_status(models, model_name,
         if requested_version in models[model_name].versions_statuses.keys():
             return True
     return False
+
+
+def add_status_to_response(version_status, response):
+    status_proto = status_pb2.StatusProto()
+    status_proto.error_code = version_status.status['error_code']
+    status_proto.error_message = version_status.status['error_message']
+    response.model_version_status.add(version=version_status.version,
+                                      state=version_status.state,
+                                      status=status_proto)

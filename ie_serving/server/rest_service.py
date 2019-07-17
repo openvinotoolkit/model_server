@@ -1,24 +1,23 @@
 import datetime
-import falcon
 import json
 
+import falcon
+from google.protobuf.json_format import MessageToJson
+from tensorflow_serving.apis import get_model_metadata_pb2, \
+    get_model_status_pb2
+
+from ie_serving.logger import get_logger
+from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
+    OUTPUT_REPRESENTATION
+from ie_serving.server.get_model_metadata_utils import \
+    prepare_get_metadata_output
+from ie_serving.server.predict_utils import prepare_input_data
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
-from tensorflow_serving.apis import get_model_metadata_pb2, \
-    get_model_status_pb2
-from google.protobuf.json_format import MessageToJson
-
-from ie_serving.logger import get_logger
-from ie_serving.server.service import ModelServiceServicer
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
-    check_availability_of_requested_status
-from ie_serving.server.get_model_metadata_utils import \
-    prepare_get_metadata_output
-from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
-    OUTPUT_REPRESENTATION
-from ie_serving.server.predict_utils import prepare_input_data
+    check_availability_of_requested_status, add_status_to_response
 
 logger = get_logger(__name__)
 
@@ -50,13 +49,11 @@ class GetModelStatus(object):
         if requested_version:
             version_status = self.models[model_name].versions_statuses[
                 requested_version]
-            ModelServiceServicer.add_status_to_response(version_status,
-                                                        response)
+            add_status_to_response(version_status, response)
         else:
             for version_status in self.models[model_name].versions_statuses. \
                     values():
-                ModelServiceServicer.add_status_to_response(version_status,
-                                                            response)
+                add_status_to_response(version_status, response)
         logger.debug("MODEL_STATUS created a response for {} - {}"
                      .format(model_name, requested_version))
         resp.status = falcon.HTTP_200

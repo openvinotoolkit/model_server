@@ -78,7 +78,7 @@ class S3Model(Model):
             model_directory += os.sep
         parsed_model_dir = urlparse(model_directory)
         content_list = cls.s3_list_content(model_directory)
-        pattern = re.compile('(' + parsed_model_dir.path[1:-1] + '/\d+/).*$')
+        pattern = re.compile('(' + parsed_model_dir.path[1:-1] + r'/\d+/).*$')
         versions = set([m.group(1) for m in (pattern.match(element) for
                                              element in content_list) if m])
 
