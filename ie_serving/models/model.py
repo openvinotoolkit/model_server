@@ -62,7 +62,7 @@ class Model(ABC):
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
                 model_directory, batch_size, version_policy_filter)
-        except IOError as error:
+        except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
             logger.error("Failed reading model versions from path: {} "
@@ -96,7 +96,7 @@ class Model(ABC):
                     self.model_directory,
                     self.batch_size,
                     self.version_policy_filter)
-        except IOError as error:
+        except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(self.model_name))
             logger.error("Failed reading model versions from path: {} "

@@ -116,6 +116,9 @@ def parse_one_model(args):
     models = {}
     if model is not None:
         models[args.model_name] = model
+    else:
+        logger.info("Could not access provided models. Server will exit now.")
+        sys.exit()
 
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
