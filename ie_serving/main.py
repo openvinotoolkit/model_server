@@ -86,6 +86,10 @@ def parse_config(args):
             logger.warning("Unexpected error occurred in {} model. "
                            "Exception: {}".format(config['config']['name'],
                                                   e))
+    if not models:
+        logger.info("Could not access any of provided models. Server will "
+                    "exit now.")
+        sys.exit()
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port])
@@ -117,7 +121,7 @@ def parse_one_model(args):
     if model is not None:
         models[args.model_name] = model
     else:
-        logger.info("Could not access provided models. Server will exit now.")
+        logger.info("Could not access provided model. Server will exit now.")
         sys.exit()
 
     if args.rest_port > 0:
