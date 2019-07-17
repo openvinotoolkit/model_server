@@ -200,6 +200,13 @@ def create_channel_for_port_single_server():
 
 
 @pytest.fixture(autouse=True, scope="session")
+def create_channel_for_port_multi_server_status():
+    channel = grpc.insecure_channel('localhost:9001')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_multi_server():
     channel = grpc.insecure_channel('localhost:9001')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -235,6 +242,13 @@ def create_channel_for_batching_server_auto():
 
 
 @pytest.fixture(scope="session")
+def create_channel_for_model_ver_pol_server_status():
+    channel = grpc.insecure_channel('localhost:9006')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
 def create_channel_for_model_ver_pol_server():
     channel = grpc.insecure_channel('localhost:9006')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -242,9 +256,23 @@ def create_channel_for_model_ver_pol_server():
 
 
 @pytest.fixture(scope="session")
+def create_channel_for_update_flow_latest_status():
+    channel = grpc.insecure_channel('localhost:9007')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
 def create_channel_for_update_flow_latest():
     channel = grpc.insecure_channel('localhost:9007')
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_update_flow_specific_status():
+    channel = grpc.insecure_channel('localhost:9008')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
@@ -519,7 +547,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     return container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_update_flow_latest(request, get_image, get_test_dir,
                                     get_docker_context):
     client = get_docker_context
@@ -544,7 +572,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
     return container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_update_flow_specific(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context

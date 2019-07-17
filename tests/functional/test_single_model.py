@@ -14,16 +14,17 @@
 # limitations under the License.
 #
 
+from conftest import infer, get_model_metadata, model_metadata_response, \
+    get_model_status, ERROR_SHAPE, infer_rest, \
+    get_model_metadata_response_rest, get_model_status_response_rest
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE
+
 import numpy as np
 import sys
 import pytest
 
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
-
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE, infer_rest, get_model_metadata_response_rest, get_model_status_response_rest  # noqa
 
 
 class TestSingleModelInference():
@@ -97,7 +98,7 @@ class TestSingleModelInference():
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
         stub = create_channel_for_port_single_server_status
-        request = get_model_metadata(model_name='resnet')
+        request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
