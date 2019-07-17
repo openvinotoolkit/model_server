@@ -141,13 +141,26 @@ docker logs ie-serving
 
 
 ### Model import issues
-OpenVINO&trade; model server will fail to start when any of the defined model cannot be loaded successfully. The root cause of
-the failure can be determined based on the collected logs on the console or in the log file.
+OpenVINO&trade; Model Server will try to load all defined models according 
+to their version policy. 
+Model version is detected when it's a properly named 
+directory in model path, containing OpenVINO model (.bin and .xml files).
+ 
+If provided model cannot be loaded it can mean that:
+- there is a problem with accessing model files (i. e. due to network issues 
+for remote storage)
+- model files are malformed and inference engine could not get created
 
-The following problem might occur during model server initialization and model loading:
-* Missing model files in the location specified in the configuration file.
-* Missing version sub-folders in the model folder.
-* Model files require custom CPU extension.
+In both situations you can get more information in server logs or by 
+requesting model versions statuses. 
+Not loaded version will not be served and will hang in status
+`LOADING` with error message: "Error occurred while loading version".
+When version gets accessible or model files get fixed, server will try to 
+load it on the next update and eventually it's status will change to 
+`AVAILABLE`, which means it's being served. 
+
+On start, server tries to load all defined models. If it can't access any 
+of these models, it provides such information in logs and exits. 
 
 ### Client request issues
 When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors 
