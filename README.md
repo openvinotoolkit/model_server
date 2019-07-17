@@ -143,7 +143,7 @@ docker logs ie-serving
 ### Model import issues
 OpenVINO&trade; Model Server loads all defined models versions according 
 to set [version policy](docs/docker_container.md#model-version-policy). 
-Model version is represented by a numerical directory in a model path, 
+A model version is represented by a numerical directory in a model path, 
 containing OpenVINO model files with .bin and .xml extensions.
 
 Below are examples of incorrect structure:
@@ -165,15 +165,15 @@ models/
 In above scenario, server will detect only version `1` of `model1`.
 Directory `2` does not contain valid OpenVINO model files, so it won't 
 be detected as a valid model version. 
-For `model2`, there are correct files, but they are not in numerical directory. 
+For `model2`, there are correct files, but they are not in a numerical directory. 
 The server will not detect any version in `model2`.
 
-When new model version is detected, the server will start loading the model files 
-and start serving new model version. The operation might fail for the following reasons:
+When new model version is detected, the server will loads the model files 
+and starts serving new model version. This operation might fail for the following reasons:
 - there is a problem with accessing model files (i. e. due to network connectivity issues
 to the  remote storage or insufficient permissions)
-- model files are malformed and inference engine could not get created
-- model files require custom CPU extension
+- model files are malformed and can not be imported by the Inference Engine
+- model requires custom CPU extension
 
 In all those situations, the root cause is reported in the server logs or in the response from a call
 to GetModelStatus function. 
