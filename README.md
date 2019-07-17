@@ -169,7 +169,7 @@ server it looks like model2 does not have any versions at all.
 Models objects, if initiated correctly, exist on the server and it's 
 `model_paths` are scanned from time to time. If 
 version appears/becomes valid and matches version policy, server will try to load 
-and serve it. If version disappears or get invalid in storage, it gets 
+and serve it. If version disappears or gets invalid in the storage, it gets 
 unloaded in the server.
 
 If model object doesn't get initiated due to accessing `model_path` fail on 
@@ -178,7 +178,7 @@ server start, it
  case of ALL provided models initiations fail, server has nothing to serve 
  and will stop.
  
-If provided model version cannot be loaded it can mean that:
+If detected model version cannot be loaded it can mean that:
 - there is a problem with accessing model files (i. e. due to network issues 
 for remote storage)
 - model files are malformed and inference engine could not get created
