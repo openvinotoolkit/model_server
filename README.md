@@ -141,10 +141,12 @@ docker logs ie-serving
 
 
 ### Model import issues
-OpenVINO&trade; Model Server will try to load all defined models according 
-to their [version policy](docs/docker_container.md#model-version-policy). 
-Model version is detected when it's a properly named 
-directory in model path, containing OpenVINO model (.bin and .xml files):
+OpenVINO&trade; Model Server loads all defined models versions according 
+to set [version policy](docs/docker_container.md#model-version-policy). 
+Model version is represented by a numerical directory in a model path, 
+containing OpenVINO model files with .bin and .xml extensions.
+
+Below are examples of incorrect structure:
 ```bash
 models/
 ├── model1
@@ -160,37 +162,32 @@ models/
     └── mapping_config.json
 ```
 
-In above scenario server will detect only version 1 of model1.
-Version 2 directory does not contain valid OpenVINO model files, so it won't 
-be detected as a valid version. 
-For model2, files look okay, but they are not in version directory, so to 
-server it looks like model2 does not have any versions at all.
+In above scenario, server will detect only version `1` of `model1`.
+Directory `2` does not contain valid OpenVINO model files, so it won't 
+be detected as a valid model version. 
+For `model2`, there are correct files, but they are not in numerical directory. 
+The server will not detect any version in `model2`.
 
-Models objects, if initiated correctly, exist on the server and it's 
-`model_paths` are scanned from time to time. If 
-version appears/becomes valid and matches version policy, server will try to load 
-and serve it. If version disappears or gets invalid in the storage, it gets 
-unloaded in the server.
-
-If model object doesn't get initiated due to accessing `model_path` fail on 
-server start, it
- will not exist on the server and it's `model_path` won't be monitored. In 
- case of ALL provided models initiations fail, server has nothing to serve 
- and will stop.
- 
-If detected model version cannot be loaded it can mean that:
-- there is a problem with accessing model files (i. e. due to network issues 
-for remote storage)
+When new model version is detected, the server will start loading the model files 
+and start serving new model version. The operation might fail for the following reasons:
+- there is a problem with accessing model files (i. e. due to network connectivity issues
+to the  remote storage or insufficient permissions)
 - model files are malformed and inference engine could not get created
-- model files require custom CPU extension.
+- model files require custom CPU extension
 
-In both situations you can get more information in server logs or by 
-requesting model versions statuses. 
-Not loaded version will not be served and will report status
-`LOADING` with error message: "Error occurred while loading version".
-When model files gets accessible or fixed, server will try to 
-load it on the next update and eventually it's status will change to 
-`AVAILABLE`, which means it's being served. 
+In all those situations, the root cause is reported in the server logs or in the response from a call
+to GetModelStatus function. 
+
+Detected but not loaded model version will not be served and will report status
+`LOADING` with error message: `Error occurred while loading version`.
+When model files becomes accessible or fixed, server will try to 
+load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
+attempt.
+
+At startup, the server will enable gRPC and REST API endpoint, after all configured models and detected model versions
+are loaded successfully (in AVAILABLE state).
+
+The server will fail to start if it can not list the content of configured model paths.
 
 
 ### Client request issues
