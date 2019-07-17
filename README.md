@@ -142,25 +142,56 @@ docker logs ie-serving
 
 ### Model import issues
 OpenVINO&trade; Model Server will try to load all defined models according 
-to their version policy. 
+to their [version policy](docs/docker_container.md#model-version-policy). 
 Model version is detected when it's a properly named 
-directory in model path, containing OpenVINO model (.bin and .xml files).
+directory in model path, containing OpenVINO model (.bin and .xml files):
+```bash
+models/
+├── model1
+│   ├── 1
+│   │   ├── ir_model.bin
+│   │   └── ir_model.xml
+│   └── 2
+│       ├── somefile.bin
+│       └── anotherfile.txt
+└── model2
+    ├── ir_model.bin
+    ├── ir_model.xml
+    └── mapping_config.json
+```
+
+In above scenario server will detect only version 1 of model1.
+Version 2 directory does not contain valid OpenVINO model files, so it won't 
+be detected as a valid version. 
+For model2, files look okay, but they are not in version directory, so to 
+server it looks like model2 does not have any versions at all.
+
+Models objects, if initiated correctly, exist on the server and it's 
+`model_paths` are scanned from time to time. If 
+version appears/becomes valid and matches version policy, server will try to load 
+and serve it. If version disappears or get invalid in storage, it gets 
+unloaded in the server.
+
+If model object doesn't get initiated due to accessing `model_path` fail on 
+server start, it
+ will not exist on the server and it's `model_path` won't be monitored. In 
+ case of ALL provided models initiations fail, server has nothing to serve 
+ and will stop.
  
-If provided model cannot be loaded it can mean that:
+If provided model version cannot be loaded it can mean that:
 - there is a problem with accessing model files (i. e. due to network issues 
 for remote storage)
 - model files are malformed and inference engine could not get created
+- model files require custom CPU extension.
 
 In both situations you can get more information in server logs or by 
 requesting model versions statuses. 
-Not loaded version will not be served and will hang in status
+Not loaded version will not be served and will report status
 `LOADING` with error message: "Error occurred while loading version".
-When version gets accessible or model files get fixed, server will try to 
+When model files gets accessible or fixed, server will try to 
 load it on the next update and eventually it's status will change to 
 `AVAILABLE`, which means it's being served. 
 
-On start, server tries to load all defined models. If it can't access any 
-of these models, it provides such information in logs and exits. 
 
 ### Client request issues
 When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors 
