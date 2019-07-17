@@ -72,8 +72,6 @@ class Model(ABC):
         versions_attributes = [version for version in versions_attributes
                                if version['version_number']
                                in available_versions]
-        available_versions = [version_attributes['version_number'] for
-                              version_attributes in versions_attributes]
         versions_statuses = dict()
         for version in available_versions:
             versions_statuses[version] = ModelVersionStatus(model_name,
@@ -81,6 +79,9 @@ class Model(ABC):
 
         engines = cls.get_engines_for_model(versions_attributes,
                                             versions_statuses)
+
+        available_versions = [version_attributes['version_number'] for
+                              version_attributes in versions_attributes]
 
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
