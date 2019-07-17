@@ -141,13 +141,54 @@ docker logs ie-serving
 
 
 ### Model import issues
-OpenVINO&trade; model server will fail to start when any of the defined model cannot be loaded successfully. The root cause of
-the failure can be determined based on the collected logs on the console or in the log file.
+OpenVINO&trade; Model Server loads all defined models versions according 
+to set [version policy](docs/docker_container.md#model-version-policy). 
+A model version is represented by a numerical directory in a model path, 
+containing OpenVINO model files with .bin and .xml extensions.
 
-The following problem might occur during model server initialization and model loading:
-* Missing model files in the location specified in the configuration file.
-* Missing version sub-folders in the model folder.
-* Model files require custom CPU extension.
+Below are examples of incorrect structure:
+```bash
+models/
+├── model1
+│   ├── 1
+│   │   ├── ir_model.bin
+│   │   └── ir_model.xml
+│   └── 2
+│       ├── somefile.bin
+│       └── anotherfile.txt
+└── model2
+    ├── ir_model.bin
+    ├── ir_model.xml
+    └── mapping_config.json
+```
+
+In above scenario, server will detect only version `1` of `model1`.
+Directory `2` does not contain valid OpenVINO model files, so it won't 
+be detected as a valid model version. 
+For `model2`, there are correct files, but they are not in a numerical directory. 
+The server will not detect any version in `model2`.
+
+When new model version is detected, the server will loads the model files 
+and starts serving new model version. This operation might fail for the following reasons:
+- there is a problem with accessing model files (i. e. due to network connectivity issues
+to the  remote storage or insufficient permissions)
+- model files are malformed and can not be imported by the Inference Engine
+- model requires custom CPU extension
+
+In all those situations, the root cause is reported in the server logs or in the response from a call
+to GetModelStatus function. 
+
+Detected but not loaded model version will not be served and will report status
+`LOADING` with error message: `Error occurred while loading version`.
+When model files becomes accessible or fixed, server will try to 
+load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
+attempt.
+
+At startup, the server will enable gRPC and REST API endpoint, after all configured models and detected model versions
+are loaded successfully (in AVAILABLE state).
+
+The server will fail to start if it can not list the content of configured model paths.
+
 
 ### Client request issues
 When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors 

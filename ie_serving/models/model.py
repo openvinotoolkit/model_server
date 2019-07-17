@@ -58,13 +58,20 @@ class Model(ABC):
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
-        versions_attributes, available_versions = cls.get_version_metadata(
-            model_directory, batch_size, version_policy_filter)
+
+        try:
+            versions_attributes, available_versions = cls.get_version_metadata(
+                model_directory, batch_size, version_policy_filter)
+        except Exception as error:
+            logger.error("Error occurred while getting versions "
+                         "of the model {}".format(model_name))
+            logger.error("Failed reading model versions from path: {} "
+                         "with error {}".format(model_directory, str(error)))
+            return None
+
         versions_attributes = [version for version in versions_attributes
                                if version['version_number']
                                in available_versions]
-        available_versions = [version_attributes['version_number'] for
-                              version_attributes in versions_attributes]
         versions_statuses = dict()
         for version in available_versions:
             versions_statuses[version] = ModelVersionStatus(model_name,
@@ -72,6 +79,9 @@ class Model(ABC):
 
         engines = cls.get_engines_for_model(versions_attributes,
                                             versions_statuses)
+
+        available_versions = [version_attributes['version_number'] for
+                              version_attributes in versions_attributes]
 
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
@@ -81,10 +91,23 @@ class Model(ABC):
         return model
 
     def update(self):
-        versions_attributes, available_versions = self.get_version_metadata(
-            self.model_directory, self.batch_size, self.version_policy_filter)
+        try:
+            versions_attributes, available_versions = \
+                self.get_version_metadata(
+                    self.model_directory,
+                    self.batch_size,
+                    self.version_policy_filter)
+        except Exception as error:
+            logger.error("Error occurred while getting versions "
+                         "of the model {}".format(self.model_name))
+            logger.error("Failed reading model versions from path: {} "
+                         "with error {}".format(self.model_directory,
+                                                str(error)))
+            return
+
         if available_versions == self.versions:
             return
+
         logger.info("Server start updating model: {}".format(self.model_name))
         to_create, to_delete = self._mark_differences(available_versions)
         logger.debug("Server will try to add {} versions".format(to_create))
