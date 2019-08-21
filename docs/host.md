@@ -86,6 +86,36 @@ ie_serving model --model_path /opt/model --model_name my_model --port 9001
 
 You can also [run it in Docker container](docker_container.md#starting-docker-container-with-ncs)
 
-**Note**: Currently Neural Computing Sticks support only **FP16** target precision. Make sure you 
-have proper model. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
+**Note**: Checkout [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+Look at VPU Plugins to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
+and convert your model to desired format.
+
+
+## Using HDDL accelerators
+
+OpenVINO Model Server can employ High-Density Deep Learning (HDDL)
+accelerators based on [Intel Movidius Myriad VPUs](https://software.intel.com/en-us/neural-compute-stick).
+
+To use HDDL accelerators with OpenVINO Model Server you need to have OpenVINO
+ Toolkit 
+with Intel® Vision Accelerator Design with Intel® Movidius™ VPU support installed.
+In order to do that follow [OpenVINO installation instruction](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux).
+Don't forget about [additional steps for Intel® Movidius™ VPU](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_linux.html#install-VPU).
+
+Before starting server, you need to specify that you want to load model on
+HDDL card for inference execution. You can do that by setting environment
+variable <i>DEVICE</i> to <i>HDDL</i>. If it's not 
+specified, OpenVINO will try to load model on CPU.
+
+Example:
+```
+export DEVICE=HDDL
+
+ie_serving model --model_path /opt/model --model_name my_model --port 9001
+```
+
+You can also [run it in Docker container](docker_container.md#starting-docker-container-with-ncs)
+
+**Note**: Checkout [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+Look at VPU Plugins to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
 and convert your model to desired format.
