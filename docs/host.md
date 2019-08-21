@@ -94,7 +94,7 @@ and convert your model to desired format.
 ## Using HDDL accelerators
 
 OpenVINO Model Server can employ High-Density Deep Learning (HDDL)
-accelerators based on [Intel Movidius Myriad VPUs](https://https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 To use HDDL accelerators with OpenVINO Model Server you need to have OpenVINO
  Toolkit 
 with Intel® Vision Accelerator Design with Intel® Movidius™ VPU support installed.

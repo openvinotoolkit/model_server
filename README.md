@@ -25,7 +25,7 @@ OpenVINO Model Server, beside CPU, can employ:
  - [Intel® Movidius™ NeuralCompute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
 It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or 
 [in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
-- Intel HDDL accelerators based on [Intel Movidius Myriad VPUs](https://https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+- Intel HDDL accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or 
 [in Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
 
