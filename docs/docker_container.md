@@ -312,7 +312,7 @@ chooses to which one the model is loaded.
 
 ## Starting docker container with HDDL
 
-Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://software.intel.com/en-us/neural-compute-stick)
+Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin
 , using OpenVINO toolkit binary distribution:
 - `make docker_build_bin` 

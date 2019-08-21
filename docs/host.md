@@ -94,8 +94,7 @@ and convert your model to desired format.
 ## Using HDDL accelerators
 
 OpenVINO Model Server can employ High-Density Deep Learning (HDDL)
-accelerators based on [Intel Movidius Myriad VPUs](https://software.intel.com/en-us/neural-compute-stick).
-
+accelerators based on [Intel Movidius Myriad VPUs](https://https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 To use HDDL accelerators with OpenVINO Model Server you need to have OpenVINO
  Toolkit 
 with Intel® Vision Accelerator Design with Intel® Movidius™ VPU support installed.
@@ -114,7 +113,7 @@ export DEVICE=HDDL
 ie_serving model --model_path /opt/model --model_name my_model --port 9001
 ```
 
-You can also [run it in Docker container](docker_container.md#starting-docker-container-with-ncs)
+You can also [run it in Docker container](docker_container.md#starting-docker-container-with-hddl)
 
 **Note**: Checkout [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
 Look at VPU Plugins to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
