@@ -325,7 +325,7 @@ In order to run container that is using HDDL accelerator, _hddldaemon_ must
 To start server with HDDL you can use command similar to:
 
 ```
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=HDDL -p 9001:9001 \
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -e DEVICE=HDDL -p 9001:9001 \
 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
 ```
 
