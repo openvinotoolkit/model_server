@@ -310,6 +310,34 @@ ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_pat
 A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
 chooses to which one the model is loaded. 
 
+## Starting docker container with HDDL
+
+Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin
+, using OpenVINO toolkit binary distribution:
+- `make docker_build_bin` 
+
+In order to run container that is using HDDL accelerator, _hddldaemon_ must
+ run on host machine. It's  required to set up environment 
+ (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
+  host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
+
+To start server with HDDL you can use command similar to:
+
+```
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -e DEVICE=HDDL -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+```
+
+`--device=/dev/ion:/dev/ion` mounts the accelerator.
+
+`-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
+ host machine
+ 
+ <i>DEVICE</i> environment variable indicates that model will
+ be loaded on HDDL device.
+
+
 ## Batch Processing
 
 `batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer.

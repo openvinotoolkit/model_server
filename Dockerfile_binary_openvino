@@ -15,7 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-venv \
     usbutils \
-    virtualenv
+    virtualenv \
+    libboost-filesystem1.58.0 \
+    libboost-thread1.58.0
 
 ADD l_openvino_toolkit*.tgz $TEMP_DIR/
 RUN cd $TEMP_DIR/l_openvino_toolkit* && \
@@ -35,8 +37,9 @@ RUN cd $TEMP_DIR/l_openvino_toolkit* && \
     ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
+ENV HDDL_INSTALL_DIR="$DL_INSTALL_DIR/inference_engine/external/hddl"
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/external/hddl/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64"
 
 WORKDIR /ie-serving-py
 
