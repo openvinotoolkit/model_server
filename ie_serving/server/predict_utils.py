@@ -78,12 +78,14 @@ def prepare_input_data(models, model_name, version, data, rest):
             return True, message, None, code
 
         # check requested shape and model shape
+        """
         if shape_required_in_model[1:] != list(tensor_input.shape)[1:]:
             code = statusCodes['invalid_arg'][request_type]
             message = INVALID_SHAPE.format(list(tensor_input.shape),
                                            shape_required_in_model)
             logger.debug("PREDICT error: {}".format(message))
             return True, message, None, code
+        """
         inference_input[tensor_name] = tensor_input
         batch_size = list(tensor_input.shape)[0]
     return False, inference_input, batch_size, None

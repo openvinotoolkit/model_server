@@ -81,7 +81,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         self.models[model_name].engines[version].in_use.acquire()
         inference_start_time = datetime.datetime.now()
         inference_output = self.models[model_name].engines[version] \
-            .infer(inference_input, batch_size)
+            .infer(inference_input)
         inference_end_time = datetime.datetime.now()
         self.models[model_name].engines[version].in_use.release()
         duration = \

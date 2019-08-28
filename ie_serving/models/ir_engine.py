@@ -140,9 +140,19 @@ class IrEngine():
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-    def infer(self, data: dict, batch_size=None):
-        if batch_size is not self.net.batch_size and self.batch_size == 0:
-            self.net.batch_size = batch_size
+    def infer(self, data: dict):
+        reshaping_required = False
+        input_shapes = {}
+        for input_name, input_data in data.items():
+            input_shapes[input_name] = input_data.shape
+            if tuple(self.net.inputs[input_name].shape) != input_data.shape:
+                logger.info(tuple(self.net.inputs[input_name].shape))
+                logger.info(input_data.shape)
+                reshaping_required = True
+        if reshaping_required:
+            logger.info("Reshaping...")
+            self.net.reshape(input_shapes)
             self.exec_net = self.plugin.load(network=self.net)
+            logger.info("Reshaped successfully")
         results = self.exec_net.infer(inputs=data)
         return results

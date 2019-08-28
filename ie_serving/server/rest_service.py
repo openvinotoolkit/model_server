@@ -164,7 +164,7 @@ class Predict():
         inference_start_time = datetime.datetime.now()
         try:
             inference_output = self.models[model_name].engines[version] \
-                .infer(inference_input, batch_size)
+                .infer(inference_input)
         except ValueError as error:
             resp.status = falcon.HTTP_400
             err_out_json = {'error': 'Malformed input data'}
