@@ -51,14 +51,15 @@ WORKDIR ${DLDT_DIR}/inference-engine/build
 RUN cmake -DENABLE_PYTHON=ON \
     -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build \
     -DPYTHON_EXECUTABLE=$(which python3)\
-    -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.5m.so \
-    -DPYTHON_INCLUDE_DIR=/usr/include/python3.5m \
+    -DPYTHON_LIBRARY=/opt/conda/lib/libpython3.6m.so \
+    -DPYTHON_INCLUDE_DIR=/opt/conda/include/python3.6m \
     -DGEMM=MKL \
     -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.5.20190502/ \
     -DENABLE_CLDNN=OFF \
     -DENABLE_MKL_DNN=ON \
-    -DCMAKE_BUILD_TYPE=Release .. && \
-    make -j$(nproc)
+    -DCMAKE_BUILD_TYPE=Release ..
+ENV CPLUS_INCLUDE_PATH=${DLDT_DIR}/inference-engine/tools/calibration_tool/statistics_collector:${DLDT_DIR}/inference-engine/include
+RUN make -j$(nproc)
 
 FROM intelpython/intelpython3_core as PROD
 
