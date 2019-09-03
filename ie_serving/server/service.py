@@ -46,7 +46,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         """
         Predict -- provides access to loaded TensorFlow model.
         """
-        # check if model with was requested
+        # check if requested model
         # is available on server with proper version
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
@@ -78,10 +78,39 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
             return predict_pb2.PredictResponse()
+
         self.models[model_name].engines[version].in_use.acquire()
+        ################################################
+        # Reshape network inputs if needed
+        reshape_required, inputs_shapes = self.models[model_name].engines[
+            version].scan_input_shapes(inference_input)
+        if reshape_required:
+            reshape_start_time = datetime.datetime.now()
+            reshape_param = inputs_shapes
+            if not self.models[model_name].reshapable:
+                reshape_param = batch_size
+            is_error, error_message = self.models[model_name].engines[
+                version].reshape(reshape_param)
+            reshape_end_time = datetime.datetime.now()
+            if is_error:
+                context.set_code(code)
+                context.set_details(error_message)
+                self.models[model_name].engines[version].in_use.release()
+                return predict_pb2.PredictResponse()
+            duration = \
+                (reshape_end_time - reshape_start_time).total_seconds() * 1000
+            logger.debug(
+                "PREDICT; network reshape completed; {}; {}; {}ms"
+                .format(model_name, version, duration))
+        ################################################
         inference_start_time = datetime.datetime.now()
-        inference_output = self.models[model_name].engines[version] \
-            .infer(inference_input)
+        inference_output, error_message = self.models[model_name].engines[
+            version].infer(inference_input)
+        if error_message is not None:
+            context.set_code(code)
+            context.set_details(error_message)
+            self.models[model_name].engines[version].in_use.release()
+            return predict_pb2.PredictResponse()
         inference_end_time = datetime.datetime.now()
         self.models[model_name].engines[version].in_use.release()
         duration = \

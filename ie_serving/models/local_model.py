@@ -51,8 +51,11 @@ class LocalModel(Model):
         return None
 
     @classmethod
-    def get_engine_for_version(cls, version_attributes):
-        engine = IrEngine.build(model_bin=version_attributes['bin_file'],
+    def get_engine_for_version(cls, model_name, version_attributes):
+        engine = IrEngine.build(model_name=model_name,
+                                model_version=version_attributes[
+                                    'version_number'],
+                                model_bin=version_attributes['bin_file'],
                                 model_xml=version_attributes['xml_file'],
                                 mapping_config=version_attributes
                                 ['mapping_config'],

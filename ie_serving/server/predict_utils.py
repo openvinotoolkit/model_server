@@ -64,28 +64,29 @@ def prepare_input_data(models, model_name, version, data, rest):
                 return True, message, None, code
         else:
             tensor_input = np.asarray(data[requested_input_blob])
+        # Validate shape for not reshapable models
+        if not models[model_name].reshapable:
+            shape_required_in_model = models[model_name].engines[version] \
+                .input_tensors[tensor_name].shape
 
-        shape_required_in_model = models[model_name].engines[version] \
-            .input_tensors[tensor_name].shape
-        # check if input batch size match the model only if not auto mode
-        if models[model_name].engines[version].batch_size != 0 \
-                and shape_required_in_model[0] != tensor_input.shape[0]:
-            code = statusCodes['invalid_arg'][request_type]
-            message = INVALID_BATCHSIZE.format(
-                tensor_input.shape[0],
-                models[model_name].engines[version].batch_size)
-            logger.debug("PREDICT error,Invalid batchsize:{}".format(message))
-            return True, message, None, code
+            # check if input batch size match the model only if not auto mode
+            if models[model_name].engines[version].batch_size != 0 \
+                    and shape_required_in_model[0] != tensor_input.shape[0]:
+                code = statusCodes['invalid_arg'][request_type]
+                message = INVALID_BATCHSIZE.format(
+                    tensor_input.shape[0],
+                    models[model_name].engines[version].batch_size)
+                logger.debug("PREDICT error,Invalid batchsize:{}".format(message))
+                return True, message, None, code
 
-        # check requested shape and model shape
-        """
-        if shape_required_in_model[1:] != list(tensor_input.shape)[1:]:
-            code = statusCodes['invalid_arg'][request_type]
-            message = INVALID_SHAPE.format(list(tensor_input.shape),
-                                           shape_required_in_model)
-            logger.debug("PREDICT error: {}".format(message))
-            return True, message, None, code
-        """
+            # check requested shape and model shape
+            if shape_required_in_model[1:] != list(tensor_input.shape)[1:]:
+                code = statusCodes['invalid_arg'][request_type]
+                message = INVALID_SHAPE.format(list(tensor_input.shape),
+                                               shape_required_in_model)
+                logger.debug("PREDICT error: {}".format(message))
+                return True, message, None, code
+
         inference_input[tensor_name] = tensor_input
         batch_size = list(tensor_input.shape)[0]
     return False, inference_input, batch_size, None

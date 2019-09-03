@@ -69,15 +69,23 @@ def parse_config(args):
     for config in configs['model_config_list']:
         try:
             batch_size = config['config'].get('batch_size', None)
+            reshapable = config['config'].get('reshapable', False)
+
             model_ver_policy = config['config'].get(
                 'model_version_policy', None)
             model = ModelBuilder.build(model_name=config['config']['name'],
                                        model_directory=config['config'][
                                            'base_path'],
                                        batch_size=batch_size,
+                                       reshapable=reshapable,
                                        model_version_policy=model_ver_policy)
             if model is not None:
                 models[config['config']['name']] = model
+                if reshapable and batch_size is not None:
+                    logger.warning(
+                        "Both reshapable and batch_size parameters are set "
+                        "for model: {}. Assuming that model is reshapable - "
+                        "batch_size will be ignored".format(model.model_name))
         except ValidationError as e_val:
             logger.warning("Model version policy for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
@@ -104,6 +112,7 @@ def parse_one_model(args):
         model = ModelBuilder.build(model_name=args.model_name,
                                    model_directory=args.model_path,
                                    batch_size=args.batch_size,
+                                   reshapable=args.reshapable,
                                    model_version_policy=model_version_policy)
     except ValidationError as e_val:
         logger.error("Model version policy is invalid. "
@@ -120,6 +129,11 @@ def parse_one_model(args):
     models = {}
     if model is not None:
         models[args.model_name] = model
+        if args.reshapable and args.batch_size is not None:
+            logger.warning(
+                "Both reshapable and batch_size parameters are set "
+                "for model: {}. Assuming that model is reshapable - "
+                "batch_size will be ignored".format(model.model_name))
     else:
         logger.info("Could not access provided model. Server will exit now.")
         sys.exit()
@@ -159,8 +173,14 @@ def main():
                           help='absolute path to model,as in tf serving',
                           required=True)
     parser_b.add_argument('--batch_size', type=str,
-                          help='sets models batchsize, int value or auto',
-                          required=False)
+                          help='sets models batchsize, int value or auto. '
+                               'This parameter will be ignored if '
+                               'reshapable flag is set.', required=False)
+    parser_b.add_argument('--reshapable',
+                          help='Enables reshaping for the model '
+                               '(model must support reshaping). If set, '
+                               'batch_size parameter is ignored.',
+                          required=False, action='store_true')
     parser_b.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
     parser_b.add_argument('--rest_port', type=int,

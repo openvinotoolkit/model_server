@@ -161,17 +161,38 @@ class Predict():
             resp.body = json.dumps(err_out_json)
             return
         self.models[model_name].engines[version].in_use.acquire()
+        ################################################
+        # Reshape network inputs if needed
+        reshape_required, inputs_shapes = self.models[model_name].engines[
+            version].scan_input_shapes(inference_input)
+        if reshape_required:
+            reshape_start_time = datetime.datetime.now()
+            reshape_param = inputs_shapes
+            if not self.models[model_name].reshapable:
+                reshape_param = batch_size
+            is_error, error_message = self.models[model_name].engines[
+                version].reshape(reshape_param)
+            reshape_end_time = datetime.datetime.now()
+            if is_error:
+                resp.status = falcon.HTTP_400
+                err_out_json = {'error': error_message}
+                resp.body = json.dumps(err_out_json)
+                self.models[model_name].engines[version].in_use.release()
+                return
+            duration = \
+                (reshape_end_time - reshape_start_time).total_seconds() * 1000
+            logger.debug(
+                "PREDICT; network reshape completed; {}; {}; {}ms".format(
+                    model_name, version, duration))
+        ################################################
         inference_start_time = datetime.datetime.now()
-        try:
-            inference_output = self.models[model_name].engines[version] \
-                .infer(inference_input)
-        except ValueError as error:
+        inference_output, error_message = self.models[model_name].engines[
+            version].infer(inference_input)
+        if error_message is not None:
             resp.status = falcon.HTTP_400
-            err_out_json = {'error': 'Malformed input data'}
-            logger.debug("PREDICT, problem with inference. "
-                         "Corrupted input: {}".format(error))
-            self.models[model_name].engines[version].in_use.release()
+            err_out_json = {'error': error_message}
             resp.body = json.dumps(err_out_json)
+            self.models[model_name].engines[version].in_use.release()
             return
         inference_end_time = datetime.datetime.now()
         self.models[model_name].engines[version].in_use.release()
