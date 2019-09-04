@@ -23,6 +23,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
 from ie_serving.logger import get_logger
+from ie_serving.models.models_utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME
 from ie_serving.server.get_model_metadata_utils import \
@@ -87,8 +88,11 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         if reshape_required:
             reshape_start_time = datetime.datetime.now()
             reshape_param = inputs_shapes
-            if not self.models[model_name].reshapable:
+
+            if self.models[model_name].engines[version].shape_info.mode == \
+                    ShapeMode.DISABLED:
                 reshape_param = batch_size
+
             is_error, error_message = self.models[model_name].engines[
                 version].reshape(reshape_param)
             reshape_end_time = datetime.datetime.now()

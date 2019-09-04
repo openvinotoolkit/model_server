@@ -19,49 +19,24 @@ from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
 from ie_serving.logger import get_logger
+from ie_serving.models.models_utils import BatchingMode
 
 logger = get_logger(__name__)
-
-
-def _set_batch_size(config_batch_size, model_batch_size):
-    if config_batch_size is not None:
-        if config_batch_size.isdigit():
-            config_batch_size = int(config_batch_size)
-            if config_batch_size > 0:
-                net_batch_size = config_batch_size
-                engine_batch_size = config_batch_size
-                effective_batch_size = str(config_batch_size)
-            else:  # zero is ignored as invalid value
-                effective_batch_size = str(model_batch_size)
-                engine_batch_size = None
-                net_batch_size = None
-        elif config_batch_size == 'auto':
-            engine_batch_size = 0
-            net_batch_size = None
-            effective_batch_size = "auto"
-        else:  # invalid value in config_batch_size to be ignored
-            effective_batch_size = str(model_batch_size)
-            engine_batch_size = None
-            net_batch_size = None
-    else:  # empty config_batch_size - default
-        effective_batch_size = str(model_batch_size)
-        engine_batch_size = None
-        net_batch_size = None
-    return engine_batch_size, net_batch_size, effective_batch_size
 
 
 class IrEngine():
 
     def __init__(self, model_name, model_version, model_xml, model_bin,
                  net, plugin, mapping_config, exec_net, inputs: dict,
-                 outputs: list, batch_size):
+                 outputs: list, batching_info, shape_info):
         self.model_name = model_name
         self.model_version = model_version
         self.model_xml = model_xml
         self.model_bin = model_bin
         self.exec_net = exec_net
         self.net = net
-        self.batch_size = batch_size
+        self.batching_info = batching_info
+        self.shape_info = shape_info
         self.plugin = plugin
         self.input_tensor_names = list(inputs.keys())
         self.input_tensors = inputs
@@ -74,16 +49,18 @@ class IrEngine():
 
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batch_size):
+              mapping_config, batching_info, shape_info):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork(model=model_xml, weights=model_bin)
 
-        engine_batch_size, net_batch_size, effective_batch_size = \
-            _set_batch_size(batch_size, net.batch_size)
-        if net_batch_size is not None:
-            net.batch_size = net_batch_size
+        if batching_info.mode == BatchingMode.FIXED:
+            net.batch_size = batching_info.batch_size
+        else:
+            batching_info.batch_size = net.batch_size
+
+        effective_batch_size = batching_info.get_effective_batch_size()
         logger.debug("effective batch size - {}".format(effective_batch_size))
         inputs = net.inputs
         outputs = net.outputs
@@ -92,7 +69,7 @@ class IrEngine():
                         model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs,
-                        batch_size=engine_batch_size)
+                        batching_info=batching_info, shape_info=shape_info)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):

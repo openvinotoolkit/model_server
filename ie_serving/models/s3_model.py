@@ -132,7 +132,9 @@ class S3Model(Model):
                                 model_xml=local_xml_file,
                                 model_bin=local_bin_file,
                                 mapping_config=local_mapping_config,
-                                batch_size=version_attributes['batch_size'])
+                                batching_info=version_attributes[
+                                    'batching_info'],
+                                shape_info=version_attributes['shape_info'])
         cls.delete_local_mirror([local_xml_file, local_bin_file,
                                  local_mapping_config])
         logger.info('Deleted temporary files')

@@ -59,5 +59,7 @@ class LocalModel(Model):
                                 model_xml=version_attributes['xml_file'],
                                 mapping_config=version_attributes
                                 ['mapping_config'],
-                                batch_size=version_attributes['batch_size'])
+                                batching_info=version_attributes[
+                                    'batching_info'],
+                                shape_info=version_attributes['shape_info'])
         return engine

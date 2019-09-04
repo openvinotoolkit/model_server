@@ -78,3 +78,67 @@ _ERROR_CODE_NAME = {
     # ErrorCode.DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_:
     #    "DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_"
 }
+
+
+##############################################
+# Input batch size and shape auxiliary classes
+
+
+class GenericMode:
+    FIXED = 0
+    AUTO = 1
+    DEFAULT = 2
+    DISABLED = 3
+
+
+class BatchingMode(GenericMode):
+    pass
+
+
+class ShapeMode(GenericMode):
+    pass
+
+
+class BatchingInfo:
+    def __init__(self, batch_size_mode, batch_size):
+        self.mode = batch_size_mode
+        self.batch_size = batch_size
+
+    @classmethod
+    def build(cls, batch_size_param):
+        batch_size = None
+        batch_size_mode = BatchingMode.DEFAULT
+        if batch_size_param is not None:
+            if batch_size_param.isdigit() and int(batch_size_param) > 0:
+                batch_size_mode = BatchingMode.FIXED
+                batch_size = int(batch_size_param)
+            elif batch_size_param == 'auto':
+                batch_size_mode = BatchingMode.AUTO
+            else:
+                batch_size_mode = BatchingMode.DEFAULT
+        return cls(batch_size_mode, batch_size)
+
+    def get_effective_batch_size(self):
+        if self.mode == BatchingMode.AUTO:
+            return "auto"
+        if self.batch_size is not None:
+            return str(self.batch_size)
+
+
+class ShapeInfo:
+
+    def __init__(self, shape_mode):
+        self.mode = shape_mode
+
+    @classmethod
+    def build(cls, shape_param):
+        if shape_param is not None:
+            if shape_param == 'auto':
+                shape_mode = ShapeMode.AUTO
+            else:
+                shape_mode = ShapeMode.DEFAULT
+        else:
+            shape_mode = ShapeMode.DISABLED
+        return cls(shape_mode)
+
+

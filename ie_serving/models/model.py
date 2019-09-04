@@ -23,7 +23,7 @@ from jsonschema.exceptions import ValidationError
 
 from ie_serving.logger import get_logger
 from ie_serving.models.model_version_status import ModelVersionStatus
-from ie_serving.models.models_utils import ErrorCode
+from ie_serving.models.models_utils import ErrorCode, BatchingInfo, ShapeInfo
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
 
 logger = get_logger(__name__)
@@ -31,16 +31,16 @@ logger = get_logger(__name__)
 
 class Model(ABC):
 
-    def __init__(self, model_name: str, model_directory: str, batch_size,
-                 reshapable: bool, available_versions: list, engines: dict,
+    def __init__(self, model_name: str, model_directory: str, batching_info,
+                 shape_info, available_versions: list, engines: dict,
                  version_policy_filter, versions_statuses: dict):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
         self.engines = engines
         self.default_version = max(self.versions, default=-1)
-        self.batch_size = batch_size
-        self.reshapable = reshapable
+        self.batching_info = batching_info
+        self.shape_info = shape_info
         self.version_policy_filter = version_policy_filter
         self.versions_statuses = versions_statuses
 
@@ -55,14 +55,19 @@ class Model(ABC):
 
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size,
-              reshapable: bool, model_version_policy: dict = None):
+              shape, model_version_policy: dict = None):
+
+        batching_info = BatchingInfo.build(batch_size)
+        shape_info = ShapeInfo.build(shape)
+
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
 
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
-                model_directory, batch_size, version_policy_filter)
+                model_directory, batching_info, shape_info,
+                version_policy_filter)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
@@ -87,7 +92,7 @@ class Model(ABC):
 
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
-                    batch_size=batch_size, reshapable=reshapable,
+                    batching_info=batching_info, shape_info=shape_info,
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses)
         return model
@@ -97,7 +102,7 @@ class Model(ABC):
             versions_attributes, available_versions = \
                 self.get_version_metadata(
                     self.model_directory,
-                    self.batch_size,
+                    self.batching_info, self.shape_info,
                     self.version_policy_filter)
         except Exception as error:
             logger.error("Error occurred while getting versions "
@@ -179,10 +184,11 @@ class Model(ABC):
             tick = time.time()
 
     @classmethod
-    def get_version_metadata(cls, model_directory, batch_size,
+    def get_version_metadata(cls, model_directory, batching_info, shape_info,
                              version_policy_filter):
         versions_attributes = cls.get_versions_attributes(model_directory,
-                                                          batch_size)
+                                                          batching_info,
+                                                          shape_info)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()
@@ -190,7 +196,8 @@ class Model(ABC):
         return versions_attributes, available_versions
 
     @classmethod
-    def get_versions_attributes(cls, model_directory, batch_size):
+    def get_versions_attributes(cls, model_directory, batching_info,
+                                shape_info):
         versions = cls.get_versions(model_directory)
         logger.debug(versions)
         versions_attributes = []
@@ -204,7 +211,8 @@ class Model(ABC):
                                           'bin_file': bin_file,
                                           'mapping_config': mapping_config,
                                           'version_number': version_number,
-                                          'batch_size': batch_size
+                                          'batching_info': batching_info,
+                                          'shape_info': shape_info
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
