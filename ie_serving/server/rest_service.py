@@ -7,6 +7,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 
 from ie_serving.logger import get_logger
+from ie_serving.models.models_utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
     OUTPUT_REPRESENTATION
 from ie_serving.server.get_model_metadata_utils import \
@@ -168,8 +169,11 @@ class Predict():
         if reshape_required:
             reshape_start_time = datetime.datetime.now()
             reshape_param = inputs_shapes
-            if not self.models[model_name].reshapable:
+
+            if self.models[model_name].engines[version].shape_info.mode == \
+                    ShapeMode.DISABLED:
                 reshape_param = batch_size
+
             is_error, error_message = self.models[model_name].engines[
                 version].reshape(reshape_param)
             reshape_end_time = datetime.datetime.now()
