@@ -165,7 +165,7 @@ class Predict():
             return
         selected_engine = self.models[model_name].engines[version]
         selected_engine.in_use.acquire()
-        ################################################
+        ###############################################
         # Reshape network inputs if needed
         reshape_required, reshape_param = self.reshaper. \
             detect_shapes_incompatibility(selected_engine, inference_input)
@@ -173,6 +173,7 @@ class Predict():
             is_error = self.reshaper.prepare_engine(selected_engine,
                                                     reshape_param, resp)
             if is_error:
+                selected_engine.in_use.release()
                 return
         ##############################################
         inference_start_time = datetime.datetime.now()

@@ -91,6 +91,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             is_error = self.reshaper.prepare_engine(selected_engine,
                                                     reshape_param, context)
             if is_error:
+                selected_engine.in_use.release()
                 return predict_pb2.PredictResponse()
         ################################################
         inference_start_time = datetime.datetime.now()
