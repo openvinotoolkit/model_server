@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,9 +23,10 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
 from ie_serving.logger import get_logger
-from ie_serving.models.models_utils import ShapeMode
+from ie_serving.models.shape_management.reshaper import Reshaper
+from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
-    INVALID_METADATA_FIELD, SIGNATURE_NAME
+    INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output_as_list, \
@@ -42,6 +43,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
 
     def __init__(self, models):
         self.models = models
+        self.reshaper = Reshaper(GRPC)
 
     def Predict(self, request, context):
         """
@@ -64,7 +66,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             return predict_pb2.PredictResponse()
 
         start_time = datetime.datetime.now()
-        occurred_problem, inference_input, batch_size, code = \
+        occurred_problem, inference_input, code = \
             prepare_input_data(models=self.models, model_name=model_name,
                                version=version, data=request.inputs,
                                rest=False)
@@ -79,52 +81,36 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
             return predict_pb2.PredictResponse()
-
-        self.models[model_name].engines[version].in_use.acquire()
+        selected_engine = self.models[model_name].engines[version]
+        selected_engine.in_use.acquire()
         ################################################
         # Reshape network inputs if needed
-        reshape_required, inputs_shapes = self.models[model_name].engines[
-            version].scan_input_shapes(inference_input)
+        reshape_required, reshape_param = self.reshaper. \
+            detect_shapes_incompatibility(selected_engine, inference_input)
         if reshape_required:
-            reshape_start_time = datetime.datetime.now()
-            reshape_param = inputs_shapes
-
-            if self.models[model_name].engines[version].shape_info.mode == \
-                    ShapeMode.DISABLED:
-                reshape_param = batch_size
-
-            is_error, error_message = self.models[model_name].engines[
-                version].reshape(reshape_param)
-            reshape_end_time = datetime.datetime.now()
+            is_error = self.reshaper.prepare_engine(selected_engine,
+                                                    reshape_param, context)
             if is_error:
-                context.set_code(code)
-                context.set_details(error_message)
-                self.models[model_name].engines[version].in_use.release()
                 return predict_pb2.PredictResponse()
-            duration = \
-                (reshape_end_time - reshape_start_time).total_seconds() * 1000
-            logger.debug(
-                "PREDICT; network reshape completed; {}; {}; {}ms"
-                .format(model_name, version, duration))
         ################################################
         inference_start_time = datetime.datetime.now()
-        inference_output, error_message = self.models[model_name].engines[
-            version].infer(inference_input)
+        inference_output, error_message = selected_engine.infer(
+            inference_input)
         if error_message is not None:
             context.set_code(code)
             context.set_details(error_message)
-            self.models[model_name].engines[version].in_use.release()
+            selected_engine.in_use.release()
             return predict_pb2.PredictResponse()
         inference_end_time = datetime.datetime.now()
-        self.models[model_name].engines[version].in_use.release()
+        selected_engine.in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         response = prepare_output_as_list(inference_output=inference_output,
-                                          model_available_outputs=self.models
-                                          [model_name].engines[version].
-                                          model_keys['outputs'])
+                                          model_available_outputs=
+                                          selected_engine. model_keys[
+                                              'outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME

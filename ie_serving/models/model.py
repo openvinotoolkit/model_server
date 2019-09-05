@@ -23,7 +23,8 @@ from jsonschema.exceptions import ValidationError
 
 from ie_serving.logger import get_logger
 from ie_serving.models.model_version_status import ModelVersionStatus
-from ie_serving.models.models_utils import ErrorCode, BatchingInfo, ShapeInfo
+from ie_serving.models.models_utils import ErrorCode
+from ie_serving.models.shape_management.utils import BatchingInfo, ShapeInfo
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
 
 logger = get_logger(__name__)

@@ -38,3 +38,6 @@ OUTPUT_REPRESENTATION = {
     COLUMN_FORMAT: 'column',
     COLUMN_SIMPLIFIED: 'column'
 }
+
+GRPC = 0
+REST = 1

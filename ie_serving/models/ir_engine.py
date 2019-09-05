@@ -19,7 +19,7 @@ from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
 from ie_serving.logger import get_logger
-from ie_serving.models.models_utils import BatchingMode
+from ie_serving.models.shape_management.utils import BatchingMode
 
 logger = get_logger(__name__)
 

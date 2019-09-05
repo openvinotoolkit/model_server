@@ -7,9 +7,10 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 
 from ie_serving.logger import get_logger
-from ie_serving.models.models_utils import ShapeMode
+from ie_serving.models.shape_management.reshaper import Reshaper
+from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
-    OUTPUT_REPRESENTATION
+    OUTPUT_REPRESENTATION, REST
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_input_data
@@ -113,6 +114,7 @@ class Predict():
 
     def __init__(self, models):
         self.models = models
+        self.reshaper = Reshaper(REST)
 
     def on_post(self, req, resp, model_name, requested_version=0):
         valid_model_spec, version = check_availability_of_requested_model(
@@ -146,7 +148,7 @@ class Predict():
             model_name].engines[version].input_key_names)
 
         start_time = datetime.datetime.now()
-        occurred_problem, inference_input, batch_size, code = \
+        occurred_problem, inference_input, code = \
             prepare_input_data(models=self.models, model_name=model_name,
                                version=version, data=inputs, rest=True)
         deserialization_end_time = datetime.datetime.now()
@@ -161,45 +163,29 @@ class Predict():
                          .format(code))
             resp.body = json.dumps(err_out_json)
             return
-        self.models[model_name].engines[version].in_use.acquire()
+        selected_engine = self.models[model_name].engines[version]
+        selected_engine.in_use.acquire()
         ################################################
         # Reshape network inputs if needed
-        reshape_required, inputs_shapes = self.models[model_name].engines[
-            version].scan_input_shapes(inference_input)
+        reshape_required, reshape_param = self.reshaper. \
+            detect_shapes_incompatibility(selected_engine, inference_input)
         if reshape_required:
-            reshape_start_time = datetime.datetime.now()
-            reshape_param = inputs_shapes
-
-            if self.models[model_name].engines[version].shape_info.mode == \
-                    ShapeMode.DISABLED:
-                reshape_param = batch_size
-
-            is_error, error_message = self.models[model_name].engines[
-                version].reshape(reshape_param)
-            reshape_end_time = datetime.datetime.now()
+            is_error = self.reshaper.prepare_engine(selected_engine,
+                                                    reshape_param, resp)
             if is_error:
-                resp.status = falcon.HTTP_400
-                err_out_json = {'error': error_message}
-                resp.body = json.dumps(err_out_json)
-                self.models[model_name].engines[version].in_use.release()
                 return
-            duration = \
-                (reshape_end_time - reshape_start_time).total_seconds() * 1000
-            logger.debug(
-                "PREDICT; network reshape completed; {}; {}; {}ms".format(
-                    model_name, version, duration))
-        ################################################
+        ##############################################
         inference_start_time = datetime.datetime.now()
-        inference_output, error_message = self.models[model_name].engines[
-            version].infer(inference_input)
+        inference_output, error_message = selected_engine.infer(
+            inference_input)
         if error_message is not None:
             resp.status = falcon.HTTP_400
             err_out_json = {'error': error_message}
             resp.body = json.dumps(err_out_json)
-            self.models[model_name].engines[version].in_use.release()
+            selected_engine.in_use.release()
             return
         inference_end_time = datetime.datetime.now()
-        self.models[model_name].engines[version].in_use.release()
+        selected_engine.in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
@@ -209,7 +195,7 @@ class Predict():
 
         response = prepare_json_response(
             OUTPUT_REPRESENTATION[input_format], inference_output,
-            self.models[model_name].engines[version].model_keys['outputs'])
+            selected_engine.model_keys['outputs'])
 
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
