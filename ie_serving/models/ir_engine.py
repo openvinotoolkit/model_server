@@ -160,22 +160,22 @@ class IrEngine():
             message = "Unknown error occurred in input reshape preparation"
             logger.debug("[Model: {}, version: {}] --- {}".format(
                 self.model_name, self.model_version, message))
-            return True, message
+            return message
 
     def _reshape(self, inputs_shapes: dict):
         #   Takes dictionary of input_name:shape pairs as parameter
         #   (obtained from scan_input_shapes method)
-        #   Returns error status and error message. If no error occurred
-        #   returns False, None
+        #   Returns error message on error and None if operation succeeded
         logger.debug("[Model: {}, version: {}] --- Reshaping "
                      "network...".format(self.model_name, self.model_version))
+        message = None
         try:
             self.net.reshape(inputs_shapes)
         except Exception as e:
             message = "Error occurred while reshaping: {}".format(str(e))
             logger.debug("[Model: {}, version: {}] --- {}".format(
                 self.model_name, self.model_version, message))
-            return True, message
+            return message
         logger.debug("[Model: {}, version: {}] --- Reshaped successfully".
                      format(self.model_name, self.model_version))
 
@@ -188,11 +188,11 @@ class IrEngine():
                 str(e))
             logger.debug("[Model: {}, version: {}] --- {}".format(
                 self.model_name, self.model_version, message))
-            return True, message
+            return message
         logger.debug("[Model: {}, version: {}] --- Network loaded "
                      "successfully".format(self.model_name,
                                            self.model_version))
-        return False, None
+        return message
 
     def _change_batch_size(self, batch_size: int):
         #   Takes load batch size as a parameter. Used to change input batch
@@ -200,6 +200,7 @@ class IrEngine():
         logger.debug("[Model: {}, version: {}] --- Changing batch size. "
                      "Loading network...".format(self.model_name,
                                                  self.model_version))
+        message = None
         old_batch_size = self.net.batch_size
         self.net.batch_size = batch_size
 
@@ -211,10 +212,10 @@ class IrEngine():
             logger.debug("[Model: {}, version: {}] --- {}".format(
                 self.model_name, self.model_version, message))
             self.net.batch_size = old_batch_size
-            return True, message
+            return message
 
         logger.debug("[Model: {}, version: {}] --- Network loaded "
                      "successfully. Batch size changed.".
                      format(self.model_name, self.model_version))
-        return False, None
+        return message
 

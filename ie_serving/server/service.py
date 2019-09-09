@@ -24,13 +24,12 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
 
 from ie_serving.logger import get_logger
 from ie_serving.models.shape_management.reshaper import Reshaper
-from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output_as_list, \
-    prepare_input_data, StatusCode
+    prepare_input_data, StatusCode, statusCodes
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
     check_availability_of_requested_status, add_status_to_response
@@ -43,7 +42,6 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
 
     def __init__(self, models):
         self.models = models
-        self.reshaper = Reshaper(GRPC)
 
     def Predict(self, request, context):
         """
@@ -65,52 +63,59 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
 
+        target_engine = self.models[model_name].engines[version]
         start_time = datetime.datetime.now()
-        occurred_problem, inference_input, code = \
-            prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=request.inputs,
-                               rest=False)
+        inference_input, error_message = \
+            prepare_input_data(target_engine=target_engine,
+                               data=request.inputs,
+                               service_type=GRPC)
         deserialization_end_time = datetime.datetime.now()
         duration = \
             (deserialization_end_time - start_time).total_seconds() * 1000
         logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
-        if occurred_problem:
+        if error_message is not None:
+            code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
-            context.set_details(inference_input)
+            context.set_details(error_message)
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
             return predict_pb2.PredictResponse()
-        selected_engine = self.models[model_name].engines[version]
-        selected_engine.in_use.acquire()
+        target_engine = self.models[model_name].engines[version]
+        target_engine.in_use.acquire()
         ################################################
         # Reshape network inputs if needed
-        reshape_required, reshape_param = self.reshaper. \
-            detect_shapes_incompatibility(selected_engine, inference_input)
+        reshape_required, reshape_param = \
+            Reshaper.detect_shapes_incompatibility(target_engine,
+                                                   inference_input)
         if reshape_required:
-            is_error = self.reshaper.prepare_engine(selected_engine,
-                                                    reshape_param, context)
-            if is_error:
-                selected_engine.in_use.release()
+            error_message = Reshaper.prepare_engine(target_engine,
+                                                    reshape_param)
+            if error_message is not None:
+                code = statusCodes['invalid_arg'][GRPC]
+                context.set_code(code)
+                context.set_details(error_message)
+                target_engine.in_use.release()
                 return predict_pb2.PredictResponse()
         ################################################
         inference_start_time = datetime.datetime.now()
-        inference_output, error_message = selected_engine.infer(
+        inference_output, error_message = target_engine.infer(
             inference_input)
         if error_message is not None:
+            code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
             context.set_details(error_message)
-            selected_engine.in_use.release()
+            target_engine.in_use.release()
             return predict_pb2.PredictResponse()
         inference_end_time = datetime.datetime.now()
-        selected_engine.in_use.release()
+        target_engine.in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
         response = prepare_output_as_list(inference_output=inference_output,
                                           model_available_outputs=
-                                          selected_engine. model_keys[
+                                          target_engine.model_keys[
                                               'outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
@@ -141,23 +146,23 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                                                         requested_version))
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
-        self.models[model_name].engines[version].in_use.acquire()
+        target_engine = self.models[model_name].engines[version]
+        target_engine.in_use.acquire()
         metadata_signature_requested = request.metadata_field[0]
         if 'signature_def' != metadata_signature_requested:
             context.set_code(StatusCode.INVALID_ARGUMENT)
             context.set_details(INVALID_METADATA_FIELD.format
                                 (metadata_signature_requested))
             logger.debug("MODEL_METADATA, invalid signature def")
+            target_engine.in_use.release()
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
-        inputs = self.models[model_name].engines[version].input_tensors
-        outputs = self.models[model_name].engines[version].output_tensors
+        inputs = target_engine.input_tensors
+        outputs = target_engine.output_tensors
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
-                                                    model_keys=self.models
-                                                    [model_name].
-                                                    engines[version].
+                                                    model_keys=target_engine.
                                                     model_keys)
         response = get_model_metadata_pb2.GetModelMetadataResponse()
 
@@ -169,7 +174,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        self.models[model_name].engines[version].in_use.release()
+        target_engine.in_use.release()
         return response
 
 

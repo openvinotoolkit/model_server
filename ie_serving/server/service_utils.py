@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import datetime
-
 from tensorflow_serving.util import status_pb2
 
 

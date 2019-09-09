@@ -13,27 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import json
-
-import falcon
 import datetime
 
 from ie_serving.logger import get_logger
 from ie_serving.models.shape_management.utils import ShapeMode
-from ie_serving.server.constants import GRPC, REST
-from ie_serving.server.predict_utils import statusCodes
+
 
 logger = get_logger(__name__)
 
 
 class Reshaper:
 
-    def __init__(self, service_type):
-        if service_type != GRPC and service_type != REST:
-            raise ValueError("Provided service type is unavailable")
-        self.service_type = service_type
-
-    def detect_shapes_incompatibility(self, engine, inference_input):
+    @staticmethod
+    def detect_shapes_incompatibility(engine, inference_input):
         # Compares workload shapes with engine inputs shapes. If different,
         # returns True, reshape_param.
         # reshape_param is inputs shapes dictionary (input_name:shape pairs)
@@ -50,30 +42,18 @@ class Reshaper:
             reshape_param = batch_size
         return reshape_required, reshape_param
 
-    def prepare_engine(self, engine, reshape_param, response_context):
+    @staticmethod
+    def prepare_engine(engine, reshape_param):
         # Reshapes engine's inputs and changes response context on error.
         # Returns True if error occurred during reshaping.
         reshape_start_time = datetime.datetime.now()
-        is_error, error_message = engine.reshape(reshape_param)
+        error_message = engine.reshape(reshape_param)
         reshape_end_time = datetime.datetime.now()
-        if is_error:
-            self._prepare_error_response(error_message, response_context)
-            return True
+        if error_message is not None:
+            return error_message
         duration = \
             (reshape_end_time - reshape_start_time).total_seconds() * 1000
         logger.debug(
-            "PREDICT; network reshape completed; {}; {}; {}ms".format(
+            "RESHAPER; network reshape completed; {}; {}; {}ms".format(
                 engine.model_name, engine.model_version, duration))
-        return False
-
-    def _prepare_error_response(self, error_message, response_context):
-        # Changes codes and messages in response context. Does not return
-        # any value.
-        if self.service_type == GRPC:
-            code = statusCodes['invalid_arg'][GRPC]
-            response_context.set_code(code)
-            response_context.set_details(error_message)
-        elif self.service_type == REST:
-            response_context.status = falcon.HTTP_400
-            err_out_json = {'error': error_message}
-            response_context.body = json.dumps(err_out_json)
+        return None

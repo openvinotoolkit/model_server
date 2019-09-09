@@ -79,12 +79,16 @@ def parse_config(args):
 
             model_ver_policy = config['config'].get(
                 'model_version_policy', None)
-            model = ModelBuilder.build(model_name=config['config']['name'],
-                                       model_directory=config['config'][
-                                           'base_path'],
-                                       batch_size=batch_size,
-                                       shape=shape,
-                                       model_version_policy=model_ver_policy)
+
+            model_spec = {
+                'model_name': config['config']['name'],
+                'model_directory': config['config']['base_path'],
+                'batch_size': batch_size,
+                'shape': shape,
+                'model_version_policy': model_ver_policy
+            }
+
+            model = ModelBuilder.build(**model_spec)
             if model is not None:
                 models[config['config']['name']] = model
         except ValidationError as e_val:
@@ -115,11 +119,15 @@ def parse_one_model(args):
             logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))
             args.batch_size = None
 
-        model = ModelBuilder.build(model_name=args.model_name,
-                                   model_directory=args.model_path,
-                                   batch_size=args.batch_size,
-                                   shape=args.shape,
-                                   model_version_policy=model_version_policy)
+        model_spec = {
+            'model_name': args.model_name,
+            'model_directory': args.model_path,
+            'batch_size': args.batch_size,
+            'shape': args.shape,
+            'model_version_policy': model_version_policy
+        }
+
+        model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:
         logger.error("Model version policy is invalid. "
                      "Exception: {}".format(e_val))

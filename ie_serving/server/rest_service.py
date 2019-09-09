@@ -8,12 +8,11 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
 
 from ie_serving.logger import get_logger
 from ie_serving.models.shape_management.reshaper import Reshaper
-from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
     OUTPUT_REPRESENTATION, REST
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
-from ie_serving.server.predict_utils import prepare_input_data
+from ie_serving.server.predict_utils import prepare_input_data, statusCodes
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
@@ -84,16 +83,16 @@ class GetModelMetadata(object):
             }
             resp.body = json.dumps(err_out_json)
             return
-        self.models[model_name].engines[version].in_use.acquire()
 
-        inputs = self.models[model_name].engines[version].input_tensors
-        outputs = self.models[model_name].engines[version].output_tensors
+        target_engine = self.models[model_name].engines[version]
+        target_engine.in_use.acquire()
+
+        inputs = target_engine.input_tensors
+        outputs = target_engine.output_tensors
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
-                                                    model_keys=self.models
-                                                    [model_name].
-                                                    engines[version].
+                                                    model_keys=target_engine.
                                                     model_keys)
         response = get_model_metadata_pb2.GetModelMetadataResponse()
 
@@ -105,7 +104,7 @@ class GetModelMetadata(object):
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        self.models[model_name].engines[version].in_use.release()
+        target_engine.in_use.release()
         resp.status = falcon.HTTP_200
         resp.body = MessageToJson(response)
 
@@ -114,7 +113,6 @@ class Predict():
 
     def __init__(self, models):
         self.models = models
-        self.reshaper = Reshaper(REST)
 
     def on_post(self, req, resp, model_name, requested_version=0):
         valid_model_spec, version = check_availability_of_requested_model(
@@ -136,57 +134,61 @@ class Predict():
             resp.status = falcon.HTTP_400
             resp.body = json.dumps({'error': 'Invalid JSON in request body'})
             return
-        input_format = get_input_format(body, self.models[
-            model_name].engines[version].input_key_names)
+
+        target_engine = self.models[model_name].engines[version]
+        input_format = get_input_format(body, target_engine.input_key_names)
         if input_format == INVALID_FORMAT:
             resp.status = falcon.HTTP_400
             resp.body = json.dumps({'error': 'Invalid inputs in request '
                                              'body'})
             return
 
-        inputs = preprocess_json_request(body, input_format, self.models[
-            model_name].engines[version].input_key_names)
+        inputs = preprocess_json_request(body, input_format,
+                                         target_engine.input_key_names)
 
         start_time = datetime.datetime.now()
-        occurred_problem, inference_input, code = \
-            prepare_input_data(models=self.models, model_name=model_name,
-                               version=version, data=inputs, rest=True)
+        inference_input, error_message = \
+            prepare_input_data(target_engine=target_engine, data=inputs,
+                               service_type=REST)
         deserialization_end_time = datetime.datetime.now()
         duration = \
             (deserialization_end_time - start_time).total_seconds() * 1000
         logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
-        if occurred_problem:
-            resp.status = code
-            err_out_json = {'error': inference_input}
+        if error_message is not None:
+            resp.status = code = statusCodes['invalid_arg'][REST]
+            err_out_json = {'error': error_message}
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
             resp.body = json.dumps(err_out_json)
             return
-        selected_engine = self.models[model_name].engines[version]
-        selected_engine.in_use.acquire()
+        target_engine.in_use.acquire()
         ###############################################
         # Reshape network inputs if needed
-        reshape_required, reshape_param = self.reshaper. \
-            detect_shapes_incompatibility(selected_engine, inference_input)
+        reshape_required, reshape_param = \
+            Reshaper.detect_shapes_incompatibility(target_engine,
+                                                   inference_input)
         if reshape_required:
-            is_error = self.reshaper.prepare_engine(selected_engine,
-                                                    reshape_param, resp)
-            if is_error:
-                selected_engine.in_use.release()
+            error_message = Reshaper.prepare_engine(target_engine,
+                                                    reshape_param)
+            if error_message is not None:
+                resp.status = falcon.HTTP_400
+                err_out_json = {'error': error_message}
+                resp.body = json.dumps(err_out_json)
+                target_engine.in_use.release()
                 return
         ##############################################
         inference_start_time = datetime.datetime.now()
-        inference_output, error_message = selected_engine.infer(
+        inference_output, error_message = target_engine.infer(
             inference_input)
         if error_message is not None:
             resp.status = falcon.HTTP_400
             err_out_json = {'error': error_message}
             resp.body = json.dumps(err_out_json)
-            selected_engine.in_use.release()
+            target_engine.in_use.release()
             return
         inference_end_time = datetime.datetime.now()
-        selected_engine.in_use.release()
+        target_engine.in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
@@ -196,7 +198,7 @@ class Predict():
 
         response = prepare_json_response(
             OUTPUT_REPRESENTATION[input_format], inference_output,
-            selected_engine.model_keys['outputs'])
+            target_engine.model_keys['outputs'])
 
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
