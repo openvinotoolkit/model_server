@@ -39,6 +39,15 @@ RUN echo "deb http://ftp.us.debian.org/debian/ jessie main contrib non-free" >> 
     apt update && \
     apt-get install -y g++-4.9
 ENV CXX=/usr/bin/g++-4.9
+
+WORKDIR /opencv
+RUN apt-get install -y qt5-default libvtk6-dev
+RUN  wget https://github.com/opencv/opencv/archive/4.1.1.tar.gz && tar -xvf 4.1.1.tar.gz
+WORKDIR /opencv/opencv-4.1.1/build
+RUN cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=OFF -DENABLE_PRECOMPILED_HEADERS=OFF ..
+RUN make -j$(nproc)
+RUN make install
+
 RUN pip install cython
 ARG DLDT_DIR=/dldt-2019_R2
 RUN git clone --depth=1 -b 2019_R2 https://github.com/opencv/dldt.git ${DLDT_DIR} && \
@@ -48,6 +57,9 @@ RUN git clone --depth=1 -b 2019_R2 https://github.com/opencv/dldt.git ${DLDT_DIR
 WORKDIR ${DLDT_DIR}
 RUN curl -L https://github.com/intel/mkl-dnn/releases/download/v0.19/mklml_lnx_2019.0.5.20190502.tgz | tar -xz
 WORKDIR ${DLDT_DIR}/inference-engine/build
+RUN apt install -y libopencv-dev
+ENV LD_LIBRARY_PATH=/usr/local/lib/
+RUN sed -i 's/-Werror -Werror=return-type/-Werror=return-type/g' ../cmake/os_flags.cmake
 RUN cmake -DENABLE_PYTHON=ON \
     -DInferenceEngine_DIR=${DLDT_DIR}/inference-engine/build \
     -DPYTHON_EXECUTABLE=$(which python3)\
@@ -57,8 +69,9 @@ RUN cmake -DENABLE_PYTHON=ON \
     -DMKLROOT=${DLDT_DIR}/mklml_lnx_2019.0.5.20190502/ \
     -DENABLE_CLDNN=OFF \
     -DENABLE_MKL_DNN=ON \
+    -DOpenCV_DIR=/usr/local/include/opencv4 \
     -DCMAKE_BUILD_TYPE=Release ..
-ENV CPLUS_INCLUDE_PATH=${DLDT_DIR}/inference-engine/tools/calibration_tool/statistics_collector:${DLDT_DIR}/inference-engine/include
+# ENV CPLUS_INCLUDE_PATH=${DLDT_DIR}/inference-engine/tools/calibration_tool/statistics_collector:${DLDT_DIR}/inference-engine/include
 RUN make -j$(nproc)
 
 FROM intelpython/intelpython3_core as PROD
@@ -69,8 +82,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
             vim
 
 COPY --from=DEV /dldt-2019_R2/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
-COPY --from=DEV /dldt-2019_R2/inference-engine/ie_bridges/python/bin/intel64/Release/python_api/python3.6/openvino/ /usr/local/lib/openvino/
+COPY --from=DEV /dldt-2019_R2/inference-engine/bin/intel64/Release/lib/plugins.xml /usr/local/lib/plugins.xml
+COPY --from=DEV /dldt-2019_R2/inference-engine/bin/intel64/Release/lib/python_api/python3.6/openvino/ /usr/local/lib/openvino/
 COPY --from=DEV /dldt-2019_R2/mklml_lnx_2019.0.5.20190502/lib/lib*.so /usr/local/lib/
+COPY --from=DEV /dldt-2019_R2/inference-engine/temp/tbb/lib/* /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib
 
