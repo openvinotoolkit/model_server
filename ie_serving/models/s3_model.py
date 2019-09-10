@@ -123,20 +123,17 @@ class S3Model(Model):
 
     @classmethod
     def get_engine_for_version(cls, model_name, version_attributes):
-        local_xml_file, local_bin_file, local_mapping_config = \
-            cls.create_local_mirror(version_attributes)
+        version_attributes['xml_file'], version_attributes['bin_file'], \
+            version_attributes['mapping_config'] = cls.create_local_mirror(
+            version_attributes)
         logger.info('Downloaded files from S3')
-        engine = IrEngine.build(model_name=model_name,
-                                model_version=version_attributes[
-                                    'version_number'],
-                                model_xml=local_xml_file,
-                                model_bin=local_bin_file,
-                                mapping_config=local_mapping_config,
-                                batching_info=version_attributes[
-                                    'batching_info'],
-                                shape_info=version_attributes['shape_info'])
-        cls.delete_local_mirror([local_xml_file, local_bin_file,
-                                 local_mapping_config])
+
+        engine_spec = cls._get_engine_spec(model_name, version_attributes)
+        engine = IrEngine.build(**engine_spec)
+
+        cls.delete_local_mirror([version_attributes['xml_file'],
+                                 version_attributes['bin_file'],
+                                 version_attributes['mapping_config']])
         logger.info('Deleted temporary files')
         return engine
 

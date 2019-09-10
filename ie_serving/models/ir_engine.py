@@ -26,13 +26,11 @@ logger = get_logger(__name__)
 
 class IrEngine():
 
-    def __init__(self, model_name, model_version, model_xml, model_bin,
-                 net, plugin, mapping_config, exec_net, inputs: dict,
+    def __init__(self, model_name, model_version, net, plugin,
+                 mapping_config, exec_net, inputs: dict,
                  outputs: list, batching_info, shape_info):
         self.model_name = model_name
         self.model_version = model_version
-        self.model_xml = model_xml
-        self.model_bin = model_bin
         self.exec_net = exec_net
         self.net = net
         self.batching_info = batching_info
@@ -66,7 +64,6 @@ class IrEngine():
         outputs = net.outputs
         exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_name=model_name, model_version=model_version,
-                        model_xml=model_xml, model_bin=model_bin,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, inputs=inputs, outputs=outputs,
                         batching_info=batching_info, shape_info=shape_info)
@@ -136,20 +133,18 @@ class IrEngine():
 
     def scan_input_shapes(self, data: dict):
         #   Takes dictionary of input_name:numpy_array pairs.
-        reshape_required = False
-        inputs_shapes = {}
+        changed_input_shapes = {}
         for input_name, input_data in data.items():
             net_input_shape = tuple(self.net.inputs[input_name].shape)
-            inputs_shapes[input_name] = input_data.shape
             if net_input_shape != input_data.shape:
+                changed_input_shapes[input_name] = input_data.shape
                 logger.debug("[Model: {}, version: {}] --- Shape change "
                              "required for input: {}. Current "
                              "shape: {}. Required shape: {}"
                              .format(self.model_name, self.model_version,
                                      input_name, net_input_shape,
                                      input_data.shape))
-                reshape_required = True
-        return reshape_required, inputs_shapes
+        return changed_input_shapes
 
     def reshape(self, reshape_param):
         if type(reshape_param) is dict:
@@ -218,4 +213,3 @@ class IrEngine():
                      "successfully. Batch size changed.".
                      format(self.model_name, self.model_version))
         return message
-

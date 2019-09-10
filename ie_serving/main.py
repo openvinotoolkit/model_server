@@ -63,30 +63,36 @@ def check_config_structure(configs):
         sys.exit()
 
 
+def get_model_spec(config):
+
+    batch_size = config.get('batch_size', None)
+    shape = config.get('shape', None)
+
+    if shape is not None and batch_size is not None:
+        logger.warning(CONFLICTING_PARAMS_WARNING.format(
+            config['name']))
+        batch_size = None   # batch_size ignored if shape defined
+
+    model_ver_policy = config.get(
+        'model_version_policy', None)
+
+    model_spec = {
+        'model_name': config['name'],
+        'model_directory': config['base_path'],
+        'batch_size': batch_size,
+        'shape': shape,
+        'model_version_policy': model_ver_policy
+    }
+    return model_spec
+
+
 def parse_config(args):
     configs = open_config(path=args.config_path)
     check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
         try:
-            batch_size = config['config'].get('batch_size', None)
-            shape = config['config'].get('shape', None)
-
-            if shape is not None and batch_size is not None:
-                logger.warning(CONFLICTING_PARAMS_WARNING.format(
-                    config['config']['name']))
-                batch_size = None   # batch_size ignored if shape defined
-
-            model_ver_policy = config['config'].get(
-                'model_version_policy', None)
-
-            model_spec = {
-                'model_name': config['config']['name'],
-                'model_directory': config['config']['base_path'],
-                'batch_size': batch_size,
-                'shape': shape,
-                'model_version_policy': model_ver_policy
-            }
+            model_spec = get_model_spec(config['config'])
 
             model = ModelBuilder.build(**model_spec)
             if model is not None:
@@ -113,19 +119,13 @@ def parse_config(args):
 
 def parse_one_model(args):
     try:
-        model_version_policy = json.loads(args.model_version_policy)
+        args.model_version_policy = json.loads(args.model_version_policy)
 
         if args.shape is not None and args.batch_size is not None:
             logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))
             args.batch_size = None
 
-        model_spec = {
-            'model_name': args.model_name,
-            'model_directory': args.model_path,
-            'batch_size': args.batch_size,
-            'shape': args.shape,
-            'model_version_policy': model_version_policy
-        }
+        model_spec = get_model_spec(vars(args))
 
         model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:

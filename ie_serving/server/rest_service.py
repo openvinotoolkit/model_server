@@ -165,10 +165,9 @@ class Predict():
         target_engine.in_use.acquire()
         ###############################################
         # Reshape network inputs if needed
-        reshape_required, reshape_param = \
-            Reshaper.detect_shapes_incompatibility(target_engine,
-                                                   inference_input)
-        if reshape_required:
+        reshape_param = Reshaper.detect_shapes_incompatibility(target_engine,
+                                                               inference_input)
+        if reshape_param is not None:
             error_message = Reshaper.prepare_engine(target_engine,
                                                     reshape_param)
             if error_message is not None:

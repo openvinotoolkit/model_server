@@ -85,10 +85,9 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         target_engine.in_use.acquire()
         ################################################
         # Reshape network inputs if needed
-        reshape_required, reshape_param = \
-            Reshaper.detect_shapes_incompatibility(target_engine,
-                                                   inference_input)
-        if reshape_required:
+        reshape_param = Reshaper.detect_shapes_incompatibility(target_engine,
+                                                               inference_input)
+        if reshape_param is not None:
             error_message = Reshaper.prepare_engine(target_engine,
                                                     reshape_param)
             if error_message is not None:
@@ -113,10 +112,9 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
                      .format(model_name, version, duration))
-        response = prepare_output_as_list(inference_output=inference_output,
-                                          model_available_outputs=
-                                          target_engine.model_keys[
-                                              'outputs'])
+        response = prepare_output_as_list(
+            inference_output=inference_output,
+            model_available_outputs=target_engine.model_keys['outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME

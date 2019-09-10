@@ -26,21 +26,24 @@ class Reshaper:
 
     @staticmethod
     def detect_shapes_incompatibility(engine, inference_input):
-        # Compares workload shapes with engine inputs shapes. If different,
-        # returns True, reshape_param.
+        # Compares workload shapes with engine inputs shapes. Returns
+        # reshape_param
         # reshape_param is inputs shapes dictionary (input_name:shape pairs)
-        # for reshapable models and batch size for non-reshapable
+        # for reshapable models and batch size for non-reshapable. If no
+        # changes needed - reshape_param is None
 
-        reshape_required, inputs_shapes = engine.scan_input_shapes(
+        reshape_param = None
+        inputs_shapes = engine.scan_input_shapes(
             inference_input)
-        reshape_param = inputs_shapes
-        # For non-reshapable models, batch_size of first input is the
-        # reshape parameter
-        if engine.shape_info.mode == ShapeMode.DISABLED:
-            input_shape = inputs_shapes[list(inputs_shapes.keys())[0]]
-            batch_size = list(input_shape)[0]
-            reshape_param = batch_size
-        return reshape_required, reshape_param
+        if inputs_shapes:
+            reshape_param = inputs_shapes
+            # For non-reshapable models, batch_size of first input is the
+            # reshape parameter
+            if engine.shape_info.mode == ShapeMode.DISABLED:
+                input_shape = inputs_shapes[list(inputs_shapes.keys())[0]]
+                batch_size = list(input_shape)[0]
+                reshape_param = batch_size
+        return reshape_param
 
     @staticmethod
     def prepare_engine(engine, reshape_param):
