@@ -72,8 +72,7 @@ def get_model_spec(config):
     shape = config.get('shape', None)
 
     if shape is not None and batch_size is not None:
-        logger.warning(CONFLICTING_PARAMS_WARNING.format(
-            config['name']))
+        logger.warning(CONFLICTING_PARAMS_WARNING.format(model_name))
         batch_size = None   # batch_size ignored if shape defined
 
     model_ver_policy = config.get(
