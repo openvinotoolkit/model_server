@@ -65,6 +65,9 @@ def check_config_structure(configs):
 
 def get_model_spec(config):
 
+    model_name = config.get('name', config.get('model_name', None))
+    model_path = config.get('base_path', config.get('model_path', None))
+
     batch_size = config.get('batch_size', None)
     shape = config.get('shape', None)
 
@@ -77,8 +80,8 @@ def get_model_spec(config):
         'model_version_policy', None)
 
     model_spec = {
-        'model_name': config['name'],
-        'model_directory': config['base_path'],
+        'model_name': model_name,
+        'model_directory': model_path,
         'batch_size': batch_size,
         'shape': shape,
         'model_version_policy': model_ver_policy
