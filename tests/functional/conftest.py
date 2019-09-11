@@ -34,7 +34,6 @@ from tensorflow_serving.apis import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2_grpc, \
     get_model_status_pb2, model_service_pb2_grpc  # noqa
 
-
 ERROR_SHAPE = 'response has invalid output'
 
 
@@ -65,25 +64,33 @@ def get_docker_context():
 
 
 def download_model(model_name, model_folder, model_version_folder, dir):
-    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/"\
+    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/" \
                      + model_name + "/frozen_" + model_name
 
     if not os.path.exists(dir + model_folder + model_version_folder):
-        print("Downloading "+model_name+" model...")
+        print("Downloading " + model_name + " model...")
         print(dir)
         os.makedirs(dir + model_folder + model_version_folder)
         response = requests.get(model_url_base + '.bin', stream=True)
         with open(
-            dir + model_folder + model_version_folder + model_name + '.bin',
+                dir + model_folder + model_version_folder + model_name + '.bin',
                 'wb') as output:
             output.write(response.content)
         response = requests.get(model_url_base + '.xml', stream=True)
         with open(
-            dir + model_folder + model_version_folder + model_name + '.xml',
+                dir + model_folder + model_version_folder + model_name + '.xml',
                 'wb') as output:
             output.write(response.content)
     return dir + model_folder + model_version_folder + model_name + '.bin', \
-        dir + model_folder + model_version_folder + model_name + '.xml'
+           dir + model_folder + model_version_folder + model_name + '.xml'
+
+
+@pytest.fixture(autouse=True, scope="session")
+def face_detection_model_downloader(get_test_dir):
+    return download_model('face-detection-retail-0004',
+                          'face-detection-retail-0004/',
+                          '1/',
+                          get_test_dir + '/saved_models/')
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -122,9 +129,9 @@ def download_two_models(get_test_dir):
 @pytest.fixture(autouse=True, scope="session")
 def download_two_model_versions(get_test_dir):
     model1_info = download_model('resnet_V1_50', 'resnet/', '1/',
-                                 get_test_dir+'/saved_models/')
+                                 get_test_dir + '/saved_models/')
     model2_info = download_model('resnet_V2_50', 'resnet/', '2/',
-                                 get_test_dir+'/saved_models/')
+                                 get_test_dir + '/saved_models/')
     return [model1_info, model2_info]
 
 
@@ -174,14 +181,16 @@ def input_data_downloader(numpy_url, get_test_dir):
 @pytest.fixture(autouse=True, scope="session")
 def input_data_downloader_v1_224(get_test_dir):
     return input_data_downloader(
-        'https://storage.googleapis.com/inference-eu/models_zoo/resnet_V1_50/datasets/10_v1_imgs.npy', # noqa
+        'https://storage.googleapis.com/inference-eu/models_zoo/resnet_V1_50/datasets/10_v1_imgs.npy',
+        # noqa
         get_test_dir)
 
 
 @pytest.fixture(autouse=True, scope="session")
 def input_data_downloader_v3_331(get_test_dir):
     return input_data_downloader(
-        'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy', # noqa
+        'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy',
+        # noqa
         get_test_dir)
 
 
@@ -284,10 +293,36 @@ def create_channel_for_update_flow_specific():
 
 
 @pytest.fixture(scope="class")
+def start_server_face_detection_model(request, get_image, get_test_dir,
+                                      get_docker_context):
+    client = get_docker_context
+    path_to_mount = get_test_dir + '/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name face_detection --model_path " \
+              "/opt/ml/face-detection-retail-0004 " \
+              "--port 9000 --rest_port 5555 --shape auto"
+
+    container = client.containers.run(image=get_image, detach=True,
+                                      name='ie-serving-py-test-face-detection',
+                                      ports={'9000/tcp': 9000,
+                                             '5555/tcp': 5555},
+                                      remove=True, volumes=volumes_dict,
+                                      command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container
+
+
+@pytest.fixture(scope="class")
 def start_server_single_model(request, get_image, get_test_dir,
                               get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -370,12 +405,11 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
 @pytest.fixture(scope="class")
 def start_server_with_mapping(request, get_image, get_test_dir,
                               get_docker_context):
-
     shutil.copyfile('tests/functional/mapping_config.json',
                     get_test_dir + '/saved_models/resnet_2_out/1/'
                                    'mapping_config.json')
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -399,7 +433,6 @@ def start_server_with_mapping(request, get_image, get_test_dir,
 @pytest.fixture(scope="session")
 def start_server_multi_model(request, get_image, get_test_dir,
                              get_docker_context):
-
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
 
@@ -414,8 +447,8 @@ def start_server_multi_model(request, get_image, get_test_dir,
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
-    volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
-                    {'bind': '/opt/ml', 'mode': 'ro'},
+    volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
+                        {'bind': '/opt/ml', 'mode': 'ro'},
                     GOOGLE_APPLICATION_CREDENTIALS:
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
@@ -441,7 +474,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
 def start_server_batch_model(request, get_image, get_test_dir,
                              get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -465,9 +498,8 @@ def start_server_batch_model(request, get_image, get_test_dir,
 @pytest.fixture(scope="class")
 def start_server_batch_model_auto(request, get_image, get_test_dir,
                                   get_docker_context):
-
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -491,9 +523,8 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
 @pytest.fixture(scope="class")
 def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                  get_docker_context):
-
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -517,7 +548,6 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request, get_image, get_test_dir,
                                   get_docker_context):
-
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     get_test_dir +
                     '/saved_models/model_ver_policy_config.json')
@@ -527,8 +557,8 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                                    'mapping_config.json')
 
     client = get_docker_context
-    volumes_dict = {'{}'.format(get_test_dir+'/saved_models/'):
-                    {'bind': '/opt/ml', 'mode': 'ro'}}
+    volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
+                        {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
               "--port 9006 --rest_port 5560"
@@ -551,7 +581,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 def start_server_update_flow_latest(request, get_image, get_test_dir,
                                     get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -576,7 +606,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
 def start_server_update_flow_specific(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir+'/saved_models/'
+    path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = '/ie-serving-py/start_server.sh ie_serving model ' \
@@ -664,7 +694,7 @@ def prepare_body_format(img, request_format, input_name):
         data_obj = {"signature_name": signature,
                     'inputs': {input_name: img.tolist()}}
     elif request_format == "column_noname":
-        data_obj = {"signature_name": signature, 'inputs':  img.tolist()}
+        data_obj = {"signature_name": signature, 'inputs': img.tolist()}
     data_json = json.dumps(data_obj)
     return data_json
 
@@ -718,7 +748,7 @@ def infer_batch_rest(batch_input, input_tensor, rest_url,
     return data
 
 
-def get_model_metadata(model_name, metadata_field: str="signature_def",
+def get_model_metadata(model_name, metadata_field: str = "signature_def",
                        version=None):
     request = get_model_metadata_pb2.GetModelMetadataRequest()
     request.model_spec.name = model_name
