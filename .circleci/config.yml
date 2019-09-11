@@ -25,7 +25,7 @@ jobs:
             cd $TEMP_DIR &&
             apt-get update &&
             apt-get install -y --no-install-recommends cpio wget cpio cmake sudo python3-pip python3-venv python3-dev python3-setuptools virtualenv build-essential &&
-            wget -c $OPENVINO_DOWNLOAD_LINK_R1 &&
+            wget -c $OPENVINO_DOWNLOAD_LINK_R2 &&
             tar xf l_openvino_toolkit*.tgz &&
             cd l_openvino_toolkit* &&
             sed -i 's/decline/accept/g' silent.cfg &&
@@ -48,14 +48,14 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: wget -c $OPENVINO_DOWNLOAD_LINK_R1 && make docker_build_bin
+          command: wget -c $OPENVINO_DOWNLOAD_LINK_R2 && make docker_build_bin
       - run:
           name: Get Google Cloud credentials
           command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
       - run:
           name: Start functional tests
           command: pyenv global 3.5.2 && make test
-  functional_tests_src_ubuntu:
+  functional_tests_apt_ubuntu:
     machine:
       enabled: true
     resource_class: medium
@@ -63,7 +63,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: make docker_build_src_ubuntu
+          command: make docker_build_apt_ubuntu
       - run:
           name: Get Google Cloud credentials
           command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
@@ -92,6 +92,6 @@ workflows:
       - unit_tests
       - style
       - functional_tests_bin
-      - functional_tests_src_ubuntu
+      - functional_tests_apt_ubuntu
       - functional_tests_src_intelpython
       
