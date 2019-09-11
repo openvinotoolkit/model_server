@@ -77,7 +77,7 @@ FROM intelpython/intelpython3_core as PROD
 RUN apt-get update && apt-get install -y --no-install-recommends \
             ca-certificates \
             curl \
-            vim
+            usbutils
 
 COPY --from=DEV /dldt-2019_R2/inference-engine/bin/intel64/Release/lib/*.so /usr/local/lib/
 COPY --from=DEV /dldt-2019_R2/inference-engine/bin/intel64/Release/lib/plugins.xml /usr/local/lib/plugins.xml
@@ -100,4 +100,3 @@ RUN sed -i '/activate/d' start_server.sh
 COPY ie_serving /ie-serving-py/ie_serving
 
 RUN pip install .
-
