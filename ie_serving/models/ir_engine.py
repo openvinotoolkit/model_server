@@ -19,7 +19,7 @@ from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
 import json
 from ie_serving.logger import get_logger
-from ie_serving.models.shape_management.utils import BatchingMode
+from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 
 logger = get_logger(__name__)
 
@@ -62,6 +62,11 @@ class IrEngine():
         logger.debug("effective batch size - {}".format(effective_batch_size))
         inputs = net.inputs
         outputs = net.outputs
+        # Temporary workaround to make sure network is healthy and ready for
+        # further reshaping
+        if shape_info.mode != ShapeMode.DISABLED:
+            net.reshape({})
+
         exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
