@@ -29,6 +29,8 @@ from tensorflow.contrib.util import make_ndarray
 import grpc
 from google.protobuf.json_format import Parse
 
+from tests.functional.constants import MODEL_SERVICE, PREDICTION_SERVICE
+
 sys.path.append(".")
 from tensorflow_serving.apis import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2_grpc, \
@@ -192,102 +194,17 @@ def input_data_downloader_v3_331(get_test_dir):
         get_test_dir)
 
 
-@pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_single_server_status():
-    channel = grpc.insecure_channel('localhost:9000')
-    stub = model_service_pb2_grpc.ModelServiceStub(channel)
-    return stub
+@pytest.fixture()
+def create_grpc_channel():
+    def _create_channel(address: str, service: int):
+        channel = grpc.insecure_channel(address)
+        if service == MODEL_SERVICE:
+            return model_service_pb2_grpc.ModelServiceStub(channel)
+        elif service == PREDICTION_SERVICE:
+            return prediction_service_pb2_grpc.PredictionServiceStub(channel)
+        return None
 
-
-@pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_single_server():
-    channel = grpc.insecure_channel('localhost:9000')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_multi_server_status():
-    channel = grpc.insecure_channel('localhost:9001')
-    stub = model_service_pb2_grpc.ModelServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_multi_server():
-    channel = grpc.insecure_channel('localhost:9001')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_port_mapping_server():
-    channel = grpc.insecure_channel('localhost:9002')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_batching_server():
-    channel = grpc.insecure_channel('localhost:9003')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_batching_server_bs4():
-    channel = grpc.insecure_channel('localhost:9004')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_batching_server_auto():
-    channel = grpc.insecure_channel('localhost:9005')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_model_ver_pol_server_status():
-    channel = grpc.insecure_channel('localhost:9006')
-    stub = model_service_pb2_grpc.ModelServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_model_ver_pol_server():
-    channel = grpc.insecure_channel('localhost:9006')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_update_flow_latest_status():
-    channel = grpc.insecure_channel('localhost:9007')
-    stub = model_service_pb2_grpc.ModelServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_update_flow_latest():
-    channel = grpc.insecure_channel('localhost:9007')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_update_flow_specific_status():
-    channel = grpc.insecure_channel('localhost:9008')
-    stub = model_service_pb2_grpc.ModelServiceStub(channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def create_channel_for_update_flow_specific():
-    channel = grpc.insecure_channel('localhost:9008')
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    return stub
+    return _create_channel
 
 
 @pytest.fixture(scope="class")

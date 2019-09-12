@@ -24,6 +24,8 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 import numpy as np
 import sys
 
+from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
+
 sys.path.append(".")
 
 
@@ -33,7 +35,7 @@ class TestMuiltModelInference():
                            input_data_downloader_v1_224,
                            input_data_downloader_v3_331,
                            start_server_multi_model,
-                           create_channel_for_port_multi_server):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Execute inference request using gRPC interface hosting multiple models
@@ -58,7 +60,7 @@ class TestMuiltModelInference():
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         input_data = input_data_downloader_v1_224[:2, :, :, :]
         print("Starting inference using resnet model")
@@ -107,7 +109,7 @@ class TestMuiltModelInference():
 
     def test_get_model_metadata(self, download_two_models,
                                 start_server_multi_model,
-                                create_channel_for_port_multi_server):
+                                create_grpc_channel):
         """
         <b>Description</b>
         Execute inference request using gRPC interface hosting multiple models
@@ -131,7 +133,7 @@ class TestMuiltModelInference():
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet_V1_50'
@@ -168,11 +170,11 @@ class TestMuiltModelInference():
 
     def test_get_model_status(self, download_two_models,
                               start_server_multi_model,
-                              create_channel_for_port_multi_server_status):
+                              create_grpc_channel):
 
         print("Downloaded model files:", download_two_models)
 
-        stub = create_channel_for_port_multi_server_status
+        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
         request = get_model_status(model_name='resnet_V1_50', version=1)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

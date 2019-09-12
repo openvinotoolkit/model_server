@@ -26,6 +26,8 @@ import sys
 import requests
 import pytest
 
+from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
+
 sys.path.append(".")
 
 
@@ -38,7 +40,7 @@ class TestModelVerPolicy():
     ])
     def test_get_model_metadata(self, model_version_policy_models,
                                 start_server_model_ver_policy,
-                                create_channel_for_model_ver_pol_server,
+                                create_grpc_channel,
                                 model_name, throw_error):
         """
         <b>Description</b>
@@ -64,7 +66,7 @@ class TestModelVerPolicy():
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_channel_for_model_ver_pol_server
+        stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
 
         print("Getting info about resnet model")
         versions = [1, 2, 3]
@@ -107,13 +109,13 @@ class TestModelVerPolicy():
     ])
     def test_get_model_status(self, model_version_policy_models,
                               start_server_model_ver_policy,
-                              create_channel_for_model_ver_pol_server_status,
+                              create_grpc_channel,
                               model_name, throw_error):
 
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_channel_for_model_ver_pol_server_status
+        stub = create_grpc_channel('localhost:9006', MODEL_SERVICE)
 
         versions = [1, 2, 3]
         for x in range(len(versions)):

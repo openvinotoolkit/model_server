@@ -17,6 +17,8 @@
 import sys
 import pytest
 
+from tests.functional.constants import PREDICTION_SERVICE
+
 sys.path.append(".")
 from conftest import infer_batch, get_model_metadata, \
     model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
@@ -28,7 +30,7 @@ class TestBatchModelInference():
     def test_run_inference(self, resnet_8_batch_model_downloader,
                            input_data_downloader_v1_224,
                            start_server_batch_model,
-                           create_channel_for_batching_server):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -51,7 +53,7 @@ class TestBatchModelInference():
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_batching_server
+        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:8, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -65,12 +67,12 @@ class TestBatchModelInference():
     def test_run_inference_bs4(self, resnet_8_batch_model_downloader,
                                input_data_downloader_v1_224,
                                start_server_batch_model_bs4,
-                               create_channel_for_batching_server_bs4):
+                               create_grpc_channel):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_batching_server_bs4
+        stub = create_grpc_channel('localhost:9004', PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:4, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -84,12 +86,12 @@ class TestBatchModelInference():
     def test_run_inference_auto(self, resnet_8_batch_model_downloader,
                                 input_data_downloader_v1_224,
                                 start_server_batch_model_auto,
-                                create_channel_for_batching_server_auto):
+                                create_grpc_channel):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_batching_server_auto
+        stub = create_grpc_channel('localhost:9005', PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:6, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -111,11 +113,11 @@ class TestBatchModelInference():
 
     def test_get_model_metadata(self, resnet_8_batch_model_downloader,
                                 start_server_batch_model,
-                                create_channel_for_batching_server):
+                                create_grpc_channel):
 
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        stub = create_channel_for_batching_server
+        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'

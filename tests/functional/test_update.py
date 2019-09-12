@@ -21,6 +21,7 @@ from conftest import copy_model, get_model_metadata, model_metadata_response, \
 
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE
+from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
 
 
 class TestSingleModelInference():
@@ -28,13 +29,12 @@ class TestSingleModelInference():
     def test_specific_version(self, download_two_model_versions,
                               resnet_2_out_model_downloader, get_test_dir,
                               start_server_update_flow_specific,
-                              create_channel_for_update_flow_specific,
-                              create_channel_for_update_flow_specific_status):
+                              create_grpc_channel):
         resnet_v1, resnet_v2 = download_two_model_versions
         resnet_2_out = resnet_2_out_model_downloader
         dir = get_test_dir + '/saved_models/' + 'update/'
-        stub = create_channel_for_update_flow_specific
-        status_stub = create_channel_for_update_flow_specific_status
+        stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
+        status_stub = create_grpc_channel('localhost:9008', MODEL_SERVICE)
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(8)
@@ -194,14 +194,13 @@ class TestSingleModelInference():
 
     def test_latest_version(self, download_two_model_versions, get_test_dir,
                             start_server_update_flow_latest,
-                            create_channel_for_update_flow_latest,
-                            create_channel_for_update_flow_latest_status):
+                            create_grpc_channel):
         resnet_v1, resnet_v2 = download_two_model_versions
         dir = get_test_dir + '/saved_models/' + 'update/'
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         time.sleep(8)
-        stub = create_channel_for_update_flow_latest
-        status_stub = create_channel_for_update_flow_latest_status
+        stub = create_grpc_channel('localhost:9007', PREDICTION_SERVICE)
+        status_stub = create_grpc_channel('localhost:9007', MODEL_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
@@ -521,11 +520,11 @@ class TestSingleModelInference():
     def test_update_rest_grpc(self, download_two_model_versions,
                               resnet_2_out_model_downloader, get_test_dir,
                               start_server_update_flow_specific,
-                              create_channel_for_update_flow_specific):
+                              create_grpc_channel):
         resnet_v1, resnet_v2 = download_two_model_versions
         resnet_2_out = resnet_2_out_model_downloader
         dir = get_test_dir + '/saved_models/' + 'update/'
-        stub = create_channel_for_update_flow_specific
+        stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(8)

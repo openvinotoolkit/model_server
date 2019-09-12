@@ -19,6 +19,8 @@ import numpy as np
 
 from conftest import infer_batch, infer_batch_rest, ERROR_SHAPE
 
+from tests.functional.constants import PREDICTION_SERVICE
+
 sys.path.append(".")
 
 
@@ -27,12 +29,12 @@ class TestModelReshaping:
     def test_single_local_model_reshaping(
             self, face_detection_model_downloader,
             start_server_face_detection_model,
-            create_channel_for_port_single_server):
+            create_grpc_channel):
 
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_port_single_server
+        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         shapes = [
             {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
@@ -85,12 +87,12 @@ class TestModelReshaping:
     def test_multi_local_model_reshaping(
             self, face_detection_model_downloader,
             start_server_multi_model,
-            create_channel_for_port_multi_server):
+            create_grpc_channel):
 
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         shapes = [
             {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},

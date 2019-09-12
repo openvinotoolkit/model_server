@@ -18,6 +18,8 @@ import numpy as np
 import sys
 import pytest
 
+from tests.functional.constants import PREDICTION_SERVICE
+
 sys.path.append(".")
 from conftest import infer, get_model_metadata, model_metadata_response, \
     ERROR_SHAPE, infer_rest, get_model_metadata_response_rest  # noqa
@@ -27,7 +29,7 @@ class TestSingleModelMappingInference():
 
     def test_run_inference(self, resnet_2_out_model_downloader,
                            input_data_downloader_v1_224,
-                           create_channel_for_port_mapping_server,
+                           create_grpc_channel,
                            start_server_with_mapping):
         """
         <b>Description</b>
@@ -51,7 +53,7 @@ class TestSingleModelMappingInference():
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         # Connect to grpc service
-        stub = create_channel_for_port_mapping_server
+        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
 
@@ -67,12 +69,12 @@ class TestSingleModelMappingInference():
         assert output['output'].shape == (1, 2048, 7, 7), ERROR_SHAPE
 
     def test_get_model_metadata(self, resnet_2_out_model_downloader,
-                                create_channel_for_port_mapping_server,
+                                create_grpc_channel,
                                 start_server_with_mapping):
 
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
-        stub = create_channel_for_port_mapping_server
+        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
 
         model_name = 'resnet_2_out'
         expected_input_metadata = {'new_key': {'dtype': 1,
