@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import requests
+import pytest
 from conftest import get_model_metadata, model_metadata_response, \
     get_model_status, get_model_status_response_rest
 from tensorflow_serving.apis import get_model_metadata_pb2, \
@@ -21,14 +22,8 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE
 from google.protobuf.json_format import Parse
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
 
-import sys
-import requests
-import pytest
-
-from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
-
-sys.path.append(".")
 
 
 class TestModelVerPolicy():

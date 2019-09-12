@@ -13,13 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import sys
 import pytest
-
-from tests.functional.constants import PREDICTION_SERVICE
-
-sys.path.append(".")
+from constants import PREDICTION_SERVICE
 from conftest import infer_batch, get_model_metadata, \
     model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
     get_model_metadata_response_rest  # noqa

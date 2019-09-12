@@ -21,7 +21,7 @@ from conftest import copy_model, get_model_metadata, model_metadata_response, \
 
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE
-from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
 
 
 class TestSingleModelInference():

@@ -13,18 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import numpy as np
 from conftest import infer, get_model_metadata, model_metadata_response, \
     infer_rest, get_model_metadata_response_rest, get_model_status, \
     get_model_status_response_rest
 from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
     ErrorCode
-import numpy as np
-import sys
-
-from tests.functional.constants import PREDICTION_SERVICE, MODEL_SERVICE
-
-sys.path.append(".")
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
 
 
 class TestModelVersionHandling():

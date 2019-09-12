@@ -21,17 +21,13 @@ import os
 import pytest
 import requests
 import shutil
-import sys
 import time
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
 import grpc
 from google.protobuf.json_format import Parse
-
-from tests.functional.constants import MODEL_SERVICE, PREDICTION_SERVICE
-
-sys.path.append(".")
+from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from tensorflow_serving.apis import predict_pb2, \
     get_model_metadata_pb2, prediction_service_pb2_grpc, \
     get_model_status_pb2, model_service_pb2_grpc  # noqa

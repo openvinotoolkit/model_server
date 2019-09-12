@@ -13,20 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import numpy as np
+import pytest
 
 from conftest import infer, get_model_metadata, model_metadata_response, \
     get_model_status, ERROR_SHAPE, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE
+from constants import MODEL_SERVICE, PREDICTION_SERVICE
 
-import numpy as np
-import sys
-import pytest
 
-from tests.functional.constants import MODEL_SERVICE, PREDICTION_SERVICE
-
-sys.path.append(".")
 
 
 class TestSingleModelInference():

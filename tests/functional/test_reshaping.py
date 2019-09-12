@@ -13,15 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import sys
 import pytest
 import numpy as np
 
 from conftest import infer_batch, infer_batch_rest, ERROR_SHAPE
+from constants import PREDICTION_SERVICE
 
-from tests.functional.constants import PREDICTION_SERVICE
 
-sys.path.append(".")
+shapes = [
+    {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
+    {'in': (1, 3, 500, 500), 'out': (1, 1, 200, 7)},
+    {'in': (1, 3, 224, 224), 'out': (1, 1, 200, 7)},
+    {'in': (4, 3, 224, 224), 'out': (1, 1, 800, 7)},
+    {'in': (8, 3, 312, 142), 'out': (1, 1, 1600, 7)},
+    {'in': (1, 3, 1024, 1024), 'out': (1, 1, 200, 7)},
+]
 
 
 class TestModelReshaping:
@@ -36,14 +42,6 @@ class TestModelReshaping:
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
-        shapes = [
-            {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 500, 500), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 224, 224), 'out': (1, 1, 200, 7)},
-            {'in': (4, 3, 224, 224), 'out': (1, 1, 800, 7)},
-            {'in': (8, 3, 312, 142), 'out': (1, 1, 1600, 7)},
-            {'in': (1, 3, 1024, 1024), 'out': (1, 1, 200, 7)},
-        ]
         out_name = 'detection_out'
         for shape in shapes:
             imgs = np.zeros(shape['in'])
@@ -63,15 +61,6 @@ class TestModelReshaping:
             start_server_face_detection_model, request_format):
 
         print("Downloaded model files:", face_detection_model_downloader)
-
-        shapes = [
-            {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 500, 500), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 224, 224), 'out': (1, 1, 200, 7)},
-            {'in': (4, 3, 224, 224), 'out': (1, 1, 800, 7)},
-            {'in': (8, 3, 312, 142), 'out': (1, 1, 1600, 7)},
-            {'in': (1, 3, 1024, 1024), 'out': (1, 1, 200, 7)},
-        ]
         out_name = 'detection_out'
         for shape in shapes:
             imgs = np.zeros(shape['in'])
@@ -94,14 +83,6 @@ class TestModelReshaping:
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
-        shapes = [
-            {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 500, 500), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 224, 224), 'out': (1, 1, 200, 7)},
-            {'in': (4, 3, 224, 224), 'out': (1, 1, 800, 7)},
-            {'in': (8, 3, 312, 142), 'out': (1, 1, 1600, 7)},
-            {'in': (1, 3, 1024, 1024), 'out': (1, 1, 200, 7)},
-        ]
         out_name = 'detection_out'
         for shape in shapes:
             imgs = np.zeros(shape['in'])
@@ -121,15 +102,6 @@ class TestModelReshaping:
             start_server_multi_model, request_format):
 
         print("Downloaded model files:", face_detection_model_downloader)
-
-        shapes = [
-            {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 500, 500), 'out': (1, 1, 200, 7)},
-            {'in': (1, 3, 224, 224), 'out': (1, 1, 200, 7)},
-            {'in': (4, 3, 224, 224), 'out': (1, 1, 800, 7)},
-            {'in': (8, 3, 312, 142), 'out': (1, 1, 1600, 7)},
-            {'in': (1, 3, 1024, 1024), 'out': (1, 1, 200, 7)},
-        ]
         out_name = 'detection_out'
         for shape in shapes:
             imgs = np.zeros(shape['in'])
