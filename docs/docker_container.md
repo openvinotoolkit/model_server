@@ -2,15 +2,15 @@
 
 ## Building the Image
 
-OpenVINO&trade; model server Docker image can be built from [DLDT sources](https://github.com/opencv/dldt) with 
-ubuntu base image [Dockerfile](../Dockerfile), intelpython base image [Dockerfile_intelpython](../Dockerfile_intelpython)
-or with Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
-via [Dockerfile_binary_openvino](../Dockerfile_binary_openvino).
+OpenVINO&trade; Model Server docker image can be built using various Dockerfiles:
+- [Dockerfile](../Dockerfile) - based on ubuntu with [apt-get package](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_apt.html) 
+- [Dockerfile_intelpython](../Dockerfile_intelpython) - with intelpython base image and Inference Engine compiled from [dldt sources](https://github.com/opencv/dldt) 
+- [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
 The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) 
 and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
 It is recommended to use online installation package because this way the resultant image will be smaller. 
-An example file looks like: `l_openvino_toolkit_p_2019.1.094_online.tgz`.
+An example file looks like: `l_openvino_toolkit_p_2019.2.242_online.tgz`.
 
 
 From the root of the git repository, execute the commands:
@@ -21,7 +21,7 @@ make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
-make docker_build_src_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
+make docker_build_apt_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
@@ -29,6 +29,7 @@ make docker_build_src_intelpython http_proxy=$http_proxy https_proxy=$https_prox
 ```
 
 **Note:** You can use also publicly available docker image from [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
+based on intelpython base image.
 
 ```bash
 docker pull intelaipg/openvino-model-server
@@ -137,6 +138,8 @@ optional arguments:
                         absolute path to model,as in tf serving
   --batch_size BATCH_SIZE
                         sets models batchsize, int value or auto
+  --shape SHAPE
+                        sets models shape (model must support reshaping). If set, batch_size parameter is ignored.                      
   --model_version_policy MODEL_VERSION_POLICY 
                         sets model version policy for model
   --port PORT           gRPC server port
@@ -213,13 +216,25 @@ It uses `json` format as shown in the example below:
          "config":{
             "name":"model_name3",
             "base_path":"gs://bucket/models/model3",
-            "model_version_policy": {"specific": { "versions":[1, 3] }}
+            "model_version_policy": {"specific": { "versions":[1, 3] }},
+            "shape": "auto"
          }
       },
       {
          "config":{
              "name":"model_name4",
-             "base_path":"s3://bucket/models/model4"
+             "base_path":"s3://bucket/models/model4",
+             "shape": {
+                "input1": "(1,3,200,200)",
+                "input2": "(1,3,50,50)"
+             }
+         }
+      },
+      {
+         "config":{
+             "name":"model_name5",
+             "base_path":"s3://bucket/models/model5",
+             "shape": "auto"
          }
       }
    ]
@@ -264,7 +279,7 @@ Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com
 version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
 You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
 - `make docker_build_bin` 
-- `make docker_build_src_ubuntu`
+- `make docker_build_apt_ubuntu`
 - `make docker_build_src_intelpython`
 
 Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
@@ -340,7 +355,7 @@ ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_pat
 
 ## Batch Processing
 
-`batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer.
+`batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer tool.
 When that parameter is set to numerical value, it is changing the model batch size at service start up. 
 It accepts also a value `auto` - this special phrase make the served model to set the batch size automatically based on the incoming data at run time.
 Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
@@ -349,9 +364,23 @@ This feature is useful for sequential inference requests of the same batch size.
 OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
-**Note:** Dynamic batch size _is not_ supported.
+*Note:* Some models like object detection do not work correctly with batch size changes. Typically those are the models,
+whose output's first dimension is not representing the batch size like on the input side. In such cases there should be 
+used reshape operation instead.
 
-Processing bigger batches of requests increases the throughput but the side effect is higher latency.
+## Model reshaping
+`shape` parameter is optional and it takes precedence over batch_size parameter. When the shape is defined as an argument,
+it ignores the batch_size value.
+
+The shape argument can change the model enabled in the model server to fit the required parameters. It accepts 3 forms of the values:
+- "auto" phrase - model server will be reloading the model with the shape matching the input data matrix. 
+- a tuple e.g. (1,3,224,224) - it defines the shape to be used for all incoming requests for models with a single input
+- a dictionary of tuples e.g. {input1:(1,3,224,224),input2:(1,3,50,50)} - it defines a shape of every included input in the model
+
+*Note:* Some models do not support reshape operation. Learn more about supported model graph layers including all limitations
+on [docs_IE_DG_ShapeInference.html](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html).
+In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
+will get an error. The model server will also report such problem in the logs.
 
 ## Model Version Policy
 Model version policy makes it possible to decide which versions of model will be served by OVMS. This parameter allows 

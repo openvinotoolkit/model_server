@@ -222,7 +222,7 @@ it might help to reduce the numbers precisions in the json message with a comman
 Usually, there is no need to tune any environment variables according to the allocated resources. In some cases 
 it might be however beneficial to adjust the threading parameters to fit the allocated resources in optimal way.
 This is especially relevant in configuration when multiple services it being used on a single node. Another situation is 
-in horizontal scalabily in Kubernetes when the thoughput can be increased by employing big volume of small containers.
+in horizontal scalability in Kubernetes when the throughput can be increased by employing big volume of small containers.
 
 Below are listed exemplary environment settings in 2 scenarios.
 
@@ -240,6 +240,13 @@ KMP_SETTINGS=1
 KMP_AFFINITY=granularity=fine,verbose,compact,1,0
 KMP_BLOCKTIME=1
 ```
+
+*Note* With the version *2019 R2*, OpenVINO Model Server is using [TBB](https://software.intel.com/en-us/tbb) threading instead
+ of [OMP](https://www.openmp.org/).
+ 
+It gives better performance especially in scenarios with shared CPU and enabled multiple AI models. It also do not require
+tuning the environment variables, which was required with OMP. The model server with TBB will be more flexible and
+easier to deploy in environments with dynamic load and resource allocation.
 
 ### Usage monitoring
 It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
