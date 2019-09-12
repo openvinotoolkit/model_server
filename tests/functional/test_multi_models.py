@@ -14,13 +14,15 @@
 # limitations under the License.
 #
 import numpy as np
+import sys
 from conftest import infer, infer_batch, get_model_metadata, \
     model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
     infer_rest, get_model_metadata_response_rest, get_model_status, \
     get_model_status_response_rest
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
+sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE  # noqa
 
 
 class TestMuiltModelInference():

@@ -15,12 +15,13 @@
 #
 
 import numpy as np
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode
+import sys
 from conftest import infer, get_model_metadata, model_metadata_response, \
      get_model_status, ERROR_SHAPE  # noqa
-
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
+    ErrorCode  # noqa
 
 
 class TestSingleModelInferenceGc():

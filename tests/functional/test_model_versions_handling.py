@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 import numpy as np
+import sys
 from conftest import infer, get_model_metadata, model_metadata_response, \
     infer_rest, get_model_metadata_response_rest, get_model_status, \
     get_model_status_response_rest
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
+sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, ErrorCode  # noqa
 
 
 class TestModelVersionHandling():

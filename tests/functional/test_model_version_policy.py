@@ -15,15 +15,15 @@
 #
 import requests
 import pytest
+import sys
 from conftest import get_model_metadata, model_metadata_response, \
     get_model_status, get_model_status_response_rest
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
 from google.protobuf.json_format import Parse
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
-
+sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, _ERROR_MESSAGE # noqa
 
 
 class TestModelVerPolicy():

@@ -15,15 +15,14 @@
 #
 import numpy as np
 import pytest
-
+import sys
 from conftest import infer, get_model_metadata, model_metadata_response, \
     get_model_status, ERROR_SHAPE, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-
-
+sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE  # noqa
 
 
 class TestSingleModelInference():

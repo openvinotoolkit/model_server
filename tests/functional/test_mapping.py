@@ -94,7 +94,6 @@ class TestSingleModelMappingInference():
                               ('column_name'), ('column_noname')])
     def test_run_inference_rest(self, resnet_2_out_model_downloader,
                                 input_data_downloader_v1_224,
-                                create_channel_for_port_mapping_server,
                                 start_server_with_mapping, request_format):
         """
             <b>Description</b>
