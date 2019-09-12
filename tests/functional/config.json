@@ -32,6 +32,13 @@
         "name": "resnet_s3",
         "base_path": "s3://inference-test-aipg/resnet_v1_50"
       }
+    },
+    {
+      "config": {
+        "name": "face_detection",
+        "base_path": "/opt/ml/face-detection-retail-0004",
+        "shape": "auto"
+      }
     }
   ]
 }

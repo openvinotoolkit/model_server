@@ -64,7 +64,7 @@ def get_docker_context():
 
 
 def download_model(model_name, model_folder, model_version_folder, dir):
-    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/" \
+    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/"\
                      + model_name + "/frozen_" + model_name
 
     if not os.path.exists(dir + model_folder + model_version_folder):
@@ -73,16 +73,16 @@ def download_model(model_name, model_folder, model_version_folder, dir):
         os.makedirs(dir + model_folder + model_version_folder)
         response = requests.get(model_url_base + '.bin', stream=True)
         with open(
-                dir + model_folder + model_version_folder + model_name + '.bin',
-                'wb') as output:
+                dir + model_folder + model_version_folder + model_name +
+                '.bin', 'wb') as output:
             output.write(response.content)
         response = requests.get(model_url_base + '.xml', stream=True)
         with open(
-                dir + model_folder + model_version_folder + model_name + '.xml',
-                'wb') as output:
+                dir + model_folder + model_version_folder + model_name +
+                '.xml', 'wb') as output:
             output.write(response.content)
     return dir + model_folder + model_version_folder + model_name + '.bin', \
-           dir + model_folder + model_version_folder + model_name + '.xml'
+        dir + model_folder + model_version_folder + model_name + '.xml'
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -181,16 +181,14 @@ def input_data_downloader(numpy_url, get_test_dir):
 @pytest.fixture(autouse=True, scope="session")
 def input_data_downloader_v1_224(get_test_dir):
     return input_data_downloader(
-        'https://storage.googleapis.com/inference-eu/models_zoo/resnet_V1_50/datasets/10_v1_imgs.npy',
-        # noqa
+        'https://storage.googleapis.com/inference-eu/models_zoo/resnet_V1_50/datasets/10_v1_imgs.npy', # noqa
         get_test_dir)
 
 
 @pytest.fixture(autouse=True, scope="session")
 def input_data_downloader_v3_331(get_test_dir):
     return input_data_downloader(
-        'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy',
-        # noqa
+        'https://storage.googleapis.com/inference-eu/models_zoo/pnasnet_large/datasets/10_331_v3_imgs.npy', # noqa
         get_test_dir)
 
 
@@ -448,7 +446,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
-                        {'bind': '/opt/ml', 'mode': 'ro'},
+                    {'bind': '/opt/ml', 'mode': 'ro'},
                     GOOGLE_APPLICATION_CREDENTIALS:
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
@@ -558,7 +556,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 
     client = get_docker_context
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
-                        {'bind': '/opt/ml', 'mode': 'ro'}}
+                    {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
               "--port 9006 --rest_port 5560"
