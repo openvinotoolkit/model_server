@@ -155,8 +155,8 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             target_engine.in_use.release()
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
-        inputs = target_engine.input_tensors
-        outputs = target_engine.output_tensors
+        inputs = target_engine.net.inputs
+        outputs = target_engine.net.outputs
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
