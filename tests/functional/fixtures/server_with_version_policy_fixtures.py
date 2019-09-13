@@ -1,7 +1,8 @@
 import pytest
 import shutil
+import os
 from utils.model_management import wait_endpoint_setup
-
+from distutils.dir_util import copy_tree
 
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request, get_image, get_test_dir,
@@ -33,3 +34,24 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     assert running is True, "docker container was not started successfully"
 
     return container
+
+
+@pytest.fixture(autouse=True, scope="session")
+def model_version_policy_models(get_test_dir,
+                                download_two_model_versions,
+                                resnet_2_out_model_downloader):
+    model_ver_dir = os.path.join(get_test_dir, 'saved_models', 'model_ver')
+    resnets = download_two_model_versions
+    resnet_1 = os.path.dirname(resnets[0][0])
+    resnet_1_dir = os.path.join(model_ver_dir, '1')
+    resnet_2 = os.path.dirname(resnets[1][0])
+    resnet_2_dir = os.path.join(model_ver_dir, '2')
+    resnet_2_out = os.path.dirname(resnet_2_out_model_downloader[0])
+    resnet_2_out_dir = os.path.join(model_ver_dir, '3')
+    if not os.path.exists(model_ver_dir):
+        os.makedirs(model_ver_dir)
+        copy_tree(resnet_1, resnet_1_dir)
+        copy_tree(resnet_2, resnet_2_dir)
+        copy_tree(resnet_2_out, resnet_2_out_dir)
+
+    return resnet_1_dir, resnet_2_dir, resnet_2_out_dir
