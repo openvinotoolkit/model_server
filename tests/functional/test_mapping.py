@@ -16,9 +16,9 @@
 
 import numpy as np
 import pytest
-from constants import PREDICTION_SERVICE
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    ERROR_SHAPE, infer_rest, get_model_metadata_response_rest  # noqa
+from constants import PREDICTION_SERVICE, ERROR_SHAPE
+from utils.grpc import infer, get_model_metadata, model_metadata_response
+from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
 class TestSingleModelMappingInference():

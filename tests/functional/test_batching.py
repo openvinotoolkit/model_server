@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 import pytest
-from constants import PREDICTION_SERVICE
-from conftest import infer_batch, get_model_metadata, \
-    model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
-    get_model_metadata_response_rest  # noqa
+from constants import PREDICTION_SERVICE, ERROR_SHAPE
+from utils.grpc import infer_batch, get_model_metadata, \
+    model_metadata_response
+from utils.rest import infer_batch_rest, get_model_metadata_response_rest
 
 
 class TestBatchModelInference():

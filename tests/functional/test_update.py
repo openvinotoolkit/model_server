@@ -16,9 +16,11 @@
 import time
 import shutil
 import sys
-from conftest import copy_model, get_model_metadata, model_metadata_response, \
-    get_model_metadata_response_rest, get_model_status, \
-    get_model_status_response_rest # noqa
+from utils.model_management import copy_model
+from utils.grpc import get_model_metadata, model_metadata_response, \
+    get_model_status
+from utils.rest import get_model_metadata_response_rest, \
+    get_model_status_response_rest
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \

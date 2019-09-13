@@ -16,8 +16,9 @@
 import pytest
 import numpy as np
 
-from conftest import infer_batch, infer_batch_rest, ERROR_SHAPE
-from constants import PREDICTION_SERVICE
+from utils.grpc import infer_batch
+from utils.rest import infer_batch_rest
+from constants import PREDICTION_SERVICE, ERROR_SHAPE
 
 
 shapes = [

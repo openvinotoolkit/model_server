@@ -16,8 +16,9 @@
 import requests
 import pytest
 import sys
-from conftest import get_model_metadata, model_metadata_response, \
-    get_model_status, get_model_status_response_rest
+from utils.grpc import get_model_metadata, model_metadata_response, \
+    get_model_status
+from utils.rest import get_model_status_response_rest
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 from google.protobuf.json_format import Parse

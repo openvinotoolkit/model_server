@@ -15,8 +15,9 @@
 #
 import numpy as np
 import sys
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    infer_rest, get_model_metadata_response_rest, get_model_status, \
+from utils.grpc import infer, get_model_metadata, model_metadata_response, \
+     get_model_status
+from utils.rest import infer_rest, get_model_metadata_response_rest,\
     get_model_status_response_rest
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
 sys.path.append(".")
