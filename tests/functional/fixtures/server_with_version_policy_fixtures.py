@@ -4,6 +4,7 @@ import os
 from utils.model_management import wait_endpoint_setup
 from distutils.dir_util import copy_tree
 
+
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request, get_image, get_test_dir,
                                   get_docker_context):
