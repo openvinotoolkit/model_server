@@ -87,8 +87,8 @@ class GetModelMetadata(object):
         target_engine = self.models[model_name].engines[version]
         target_engine.in_use.acquire()
 
-        inputs = target_engine.input_tensors
-        outputs = target_engine.output_tensors
+        inputs = target_engine.net.inputs
+        outputs = target_engine.net.outputs
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,

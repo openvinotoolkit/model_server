@@ -27,8 +27,7 @@ logger = get_logger(__name__)
 class IrEngine():
 
     def __init__(self, model_name, model_version, net, plugin,
-                 mapping_config, exec_net, inputs: dict,
-                 outputs: list, batching_info, shape_info):
+                 mapping_config, exec_net, batching_info, shape_info):
         self.model_name = model_name
         self.model_version = model_version
         self.exec_net = exec_net
@@ -36,10 +35,8 @@ class IrEngine():
         self.batching_info = batching_info
         self.shape_info = shape_info
         self.plugin = plugin
-        self.input_tensor_names = list(inputs.keys())
-        self.input_tensors = inputs
-        self.output_tensor_names = list(outputs.keys())
-        self.output_tensors = outputs
+        self.input_tensor_names = list(net.inputs.keys())
+        self.output_tensor_names = list(net.outputs.keys())
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
         self.in_use = Lock()
@@ -59,19 +56,36 @@ class IrEngine():
             batching_info.batch_size = net.batch_size
 
         effective_batch_size = batching_info.get_effective_batch_size()
-        logger.debug("effective batch size - {}".format(effective_batch_size))
-        inputs = net.inputs
-        outputs = net.outputs
-        # Temporary workaround to make sure network is healthy and ready for
-        # further reshaping
-        if shape_info.mode != ShapeMode.DISABLED:
+        logger.debug("[Model: {}, version: {}] --- effective batch size - {}"
+                     .format(model_name, model_version, effective_batch_size))
+        ###############################
+        # Initial shape setup
+        if shape_info.mode == ShapeMode.FIXED:
+            try:
+                fixed_shape = shape_info.get_shape_dict(net.inputs)
+            except Exception as e:
+                logger.debug("[Model: {}, version: {}] -- {}".format(
+                    model_name, model_version, str(e)))
+                raise e
+
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "fixed value: {}".format(model_name, model_version,
+                                                  fixed_shape))
+            net.reshape(fixed_shape)
+        elif shape_info.mode == ShapeMode.AUTO:
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "automatic".format(model_name, model_version))
             net.reshape({})
+        elif shape_info.mode == ShapeMode.DEFAULT:
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "default".format(model_name, model_version))
+        ###############################
 
         exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
-                        exec_net=exec_net, inputs=inputs, outputs=outputs,
-                        batching_info=batching_info, shape_info=shape_info)
+                        exec_net=exec_net, batching_info=batching_info,
+                        shape_info=shape_info)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -82,7 +96,8 @@ class IrEngine():
                 return mapping_data
             except Exception as e:
                 message = "Error occurred while reading mapping_config in " \
-                          "path {}. Message error {}".format(mapping_config, e)
+                          "path {}. Message error {}".format(mapping_config,
+                                                             e)
                 logger.error("[Model: {}, version: {}] --- {}".format(
                     self.model_name, self.model_version, message))
         return None

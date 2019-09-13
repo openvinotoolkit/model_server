@@ -66,7 +66,7 @@ def prepare_input_data(target_engine, data, service_type):
             tensor_input = np.asarray(data[requested_input_blob])
         # Validate shape if shape not in auto mode
         if target_engine.shape_info.mode != ShapeMode.AUTO:
-            shape_required_in_model = target_engine.input_tensors[
+            shape_required_in_model = target_engine.net.inputs[
                 tensor_name].shape
 
             # For reshapable models check all dimensions,
