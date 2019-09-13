@@ -17,6 +17,7 @@
 import docker
 import pytest
 import grpc
+import os
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
@@ -53,6 +54,7 @@ def get_image(request):
 
 @pytest.fixture(scope="session")
 def get_test_dir(request):
+    os.makedirs(request.config.getoption("--test_dir"), exist_ok=True)
     return request.config.getoption("--test_dir")
 
 
