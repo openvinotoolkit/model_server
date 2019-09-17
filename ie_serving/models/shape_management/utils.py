@@ -91,7 +91,7 @@ class ShapeInfo:
     @classmethod
     def build(cls, shape_param):
         if shape_param is None:
-            return ShapeMode.DISABLED
+            return cls(ShapeMode.DISABLED, None)
         shape_mode, shape = cls.process_shape_param(shape_param)
         return cls(shape_mode, shape)
 
