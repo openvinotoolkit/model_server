@@ -15,8 +15,6 @@
 #
 
 import json
-from jsonschema import validate
-from jsonschema.exceptions import ValidationError
 
 from ie_serving.logger import get_logger
 
