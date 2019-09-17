@@ -100,7 +100,7 @@ class ShapeInfo:
         shape = None
         shape_mode = ShapeMode.DEFAULT
         if type(shape_param) is dict:
-            shape = cls.prepare_shapes_dict(shape_param)
+            shape = cls.prepare_shape_dict(shape_param)
             shape_mode = ShapeMode.FIXED
         elif type(shape_param) is str:
             shape_mode, shape = cls.get_shape_from_string(shape_param)
@@ -117,23 +117,23 @@ class ShapeInfo:
             if shape is not None:
                 shape_mode = ShapeMode.FIXED
         elif shape_param[0] == '{' and shape_param[-1] == '}':
-            shape = cls.parse_shapes_dict(shape_param)
+            shape = cls.parse_shape_dict(shape_param)
             if shape:
                 shape_mode = ShapeMode.FIXED
         return shape_mode, shape
 
     @classmethod
-    def parse_shapes_dict(cls, shape_param: str):
+    def parse_shape_dict(cls, shape_param: str):
         try:
             shapes_dict = json.loads(shape_param)
         except Exception as e:
             logger.error("Error getting shapes dictionary from string: {}"
                          .format(str(e)))
             return {}
-        return cls.prepare_shapes_dict(shapes_dict)
+        return cls.prepare_shape_dict(shapes_dict)
 
     @classmethod
-    def prepare_shapes_dict(cls, shapes_dict):
+    def prepare_shape_dict(cls, shapes_dict):
         output_shapes = {}
         for key, value in shapes_dict.items():
             if type(key) is str and type(value) is str:
