@@ -183,7 +183,7 @@ class TestModelReshaping:
         out_name = 'detection_out'
         for shape in shapes:
             imgs = np.zeros(shape['in'])
-            rest_url = 'http://localhost:5561/v1/models/face_detection' \
+            rest_url = 'http://localhost:5561/v1/models/face_detection_auto' \
                        ':predict'
             output = infer_batch_rest(batch_input=imgs,
                                       input_tensor='data', rest_url=rest_url,
