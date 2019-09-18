@@ -365,7 +365,7 @@ OpenVINO&trade; Model Server determines the batch size based on the size of the 
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
 *Note:* Some models like object detection do not work correctly with batch size changed with `batch_size` parameter. Typically those are the models,
-whose output's first dimension is not representing the batch size like on the input side. In such cases there should be 
+whose output's first dimension is not representing the batch size like on the input side.
 used reshape operation instead.
 
 ## Model reshaping
