@@ -120,7 +120,9 @@ class ShapeInfo:
             shape = cls.parse_shape_dict(shape_param)
             if shape:
                 shape_mode = ShapeMode.FIXED
-        logger.warning('Unexpected value in shape parameter. Using default.')
+        else:
+            logger.warning('Unexpected value in shape parameter. '
+                           'Using default configuration.')
         return shape_mode, shape
 
     @classmethod
