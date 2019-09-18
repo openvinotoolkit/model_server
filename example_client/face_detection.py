@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,24 @@
 # limitations under the License.
 #
 
+import argparse
+import cv2
+import datetime
 import grpc
 import numpy as np
 import os
 import tensorflow.contrib.util as tf_contrib_util
-import classes
-import datetime
-import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics
-import cv2
+
+
+def load_image(file_path):
+    img = cv2.imread(file_path)  # BGR color format, shape HWC
+    img = cv2.resize(img, (args['width'], args['height']))
+    img = img.transpose(2,0,1).reshape(1,3,args['height'],args['width'])
+    # change shape to NCHW
+    return img
 
 
 parser = argparse.ArgumentParser(description='Demo for face detection requests via TFS gRPC API.'
@@ -33,9 +40,9 @@ parser = argparse.ArgumentParser(description='Demo for face detection requests v
 
 parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="images/people")
 parser.add_argument('--output_dir', required=False, help='Directory for staring images with detection results', default="results")
-parser.add_argument('--batch_size', required=False, help='how many images should be grouped in one batch', default=1, type=int)
-parser.add_argument('--width', required=False, help='how many images should be grouped in one batch', default=1200, type=int)
-parser.add_argument('--height', required=False, help='how many images should be grouped in one batch', default=800, type=int)
+parser.add_argument('--batch_size', required=False, help='How many images should be grouped in one batch', default=1, type=int)
+parser.add_argument('--width', required=False, help='How the input image width should be resized in pixels', default=1200, type=int)
+parser.add_argument('--height', required=False, help='How the input image width should be resized in pixels', default=800, type=int)
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 
@@ -47,85 +54,67 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 files = os.listdir(args['input_images_dir'])
 batch_size = args['batch_size']
 print(files)
-print(type(files))
 
-def load_image(file):
-    with open(file, mode='rb') as file:
-        content = file.read()
-
-    img = np.frombuffer(content, dtype=np.uint8)
-    img = cv2.imdecode(img, cv2.IMREAD_COLOR)  # BGR format
-    img = img.astype('float32')
-    img = cv2.resize(img, (args['width'], args['height']))
-    img = img.astype('float32')
-    print(img.shape)
-    cv2.imwrite('test.jpg',img)
-    img = img.transpose(2,0,1).reshape(1,3,args['height'],args['width'])
-    print(img.shape)
-
-    return img
 
 imgs = np.zeros((0,3,args['height'],args['width']), np.dtype('<f'))
 for i in files:
     img = load_image(os.path.join(args['input_images_dir'], i))
-    imgs = np.append(imgs, img, axis=0)
+    imgs = np.append(imgs, img, axis=0)  # contains all imported images
 
-print(imgs.shape)
-
-iterations = len(files)//batch_size
-
-print('Start processing:')
-print('Iterations: {} \n'.format(iterations))
+print('Start processing {} iterations with batch size {}'.format(len(files)//batch_size , batch_size))
 
 iteration = 0
 processing_times = np.zeros((0),int)
 
-while iteration <= iterations:
-    for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
-        iteration += 1
-        if iteration > iterations: break
-        request = predict_pb2.PredictRequest()
-        request.model_spec.name = "face-detection"
-        img = imgs[x:(x + batch_size)]
 
-        print("request shape", img.shape)
-        request.inputs["data"].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
-        start_time = datetime.datetime.now()
-        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-        end_time = datetime.datetime.now()
+for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
+    iteration += 1
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = "face-detection"
+    img = imgs[x:(x + batch_size)]
+    print("\nRequest shape", img.shape)
+    request.inputs["data"].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+    start_time = datetime.datetime.now()
+    result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+    end_time = datetime.datetime.now()
 
-        duration = (end_time - start_time).total_seconds() * 1000
-        processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = tf_contrib_util.make_ndarray(result.outputs["detection_out"])
-        print("response shape", output.shape)
-        for y in range(0,img.shape[0]):
-            img_out = img[y,:,:,:]
-            print("image in batch",y, "shape",img_out.shape)
-            img_out = img_out.transpose(1,2,0)
-            for i in range(0, 200*batch_size-1):
-                detection = output[:,:,i,:]
-                if detection[0,0,2] > 0.5 and int(detection[0,0,0]) == y:
-                    print("detection", i , detection)
-                    x_min = int(detection[0,0,3] * args['width'])
-                    y_min = int(detection[0,0,4] * args['height'])
-                    x_max = int(detection[0,0,5] * args['width'])
-                    y_max = int(detection[0,0,6] * args['height'])
-                    print("x_min", x_min)
-                    print("y_min", y_min)
-                    print("x_max", x_max)
-                    print("y_max", y_max)
+    duration = (end_time - start_time).total_seconds() * 1000
+    processing_times = np.append(processing_times,np.array([int(duration)]))
+    output = tf_contrib_util.make_ndarray(result.outputs["detection_out"])
+    print("Response shape", output.shape)
+    for y in range(0,img.shape[0]):  # iterate over responses from all images in the batch
+        img_out = img[y,:,:,:]
 
-                    img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
-    #            else:
-    #                break
-            print("saving result to",os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg\n'))
-            cv2.imwrite(os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'),img_out)
+        print("image in batch item",y, ", output shape",img_out.shape)
+        img_out = img_out.transpose(1,2,0)
+        for i in range(0, 200*batch_size-1):  # there is returned 200 detections for each image in the batch
+            detection = output[:,:,i,:]
+            # each detection has shape 1,1,7 where last dimension represent:
+            # image_id - ID of the image in the batch
+            # label - predicted class ID
+            # conf - confidence for the predicted class
+            # (x_min, y_min) - coordinates of the top left bounding box corner
+            #(x_max, y_max) - coordinates of the bottom right bounding box corner.
+            if detection[0,0,2] > 0.5 and int(detection[0,0,0]) == y:  # ignore detections for image_id != y and confidence <0.5
+                print("detection", i , detection)
+                x_min = int(detection[0,0,3] * args['width'])
+                y_min = int(detection[0,0,4] * args['height'])
+                x_max = int(detection[0,0,5] * args['width'])
+                y_max = int(detection[0,0,6] * args['height'])
+                # box coordinates are proportional to the image size
+                print("x_min", x_min)
+                print("y_min", y_min)
+                print("x_max", x_max)
+                print("y_max", y_max)
 
-        # for object classification models show imagenet class
-        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
-                                                                                  round(1000 * batch_size / np.average(duration), 2)
+                img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
+                # draw each detected box on the input image
+        print("saving result to",os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'))
+        cv2.imwrite(os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'),img_out)
+
+    print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'
+          .format(iteration, round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)
                                                                                   ))
-
 
 print_statistics(processing_times, batch_size)
 

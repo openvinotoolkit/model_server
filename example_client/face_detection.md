@@ -28,8 +28,8 @@ optional arguments:
                         Directory for staring images with detection results
   --batch_size BATCH_SIZE
                         how many images should be grouped in one batch
-  --width WIDTH         how many images should be grouped in one batch
-  --height HEIGHT       how many images should be grouped in one batch
+  --width WIDTH         how the input image width should be resized in pixels
+  --height HEIGHT       how the input height should be resized in pixels
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
@@ -64,7 +64,7 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
-<#iternation>_<#image_in_batch>.jpeg
+<#iteration>_<#image_in_batch>.jpeg
 
 
 
