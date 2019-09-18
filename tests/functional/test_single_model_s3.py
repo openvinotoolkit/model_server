@@ -14,11 +14,13 @@
 # limitations under the License.
 #
 
-import numpy as np
 import sys
+
+import numpy as np
+from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
-from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa

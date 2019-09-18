@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import time
 import shutil
 import sys
-from utils.model_management import copy_model
+import time
+
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
 from utils.grpc import get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.model_management import copy_model
 from utils.rest import get_model_metadata_response_rest, \
     get_model_status_response_rest
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
+
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa

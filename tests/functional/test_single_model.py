@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import sys
+
 import numpy as np
 import pytest
-import sys
+from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
-from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa

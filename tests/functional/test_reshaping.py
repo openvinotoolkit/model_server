@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import pytest
-import numpy as np
 
+import numpy as np
+import pytest
+from constants import PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer_batch
 from utils.rest import infer_batch_rest
-from constants import PREDICTION_SERVICE, ERROR_SHAPE
-
 
 shapes = [
     {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},

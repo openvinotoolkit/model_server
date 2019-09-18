@@ -13,16 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import requests
-import pytest
 import sys
+
+import pytest
+import requests
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from google.protobuf.json_format import Parse
+from tensorflow_serving.apis import get_model_metadata_pb2, \
+    get_model_status_pb2  # noqa
 from utils.grpc import get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.rest import get_model_status_response_rest
-from tensorflow_serving.apis import get_model_metadata_pb2, \
-    get_model_status_pb2  # noqa
-from google.protobuf.json_format import Parse
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
+
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, _ERROR_MESSAGE # noqa
 

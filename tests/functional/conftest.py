@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-import docker
-import pytest
-import grpc
 import os
 
+import docker
+import grpc
+import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
