@@ -14,22 +14,23 @@
 # limitations under the License.
 #
 
-import numpy as np
 import sys
 
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode
+import numpy as np
+from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+from utils.grpc import infer, get_model_metadata, model_metadata_response, \
+    get_model_status
 
 sys.path.append(".")
-from conftest import infer, get_model_metadata, model_metadata_response, \
-     get_model_status, ERROR_SHAPE  # noqa
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
+    ErrorCode  # noqa
 
 
 class TestSingleModelInferenceGc():
 
     def test_run_inference(self, input_data_downloader_v1_224,
                            start_server_single_model_from_gc,
-                           create_channel_for_port_single_server):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -50,7 +51,7 @@ class TestSingleModelInferenceGc():
         """
 
         # Connect to grpc service
-        stub = create_channel_for_port_single_server
+        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -64,9 +65,9 @@ class TestSingleModelInferenceGc():
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
     def test_get_model_metadata(self, start_server_single_model_from_gc,
-                                create_channel_for_port_single_server):
+                                create_grpc_channel):
 
-        stub = create_channel_for_port_single_server
+        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -84,9 +85,9 @@ class TestSingleModelInferenceGc():
         assert expected_output_metadata == output_metadata
 
     def test_get_model_status(self, start_server_single_model_from_gc,
-                              create_channel_for_port_single_server_status):
+                              create_grpc_channel):
 
-        stub = create_channel_for_port_single_server_status
+        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

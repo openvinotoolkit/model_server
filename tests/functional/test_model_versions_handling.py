@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from conftest import infer, get_model_metadata, model_metadata_response, \
-    infer_rest, get_model_metadata_response_rest, get_model_status, \
-    get_model_status_response_rest
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode
-import numpy as np
 import sys
 
+import numpy as np
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from utils.grpc import infer, get_model_metadata, model_metadata_response, \
+    get_model_status
+from utils.rest import infer_rest, get_model_metadata_response_rest, \
+    get_model_status_response_rest
 
 sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, ErrorCode  # noqa
 
 
 class TestModelVersionHandling():
@@ -31,7 +31,7 @@ class TestModelVersionHandling():
     def test_run_inference(self, download_two_model_versions,
                            input_data_downloader_v1_224,
                            start_server_multi_model,
-                           create_channel_for_port_multi_server):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Execute inference request using gRPC interface with version specified
@@ -60,7 +60,7 @@ class TestModelVersionHandling():
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
@@ -87,12 +87,12 @@ class TestModelVersionHandling():
 
     def test_get_model_metadata(self, download_two_model_versions,
                                 start_server_multi_model,
-                                create_channel_for_port_multi_server):
+                                create_grpc_channel):
 
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
         versions = [None, 1]
 
         expected_outputs_metadata = \
@@ -121,12 +121,12 @@ class TestModelVersionHandling():
 
     def test_get_model_status(self, download_two_model_versions,
                               start_server_multi_model,
-                              create_channel_for_port_multi_server_status):
+                              create_grpc_channel):
 
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server_status
+        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
         versions = [None, 1]
         for x in range(len(versions)):
             model_name = 'resnet'
