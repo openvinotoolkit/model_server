@@ -366,7 +366,7 @@ For example with the input shape (1, 3, 225, 225), the batch size is set to 1. W
 
 *Note:* Some models like object detection do not work correctly with batch size changed with `batch_size` parameter. Typically those are the models,
 whose output's first dimension is not representing the batch size like on the input side.
-used reshape operation instead.
+Changing batch size in this kind of models can be done with network reshaping by setting `shape` parameter appropriately.
 
 ## Model reshaping
 `shape` parameter is optional and it takes precedence over batch_size parameter. When the shape is defined as an argument,
