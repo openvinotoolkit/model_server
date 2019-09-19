@@ -33,25 +33,30 @@ class ShapeInfo:
         self.shape = shape
         # shape field can be either:
         # - None for disabled, default, auto mode
-        # - Tuple or Dict for fixed mode, depending on provided parameter
+        # - Dict of input_name:shape pairs for fixed mode
 
     def process_shape_param(self, shape_param, net_inputs):
         shape = None
         shape_mode = ShapeMode.DEFAULT
         if type(shape_param) is dict:
             shape = self.get_shape_dict(shape_param)
-            shape_mode = ShapeMode.FIXED
         elif type(shape_param) is str:
             shape_mode, shape = self.get_shape_from_string(shape_param)
 
-        if shape is not None and type(shape) is tuple:
-            if len(net_inputs) > 1:
-                raise Exception("Noname shape specified for model with "
-                                "multiple inputs")
-            else:
-                input_name = list(net_inputs.keys())[0]
-                shape = {input_name: shape}
+        if shape is not None:
+            shape_mode = ShapeMode.FIXED
+            if type(shape) is tuple:
+                shape = self._shape_as_dict(shape, net_inputs)
+
         return shape_mode, shape
+
+    def _shape_as_dict(self, shape: tuple, net_inputs: dict):
+        if len(net_inputs) > 1:
+            raise Exception("Noname shape specified for model with "
+                            "multiple inputs")
+        else:
+            input_name = list(net_inputs.keys())[0]
+            return {input_name: shape}
 
     def get_shape_from_string(self, shape_param):
         shape = None
@@ -77,6 +82,7 @@ class ShapeInfo:
         output_shapes = {}
         for key, value in shapes.items():
             if type(key) is str and type(value) is str:
+                value = value.replace('(', '[').replace(')', ']')
                 output_shapes.update(self._get_single_shape(input_name=key,
                                                             shape=value))
         if output_shapes:
