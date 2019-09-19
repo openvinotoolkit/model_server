@@ -76,7 +76,7 @@ class ShapeInfo:
     def get_shape_dict(self, model_inputs):
         # Returns shape in dict format - {input_name: shape, ...}
         if type(self.shape) is tuple:
-            if len(list(model_inputs.keys())) > 1:
+            if len(model_inputs) > 1:
                 raise Exception("Noname shape specified for model with "
                                 "multiple inputs")
             else:

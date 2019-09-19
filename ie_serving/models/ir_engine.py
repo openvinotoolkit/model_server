@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import datetime
 from threading import Lock
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from openvino.inference_engine import IENetwork, IEPlugin
@@ -151,6 +151,26 @@ class IrEngine():
             return None, message
         return results, None
 
+    def detect_shapes_incompatibility(self, inference_input):
+        # Compares workload shapes with engine inputs shapes. Returns
+        # reshape_param
+        # reshape_param is inputs shapes dictionary (input_name:shape pairs)
+        # for reshapable models and batch size for non-reshapable. If no
+        # changes needed - reshape_param is None
+
+        reshape_param = None
+        inputs_shapes = self.scan_input_shapes(
+            inference_input)
+        if inputs_shapes:
+            reshape_param = inputs_shapes
+            # For non-reshapable models, batch_size of first input is the
+            # reshape parameter
+            if self.shape_info.mode == ShapeMode.DISABLED:
+                input_shape = inputs_shapes[list(inputs_shapes.keys())[0]]
+                batch_size = list(input_shape)[0]
+                reshape_param = batch_size
+        return reshape_param
+
     def scan_input_shapes(self, data: dict):
         #   Takes dictionary of input_name:numpy_array pairs.
         changed_input_shapes = {}
@@ -167,15 +187,25 @@ class IrEngine():
         return changed_input_shapes
 
     def reshape(self, reshape_param):
+        reshape_start_time = datetime.datetime.now()
         if type(reshape_param) is dict:
-            return self._reshape(reshape_param)
+            error_message = self._reshape(reshape_param)
         elif type(reshape_param) is int:
-            return self._change_batch_size(reshape_param)
+            error_message = self._change_batch_size(reshape_param)
         else:
-            message = "Unknown error occurred in input reshape preparation"
+            error_message = "Unknown error occurred in input " \
+                            "reshape preparation"
+        reshape_end_time = datetime.datetime.now()
+        if error_message is not None:
             logger.debug("[Model: {}, version: {}] --- {}".format(
-                self.model_name, self.model_version, message))
-            return message
+                self.model_name, self.model_version, error_message))
+            return error_message
+        duration = \
+            (reshape_end_time - reshape_start_time).total_seconds() * 1000
+        logger.debug(
+            "IR_ENGINE; network reshape completed; {}; {}; {}ms".format(
+                self.model_name, self.model_version, duration))
+        return None
 
     def _reshape(self, inputs_shapes: dict):
         #   Takes dictionary of input_name:shape pairs as parameter
