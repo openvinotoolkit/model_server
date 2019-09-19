@@ -146,8 +146,8 @@ class TestModelReshaping:
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
-        models_names = ["face_detection_fixed_noname",
-                        "face_detection_fixed_name"]
+        models_names = ["face_detection_fixed_nonamed",
+                        "face_detection_fixed_named"]
 
         out_name = 'detection_out'
 
