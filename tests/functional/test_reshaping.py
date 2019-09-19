@@ -56,7 +56,6 @@ class TestModelReshaping:
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == shape['out'], ERROR_SHAPE
 
-    @pytest.mark.skip(reason="Fixed shape option not yet merged")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_input_shape, True), ((1, 3, 300, 300),
                                                           False)])
@@ -134,7 +133,6 @@ class TestModelReshaping:
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == shape['out'], ERROR_SHAPE
 
-    @pytest.mark.skip(reason="Fixed shape option not yet merged")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_input_shape, True), ((1, 3, 300, 300),
                               False)])

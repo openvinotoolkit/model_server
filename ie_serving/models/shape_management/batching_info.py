@@ -35,4 +35,3 @@ class BatchingInfo:
             return "auto"
         if self.batch_size is not None:
             return str(self.batch_size)
-
