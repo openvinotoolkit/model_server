@@ -14,11 +14,15 @@
 # limitations under the License.
 #
 import datetime
-from threading import Lock
-from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
-from openvino.inference_engine import IENetwork, IEPlugin
 import json
+from threading import Lock
+
+from openvino.inference_engine import IENetwork, IEPlugin
+
+from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from ie_serving.logger import get_logger
+from ie_serving.models.shape_management.batching_info import BatchingInfo
+from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 
 logger = get_logger(__name__)
@@ -44,12 +48,13 @@ class IrEngine():
 
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batching_info, shape_info):
+              mapping_config, batch_size_param, shape_param):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork(model=model_xml, weights=model_bin)
-
+        batching_info = BatchingInfo(batch_size_param)
+        shape_info = ShapeInfo(shape_param, net.inputs)
         if batching_info.mode == BatchingMode.FIXED:
             net.batch_size = batching_info.batch_size
         else:
@@ -61,17 +66,10 @@ class IrEngine():
         ###############################
         # Initial shape setup
         if shape_info.mode == ShapeMode.FIXED:
-            try:
-                fixed_shape = shape_info.get_shape_dict(net.inputs)
-            except Exception as e:
-                logger.debug("[Model: {}, version: {}] -- {}".format(
-                    model_name, model_version, str(e)))
-                raise e
-
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
                          "fixed value: {}".format(model_name, model_version,
-                                                  fixed_shape))
-            net.reshape(fixed_shape)
+                                                  shape_info.shape))
+            net.reshape(shape_info.shape)
         elif shape_info.mode == ShapeMode.AUTO:
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
                          "automatic".format(model_name, model_version))
