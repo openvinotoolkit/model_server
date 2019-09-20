@@ -137,9 +137,9 @@ class TestMuiltModelInference():
         model_name = 'resnet_V1_50'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+                                             'shape': [2, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [2, 1000]}}
         request = get_model_metadata(model_name='resnet_V1_50')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -295,9 +295,9 @@ class TestMuiltModelInference():
         model_name = 'resnet_V1_50'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+                                             'shape': [2, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [2, 1000]}}
         rest_url = 'http://localhost:5561/v1/models/resnet_V1_50/metadata'
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(

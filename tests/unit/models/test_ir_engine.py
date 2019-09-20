@@ -40,7 +40,7 @@ def test_init_class():
     assert model_bin == engine.model_bin
     assert exec_net == engine.exec_net
     assert [input_key] == engine.input_tensor_names
-    assert inputs == engine.input_tensors
+    assert inputs == engine.net.inputs
     assert ['output'] == engine.output_tensor_names
     assert {'inputs': {'input': 'input'},
             'outputs': {'output': 'output'}} == engine.model_keys

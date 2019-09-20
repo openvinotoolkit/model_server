@@ -23,7 +23,6 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
 from ie_serving.logger import get_logger
-from ie_serving.models.shape_management.reshaper import Reshaper
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
@@ -85,11 +84,10 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         target_engine.in_use.acquire()
         ################################################
         # Reshape network inputs if needed
-        reshape_param = Reshaper.detect_shapes_incompatibility(target_engine,
-                                                               inference_input)
+        reshape_param = target_engine.detect_shapes_incompatibility(
+            inference_input)
         if reshape_param is not None:
-            error_message = Reshaper.prepare_engine(target_engine,
-                                                    reshape_param)
+            error_message = target_engine.reshape(reshape_param)
             if error_message is not None:
                 code = statusCodes['invalid_arg'][GRPC]
                 context.set_code(code)
@@ -155,8 +153,8 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             target_engine.in_use.release()
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
-        inputs = target_engine.input_tensors
-        outputs = target_engine.output_tensors
+        inputs = target_engine.net.inputs
+        outputs = target_engine.net.outputs
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
