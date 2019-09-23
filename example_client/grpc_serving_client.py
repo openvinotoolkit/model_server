@@ -38,7 +38,7 @@ parser.add_argument('--transpose_input', choices=["False", "True"], default="Tru
                     help='Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True',
                     dest="transpose_input")
 parser.add_argument('--transpose_method', choices=["nchw2nhwc","nhwc2nchw"], default="nhwc2nchw",
-                    help="How the input transposition should be executed: nhwc2nchw or nhwc2nchw",
+                    help="How the input transposition should be executed: nhwc2nchw or nchw2nhwc",
                     dest="transpose_method")
 parser.add_argument('--iterations', default=0,
                     help='Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)',

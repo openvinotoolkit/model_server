@@ -14,22 +14,21 @@
 # limitations under the License.
 #
 
-from setuptools import setup
-
+from setuptools import setup, find_packages
 
 setup(
     name='ie_serving',
-    version=2019.1,
+    version="2019.2",
     description="DLDT inference server",
     long_description="""DLDT inference server""",
     keywords='',
     author_email='',
-    packages=['ie_serving', 'ie_serving.server', 'ie_serving.models',
-              'ie_serving.tensorflow_serving_api'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=["grpcio", "numpy", "protobuf",
-                      "tensorflow", "google-cloud-storage", "boto3",
+                      "tensorflow-serving-api", "google-cloud-storage",
+                      "boto3",
                       "jsonschema", "falcon", "cheroot"],
     entry_points={
         'console_scripts': [

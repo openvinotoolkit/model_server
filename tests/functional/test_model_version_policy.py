@@ -14,14 +14,19 @@
 # limitations under the License.
 #
 
+from conftest import get_model_metadata, model_metadata_response, \
+    get_model_status, get_model_status_response_rest
+from tensorflow_serving.apis import get_model_metadata_pb2, \
+    get_model_status_pb2  # noqa
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE
+from google.protobuf.json_format import Parse
+
 import sys
 import requests
 import pytest
-from google.protobuf.json_format import Parse
-from grpc.framework.interfaces.face.face import AbortionError
+
 sys.path.append(".")
-from conftest import get_model_metadata, model_metadata_response  # noqa
-from ie_serving.tensorflow_serving_api import get_model_metadata_pb2  # noqa
 
 
 class TestModelVerPolicy():
@@ -91,8 +96,54 @@ class TestModelVerPolicy():
                 assert expected_input_metadata == input_metadata
                 assert expected_output_metadata == output_metadata
             else:
-                with pytest.raises(AbortionError):
+                with pytest.raises(Exception) as e:
                     response = stub.GetModelMetadata(request, 10)
+                assert "Servable not found for request" in str(e.value)
+
+    @pytest.mark.parametrize("model_name, throw_error", [
+        ('all', [False, False, False]),
+        ('specific', [False, True, False]),
+        ('latest', [True, False, False]),
+    ])
+    def test_get_model_status(self, model_version_policy_models,
+                              start_server_model_ver_policy,
+                              create_channel_for_model_ver_pol_server_status,
+                              model_name, throw_error):
+
+        print("Downloaded model files:", model_version_policy_models)
+
+        # Connect to grpc service
+        stub = create_channel_for_model_ver_pol_server_status
+
+        versions = [1, 2, 3]
+        for x in range(len(versions)):
+            request = get_model_status(model_name=model_name,
+                                       version=versions[x])
+            if not throw_error[x]:
+                response = stub.GetModelStatus(request, 10)
+                versions_statuses = response.model_version_status
+                version_status = versions_statuses[0]
+                assert version_status.version == versions[x]
+                assert version_status.state == ModelVersionState.AVAILABLE
+                assert version_status.status.error_code == ErrorCode.OK
+                assert version_status.status.error_message == _ERROR_MESSAGE[
+                    ModelVersionState.AVAILABLE][ErrorCode.OK]
+            else:
+                with pytest.raises(Exception) as e:
+                    response = stub.GetModelStatus(request, 10)
+                assert "Servable not found for request" in str(e.value)
+
+        #   aggregated results check
+        if model_name == 'all':
+            request = get_model_status(model_name=model_name)
+            response = stub.GetModelStatus(request, 10)
+            versions_statuses = response.model_version_status
+            assert len(versions_statuses) == 3
+            for version_status in versions_statuses:
+                assert version_status.state == ModelVersionState.AVAILABLE
+                assert version_status.status.error_code == ErrorCode.OK
+                assert version_status.status.error_message == _ERROR_MESSAGE[
+                    ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
@@ -104,7 +155,7 @@ class TestModelVerPolicy():
                                      model_name, throw_error):
         """
         <b>Description</b>
-        Execute GetModelMetadata request using gRPC interface
+        Execute GetModelMetadata request using REST API interface
         hosting multiple models
 
         <b>input data</b>
@@ -162,3 +213,46 @@ class TestModelVerPolicy():
                 assert expected_output_metadata == output_metadata
             else:
                 assert 404 == result.status_code
+
+    @pytest.mark.parametrize("model_name, throw_error", [
+        ('all', [False, False, False]),
+        ('specific', [False, True, False]),
+        ('latest', [True, False, False]),
+    ])
+    def test_get_model_status_rest(self, model_version_policy_models,
+                                   start_server_model_ver_policy,
+                                   model_name, throw_error):
+
+        print("Downloaded model files:", model_version_policy_models)
+
+        versions = [1, 2, 3]
+        for x in range(len(versions)):
+            rest_url = 'http://localhost:5560/v1/models/{}/' \
+                       'versions/{}'.format(model_name, versions[x])
+            result = requests.get(rest_url)
+            if not throw_error[x]:
+                output_json = result.text
+                status_pb = get_model_status_pb2.GetModelStatusResponse()
+                response = Parse(output_json, status_pb,
+                                 ignore_unknown_fields=False)
+                versions_statuses = response.model_version_status
+                version_status = versions_statuses[0]
+                assert version_status.version == versions[x]
+                assert version_status.state == ModelVersionState.AVAILABLE
+                assert version_status.status.error_code == ErrorCode.OK
+                assert version_status.status.error_message == _ERROR_MESSAGE[
+                    ModelVersionState.AVAILABLE][ErrorCode.OK]
+            else:
+                assert 404 == result.status_code
+
+                #   aggregated results check
+        if model_name == 'all':
+            rest_url = 'http://localhost:5560/v1/models/all'
+            response = get_model_status_response_rest(rest_url)
+            versions_statuses = response.model_version_status
+            assert len(versions_statuses) == 3
+            for version_status in versions_statuses:
+                assert version_status.state == ModelVersionState.AVAILABLE
+                assert version_status.status.error_code == ErrorCode.OK
+                assert version_status.status.error_message == _ERROR_MESSAGE[
+                    ModelVersionState.AVAILABLE][ErrorCode.OK]

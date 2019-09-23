@@ -15,15 +15,19 @@ and allows frameworks such as [AWS Sagemaker](https://github.com/aws/sagemaker-t
 
 OpenVINO Model Server supports for the models storage, beside local filesystem, also GCS, S3 and Minio. 
 
-It is implemented as a python service using gRPC library interface; falcon REST API framework;  data serialization and deserialization 
+It is implemented as a python service using gRPC interface library; falcon REST API framework;  data serialization and deserialization 
 using TensorFlow; and OpenVINO&trade; for inference execution. It acts as an integrator and a bridge exposing CPU optimized 
 inference engine over network interfaces. 
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
-OpenVINO Model Server, beside CPU, can employ [Intel® Movidius™ Neural Compute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
+OpenVINO Model Server, beside CPU, can employ:
+ - [Intel® Movidius™ NeuralCompute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
 It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or 
 [in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
+- Intel HDDL accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or 
+[in Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
 
 ## Getting it up and running
 
@@ -41,30 +45,34 @@ Using FPGA (TBD)
 
 ## gRPC API documentation
 
-OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](ie_serving/tensorflow_serving_api/prediction_service.proto).
-**Note:** The implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis).
+**Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
 
-[predict Function Spec](ie_serving/tensorflow_serving_api/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
+[predict function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
 * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
-[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format and an optional output filter.
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format.
 * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
  
-[get_model_metadata Function spec](ie_serving/tensorflow_serving_api/get_model_metadata.proto) has three message definitions:
+[get_model_metadata function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions:
  *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
  A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
 
-Refer to the example client code to learn how to use this API and submit the requests using gRPC interface.
+[get model status function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/get_model_status.proto) can be used to report
+all exposed versions including their state in their lifecycle. 
 
-gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization. 
+Refer to the [example client code](example_client) to learn how to use this API and submit the requests using gRPC interface.
+
+gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization.
+It can achieve shorter latency especially for big input messages like images. 
 
 ## RESTful API documentation 
 
 OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
 
 Both row and column format of the requests are implemented. 
-**Note:** Just like with gRPC, only the implementations for *Predict* and *GetModelMetadata* function calls are currently available. 
+**Note:** Just like with gRPC, only the implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 
 Only the numerical data types are supported. 
 
@@ -74,15 +82,22 @@ REST API is recommended when the primary goal is in reducing the number of clien
 
 ## Usage examples
 
-[Kubernetes](example_k8s)
+[Kubernetes deployments](example_k8s)
 
-[Sagemaker](example_sagemaker)
+[Sagemaker integration](example_sagemaker)
 
-[Client Code Example](example_client)
+Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
+and [RESTful API](example_client/#rest-api-client-to-predict-function) with numpy data input
+
+[Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
+
+[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
+
+[Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
 
 [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
 
-[Jupyter notebook - REST API client](example_client/REST_age_gender.ipynb)
+[Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
 
 ## Benchmarking results
@@ -130,13 +145,54 @@ docker logs ie-serving
 
 
 ### Model import issues
-OpenVINO&trade; model server will fail to start when any of the defined model cannot be loaded successfully. The root cause of
-the failure can be determined based on the collected logs on the console or in the log file.
+OpenVINO&trade; Model Server loads all defined models versions according 
+to set [version policy](docs/docker_container.md#model-version-policy). 
+A model version is represented by a numerical directory in a model path, 
+containing OpenVINO model files with .bin and .xml extensions.
 
-The following problem might occur during model server initialization and model loading:
-* Missing model files in the location specified in the configuration file.
-* Missing version sub-folders in the model folder.
-* Model files require custom CPU extension.
+Below are examples of incorrect structure:
+```bash
+models/
+├── model1
+│   ├── 1
+│   │   ├── ir_model.bin
+│   │   └── ir_model.xml
+│   └── 2
+│       ├── somefile.bin
+│       └── anotherfile.txt
+└── model2
+    ├── ir_model.bin
+    ├── ir_model.xml
+    └── mapping_config.json
+```
+
+In above scenario, server will detect only version `1` of `model1`.
+Directory `2` does not contain valid OpenVINO model files, so it won't 
+be detected as a valid model version. 
+For `model2`, there are correct files, but they are not in a numerical directory. 
+The server will not detect any version in `model2`.
+
+When new model version is detected, the server will loads the model files 
+and starts serving new model version. This operation might fail for the following reasons:
+- there is a problem with accessing model files (i. e. due to network connectivity issues
+to the  remote storage or insufficient permissions)
+- model files are malformed and can not be imported by the Inference Engine
+- model requires custom CPU extension
+
+In all those situations, the root cause is reported in the server logs or in the response from a call
+to GetModelStatus function. 
+
+Detected but not loaded model version will not be served and will report status
+`LOADING` with error message: `Error occurred while loading version`.
+When model files becomes accessible or fixed, server will try to 
+load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
+attempt.
+
+At startup, the server will enable gRPC and REST API endpoint, after all configured models and detected model versions
+are loaded successfully (in AVAILABLE state).
+
+The server will fail to start if it can not list the content of configured model paths.
+
 
 ### Client request issues
 When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors 
@@ -192,7 +248,7 @@ You can parse the logs to analyze: volume of requests, processing statistics and
 
 ## Known limitations and plans
 
-* Currently, only *Predict* and *GetModelMetadata* calls are implemented using Tensorflow Serving API. 
+* Currently, *Predict*, *GetModelMetadata* and *GetModelStatus* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
 
@@ -212,8 +268,7 @@ Docker image with OpenVINO Model Server can be built with several options:
 - `make docker_build_src_ubuntu` - using OpenVINO source code with ubuntu base image
 - `make docker_build_src_intelpython` - using OpenVINO source code with 'intelpython/intelpython3_core' base image 
 (Intel optimized python distribution with conda and debian)
-- `make docker_build_clearlinux` - using ClearLinux base image and 
-[computer vision bundle](https://github.com/clearlinux/clr-bundles/blob/master/bundles/computer-vision-basic) 
+
 
 ### Testing
 

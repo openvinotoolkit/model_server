@@ -140,7 +140,7 @@ class TestBatchModelInference():
                                 start_server_batch_model, request_format):
         """
             <b>Description</b>
-            Submit request to gRPC interface serving a single resnet model
+            Submit request to REST API interface serving a single resnet model
 
             <b>input data</b>
             - directory with the model in IR format
@@ -214,7 +214,7 @@ class TestBatchModelInference():
                                      request_format):
         """
             <b>Description</b>
-            Submit request to gRPC interface serving a single resnet model
+            Submit request to REST API interface serving a single resnet model
 
             <b>input data</b>
             - directory with the model in IR format

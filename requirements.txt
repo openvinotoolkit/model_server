@@ -1,9 +1,10 @@
-grpcio==1.14.1
-numpy==1.16.1
-protobuf==3.6.1
-tensorflow==1.13.1
-google-cloud-storage==1.13.2
-boto3==1.9.80
+grpcio==1.22.0
+numpy==1.16.2
+protobuf==3.9.0
+tensorflow==1.14.0
+tensorflow-serving-api==1.14.0
+google-cloud-storage==1.16.1
+boto3==1.9.188
 jsonschema==2.6.0
 falcon==2.0.0
 cheroot==6.5.5

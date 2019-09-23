@@ -111,7 +111,7 @@ completed with just one command like below:
 
 ```bash
 docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest-port 8001
+/ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest_port 8001
 ```
 
 * option `-v` defines how the models folder should be mounted inside the docker container.
@@ -127,7 +127,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
                         [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT]
-                        [--rest-port PORT] 
+                        [--rest_port PORT] 
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -140,7 +140,7 @@ optional arguments:
   --model_version_policy MODEL_VERSION_POLICY 
                         sets model version policy for model
   --port PORT           gRPC server port
-  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
+  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
 
 ```
 
@@ -243,26 +243,29 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 -e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
 -e AWS_REGION=“${AWS_REGION}”  \
 -e S3_ENDPOINT=“${S3_ENDPOINT}”  \
-/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --rest-port 8001
+/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --rest_port 8001
 ```
 
 Below is the explanation of the `ie_serving config` parameters
 ```bash
-usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest-port PORT]
+usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest_port PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
   --config_path CONFIG_PATH
                         absolute path to json configuration file
   --port PORT           gRPC server port
-  --rest-port PORT      REST server port, the REST server will not be started if rest-port is blank or set to 0
+  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
 ```
 
 ## Starting docker container with NCS
 
-Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick) 
-is distributed only in a binary form, so
-loading models on NCS is possible __only with binary built docker image__.
+Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
+version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
+You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
+- `make docker_build_bin` 
+- `make docker_build_src_ubuntu`
+- `make docker_build_src_intelpython`
 
 Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
 rules:
@@ -306,6 +309,34 @@ ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_pat
 
 A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
 chooses to which one the model is loaded. 
+
+## Starting docker container with HDDL
+
+Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin
+, using OpenVINO toolkit binary distribution:
+- `make docker_build_bin` 
+
+In order to run container that is using HDDL accelerator, _hddldaemon_ must
+ run on host machine. It's  required to set up environment 
+ (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
+  host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
+
+To start server with HDDL you can use command similar to:
+
+```
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -e DEVICE=HDDL -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+```
+
+`--device=/dev/ion:/dev/ion` mounts the accelerator.
+
+`-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
+ host machine
+ 
+ <i>DEVICE</i> environment variable indicates that model will
+ be loaded on HDDL device.
+
 
 ## Batch Processing
 
@@ -351,4 +382,5 @@ Updates in the model version files will not be detected and they will not trigge
 
 By default model server is detecting new and deleted versions in 1 second intervals. 
 The frequency can be changed by setting environment variable `FILE_SYSTEM_POLL_WAIT_SECONDS`.
+If set to negative or zero, updates will be disabled.
 

@@ -23,14 +23,15 @@ from ie_serving.models.s3_model import S3Model
 class ModelBuilder:
     @staticmethod
     def build(model_name: str, model_directory: str,
-              model_version_policy: dict, batch_size):
+              model_version_policy: dict, batch_size, shape):
         parsed_path = urlparse(model_directory)
         if parsed_path.scheme == '':
-            return LocalModel.build(model_name, model_directory, batch_size,
+            return LocalModel.build(model_name, model_directory,
+                                    batch_size, shape,
                                     model_version_policy)
         elif parsed_path.scheme == 'gs':
             return GSModel.build(model_name, model_directory, batch_size,
-                                 model_version_policy)
+                                 shape, model_version_policy)
         elif parsed_path.scheme == 's3':
             return S3Model.build(model_name, model_directory, batch_size,
-                                 model_version_policy)
+                                 shape, model_version_policy)

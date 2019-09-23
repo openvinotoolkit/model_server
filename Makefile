@@ -27,7 +27,7 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
-OVMS_VERSION := "2019_R1"
+OVMS_VERSION := "2019_R2"
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -41,6 +41,7 @@ venv: $(ACTIVATE)
 $(ACTIVATE): requirements.txt requirements-dev.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
+	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
@@ -69,6 +70,7 @@ test_local_only: venv
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_batching.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_mapping.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_single_model.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_update.py
 
 style: venv
 	@echo "Style-checking codebase..."
@@ -82,11 +84,11 @@ clean: clean_pyc
 	@echo "Removing virtual env files..."
 	@rm -rf $(VIRTUALENV_DIR)
 
-docker_build_src_ubuntu:
+docker_build_apt_ubuntu:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R1 src >> version
+	@echo OpenVINO version: 2019_R2 apt >> version
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
@@ -102,7 +104,7 @@ docker_build_src_intelpython:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R1 src >> version
+	@echo OpenVINO version: 2019_R2 src >> version
 	@echo docker build -f Dockerfile_intelpython --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile_intelpython --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 

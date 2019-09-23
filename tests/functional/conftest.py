@@ -26,12 +26,13 @@ import time
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.util import make_tensor_proto
 from tensorflow.contrib.util import make_ndarray
-from grpc.beta import implementations
+import grpc
 from google.protobuf.json_format import Parse
 
 sys.path.append(".")
-from ie_serving.tensorflow_serving_api import predict_pb2, \
-    get_model_metadata_pb2, prediction_service_pb2  # noqa
+from tensorflow_serving.apis import predict_pb2, \
+    get_model_metadata_pb2, prediction_service_pb2_grpc, \
+    get_model_status_pb2, model_service_pb2_grpc  # noqa
 
 
 ERROR_SHAPE = 'response has invalid output'
@@ -185,65 +186,100 @@ def input_data_downloader_v3_331(get_test_dir):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def create_channel_for_port_multi_server():
-    channel = implementations.insecure_channel('localhost', 9001)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+def create_channel_for_port_single_server_status():
+    channel = grpc.insecure_channel('localhost:9000')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
 @pytest.fixture(autouse=True, scope="session")
 def create_channel_for_port_single_server():
-    channel = implementations.insecure_channel('localhost', 9000)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9000')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(autouse=True, scope="session")
+def create_channel_for_port_multi_server_status():
+    channel = grpc.insecure_channel('localhost:9001')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(autouse=True, scope="session")
+def create_channel_for_port_multi_server():
+    channel = grpc.insecure_channel('localhost:9001')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_port_mapping_server():
-    channel = implementations.insecure_channel('localhost', 9002)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9002')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server():
-    channel = implementations.insecure_channel('localhost', 9003)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9003')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_bs4():
-    channel = implementations.insecure_channel('localhost', 9004)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9004')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_batching_server_auto():
-    channel = implementations.insecure_channel('localhost', 9005)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9005')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_model_ver_pol_server_status():
+    channel = grpc.insecure_channel('localhost:9006')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_model_ver_pol_server():
-    channel = implementations.insecure_channel('localhost', 9006)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9006')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_update_flow_latest_status():
+    channel = grpc.insecure_channel('localhost:9007')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_update_flow_latest():
-    channel = implementations.insecure_channel('localhost', 9007)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9007')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    return stub
+
+
+@pytest.fixture(scope="session")
+def create_channel_for_update_flow_specific_status():
+    channel = grpc.insecure_channel('localhost:9008')
+    stub = model_service_pb2_grpc.ModelServiceStub(channel)
     return stub
 
 
 @pytest.fixture(scope="session")
 def create_channel_for_update_flow_specific():
-    channel = implementations.insecure_channel('localhost', 9008)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = grpc.insecure_channel('localhost:9008')
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     return stub
 
 
@@ -256,7 +292,7 @@ def start_server_single_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000 --rest-port 5555"
+              "--port 9000 --rest_port 5555"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single',
@@ -344,7 +380,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
-              "--port 9002 --rest-port 5556"
+              "--port 9002 --rest_port 5556"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-2-out',
@@ -384,7 +420,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port 9001 " \
-              "--rest-port 5561"
+              "--rest_port 5561"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi',
@@ -410,7 +446,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9003 --rest-port 5557"
+              "--port 9003 --rest_port 5557"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch',
@@ -436,7 +472,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9005 --batch_size auto --rest-port 5559"
+              "--port 9005 --batch_size auto --rest_port 5559"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch',
@@ -462,7 +498,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9004 --batch_size 4 --rest-port 5558"
+              "--port 9004 --batch_size 4 --rest_port 5558"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4',
@@ -495,7 +531,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                     {'bind': '/opt/ml', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
-              "--port 9006 --rest-port 5560"
+              "--port 9006 --rest_port 5560"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-policy',
@@ -511,7 +547,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     return container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_update_flow_latest(request, get_image, get_test_dir,
                                     get_docker_context):
     client = get_docker_context
@@ -520,7 +556,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007 --rest-port 5562"
+              "--port 9007 --rest_port 5562"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-latest',
@@ -536,7 +572,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
     return container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_update_flow_specific(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
@@ -547,7 +583,7 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
               '--model_name resnet --model_path /opt/ml/update ' \
               '--port 9008 --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
-              '--rest-port 5563'
+              '--rest_port 5563'
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-'
@@ -726,3 +762,19 @@ def model_metadata_response(response):
         output_blobs_keys[output_blob].update({'dtype': tensor_dtype})
 
     return input_blobs_keys, output_blobs_keys
+
+
+def get_model_status(model_name, version=None):
+    request = get_model_status_pb2.GetModelStatusRequest()
+    request.model_spec.name = model_name
+    if version is not None:
+        request.model_spec.version.value = version
+    return request
+
+
+def get_model_status_response_rest(rest_url):
+    result = requests.get(rest_url)
+    output_json = result.text
+    status_pb = get_model_status_pb2.GetModelStatusResponse()
+    response = Parse(output_json, status_pb, ignore_unknown_fields=False)
+    return response

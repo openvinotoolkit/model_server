@@ -20,6 +20,7 @@ import sys
 import threading
 
 from ie_serving.models.model_builder import ModelBuilder
+from ie_serving.server.constants import CONFLICTING_PARAMS_WARNING
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
 from ie_serving.server.start import start_web_rest_server
@@ -62,21 +63,42 @@ def check_config_structure(configs):
         sys.exit()
 
 
+def get_model_spec(config):
+
+    model_name = config.get('name', config.get('model_name', None))
+    model_path = config.get('base_path', config.get('model_path', None))
+
+    batch_size = config.get('batch_size', None)
+    shape = config.get('shape', None)
+
+    if shape is not None and batch_size is not None:
+        logger.warning(CONFLICTING_PARAMS_WARNING.format(model_name))
+        batch_size = None   # batch_size ignored if shape defined
+
+    model_ver_policy = config.get(
+        'model_version_policy', None)
+
+    model_spec = {
+        'model_name': model_name,
+        'model_directory': model_path,
+        'batch_size': batch_size,
+        'shape': shape,
+        'model_version_policy': model_ver_policy
+    }
+    return model_spec
+
+
 def parse_config(args):
     configs = open_config(path=args.config_path)
     check_config_structure(configs=configs)
     models = {}
     for config in configs['model_config_list']:
         try:
-            batch_size = config['config'].get('batch_size', None)
-            model_ver_policy = config['config'].get(
-                'model_version_policy', None)
-            model = ModelBuilder.build(model_name=config['config']['name'],
-                                       model_directory=config['config'][
-                                           'base_path'],
-                                       batch_size=batch_size,
-                                       model_version_policy=model_ver_policy)
-            models[config['config']['name']] = model
+            model_spec = get_model_spec(config['config'])
+
+            model = ModelBuilder.build(**model_spec)
+            if model is not None:
+                models[config['config']['name']] = model
         except ValidationError as e_val:
             logger.warning("Model version policy for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
@@ -85,6 +107,10 @@ def parse_config(args):
             logger.warning("Unexpected error occurred in {} model. "
                            "Exception: {}".format(config['config']['name'],
                                                   e))
+    if not models:
+        logger.info("Could not access any of provided models. Server will "
+                    "exit now.")
+        sys.exit()
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port])
@@ -95,11 +121,15 @@ def parse_config(args):
 
 def parse_one_model(args):
     try:
-        model_version_policy = json.loads(args.model_version_policy)
-        model = ModelBuilder.build(model_name=args.model_name,
-                                   model_directory=args.model_path,
-                                   batch_size=args.batch_size,
-                                   model_version_policy=model_version_policy)
+        args.model_version_policy = json.loads(args.model_version_policy)
+
+        if args.shape is not None and args.batch_size is not None:
+            logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))
+            args.batch_size = None
+
+        model_spec = get_model_spec(vars(args))
+
+        model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:
         logger.error("Model version policy is invalid. "
                      "Exception: {}".format(e_val))
@@ -112,7 +142,13 @@ def parse_one_model(args):
         logger.error("Unexpected error occurred. "
                      "Exception: {}".format(e))
         sys.exit()
-    models = {args.model_name: model}
+    models = {}
+    if model is not None:
+        models[args.model_name] = model
+    else:
+        logger.info("Could not access provided model. Server will exit now.")
+        sys.exit()
+
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port])
@@ -133,9 +169,9 @@ def main():
                           required=True)
     parser_a.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
-    parser_a.add_argument('--rest-port', type=int,
+    parser_a.add_argument('--rest_port', type=int,
                           help='REST server port, the REST server will not be'
-                               ' started if rest-port is blank or set to 0',
+                               ' started if rest_port is blank or set to 0',
                           required=False, default=0)
     parser_a.set_defaults(func=parse_config)
 
@@ -148,13 +184,18 @@ def main():
                           help='absolute path to model,as in tf serving',
                           required=True)
     parser_b.add_argument('--batch_size', type=str,
-                          help='sets models batchsize, int value or auto',
-                          required=False)
+                          help='sets models batchsize, int value or auto. '
+                               'This parameter will be ignored if '
+                               'shape is set', required=False)
+    parser_b.add_argument('--shape', type=str,
+                          help='sets models shape (model must support '
+                               'reshaping). If set, batch_size parameter is '
+                               'ignored.', required=False)
     parser_b.add_argument('--port', type=int, help='gRPC server port',
                           required=False, default=9000)
-    parser_b.add_argument('--rest-port', type=int,
+    parser_b.add_argument('--rest_port', type=int,
                           help='REST server port, the REST server will not be'
-                               ' started if rest-port is blank or set to 0',
+                               ' started if rest_port is blank or set to 0',
                           required=False, default=0)
     parser_b.add_argument('--model_version_policy', type=str,
                           help='model version policy',
