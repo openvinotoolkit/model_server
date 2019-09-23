@@ -38,7 +38,8 @@ def test_model_init(engines):
     new_model = LocalModel(model_name=model_name, model_directory='fake_path',
                            available_versions=available_versions,
                            engines=engines,
-                           batch_size=None,
+                           batch_size_param=None,
+                           shape_param=None,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses)
 
@@ -86,11 +87,13 @@ def test_get_engines_for_model(mocker, is_error):
     available_versions = [{'xml_file': 'modelv2.xml',
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 2, 'batch_size': None},
+                           'version_number': 2, 'batch_size_param': None,
+                           'shape_param': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 4, 'batch_size': None}]
+                           'version_number': 4, 'batch_size_param': None,
+                           'shape_param': None}]
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']
@@ -102,6 +105,7 @@ def test_get_engines_for_model(mocker, is_error):
         get_engine_for_version_mocker.side_effect = Exception()
 
     output = LocalModel.get_engines_for_model(
+        model_name='test',
         versions_attributes=available_versions,
         versions_statuses=versions_statuses)
 
@@ -127,21 +131,25 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     available_versions = [{'xml_file': 'modelv2.xml',
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 2, 'batch_size': None},
+                           'version_number': 2, 'batch_size_param': None,
+                           'shape_param': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 3, 'batch_size': None},
+                           'version_number': 3, 'batch_size_param': None,
+                           'shape_param': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
-                           'version_number': 4, 'batch_size': None}]
+                           'version_number': 4, 'batch_size_param': None,
+                           'shape_param': None}]
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']
         versions_statuses[version_number] = ModelVersionStatus(
             "test", version_number)
     output = LocalModel.get_engines_for_model(
+        model_name='test',
         versions_attributes=available_versions,
         versions_statuses=versions_statuses)
     assert 2 == len(output)

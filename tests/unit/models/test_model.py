@@ -94,6 +94,6 @@ def test_get_version_metadata(mocker):
         "ie_serving.models.model.Model.get_versions_attributes")
     attributes_mock.return_value = test_attributes
     output_attributes, output_versions = Model.get_version_metadata(
-        'test', None, lambda versions: versions[:])
+        'test', None, None, lambda versions: versions[:])
     assert output_attributes == test_attributes
     assert output_versions == [1]

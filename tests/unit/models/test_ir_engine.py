@@ -14,37 +14,33 @@
 # limitations under the License.
 #
 
-from ie_serving.models.ir_engine import IrEngine, _set_batch_size
-from unittest import mock
 import json
+from unittest import mock
+
 import pytest
-from conftest import Layer
+from conftest import MockedNet, MockedIOInfo
+
+from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models.shape_management.batching_info import BatchingInfo
+from ie_serving.models.shape_management.shape_info import ShapeInfo
 
 
 def test_init_class():
-    model_xml = 'model1.xml'
-    model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
-    net = None
-    batch_size = None
+    net = MockedNet(inputs={'input': MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
+                    outputs={'output': MockedIOInfo('FP32', [1, 1], 'NCHW')})
+    batching_info = BatchingInfo(None)
+    shape_info = ShapeInfo(None, net.inputs)
     plugin = None
-    input_key = 'input'
-    inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
-    outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
-    engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
-                      mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
-                      batch_size=batch_size)
-    assert model_xml == engine.model_xml
-    assert model_bin == engine.model_bin
+    engine = IrEngine(model_name='test', model_version=1,
+                      mapping_config=mapping_config,
+                      exec_net=exec_net,
+                      net=net, plugin=plugin, batching_info=batching_info,
+                      shape_info=shape_info)
     assert exec_net == engine.exec_net
-    assert [input_key] == engine.input_tensor_names
-    assert inputs == engine.net.inputs
-    assert ['output'] == engine.output_tensor_names
-    assert {'inputs': {'input': 'input'},
-            'outputs': {'output': 'output'}} == engine.model_keys
-    assert [input_key] == engine.input_key_names
+    assert list(net.inputs.keys()) == engine.input_tensor_names
+    assert list(net.outputs.keys()) == engine.output_tensor_names
 
 
 def test_build_device_cpu(mocker):
@@ -53,12 +49,14 @@ def test_build_device_cpu(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
-    batch_size = None
+    batch_size_param, shape_param = None, None
     mapping_config = 'mapping_config.json'
     with pytest.raises(Exception):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+        IrEngine.build(model_name='test', model_version=1,
+                       model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
-                       batch_size=batch_size)
+                       batch_size_param=batch_size_param,
+                       shape_param=shape_param)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -71,11 +69,13 @@ def test_build_device_other(mocker):
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
-    batch_size = None
+    batch_size_param, shape_param = None, None
     with pytest.raises(Exception):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+        IrEngine.build(model_name='test', model_version=1,
+                       model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
-                       batch_size=batch_size)
+                       batch_size_param=batch_size_param,
+                       shape_param=shape_param)
         assert not cpu_extension_mock.assert_called_once_with()
 
 
@@ -181,21 +181,3 @@ def test_set_keys(get_fake_ir_engine, mocker):
     output = engine.set_keys('mapping_config.json')
     keys_from_config_mocker.assert_called_once_with('something')
     assert 'config' == output
-
-
-@pytest.mark.parametrize(('in_conf_bs', 'in_model_bs',
-                          'exp_engine_bs', 'exp_net_bs', 'exp_effective_bs'), [
-    ('auto', 1, 0, None, 'auto'),
-    ('invalid', 1, None, None, '1'),
-    ('0', 2, None, None, '2'),
-    ('8', 1, 8, 8, '8'),
-    (None, 4, None, None, '4')
-])
-def test_set_batch_size(in_conf_bs, in_model_bs,
-                        exp_engine_bs, exp_net_bs, exp_effective_bs):
-    e_bs, net_bs, effective_bs = \
-        _set_batch_size(in_conf_bs, in_model_bs)
-
-    assert e_bs == exp_engine_bs
-    assert net_bs == exp_net_bs
-    assert effective_bs == exp_effective_bs
