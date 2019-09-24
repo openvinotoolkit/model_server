@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 import json
 from unittest import mock
-from unittest.mock import patch
 
 import pytest
+from config import RESHAPE_TEST_CASES, \
+    SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
 from conftest import MockedNet, MockedIOInfo
 
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
-from tests.unit.config import RESHAPE_TEST_CASES, \
-    SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
 
 
 def test_init_class():
