@@ -1,3 +1,6 @@
+import numpy as np
+
+from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import INVALID_FORMAT, COLUMN_FORMAT, \
     COLUMN_SIMPLIFIED, ROW_FORMAT, ROW_SIMPLIFIED
 
@@ -166,4 +169,56 @@ PREPARE_JSON_RESPONSE_TEST_CASES = [
     ("column", {"out1": [1, 2], "out2": [3, 4]},
      {"output1": "out1", "output2": "out2"},
      {"outputs": {"output1": [1, 2], "output2": [3, 4]}}),
+]
+
+DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES = [
+    (ShapeMode.AUTO, {'input': (1, 1, 1)},
+     {'input': (1, 1, 1)}),
+    (ShapeMode.AUTO, {}, None),
+    (ShapeMode.DISABLED, {'input': (1, 1, 1)}, 1)
+]
+
+SCAN_INPUT_SHAPES_TEST_CASES = [
+    ({"input": (1, 1, 1)}, {"input": np.zeros((1, 2, 2))},
+     {"input": (1, 2, 2)}),
+    ({"input": (1, 1, 1)}, {"input": np.zeros((1, 1, 1))},
+     {}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 2, 2)), "input2": np.zeros((2, 1, 1))},
+     {"input1": (1, 2, 2), "input2": (2, 1, 1)}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 1, 1)), "input2": np.zeros((2, 1, 1))},
+     {"input2": (2, 1, 1)}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 1, 1)), "input2": np.zeros((1, 1, 1))},
+     {}),
+]
+
+NOT_CALLED = -1
+
+RESHAPE_TEST_CASES = [
+    ({"input": (1, 1, 1)},
+     {'_reshape': True, '_change_batch_size': False},
+     {'_reshape': None, '_change_batch_size': NOT_CALLED},
+     None),
+    ({"input": (1, 1, 1)},
+     {'_reshape': True, '_change_batch_size': False},
+     {'_reshape': "Error", '_change_batch_size': NOT_CALLED},
+     "Error"),
+    (1,
+     {'_reshape': False, '_change_batch_size': True},
+     {'_reshape': NOT_CALLED, '_change_batch_size': None},
+     None),
+    (1,
+     {'_reshape': False, '_change_batch_size': True},
+     {'_reshape': NOT_CALLED, '_change_batch_size': "Error"},
+     "Error"),
+    ("string",
+     {'_reshape': False, '_change_batch_size': False},
+     {'_reshape': NOT_CALLED, '_change_batch_size': NOT_CALLED},
+     "Unknown error occurred in input reshape preparation"),
+    ((1, 1, 1),
+     {'_reshape': False, '_change_batch_size': False},
+     {'_reshape': NOT_CALLED, '_change_batch_size': NOT_CALLED},
+     "Unknown error occurred in input reshape preparation"),
 ]

@@ -40,13 +40,6 @@ MODEL_SERVICE = model_service_pb2. \
     DESCRIPTOR.services_by_name['ModelService']
 
 
-class Layer:
-    def __init__(self, precision, shape, layout):
-        self.precision = precision
-        self.shape = shape
-        self.layout = layout
-
-
 class MockedIOInfo:
     def __init__(self, precision, shape, layout):
         self.precision = precision

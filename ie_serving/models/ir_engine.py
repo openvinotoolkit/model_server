@@ -170,7 +170,10 @@ class IrEngine():
         return reshape_param
 
     def scan_input_shapes(self, data: dict):
-        #   Takes dictionary of input_name:numpy_array pairs.
+        # Takes dictionary of input_name:numpy_array pairs.
+        # returns dict of input_name:shape pairs with shapes different from
+        # current inputs shapes in a network - empty dict if inference
+        # workload and network inputs shapes are equal.
         changed_input_shapes = {}
         for input_name, input_data in data.items():
             net_input_shape = tuple(self.net.inputs[input_name].shape)

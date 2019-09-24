@@ -16,6 +16,7 @@
 
 import json
 from unittest import mock
+from unittest.mock import patch
 
 import pytest
 from conftest import MockedNet, MockedIOInfo
@@ -23,6 +24,8 @@ from conftest import MockedNet, MockedIOInfo
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
+from tests.unit.config import RESHAPE_TEST_CASES, \
+    SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
 
 
 def test_init_class():
@@ -181,3 +184,56 @@ def test_set_keys(get_fake_ir_engine, mocker):
     output = engine.set_keys('mapping_config.json')
     keys_from_config_mocker.assert_called_once_with('something')
     assert 'config' == output
+
+
+@pytest.mark.parametrize("shape_mode, changed_inputs, expected_reshape_param",
+                         DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES)
+def test_detect_shapes_incompatibility(get_fake_ir_engine, mocker,
+                                       shape_mode, changed_inputs,
+                                       expected_reshape_param):
+    engine = get_fake_ir_engine
+    engine.shape_info.mode = shape_mode
+    scan_input_shapes_mock = mocker.patch('ie_serving.models.'
+                                          'ir_engine.IrEngine.'
+                                          'scan_input_shapes')
+    scan_input_shapes_mock.return_value = changed_inputs
+    reshape_param = engine.detect_shapes_incompatibility(None)
+    assert reshape_param == expected_reshape_param
+
+
+@pytest.mark.parametrize("net_inputs_shapes, data, expected_output",
+                         SCAN_INPUT_SHAPES_TEST_CASES)
+def test_scan_input_shapes(get_fake_ir_engine, net_inputs_shapes, data,
+                           expected_output):
+    engine = get_fake_ir_engine
+
+    # update network with desired inputs
+    new_inputs = {}
+    for input_name, input_shape in net_inputs_shapes.items():
+        new_inputs.update({input_name: MockedIOInfo('FP32', list(input_shape),
+                                                    'NCHW')})
+    engine.net.inputs = new_inputs
+
+    output = engine.scan_input_shapes(data)
+    assert output == expected_output
+
+
+@pytest.mark.parametrize("reshape_param, calls_config, returns_config, "
+                         "expected_output", RESHAPE_TEST_CASES)
+def test_reshape(get_fake_ir_engine, mocker, reshape_param, calls_config,
+                 returns_config, expected_output):
+    engine = get_fake_ir_engine
+    methods_mocks = {
+        method_name: mocker.patch('ie_serving.models.ir_engine.IrEngine.{}'
+                                  .format(method_name))
+        for (method_name, _) in calls_config.items()
+    }
+
+    for method_name, return_value in returns_config.items():
+        methods_mocks[method_name].return_value = return_value
+
+    output = engine.reshape(reshape_param)
+
+    for method_name, is_called in calls_config.items():
+        assert methods_mocks[method_name].called == is_called
+    assert output == expected_output
