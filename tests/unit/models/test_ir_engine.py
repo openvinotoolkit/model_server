@@ -225,7 +225,7 @@ def test_reshape(get_fake_ir_engine, mocker, reshape_param, calls_config,
     methods_mocks = {
         method_name: mocker.patch('ie_serving.models.ir_engine.IrEngine.{}'
                                   .format(method_name))
-        for (method_name, _) in calls_config.items()
+        for method_name in list(calls_config.keys())
     }
 
     for method_name, return_value in returns_config.items():

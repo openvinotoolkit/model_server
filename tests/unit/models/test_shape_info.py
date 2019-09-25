@@ -29,7 +29,7 @@ def test_process_shape_param(mocker, shape_param, net_inputs, calls_config,
         method_name: mocker.patch('ie_serving.models.shape_management.'
                                   'shape_info.ShapeInfo.{}'
                                   .format(method_name))
-        for (method_name, _) in calls_config.items()
+        for method_name in list(calls_config.keys())
     }
 
     for method_name, return_value in returns_config.items():
@@ -65,7 +65,7 @@ def test_get_shape_from_string(mocker, shape_param, calls_config,
         method_name: mocker.patch('ie_serving.models.shape_management.'
                                   'shape_info.ShapeInfo.{}'
                                   .format(method_name))
-        for (method_name, _) in calls_config.items()
+        for method_name in list(calls_config.keys())
     }
 
     for method_name, return_value in returns_config.items():
