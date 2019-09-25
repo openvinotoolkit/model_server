@@ -19,14 +19,14 @@ import numpy as np
 import pytest
 from ie_serving.server.get_model_metadata_utils import \
     _prepare_signature, prepare_get_metadata_output
-from conftest import Layer
+from conftest import MockedIOInfo
 
 
 @pytest.mark.parametrize("layers, tensor_key, np_type", [
-    ({'tensor': Layer('FP32', (1, 1, 1), 'NCHW'),
-      'test_tensor': Layer('FP32', (1, 1, 1), 'NCHW')},
+    ({'tensor': MockedIOInfo('FP32', (1, 1, 1), 'NCHW'),
+      'test_tensor': MockedIOInfo('FP32', (1, 1, 1), 'NCHW')},
      {'new_key': 'tensor', 'client_key': 'test_tensor'}, np.float32),
-    ({'tensor': Layer('I32', (1, 1, 1), 'NCHW')}, {'new_key': 'tensor'},
+    ({'tensor': MockedIOInfo('I32', (1, 1, 1), 'NCHW')}, {'new_key': 'tensor'},
      np.int32),
 ])
 def test_prepare_signature(layers, tensor_key, np_type):
@@ -46,8 +46,8 @@ def test_prepare_signature(layers, tensor_key, np_type):
 
 
 def test_prepare_get_metadata_output():
-    inputs = {'tensor_input': Layer('FP32', (1, 1, 1), 'NCHW')}
-    outputs = {'tensor_output': Layer('FP32', (1, 1, 1), 'NCHW')}
+    inputs = {'tensor_input': MockedIOInfo('FP32', (1, 1, 1), 'NCHW')}
+    outputs = {'tensor_output': MockedIOInfo('FP32', (1, 1, 1), 'NCHW')}
     model_keys = {'inputs': {'name': 'tensor_input'},
                   'outputs': {'output_name': 'tensor_output'}}
     output = prepare_get_metadata_output(

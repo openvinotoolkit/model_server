@@ -1,3 +1,6 @@
+import numpy as np
+
+from ie_serving.models.shape_management.utils import ShapeMode
 from ie_serving.server.constants import INVALID_FORMAT, COLUMN_FORMAT, \
     COLUMN_SIMPLIFIED, ROW_FORMAT, ROW_SIMPLIFIED
 
@@ -166,4 +169,177 @@ PREPARE_JSON_RESPONSE_TEST_CASES = [
     ("column", {"out1": [1, 2], "out2": [3, 4]},
      {"output1": "out1", "output2": "out2"},
      {"outputs": {"output1": [1, 2], "output2": [3, 4]}}),
+]
+
+DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES = [
+    (ShapeMode.AUTO, {'input': (1, 1, 1)},
+     {'input': (1, 1, 1)}),
+    (ShapeMode.AUTO, {}, None),
+    (ShapeMode.DISABLED, {'input': (1, 1, 1)}, 1)
+]
+
+SCAN_INPUT_SHAPES_TEST_CASES = [
+    ({"input": (1, 1, 1)}, {"input": np.zeros((1, 2, 2))},
+     {"input": (1, 2, 2)}),
+    ({"input": (1, 1, 1)}, {"input": np.zeros((1, 1, 1))},
+     {}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 2, 2)), "input2": np.zeros((2, 1, 1))},
+     {"input1": (1, 2, 2), "input2": (2, 1, 1)}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 1, 1)), "input2": np.zeros((2, 1, 1))},
+     {"input2": (2, 1, 1)}),
+    ({"input1": (1, 1, 1), "input2": (1, 1, 1)},
+     {"input1": np.zeros((1, 1, 1)), "input2": np.zeros((1, 1, 1))},
+     {}),
+]
+
+NOT_CALLED = -1
+
+RESHAPE_TEST_CASES = [
+    ({"input": (1, 1, 1)},
+     {'_reshape': True, '_change_batch_size': False},
+     {'_reshape': None, '_change_batch_size': NOT_CALLED},
+     None),
+    ({"input": (1, 1, 1)},
+     {'_reshape': True, '_change_batch_size': False},
+     {'_reshape': "Error", '_change_batch_size': NOT_CALLED},
+     "Error"),
+    (1,
+     {'_reshape': False, '_change_batch_size': True},
+     {'_reshape': NOT_CALLED, '_change_batch_size': None},
+     None),
+    (1,
+     {'_reshape': False, '_change_batch_size': True},
+     {'_reshape': NOT_CALLED, '_change_batch_size': "Error"},
+     "Error"),
+    ("string",
+     {'_reshape': False, '_change_batch_size': False},
+     {'_reshape': NOT_CALLED, '_change_batch_size': NOT_CALLED},
+     "Unknown error occurred in input reshape preparation"),
+    ((1, 1, 1),
+     {'_reshape': False, '_change_batch_size': False},
+     {'_reshape': NOT_CALLED, '_change_batch_size': NOT_CALLED},
+     "Unknown error occurred in input reshape preparation"),
+]
+
+PROCESS_SHAPE_PARAM_TEST_CASES = [
+    ({"input": "[1, 1, 1]"},
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': True,
+      'get_shape_from_string': False,
+      '_shape_as_dict': False},
+     {'get_shape_dict': {"input": (1, 1, 1)},
+      'get_shape_from_string': NOT_CALLED,
+      '_shape_as_dict': NOT_CALLED},
+     (ShapeMode.FIXED, {"input": (1, 1, 1)})
+     ),
+    ({"input": "[1, 1, 1]"},
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': True,
+      'get_shape_from_string': False,
+      '_shape_as_dict': False},
+     {'get_shape_dict': None,
+      'get_shape_from_string': NOT_CALLED,
+      '_shape_as_dict': NOT_CALLED},
+     (ShapeMode.DEFAULT, None)
+     ),
+    ("auto",
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': False,
+      'get_shape_from_string': True,
+      '_shape_as_dict': False},
+     {'get_shape_dict': NOT_CALLED,
+      'get_shape_from_string': (ShapeMode.AUTO, None),
+      '_shape_as_dict': NOT_CALLED},
+     (ShapeMode.AUTO, None)
+     ),
+    ("bad_param",
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': False,
+      'get_shape_from_string': True,
+      '_shape_as_dict': False},
+     {'get_shape_dict': NOT_CALLED,
+      'get_shape_from_string': (ShapeMode.DEFAULT, None),
+      '_shape_as_dict': NOT_CALLED},
+     (ShapeMode.DEFAULT, None)
+     ),
+    ("{\"input\": \"[1, 1, 1]\"}",
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': False,
+      'get_shape_from_string': True,
+      '_shape_as_dict': False},
+     {'get_shape_dict': NOT_CALLED,
+      'get_shape_from_string': (ShapeMode.FIXED, {"input": (1, 1, 1)}),
+      '_shape_as_dict': NOT_CALLED},
+     (ShapeMode.FIXED, {"input": (1, 1, 1)})
+     ),
+    ("(1, 1, 1)",
+     {"input": (1, 1, 1)},
+     {'get_shape_dict': False,
+      'get_shape_from_string': True,
+      '_shape_as_dict': True},
+     {'get_shape_dict': NOT_CALLED,
+      'get_shape_from_string': (ShapeMode.FIXED, (1, 1, 1)),
+      '_shape_as_dict': {"input": (1, 1, 1)}},
+     (ShapeMode.FIXED, {"input": (1, 1, 1)})
+     )
+]
+
+
+PROCESS_GET_SHAPE_FROM_STRING_TEST_CASES = [
+    ("auto",
+     {'load_shape': False,
+      'get_shape_tuple': False,
+      'get_shape_dict': False},
+     {'load_shape': NOT_CALLED,
+      'get_shape_tuple': NOT_CALLED,
+      'get_shape_dict': NOT_CALLED},
+     (ShapeMode.AUTO, None)
+     ),
+    ("bad_param",
+     {'load_shape': True,
+      'get_shape_tuple': False,
+      'get_shape_dict': False},
+     {'load_shape': None,
+      'get_shape_tuple': NOT_CALLED,
+      'get_shape_dict': NOT_CALLED},
+     (ShapeMode.DEFAULT, None)
+     ),
+    ("(1, 1, 1)",
+     {'load_shape': True,
+      'get_shape_tuple': True,
+      'get_shape_dict': False},
+     {'load_shape': [1, 1, 1],
+      'get_shape_tuple': (1, 1, 1),
+      'get_shape_dict': NOT_CALLED},
+     (ShapeMode.FIXED,  (1, 1, 1))
+     ),
+    ("(1, 1, 1)",
+     {'load_shape': True,
+      'get_shape_tuple': True,
+      'get_shape_dict': False},
+     {'load_shape': ["string", 1, 1],
+      'get_shape_tuple': None,
+      'get_shape_dict': NOT_CALLED},
+     (ShapeMode.DEFAULT, None)
+     ),
+    ("{\"input\": \"(1, 1, 1)\"}",
+     {'load_shape': True,
+      'get_shape_tuple': False,
+      'get_shape_dict': True},
+     {'load_shape': {"input": [1, 1, 1]},
+      'get_shape_tuple': NOT_CALLED,
+      'get_shape_dict': {"input": (1, 1, 1)}},
+     (ShapeMode.FIXED,  {"input": (1, 1, 1)})
+     ),
+    ("{\"input\": \"(1, 1, 1)\"}",
+     {'load_shape': True,
+      'get_shape_tuple': False,
+      'get_shape_dict': True},
+     {'load_shape': {"input": ["string", 1, 1]},
+      'get_shape_tuple': NOT_CALLED,
+      'get_shape_dict': None},
+     (ShapeMode.DEFAULT,  None)
+     ),
 ]
