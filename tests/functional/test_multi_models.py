@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from conftest import infer, infer_batch, get_model_metadata, \
-    model_metadata_response, ERROR_SHAPE, infer_batch_rest, \
-    infer_rest, get_model_metadata_response_rest, get_model_status, \
-    get_model_status_response_rest
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
-
-import numpy as np
 import sys
 
+import numpy as np
+from constants import PREDICTION_SERVICE, MODEL_SERVICE, ERROR_SHAPE
+from utils.grpc import infer, infer_batch, get_model_metadata, \
+    model_metadata_response, get_model_status
+from utils.rest import infer_batch_rest, infer_rest, \
+    get_model_metadata_response_rest, get_model_status_response_rest
+
 sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE  # noqa
 
 
 class TestMuiltModelInference():
@@ -33,7 +33,7 @@ class TestMuiltModelInference():
                            input_data_downloader_v1_224,
                            input_data_downloader_v3_331,
                            start_server_multi_model,
-                           create_channel_for_port_multi_server):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Execute inference request using gRPC interface hosting multiple models
@@ -58,7 +58,7 @@ class TestMuiltModelInference():
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         input_data = input_data_downloader_v1_224[:2, :, :, :]
         print("Starting inference using resnet model")
@@ -107,7 +107,7 @@ class TestMuiltModelInference():
 
     def test_get_model_metadata(self, download_two_models,
                                 start_server_multi_model,
-                                create_channel_for_port_multi_server):
+                                create_grpc_channel):
         """
         <b>Description</b>
         Execute inference request using gRPC interface hosting multiple models
@@ -131,15 +131,15 @@ class TestMuiltModelInference():
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_channel_for_port_multi_server
+        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet_V1_50'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+                                             'shape': [2, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [2, 1000]}}
         request = get_model_metadata(model_name='resnet_V1_50')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -168,11 +168,11 @@ class TestMuiltModelInference():
 
     def test_get_model_status(self, download_two_models,
                               start_server_multi_model,
-                              create_channel_for_port_multi_server_status):
+                              create_grpc_channel):
 
         print("Downloaded model files:", download_two_models)
 
-        stub = create_channel_for_port_multi_server_status
+        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
         request = get_model_status(model_name='resnet_V1_50', version=1)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
@@ -295,9 +295,9 @@ class TestMuiltModelInference():
         model_name = 'resnet_V1_50'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+                                             'shape': [2, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [2, 1000]}}
         rest_url = 'http://localhost:5561/v1/models/resnet_V1_50/metadata'
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(

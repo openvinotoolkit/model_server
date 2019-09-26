@@ -31,15 +31,16 @@ logger = get_logger(__name__)
 
 class Model(ABC):
 
-    def __init__(self, model_name: str, model_directory: str, batch_size,
-                 available_versions: list, engines: dict,
+    def __init__(self, model_name: str, model_directory: str, batch_size_param,
+                 shape_param, available_versions: list, engines: dict,
                  version_policy_filter, versions_statuses: dict):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
         self.engines = engines
         self.default_version = max(self.versions, default=-1)
-        self.batch_size = batch_size
+        self.batch_size_param = batch_size_param
+        self.shape_param = shape_param
         self.version_policy_filter = version_policy_filter
         self.versions_statuses = versions_statuses
 
@@ -53,15 +54,17 @@ class Model(ABC):
                                                 self.default_version))
 
     @classmethod
-    def build(cls, model_name: str, model_directory: str, batch_size,
-              model_version_policy: dict = None):
+    def build(cls, model_name: str, model_directory: str, batch_size_param,
+              shape_param, model_version_policy: dict = None):
+
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
             model_version_policy)
 
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
-                model_directory, batch_size, version_policy_filter)
+                model_directory, batch_size_param, shape_param,
+                version_policy_filter)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
@@ -77,7 +80,8 @@ class Model(ABC):
             versions_statuses[version] = ModelVersionStatus(model_name,
                                                             version)
 
-        engines = cls.get_engines_for_model(versions_attributes,
+        engines = cls.get_engines_for_model(model_name,
+                                            versions_attributes,
                                             versions_statuses)
 
         available_versions = [version_attributes['version_number'] for
@@ -85,7 +89,8 @@ class Model(ABC):
 
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
-                    batch_size=batch_size,
+                    batch_size_param=batch_size_param,
+                    shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses)
         return model
@@ -95,7 +100,7 @@ class Model(ABC):
             versions_attributes, available_versions = \
                 self.get_version_metadata(
                     self.model_directory,
-                    self.batch_size,
+                    self.batch_size_param, self.shape_param,
                     self.version_policy_filter)
         except Exception as error:
             logger.error("Error occurred while getting versions "
@@ -117,8 +122,9 @@ class Model(ABC):
             attribute for attribute in versions_attributes if
             attribute['version_number'] in to_create]
 
-        created_engines = self.get_engines_for_model(
-            new_versions_attributes, self.versions_statuses)
+        created_engines = self.get_engines_for_model(self.model_name,
+                                                     new_versions_attributes,
+                                                     self.versions_statuses)
         created_versions = [attributes_to_create['version_number'] for
                             attributes_to_create in new_versions_attributes]
         self.engines.update(created_engines)
@@ -176,10 +182,11 @@ class Model(ABC):
             tick = time.time()
 
     @classmethod
-    def get_version_metadata(cls, model_directory, batch_size,
-                             version_policy_filter):
+    def get_version_metadata(cls, model_directory, batch_size_param,
+                             shape_param, version_policy_filter):
         versions_attributes = cls.get_versions_attributes(model_directory,
-                                                          batch_size)
+                                                          batch_size_param,
+                                                          shape_param)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()
@@ -187,7 +194,8 @@ class Model(ABC):
         return versions_attributes, available_versions
 
     @classmethod
-    def get_versions_attributes(cls, model_directory, batch_size):
+    def get_versions_attributes(cls, model_directory, batch_size_param,
+                                shape_param):
         versions = cls.get_versions(model_directory)
         logger.debug(versions)
         versions_attributes = []
@@ -201,7 +209,8 @@ class Model(ABC):
                                           'bin_file': bin_file,
                                           'mapping_config': mapping_config,
                                           'version_number': version_number,
-                                          'batch_size': batch_size
+                                          'batch_size_param': batch_size_param,
+                                          'shape_param': shape_param
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
@@ -235,7 +244,8 @@ class Model(ABC):
                               "valid.".format(model_version_policy))
 
     @classmethod
-    def get_engines_for_model(cls, versions_attributes, versions_statuses):
+    def get_engines_for_model(cls, model_name, versions_attributes,
+                              versions_statuses):
         inference_engines = {}
         failures = []
         for version_attributes in versions_attributes:
@@ -247,7 +257,7 @@ class Model(ABC):
                 versions_statuses[version_number].set_loading()
 
                 inference_engines[version_number] = \
-                    cls.get_engine_for_version(version_attributes)
+                    cls.get_engine_for_version(model_name, version_attributes)
             except Exception as e:
                 logger.error("Error occurred while loading model "
                              "version: {}".format(version_attributes))
@@ -262,6 +272,18 @@ class Model(ABC):
             versions_attributes.remove(failure)
 
         return inference_engines
+
+    @classmethod
+    def _get_engine_spec(cls, model_name, version_attributes):
+        return {
+            'model_name': model_name,
+            'model_version': version_attributes['version_number'],
+            'model_bin': version_attributes['bin_file'],
+            'model_xml': version_attributes['xml_file'],
+            'mapping_config': version_attributes['mapping_config'],
+            'batch_size_param': version_attributes['batch_size_param'],
+            'shape_param': version_attributes['shape_param']
+        }
 
     #   Subclass interface
     @classmethod
@@ -281,5 +303,5 @@ class Model(ABC):
 
     @classmethod
     @abstractmethod
-    def get_engine_for_version(cls, version_attributes):
+    def get_engine_for_version(cls, model_name, version_attributes):
         pass

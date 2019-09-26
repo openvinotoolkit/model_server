@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-from setuptools import setup
-
+from setuptools import setup, find_packages
 
 setup(
     name='ie_serving',
@@ -24,7 +23,7 @@ setup(
     long_description="""DLDT inference server""",
     keywords='',
     author_email='',
-    packages=['ie_serving', 'ie_serving.server', 'ie_serving.models'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=["grpcio", "numpy", "protobuf",
