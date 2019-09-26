@@ -1,0 +1,17 @@
+FROM clearlinux
+
+RUN swupd update -V 31070 && swupd bundle-add computer-vision-basic && swupd clean
+# OpenVino R2 version
+
+COPY start_server.sh setup.py requirements_clearlinux.txt version /ie-serving-py/
+COPY ie_serving /ie-serving-py/ie_serving
+
+WORKDIR /ie-serving-py
+
+RUN pip --no-cache-dir install -r requirements_clearlinux.txt
+
+
+ENV CPU_EXTENSION=/usr/lib64/libcpu_extension.so
+RUN pip install .
+
+RUN sed -i '/activate/d' start_server.sh
