@@ -32,6 +32,27 @@
         "name": "resnet_s3",
         "base_path": "s3://inference-test-aipg/resnet_v1_50"
       }
+    },
+    {
+      "config": {
+        "name": "face_detection_auto",
+        "base_path": "/opt/ml/face-detection-retail-0004",
+        "shape": "auto"
+      }
+    },
+    {
+      "config": {
+        "name": "face_detection_fixed_nonamed",
+        "base_path": "/opt/ml/face-detection-retail-0004",
+        "shape": "(1, 3, 600, 600)"
+      }
+    },
+    {
+      "config": {
+        "name": "face_detection_fixed_named",
+        "base_path": "/opt/ml/face-detection-retail-0004",
+        "shape": {"data":  "(1, 3, 600, 600)"}
+      }
     }
   ]
 }

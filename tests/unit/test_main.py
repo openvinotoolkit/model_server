@@ -16,9 +16,20 @@
 
 from ie_serving import main
 from unittest import mock
-import collections
 import pytest
 import json
+
+
+class MockedArgs:
+    def __init__(self, model_name, model_path, batch_size, shape,
+                 model_version_policy, port, rest_port):
+        self.model_name = model_name
+        self.model_path = model_path
+        self.batch_size = batch_size
+        self.shape = shape
+        self.model_version_policy = model_version_policy
+        self.port = port
+        self.rest_port = rest_port
 
 
 def test_open_config(mocker):
@@ -35,7 +46,9 @@ def test_open_config(mocker):
 @pytest.mark.parametrize("should_exit, test_config", [
     (False, {'model_config_list': [{'config': {'base_path': '',
                                                'name': ''}}]}),
-    (True, {'model_config_list': [{'config': {'base_path': '', 'test': ''}}]}),
+    (
+            True, {'model_config_list': [
+                {'config': {'base_path': '', 'test': ''}}]}),
     (True, {'model_config_list': [{'config': ''}]}),
     (True, {'model_config_list': 'test'}),
     (True, {'model_config_list': 5}),
@@ -70,10 +83,8 @@ def test_open_config_wrong_json(mocker):
                            (SystemExit, Exception), True)])
 def test_parse_one_model(mocker, should_fail, model_version_policy,
                          exceptions, unexpected_exception):
-    args = collections.namedtuple('args',
-                                  'model_name model_path batch_size'
-                                  ' model_version_policy port rest_port')
-    arguments = args('test', 'test', None, model_version_policy, 9000, 5555)
+    arguments = MockedArgs('test', 'test', None, None, model_version_policy,
+                           9000, 5555)
     if should_fail:
         if unexpected_exception:
             builder_mocker = mocker.patch('ie_serving.main.'

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,37 +14,35 @@
 # limitations under the License.
 #
 
-from ie_serving.models.ir_engine import IrEngine, _set_batch_size
-from unittest import mock
 import json
+from unittest import mock
+
 import pytest
-from conftest import Layer
+from config import RESHAPE_TEST_CASES, \
+    SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
+from conftest import MockedNet, MockedIOInfo
+
+from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models.shape_management.batching_info import BatchingInfo
+from ie_serving.models.shape_management.shape_info import ShapeInfo
 
 
 def test_init_class():
-    model_xml = 'model1.xml'
-    model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
     exec_net = None
-    net = None
-    batch_size = None
+    net = MockedNet(inputs={'input': MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
+                    outputs={'output': MockedIOInfo('FP32', [1, 1], 'NCHW')})
+    batching_info = BatchingInfo(None)
+    shape_info = ShapeInfo(None, net.inputs)
     plugin = None
-    input_key = 'input'
-    inputs = {input_key: Layer('FP32', (1, 1), 'NCHW')}
-    outputs = {'output': Layer('FP32', (1, 1), 'NCHW')}
-    engine = IrEngine(model_bin=model_bin, model_xml=model_xml,
-                      mapping_config=mapping_config, exec_net=exec_net,
-                      inputs=inputs, outputs=outputs, net=net, plugin=plugin,
-                      batch_size=batch_size)
-    assert model_xml == engine.model_xml
-    assert model_bin == engine.model_bin
+    engine = IrEngine(model_name='test', model_version=1,
+                      mapping_config=mapping_config,
+                      exec_net=exec_net,
+                      net=net, plugin=plugin, batching_info=batching_info,
+                      shape_info=shape_info)
     assert exec_net == engine.exec_net
-    assert [input_key] == engine.input_tensor_names
-    assert inputs == engine.input_tensors
-    assert ['output'] == engine.output_tensor_names
-    assert {'inputs': {'input': 'input'},
-            'outputs': {'output': 'output'}} == engine.model_keys
-    assert [input_key] == engine.input_key_names
+    assert list(net.inputs.keys()) == engine.input_tensor_names
+    assert list(net.outputs.keys()) == engine.output_tensor_names
 
 
 def test_build_device_cpu(mocker):
@@ -53,12 +51,14 @@ def test_build_device_cpu(mocker):
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
-    batch_size = None
+    batch_size_param, shape_param = None, None
     mapping_config = 'mapping_config.json'
     with pytest.raises(Exception):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+        IrEngine.build(model_name='test', model_version=1,
+                       model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
-                       batch_size=batch_size)
+                       batch_size_param=batch_size_param,
+                       shape_param=shape_param)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -71,11 +71,13 @@ def test_build_device_other(mocker):
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'
-    batch_size = None
+    batch_size_param, shape_param = None, None
     with pytest.raises(Exception):
-        IrEngine.build(model_bin=model_bin, model_xml=model_xml,
+        IrEngine.build(model_name='test', model_version=1,
+                       model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
-                       batch_size=batch_size)
+                       batch_size_param=batch_size_param,
+                       shape_param=shape_param)
         assert not cpu_extension_mock.assert_called_once_with()
 
 
@@ -183,19 +185,54 @@ def test_set_keys(get_fake_ir_engine, mocker):
     assert 'config' == output
 
 
-@pytest.mark.parametrize(('in_conf_bs', 'in_model_bs',
-                          'exp_engine_bs', 'exp_net_bs', 'exp_effective_bs'), [
-    ('auto', 1, 0, None, 'auto'),
-    ('invalid', 1, None, None, '1'),
-    ('0', 2, None, None, '2'),
-    ('8', 1, 8, 8, '8'),
-    (None, 4, None, None, '4')
-])
-def test_set_batch_size(in_conf_bs, in_model_bs,
-                        exp_engine_bs, exp_net_bs, exp_effective_bs):
-    e_bs, net_bs, effective_bs = \
-        _set_batch_size(in_conf_bs, in_model_bs)
+@pytest.mark.parametrize("shape_mode, changed_inputs, expected_reshape_param",
+                         DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES)
+def test_detect_shapes_incompatibility(get_fake_ir_engine, mocker,
+                                       shape_mode, changed_inputs,
+                                       expected_reshape_param):
+    engine = get_fake_ir_engine
+    engine.shape_info.mode = shape_mode
+    scan_input_shapes_mock = mocker.patch('ie_serving.models.'
+                                          'ir_engine.IrEngine.'
+                                          'scan_input_shapes')
+    scan_input_shapes_mock.return_value = changed_inputs
+    reshape_param = engine.detect_shapes_incompatibility(None)
+    assert reshape_param == expected_reshape_param
 
-    assert e_bs == exp_engine_bs
-    assert net_bs == exp_net_bs
-    assert effective_bs == exp_effective_bs
+
+@pytest.mark.parametrize("net_inputs_shapes, data, expected_output",
+                         SCAN_INPUT_SHAPES_TEST_CASES)
+def test_scan_input_shapes(get_fake_ir_engine, net_inputs_shapes, data,
+                           expected_output):
+    engine = get_fake_ir_engine
+
+    # update network with desired inputs
+    new_inputs = {}
+    for input_name, input_shape in net_inputs_shapes.items():
+        new_inputs.update({input_name: MockedIOInfo('FP32', list(input_shape),
+                                                    'NCHW')})
+    engine.net.inputs = new_inputs
+
+    output = engine.scan_input_shapes(data)
+    assert output == expected_output
+
+
+@pytest.mark.parametrize("reshape_param, calls_config, returns_config, "
+                         "expected_output", RESHAPE_TEST_CASES)
+def test_reshape(get_fake_ir_engine, mocker, reshape_param, calls_config,
+                 returns_config, expected_output):
+    engine = get_fake_ir_engine
+    methods_mocks = {
+        method_name: mocker.patch('ie_serving.models.ir_engine.IrEngine.{}'
+                                  .format(method_name))
+        for method_name in list(calls_config.keys())
+    }
+
+    for method_name, return_value in returns_config.items():
+        methods_mocks[method_name].return_value = return_value
+
+    output = engine.reshape(reshape_param)
+
+    for method_name, is_called in calls_config.items():
+        assert methods_mocks[method_name].called == is_called
+    assert output == expected_output

@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from threading import Lock
-from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
-from openvino.inference_engine import IENetwork, IEPlugin
+import datetime
 import json
+from threading import Lock
+
+from openvino.inference_engine import IENetwork, IEPlugin
+
+from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
 from ie_serving.logger import get_logger
+from ie_serving.models.shape_management.batching_info import BatchingInfo
+from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 
 logger = get_logger(__name__)
@@ -27,8 +31,7 @@ logger = get_logger(__name__)
 class IrEngine():
 
     def __init__(self, model_name, model_version, net, plugin,
-                 mapping_config, exec_net, inputs: dict,
-                 outputs: list, batching_info, shape_info):
+                 mapping_config, exec_net, batching_info, shape_info):
         self.model_name = model_name
         self.model_version = model_version
         self.exec_net = exec_net
@@ -36,10 +39,8 @@ class IrEngine():
         self.batching_info = batching_info
         self.shape_info = shape_info
         self.plugin = plugin
-        self.input_tensor_names = list(inputs.keys())
-        self.input_tensors = inputs
-        self.output_tensor_names = list(outputs.keys())
-        self.output_tensors = outputs
+        self.input_tensor_names = list(net.inputs.keys())
+        self.output_tensor_names = list(net.outputs.keys())
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
         self.in_use = Lock()
@@ -47,31 +48,42 @@ class IrEngine():
 
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batching_info, shape_info):
+              mapping_config, batch_size_param, shape_param):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
         net = IENetwork(model=model_xml, weights=model_bin)
-
+        batching_info = BatchingInfo(batch_size_param)
+        shape_info = ShapeInfo(shape_param, net.inputs)
         if batching_info.mode == BatchingMode.FIXED:
             net.batch_size = batching_info.batch_size
         else:
             batching_info.batch_size = net.batch_size
 
         effective_batch_size = batching_info.get_effective_batch_size()
-        logger.debug("effective batch size - {}".format(effective_batch_size))
-        inputs = net.inputs
-        outputs = net.outputs
-        # Temporary workaround to make sure network is healthy and ready for
-        # further reshaping
-        if shape_info.mode != ShapeMode.DISABLED:
+        logger.debug("[Model: {}, version: {}] --- effective batch size - {}"
+                     .format(model_name, model_version, effective_batch_size))
+        ###############################
+        # Initial shape setup
+        if shape_info.mode == ShapeMode.FIXED:
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "fixed value: {}".format(model_name, model_version,
+                                                  shape_info.shape))
+            net.reshape(shape_info.shape)
+        elif shape_info.mode == ShapeMode.AUTO:
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "automatic".format(model_name, model_version))
             net.reshape({})
+        elif shape_info.mode == ShapeMode.DEFAULT:
+            logger.debug("[Model: {}, version: {}] --- Setting shape to "
+                         "default".format(model_name, model_version))
+        ###############################
 
         exec_net = plugin.load(network=net, num_requests=1)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
-                        exec_net=exec_net, inputs=inputs, outputs=outputs,
-                        batching_info=batching_info, shape_info=shape_info)
+                        exec_net=exec_net, batching_info=batching_info,
+                        shape_info=shape_info)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -82,7 +94,8 @@ class IrEngine():
                 return mapping_data
             except Exception as e:
                 message = "Error occurred while reading mapping_config in " \
-                          "path {}. Message error {}".format(mapping_config, e)
+                          "path {}. Message error {}".format(mapping_config,
+                                                             e)
                 logger.error("[Model: {}, version: {}] --- {}".format(
                     self.model_name, self.model_version, message))
         return None
@@ -136,8 +149,31 @@ class IrEngine():
             return None, message
         return results, None
 
+    def detect_shapes_incompatibility(self, inference_input):
+        # Compares workload shapes with engine inputs shapes. Returns
+        # reshape_param
+        # reshape_param is inputs shapes dictionary (input_name:shape pairs)
+        # for reshapable models and batch size for non-reshapable. If no
+        # changes needed - reshape_param is None
+
+        reshape_param = None
+        inputs_shapes = self.scan_input_shapes(
+            inference_input)
+        if inputs_shapes:
+            reshape_param = inputs_shapes
+            # For non-reshapable models, batch_size of first input is the
+            # reshape parameter
+            if self.shape_info.mode == ShapeMode.DISABLED:
+                input_shape = inputs_shapes[list(inputs_shapes.keys())[0]]
+                batch_size = list(input_shape)[0]
+                reshape_param = batch_size
+        return reshape_param
+
     def scan_input_shapes(self, data: dict):
-        #   Takes dictionary of input_name:numpy_array pairs.
+        # Takes dictionary of input_name:numpy_array pairs.
+        # returns dict of input_name:shape pairs with shapes different from
+        # current inputs shapes in a network - empty dict if inference
+        # workload and network inputs shapes are equal.
         changed_input_shapes = {}
         for input_name, input_data in data.items():
             net_input_shape = tuple(self.net.inputs[input_name].shape)
@@ -152,15 +188,25 @@ class IrEngine():
         return changed_input_shapes
 
     def reshape(self, reshape_param):
+        reshape_start_time = datetime.datetime.now()
         if type(reshape_param) is dict:
-            return self._reshape(reshape_param)
+            error_message = self._reshape(reshape_param)
         elif type(reshape_param) is int:
-            return self._change_batch_size(reshape_param)
+            error_message = self._change_batch_size(reshape_param)
         else:
-            message = "Unknown error occurred in input reshape preparation"
+            error_message = "Unknown error occurred in input " \
+                            "reshape preparation"
+        reshape_end_time = datetime.datetime.now()
+        if error_message is not None:
             logger.debug("[Model: {}, version: {}] --- {}".format(
-                self.model_name, self.model_version, message))
-            return message
+                self.model_name, self.model_version, error_message))
+            return error_message
+        duration = \
+            (reshape_end_time - reshape_start_time).total_seconds() * 1000
+        logger.debug(
+            "IR_ENGINE; network reshape completed; {}; {}; {}ms".format(
+                self.model_name, self.model_version, duration))
+        return None
 
     def _reshape(self, inputs_shapes: dict):
         #   Takes dictionary of input_name:shape pairs as parameter

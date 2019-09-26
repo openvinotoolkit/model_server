@@ -14,20 +14,7 @@
 # limitations under the License.
 #
 
-##############################################
-# Input batch size and shape auxiliary classes
+MODEL_SERVICE = 1
+PREDICTION_SERVICE = 2
 
-
-class GenericMode:
-    FIXED = 0
-    AUTO = 1
-    DEFAULT = 2
-    DISABLED = 3
-
-
-class BatchingMode(GenericMode):
-    pass
-
-
-class ShapeMode(GenericMode):
-    pass
+ERROR_SHAPE = 'response has invalid output'

@@ -7,7 +7,6 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 
 from ie_serving.logger import get_logger
-from ie_serving.models.shape_management.reshaper import Reshaper
 from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
     OUTPUT_REPRESENTATION, REST
 from ie_serving.server.get_model_metadata_utils import \
@@ -87,8 +86,8 @@ class GetModelMetadata(object):
         target_engine = self.models[model_name].engines[version]
         target_engine.in_use.acquire()
 
-        inputs = target_engine.input_tensors
-        outputs = target_engine.output_tensors
+        inputs = target_engine.net.inputs
+        outputs = target_engine.net.outputs
 
         signature_def = prepare_get_metadata_output(inputs=inputs,
                                                     outputs=outputs,
@@ -165,11 +164,10 @@ class Predict():
         target_engine.in_use.acquire()
         ###############################################
         # Reshape network inputs if needed
-        reshape_param = Reshaper.detect_shapes_incompatibility(target_engine,
-                                                               inference_input)
+        reshape_param = target_engine.detect_shapes_incompatibility(
+            inference_input)
         if reshape_param is not None:
-            error_message = Reshaper.prepare_engine(target_engine,
-                                                    reshape_param)
+            error_message = target_engine.reshape(reshape_param)
             if error_message is not None:
                 resp.status = falcon.HTTP_400
                 err_out_json = {'error': error_message}

@@ -13,20 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import sys
 
-from conftest import get_model_metadata, model_metadata_response, \
-    get_model_status, get_model_status_response_rest
+import pytest
+import requests
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
-from google.protobuf.json_format import Parse
-
-import sys
-import requests
-import pytest
+from utils.grpc import get_model_metadata, model_metadata_response, \
+    get_model_status
+from utils.rest import get_model_status_response_rest
 
 sys.path.append(".")
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, _ERROR_MESSAGE # noqa
 
 
 class TestModelVerPolicy():
@@ -38,7 +38,7 @@ class TestModelVerPolicy():
     ])
     def test_get_model_metadata(self, model_version_policy_models,
                                 start_server_model_ver_policy,
-                                create_channel_for_model_ver_pol_server,
+                                create_grpc_channel,
                                 model_name, throw_error):
         """
         <b>Description</b>
@@ -64,7 +64,7 @@ class TestModelVerPolicy():
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_channel_for_model_ver_pol_server
+        stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
 
         print("Getting info about resnet model")
         versions = [1, 2, 3]
@@ -107,13 +107,13 @@ class TestModelVerPolicy():
     ])
     def test_get_model_status(self, model_version_policy_models,
                               start_server_model_ver_policy,
-                              create_channel_for_model_ver_pol_server_status,
+                              create_grpc_channel,
                               model_name, throw_error):
 
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_channel_for_model_ver_pol_server_status
+        stub = create_grpc_channel('localhost:9006', MODEL_SERVICE)
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
