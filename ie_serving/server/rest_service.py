@@ -161,7 +161,6 @@ class Predict():
                          .format(code))
             resp.body = json.dumps(err_out_json)
             return
-        target_engine.in_use.acquire()
         ###############################################
         # Reshape network inputs if needed
         reshape_param = target_engine.detect_shapes_incompatibility(
@@ -172,7 +171,6 @@ class Predict():
                 resp.status = falcon.HTTP_400
                 err_out_json = {'error': error_message}
                 resp.body = json.dumps(err_out_json)
-                target_engine.in_use.release()
                 return
         ##############################################
         inference_start_time = datetime.datetime.now()
@@ -182,10 +180,8 @@ class Predict():
             resp.status = falcon.HTTP_400
             err_out_json = {'error': error_message}
             resp.body = json.dumps(err_out_json)
-            target_engine.in_use.release()
             return
         inference_end_time = datetime.datetime.now()
-        target_engine.in_use.release()
         duration = \
             (inference_end_time - inference_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"

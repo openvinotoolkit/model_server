@@ -15,6 +15,9 @@
 #
 
 import datetime
+import threading
+import time
+import uuid
 
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import get_model_status_pb2
@@ -23,6 +26,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
 from ie_serving.logger import get_logger
+from ie_serving.models.models_utils import ModelVersionState
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
@@ -63,6 +67,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             return predict_pb2.PredictResponse()
 
         target_engine = self.models[model_name].engines[version]
+
         start_time = datetime.datetime.now()
         inference_input, error_message = \
             prepare_input_data(target_engine=target_engine,
@@ -80,50 +85,40 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             logger.debug("PREDICT, problem with input data. Exit code {}"
                          .format(code))
             return predict_pb2.PredictResponse()
+
         target_engine = self.models[model_name].engines[version]
-        target_engine.in_use.acquire()
-        ################################################
-        # Reshape network inputs if needed
-        reshape_param = target_engine.detect_shapes_incompatibility(
-            inference_input)
-        if reshape_param is not None:
-            error_message = target_engine.reshape(reshape_param)
-            if error_message is not None:
-                code = statusCodes['invalid_arg'][GRPC]
-                context.set_code(code)
-                context.set_details(error_message)
-                target_engine.in_use.release()
-                return predict_pb2.PredictResponse()
-        ################################################
-        inference_start_time = datetime.datetime.now()
-        inference_output, error_message = target_engine.infer(
-            inference_input)
-        if error_message is not None:
+        inference_id = str(uuid.uuid1())
+        target_engine.requests_queue.put((inference_id,
+                                         inference_input))
+        inference_output = self.wait_for_results(target_engine, inference_id)
+        if inference_output is str:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
-            context.set_details(error_message)
-            target_engine.in_use.release()
+            context.set_details(inference_output)
+            logger.debug("PREDICT, problem during inference execution. Exit "
+                         "code {}".format(code))
             return predict_pb2.PredictResponse()
-        inference_end_time = datetime.datetime.now()
-        target_engine.in_use.release()
-        duration = \
-            (inference_end_time - inference_start_time).total_seconds() * 1000
-        logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
-                     .format(model_name, version, duration))
         response = prepare_output_as_list(
             inference_output=inference_output,
             model_available_outputs=target_engine.model_keys['outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
-        serialization_end_time = datetime.datetime.now()
-        duration = \
-            (serialization_end_time -
-             inference_end_time).total_seconds() * 1000
-        logger.debug("PREDICT; inference results serialization completed;"
-                     " {}; {}; {}ms".format(model_name, version, duration))
-
         return response
+
+    def wait_for_results(self, target_engine, inference_id, interval=0.001):
+        while True:
+            time.sleep(interval)
+            if inference_id in target_engine.results_map:
+                result = target_engine.results_map[inference_id]
+                if type(result) is int:
+                    ir_index = result
+                    inference_output = target_engine.exec_net.requests[
+                        ir_index].outputs
+                    target_engine.free_ir_index_queue.put(ir_index)
+                    result = inference_output
+                    del target_engine.results_map[inference_id]
+                return result
 
     def GetModelMetadata(self, request, context):
 

@@ -30,8 +30,9 @@ LOG_PATH = os.getenv('LOG_PATH', None)
 FILE_SYSTEM_POLL_WAIT_SECONDS = float(
     os.getenv('FILE_SYSTEM_POLL_WAIT_SECONDS', 1))
 
-
 MAPPING_CONFIG_FILENAME = 'mapping_config.json'
+
+REQUESTS_QUEUE_SIZE = os.getenv("REQUESTS_QUEUE_SIZE", 100)
 
 
 class S3_Config:

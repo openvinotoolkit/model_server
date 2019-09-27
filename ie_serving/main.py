@@ -77,13 +77,15 @@ def get_model_spec(config):
 
     model_ver_policy = config.get(
         'model_version_policy', None)
+    nireq = int(config.get('nireq', 1))
 
     model_spec = {
         'model_name': model_name,
         'model_directory': model_path,
         'batch_size': batch_size,
         'shape': shape,
-        'model_version_policy': model_ver_policy
+        'model_version_policy': model_ver_policy,
+        'nireq': nireq
     }
     return model_spec
 
@@ -113,10 +115,11 @@ def parse_config(args):
         sys.exit()
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
-                                          args=[models, args.rest_port])
+                                          args=[models, args.rest_port,
+                                                args.rest_workers])
         process_thread.setDaemon(True)
         process_thread.start()
-    start_server(models=models, max_workers=1, port=args.port)
+    start_server(models=models, max_workers=args.grpc_workers, port=args.port)
 
 
 def parse_one_model(args):
@@ -151,10 +154,12 @@ def parse_one_model(args):
 
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
-                                          args=[models, args.rest_port])
+                                          args=[models, args.rest_port,
+                                                int(args.rest_workers)])
         process_thread.setDaemon(True)
         process_thread.start()
-    start_server(models=models, max_workers=1, port=args.port)
+    start_server(models=models, max_workers=int(args.grpc_workers),
+                 port=args.port)
 
 
 def main():
@@ -173,6 +178,14 @@ def main():
                           help='REST server port, the REST server will not be'
                                ' started if rest_port is blank or set to 0',
                           required=False, default=0)
+    parser_a.add_argument('--grpc_workers', type=int,
+                          help='Number of workers in gRPC server',
+                          required=False,
+                          default=1)
+    parser_a.add_argument('--rest_workers', type=int,
+                          help='Number of workers in REST server',
+                          required=False,
+                          default=1)
     parser_a.set_defaults(func=parse_config)
 
     parser_b = subparsers.add_parser('model',
@@ -201,6 +214,19 @@ def main():
                           help='model version policy',
                           required=False,
                           default='{"latest": { "num_versions":1 }}')
+    parser_b.add_argument('--grpc_workers', type=int,
+                          help='Number of workers in gRPC server',
+                          required=False,
+                          default=1)
+    parser_b.add_argument('--rest_workers', type=int,
+                          help='Number of workers in REST server',
+                          required=False,
+                          default=1)
+    parser_b.add_argument('--nireq', type=int,
+                          help='Number of infer requests for model - max '
+                               'number of inferences running in parallel',
+                          required=False,
+                          default=1)
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))
