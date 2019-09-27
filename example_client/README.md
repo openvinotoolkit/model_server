@@ -475,4 +475,60 @@ python rest_get_model_status.py --rest_port 8000 --model_version 1
 {'model_version_status': [{'version': '1', 'state': 'AVAILABLE', 'status': {'error_code': 'OK', 'error_message': ''}}]}
 ```
 
+# Multiple input example for HDDL
+```bash
+The purpose of this example is to show how send inputs from multiple sources(cameras, video files) to a model served from
+inside the OpenVINO model server(inside docker)
+
+python multi_inputs.py --help
+Options:
+  -h, --help            Show this help message and exit.
+  -n NETWORK_NAME, --network_name NETWORK_NAME
+                        Network name
+  -l INPUT_LAYER, --input_layer INPUT_LAYER
+                        Input layer name
+  -o OUTPUT_LAYER, --output_layer OUTPUT_LAYER
+                        Output layer name
+  -d INPUT_DIMENSION, --input_dimension INPUT_DIMENSION
+                        Input image dimension
+  -c NUM_CAMERAS, --num_cameras NUM_CAMERAS
+                        Number of cameras to be used
+  -f FILE, --file FILE  Path to the video file
+  -i IP, --ip IP        ip address of the ovms
+  -p PORT, --port PORT  port of the ovms
+
+To run this example you will need to run the OpenVINO hddldaemon and OpenVINO model server separately. Below are the steps
+to install and run them(provided for Linux OS):
+
+* Setup OpenVINO & HDDL:
+  - https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux.html
+  - https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux_ivad_vpu.html
+
+* Setup OVMS to use HDDL:
+  - https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#starting-docker-container-with-hddl
+
+Sample output:
+==============
+TERMINAL 1: <openvino_installation_root>/openvino/inference_engine/external/hddl/bin/hddldaemon
+TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml -e DEVICE=HDDL
+            -e FILE_SYSTEM_POLL_WAIT_SECONDS=0 -p 8001:8001 -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh
+            ie_serving model --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001
+TERMINAL 3: python3.6 multi_inputs.py -n SSDMobileNet -l image_tensor -o DetectionOutput -d 300 -c 1
+            -f /var/repos/github/sample-videos/face-demographics-walking.mp4 -i 127.0.0.1 -p 9001
+
+Console logs:
+============
+[$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Camera0 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Camera0 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Camera0 fps: 8, Inf fps: 8, dropped fps: 0
+[$(levelname)s ] Exiting thread 0
+[$(levelname)s ] Good Bye!
+
+You should also be seeing the GUI showing the video frame and bounding boxes drawn with the detected class name
+
+```
+
 Refer also to the usage demo in the [jupyter notebook](../example_k8s/OVMS_demo.ipynb).
