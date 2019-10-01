@@ -17,13 +17,14 @@ import datetime
 import json
 import queue
 import time
-from threading import Event, Thread
+from threading import Thread
 
 from openvino.inference_engine import IENetwork, IEPlugin
 
 from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR, \
     REQUESTS_QUEUE_SIZE
 from ie_serving.logger import get_logger
+from ie_serving.models.constants import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
@@ -36,7 +37,7 @@ def inference_callback(status, py_data):
     inference_id = py_data['inference_id']
     ir_index = py_data['ir_index']
 
-    if status == 0:
+    if status == InferenceStatus.OK:
         ir_engine.results_map.update({inference_id: ir_index})
     else:
         ir_engine.results_map.update({inference_id: "Error occurred during "
@@ -47,7 +48,7 @@ class IrEngine():
 
     def __init__(self, model_name, model_version, net, plugin,
                  mapping_config, exec_net, batching_info, shape_info,
-                 free_ir_index_queue, nireq, requests_queue):
+                 free_ireq_index_queue, num_ireq, requests_queue):
         self.model_name = model_name
         self.model_version = model_version
         self.exec_net = exec_net
@@ -60,8 +61,8 @@ class IrEngine():
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
 
-        self.free_ir_index_queue = free_ir_index_queue
-        self.nireq = nireq
+        self.free_ireq_index_queue = free_ireq_index_queue
+        self.num_ireq = num_ireq
         self.requests_queue = requests_queue
         self.results_map = {}
 
@@ -72,7 +73,7 @@ class IrEngine():
 
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batch_size_param, shape_param, nireq):
+              mapping_config, batch_size_param, shape_param, num_ireq):
         plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
         if CPU_EXTENSION and 'CPU' in DEVICE:
             plugin.add_cpu_extension(CPU_EXTENSION)
@@ -103,19 +104,19 @@ class IrEngine():
                          "default".format(model_name, model_version))
         ###############################
         # Creating free infer requests indexes queue
-        free_ir_index_queue = queue.Queue(maxsize=nireq)
-        [free_ir_index_queue.put(ir_index) for ir_index
-         in range(nireq)]
+        free_ireq_index_queue = queue.Queue(maxsize=num_ireq)
+        for ireq_index in range(num_ireq):
+            free_ireq_index_queue.put(ireq_index)
         ###############################
         requests_queue = queue.Queue(maxsize=REQUESTS_QUEUE_SIZE)
 
-        exec_net = plugin.load(network=net, num_requests=nireq)
+        exec_net = plugin.load(network=net, num_requests=num_ireq)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, batching_info=batching_info,
                         shape_info=shape_info,
-                        free_ir_index_queue=free_ir_index_queue,
-                        nireq=nireq, requests_queue=requests_queue)
+                        free_ireq_index_queue=free_ireq_index_queue,
+                        num_ireq=num_ireq, requests_queue=requests_queue)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -174,16 +175,12 @@ class IrEngine():
         while True:
             request = self.requests_queue.get()
             inference_id, inference_input = request
-            ################################################
-            # Reshape network inputs if needed
-            reshape_param = self.detect_shapes_incompatibility(
+            error_message = self.adjust_network_inputs_if_needed(
                 inference_input)
-            if reshape_param is not None:
-                error_message = self.reshape(reshape_param)
-                if error_message is not None:
-                    self.results_map.update({inference_id: error_message})
-            ################################################
-            ir_index = self.free_ir_index_queue.get()
+            if error_message is not None:
+                self.results_map.update({inference_id: error_message})
+                continue
+            ir_index = self.free_ireq_index_queue.get()
             py_data = {
                 'ir_engine': self,
                 'ir_index': ir_index,
@@ -192,6 +189,28 @@ class IrEngine():
             self.exec_net.requests[ir_index].set_completion_callback(
                 py_callback=inference_callback, py_data=py_data)
             self.exec_net.requests[ir_index].async_infer(inference_input)
+
+    def wait_for_results(self, inference_id, interval=0.001):
+        while True:
+            time.sleep(interval)
+            if inference_id in self.results_map:
+                result = self.results_map[inference_id]
+                if type(result) is int:
+                    ir_index = result
+                    inference_output = self.exec_net.requests[
+                        ir_index].outputs
+                    self.free_ireq_index_queue.put(ir_index)
+                    result = inference_output
+                    del self.results_map[inference_id]
+                return result
+
+    def adjust_network_inputs_if_needed(self, inference_input):
+        error_message = None
+        reshape_param = self.detect_shapes_incompatibility(
+            inference_input)
+        if reshape_param is not None:
+            error_message = self.reshape(reshape_param)
+        return error_message
 
     def detect_shapes_incompatibility(self, inference_input):
         # Compares workload shapes with engine inputs shapes. Returns

@@ -77,7 +77,7 @@ def get_model_spec(config):
 
     model_ver_policy = config.get(
         'model_version_policy', None)
-    nireq = int(config.get('nireq', 1))
+    num_ireq = int(config.get('nireq', 1))
 
     model_spec = {
         'model_name': model_name,
@@ -85,7 +85,7 @@ def get_model_spec(config):
         'batch_size': batch_size,
         'shape': shape,
         'model_version_policy': model_ver_policy,
-        'nireq': nireq
+        'num_ireq': num_ireq
     }
     return model_spec
 
@@ -155,10 +155,10 @@ def parse_one_model(args):
     if args.rest_port > 0:
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port,
-                                                int(args.rest_workers)])
+                                                args.rest_workers])
         process_thread.setDaemon(True)
         process_thread.start()
-    start_server(models=models, max_workers=int(args.grpc_workers),
+    start_server(models=models, max_workers=args.grpc_workers,
                  port=args.port)
 
 

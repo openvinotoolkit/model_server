@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 import re
-from threading import Thread
-import time
+import threading
 from abc import ABC, abstractmethod
 
 from jsonschema import validate
@@ -34,7 +33,8 @@ class Model(ABC):
     def __init__(self, model_name: str, model_directory: str,
                  batch_size_param,
                  shape_param, available_versions: list, engines: dict,
-                 version_policy_filter, versions_statuses: dict, nireq: int):
+                 version_policy_filter, versions_statuses: dict,
+                 num_ireq: int):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
@@ -42,7 +42,7 @@ class Model(ABC):
         self.default_version = max(self.versions, default=-1)
         self.batch_size_param = batch_size_param
         self.shape_param = shape_param
-        self.nireq = nireq
+        self.num_ireq = num_ireq
         self.version_policy_filter = version_policy_filter
         self.versions_statuses = versions_statuses
 
@@ -57,7 +57,8 @@ class Model(ABC):
 
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size_param,
-              shape_param, model_version_policy: dict = None, nireq: int = 1):
+              shape_param, model_version_policy: dict = None,
+              num_ireq: int = 1):
 
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
@@ -66,7 +67,7 @@ class Model(ABC):
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
                 model_directory, batch_size_param, shape_param,
-                version_policy_filter, nireq)
+                version_policy_filter, num_ireq)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
@@ -95,7 +96,7 @@ class Model(ABC):
                     shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses,
-                    nireq=nireq)
+                    num_ireq=num_ireq)
         return model
 
     def update(self):
@@ -104,7 +105,7 @@ class Model(ABC):
                 self.get_version_metadata(
                     self.model_directory,
                     self.batch_size_param, self.shape_param,
-                    self.version_policy_filter, self.nireq)
+                    self.version_policy_filter, self.num_ireq)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(self.model_name))
@@ -145,8 +146,8 @@ class Model(ABC):
                     "for {} model is {}".format(self.model_name,
                                                 self.default_version))
         for version in to_delete:
-            process_thread = Thread(target=self._delete_engine,
-                                    args=[version])
+            process_thread = threading.Thread(target=self._delete_engine,
+                                              args=[version])
             process_thread.start()
 
     def _mark_differences(self, new_versions):
@@ -180,31 +181,18 @@ class Model(ABC):
                      "deleted engines finalized".format(self.model_name))
 
     def _delete_engine(self, version):
-        start_time = time.time()
-        tick = start_time
-        lock_counter = 0
-        while tick - start_time < 120:
-            time.sleep(0.1)
-            if not self.engines[version].in_use.locked():
-                lock_counter += 1
-            else:
-                lock_counter = 0
-            if lock_counter >= 10:
-                del self.engines[version]
-                logger.debug("Version {} of the {} model "
-                             "has been removed".format(version,
-                                                       self.model_name))
-                self.versions_statuses[version].set_end()
-                self.versions_locks[version].set(VersionOperability.DELETED)
-                break
-            tick = time.time()
+        del self.engines[version]
+        logger.debug("Version {} of the {} model has been removed".format(
+            version, self.model_name))
+        self.versions_statuses[version].set_end()
 
     @classmethod
     def get_version_metadata(cls, model_directory, batch_size_param,
-                             shape_param, version_policy_filter, nireq):
+                             shape_param, version_policy_filter, num_ireq):
         versions_attributes = cls.get_versions_attributes(model_directory,
                                                           batch_size_param,
-                                                          shape_param, nireq)
+                                                          shape_param,
+                                                          num_ireq)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()
@@ -213,7 +201,7 @@ class Model(ABC):
 
     @classmethod
     def get_versions_attributes(cls, model_directory, batch_size_param,
-                                shape_param, nireq):
+                                shape_param, num_ireq):
         versions = cls.get_versions(model_directory)
         logger.debug(versions)
         versions_attributes = []
@@ -229,7 +217,7 @@ class Model(ABC):
                                           'version_number': version_number,
                                           'batch_size_param': batch_size_param,
                                           'shape_param': shape_param,
-                                          'nireq': nireq
+                                          'num_ireq': num_ireq
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
@@ -302,7 +290,7 @@ class Model(ABC):
             'mapping_config': version_attributes['mapping_config'],
             'batch_size_param': version_attributes['batch_size_param'],
             'shape_param': version_attributes['shape_param'],
-            'nireq': version_attributes['nireq']
+            'num_ireq': version_attributes['num_ireq']
         }
 
     #   Subclass interface

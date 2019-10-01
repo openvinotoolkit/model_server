@@ -84,7 +84,6 @@ class GetModelMetadata(object):
             return
 
         target_engine = self.models[model_name].engines[version]
-        target_engine.in_use.acquire()
 
         inputs = target_engine.net.inputs
         outputs = target_engine.net.outputs
@@ -103,7 +102,6 @@ class GetModelMetadata(object):
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        target_engine.in_use.release()
         resp.status = falcon.HTTP_200
         resp.body = MessageToJson(response)
 

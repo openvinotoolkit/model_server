@@ -90,7 +90,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         inference_id = str(uuid.uuid1())
         target_engine.requests_queue.put((inference_id,
                                          inference_input))
-        inference_output = self.wait_for_results(target_engine, inference_id)
+        inference_output = target_engine.wait_for_results(inference_id)
         if inference_output is str:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
@@ -105,20 +105,6 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
         return response
-
-    def wait_for_results(self, target_engine, inference_id, interval=0.001):
-        while True:
-            time.sleep(interval)
-            if inference_id in target_engine.results_map:
-                result = target_engine.results_map[inference_id]
-                if type(result) is int:
-                    ir_index = result
-                    inference_output = target_engine.exec_net.requests[
-                        ir_index].outputs
-                    target_engine.free_ir_index_queue.put(ir_index)
-                    result = inference_output
-                    del target_engine.results_map[inference_id]
-                return result
 
     def GetModelMetadata(self, request, context):
 
@@ -138,14 +124,12 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             logger.debug("MODEL_METADATA, invalid model spec from request")
             return get_model_metadata_pb2.GetModelMetadataResponse()
         target_engine = self.models[model_name].engines[version]
-        target_engine.in_use.acquire()
         metadata_signature_requested = request.metadata_field[0]
         if 'signature_def' != metadata_signature_requested:
             context.set_code(StatusCode.INVALID_ARGUMENT)
             context.set_details(INVALID_METADATA_FIELD.format
                                 (metadata_signature_requested))
             logger.debug("MODEL_METADATA, invalid signature def")
-            target_engine.in_use.release()
             return get_model_metadata_pb2.GetModelMetadataResponse()
 
         inputs = target_engine.net.inputs
@@ -165,7 +149,6 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        target_engine.in_use.release()
         return response
 
 
