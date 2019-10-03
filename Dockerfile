@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN curl -o GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 RUN apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-RUN echo "deb https://apt.repos.intel.com/openvino/2019/ all main" > /etc/apt/sources.list.d/intel-openvino-2019.list
+RUN echo "deb [trusted=yes] https://apt.repos.intel.com/openvino/2019/ all main" > /etc/apt/sources.list.d/intel-openvino-2019.list
 
 RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2019.2.242
 
