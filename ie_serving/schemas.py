@@ -33,3 +33,32 @@ all_schema = {
     'required': ['all'],
     'properties': {'all': {'type': 'object'}},
 }
+
+models_config_schema = {
+    'definitions': {
+        'model_config': {
+            'type': 'object',
+            'required': ['config'],
+            'properties': {
+                'config': {
+                    'type': 'object',
+                    'required': ['name', 'base_path'],
+                    'properties': {
+                        'name': {'type': 'string'},
+                        'base_path': {'type': 'string'},
+                        'batch_size': {'type': ['integer', 'string']},
+                        'model_version_policy': {'type': 'object'},
+                        'shape': {'type': ['object', 'string']},
+                        'nireq': {'type': 'integer'},
+                    }
+                }
+            }
+        }
+    },
+    'type': 'object',
+    'required': ['model_config_list'],
+    'properties': {'model_config_list': {
+        'type': 'array',
+        'items': {"$ref": "#/definitions/model_config"},
+    }},
+}

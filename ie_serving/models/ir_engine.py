@@ -16,13 +16,11 @@
 import datetime
 import json
 import queue
-import time
 from threading import Thread
 
 from openvino.inference_engine import IENetwork, IEPlugin
 
-from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR, \
-    REQUESTS_QUEUE_SIZE
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.models.constants import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
@@ -34,14 +32,16 @@ logger = get_logger(__name__)
 
 def inference_callback(status, py_data):
     ir_engine = py_data['ir_engine']
-    inference_id = py_data['inference_id']
-    ir_index = py_data['ir_index']
+    request = py_data['request']
+    ireq_index = py_data['ireq_index']
 
     if status == InferenceStatus.OK:
-        ir_engine.results_map.update({inference_id: ir_index})
+        request.set_result(ireq_index=ireq_index,
+                           result=ir_engine.exec_net.requests[ireq_index].
+                           outputs)
     else:
-        ir_engine.results_map.update({inference_id: "Error occurred during "
-                                                    "inference execution"})
+        request.set_result(ireq_index=ireq_index,
+                           result="Error occurred during inference execution")
 
 
 class IrEngine():
@@ -64,7 +64,6 @@ class IrEngine():
         self.free_ireq_index_queue = free_ireq_index_queue
         self.num_ireq = num_ireq
         self.requests_queue = requests_queue
-        self.results_map = {}
 
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
@@ -74,9 +73,10 @@ class IrEngine():
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
               mapping_config, batch_size_param, shape_param, num_ireq):
-        plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
-        if CPU_EXTENSION and 'CPU' in DEVICE:
-            plugin.add_cpu_extension(CPU_EXTENSION)
+        plugin = IEPlugin(device=GLOBAL_CONFIG['device'],
+                          plugin_dirs=GLOBAL_CONFIG['plugin_dir'])
+        if GLOBAL_CONFIG['cpu_extension'] and 'CPU' in GLOBAL_CONFIG['device']:
+            plugin.add_cpu_extension(GLOBAL_CONFIG['cpu_extension'])
         net = IENetwork(model=model_xml, weights=model_bin)
         batching_info = BatchingInfo(batch_size_param)
         shape_info = ShapeInfo(shape_param, net.inputs)
@@ -108,7 +108,8 @@ class IrEngine():
         for ireq_index in range(num_ireq):
             free_ireq_index_queue.put(ireq_index)
         ###############################
-        requests_queue = queue.Queue(maxsize=REQUESTS_QUEUE_SIZE)
+        requests_queue = queue.Queue(maxsize=GLOBAL_CONFIG[
+            'engine_requests_queue_size'])
 
         exec_net = plugin.load(network=net, num_requests=num_ireq)
         ir_engine = cls(model_name=model_name, model_version=model_version,
@@ -174,41 +175,41 @@ class IrEngine():
     def start_inference_service(self):
         while True:
             request = self.requests_queue.get()
-            inference_id, inference_input = request
             error_message = self.adjust_network_inputs_if_needed(
-                inference_input)
+                request.inference_input)
             if error_message is not None:
-                self.results_map.update({inference_id: error_message})
+                request.result = error_message
                 continue
-            ir_index = self.free_ireq_index_queue.get()
+            ireq_index = self.free_ireq_index_queue.get()
             py_data = {
                 'ir_engine': self,
-                'ir_index': ir_index,
-                'inference_id': inference_id
+                'ireq_index': ireq_index,
+                'request': request
             }
-            self.exec_net.requests[ir_index].set_completion_callback(
+            self.exec_net.requests[ireq_index].set_completion_callback(
                 py_callback=inference_callback, py_data=py_data)
-            self.exec_net.requests[ir_index].async_infer(inference_input)
+            self.exec_net.requests[ireq_index].async_infer(
+                request.inference_input)
 
-    def wait_for_results(self, inference_id, interval=0.001):
-        while True:
-            time.sleep(interval)
-            if inference_id in self.results_map:
-                result = self.results_map[inference_id]
-                if type(result) is int:
-                    ir_index = result
-                    inference_output = self.exec_net.requests[
-                        ir_index].outputs
-                    self.free_ireq_index_queue.put(ir_index)
-                    result = inference_output
-                    del self.results_map[inference_id]
-                return result
+    def suppress_inference(self):
+        # Wait for all inferences executed on deleted engines to end
+        logger.debug("[Model: {} Version: {}] --- Waiting for in progress "
+                     "inferences to finish...".
+                     format(self.model_name, self.model_version))
+        engine_suppressed = False
+        while not engine_suppressed:
+            if self.free_ireq_index_queue.full():
+                engine_suppressed = True
+        logger.debug("[Model: {} Version: {}] --- In progress inferences "
+                     "has been finalized...".
+                     format(self.model_name, self.model_version))
 
     def adjust_network_inputs_if_needed(self, inference_input):
         error_message = None
         reshape_param = self.detect_shapes_incompatibility(
             inference_input)
         if reshape_param is not None:
+            self.suppress_inference()
             error_message = self.reshape(reshape_param)
         return error_message
 

@@ -117,7 +117,8 @@ class Model(ABC):
         if available_versions == self.versions:
             return
 
-        logger.info("Server start updating model: {}".format(self.model_name))
+        logger.info("Server will start updating model: {}".format(
+            self.model_name))
         to_create, to_delete = self._mark_differences(available_versions)
         logger.debug("Server will try to add {} versions".format(to_create))
         logger.debug(
@@ -135,7 +136,6 @@ class Model(ABC):
         self.versions.extend(created_versions)
         self.versions = [x for x in self.versions if x not in to_delete]
         self.default_version = max(self.versions, default=-1)
-        self.shut_off_deleted_engines(to_delete)
 
         [self.versions_statuses[version].set_available() for version in
          created_versions]
@@ -167,20 +167,8 @@ class Model(ABC):
 
         return to_create, to_delete
 
-    def shut_off_deleted_engines(self, to_delete: list):
-        # Wait for all inferences executed on deleted engines to end
-        logger.debug("[Model: {}] --- Waiting for inferences executed on "
-                     "deleted engines to finish...".format(self.model_name))
-        engines_suppressed = False
-        while not engines_suppressed:
-            engines_suppressed = True
-            for version in to_delete:
-                if not self.engines[version].free_ir_index_queue.full():
-                    engines_suppressed = False
-        logger.debug("[Model: {}] --- All inferences executed on "
-                     "deleted engines finalized".format(self.model_name))
-
     def _delete_engine(self, version):
+        self.engines[version].suppress_inference()
         del self.engines[version]
         logger.debug("Version {} of the {} model has been removed".format(
             version, self.model_name))

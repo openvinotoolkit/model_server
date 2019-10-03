@@ -17,7 +17,7 @@ import boto3
 from botocore.client import Config
 from botocore import UNSIGNED
 from botocore import exceptions
-from ie_serving.config import MAPPING_CONFIG_FILENAME, S3_Config
+from ie_serving.config import GLOBAL_CONFIG, S3_Config
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
@@ -115,9 +115,10 @@ class S3Model(Model):
     @classmethod
     def _get_mapping_config(cls, version):
         content_list = cls.s3_list_content(version)
-        mapping_config = urlparse(version).path[1:] + MAPPING_CONFIG_FILENAME
+        mapping_config = urlparse(version).path[1:] + GLOBAL_CONFIG[
+            'mapping_config_filename']
         if mapping_config in content_list:
-            return version + MAPPING_CONFIG_FILENAME
+            return version + GLOBAL_CONFIG['mapping_config_filename']
         else:
             return None
 

@@ -16,23 +16,26 @@
 
 import os
 
-DEVICE = os.environ.get('DEVICE', "CPU")
 if os.path.isfile("/usr/local/lib/libcpu_extension.so"):
     default_cpu_extension = "/usr/local/lib/libcpu_extension.so"
 else:
     default_cpu_extension = "/opt/intel/openvino/" \
                             "deployment_tools/inference_engine/lib/" \
                             "/intel64/libcpu_extension_avx2.so"
-CPU_EXTENSION = os.environ.get('CPU_EXTENSION', default_cpu_extension)
-PLUGIN_DIR = os.environ.get('PLUGIN_DIR', None)
-LOGGING_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-LOG_PATH = os.getenv('LOG_PATH', None)
-FILE_SYSTEM_POLL_WAIT_SECONDS = float(
-    os.getenv('FILE_SYSTEM_POLL_WAIT_SECONDS', 1))
 
-MAPPING_CONFIG_FILENAME = 'mapping_config.json'
-
-REQUESTS_QUEUE_SIZE = os.getenv("REQUESTS_QUEUE_SIZE", 100)
+GLOBAL_CONFIG = {
+    'device': os.environ.get('DEVICE', "CPU"),
+    'cpu_extension': os.environ.get('CPU_EXTENSION', default_cpu_extension),
+    'plugin_dir': os.environ.get('PLUGIN_DIR', None),
+    'logging_level': os.getenv('LOG_LEVEL', 'INFO'),
+    'log_path': os.getenv('LOG_PATH', None),
+    'file_system_poll_wait_seconds': float(
+        os.getenv('FILE_SYSTEM_POLL_WAIT_SECONDS', 1)),
+    'mapping_config_filename': 'mapping_config.json',
+    'rest_requests_queue_size': os.getenv('REST_REQUESTS_QUEUE_SIZE', 100),
+    'engine_requests_queue_size': os.getenv('ENGINE_REQUESTS_QUEUE_SIZE',
+                                            None)
+}
 
 
 class S3_Config:

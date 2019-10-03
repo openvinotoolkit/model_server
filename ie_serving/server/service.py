@@ -15,9 +15,6 @@
 #
 
 import datetime
-import threading
-import time
-import uuid
 
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import get_model_status_pb2
@@ -26,13 +23,13 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
 from ie_serving.logger import get_logger
-from ie_serving.models.models_utils import ModelVersionState
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output_as_list, \
     prepare_input_data, StatusCode, statusCodes
+from ie_serving.server.request import Request
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
     check_availability_of_requested_status, add_status_to_response
@@ -87,10 +84,9 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             return predict_pb2.PredictResponse()
 
         target_engine = self.models[model_name].engines[version]
-        inference_id = str(uuid.uuid1())
-        target_engine.requests_queue.put((inference_id,
-                                         inference_input))
-        inference_output = target_engine.wait_for_results(inference_id)
+        inference_request = Request(inference_input)
+        target_engine.requests_queue.put(inference_request)
+        inference_output, used_ireq_index = inference_request.wait_for_result()
         if inference_output is str:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
@@ -104,6 +100,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
+        target_engine.free_ireq_index_queue.put(used_ireq_index)
         return response
 
     def GetModelMetadata(self, request, context):

@@ -28,7 +28,7 @@ from tensorflow_serving.apis import model_service_pb2_grpc
 from ie_serving.server.service import PredictionServiceServicer, \
     ModelServiceServicer
 from ie_serving.logger import get_logger
-from ie_serving.config import FILE_SYSTEM_POLL_WAIT_SECONDS
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.server.rest_service import create_rest_api
 
 logger = get_logger(__name__)
@@ -61,8 +61,8 @@ def serve(models, max_workers: int=1, port: int=9000):
                                                   models=list(models.keys())))
     try:
         while True:
-            if FILE_SYSTEM_POLL_WAIT_SECONDS > 0:
-                time.sleep(FILE_SYSTEM_POLL_WAIT_SECONDS)
+            if GLOBAL_CONFIG['file_system_poll_wait_seconds'] > 0:
+                time.sleep(GLOBAL_CONFIG['file_system_poll_wait_seconds'])
                 for model in models:
                     models[model].update()
             else:
@@ -75,7 +75,9 @@ def serve(models, max_workers: int=1, port: int=9000):
 def start_web_rest_server(models, rest_port, num_threads):
     d = PathInfoDispatcher({'/': create_rest_api(models)})
     server = WSGIServer(('0.0.0.0', rest_port), d,
-                        numthreads=num_threads, request_queue_size=50)
+                        numthreads=num_threads,
+                        request_queue_size=GLOBAL_CONFIG[
+                            'rest_requests_queue_size'])
 
     try:
         server.start()

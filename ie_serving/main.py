@@ -19,15 +19,24 @@ import json
 import sys
 import threading
 
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.models.model_builder import ModelBuilder
+from ie_serving.schemas import models_config_schema
 from ie_serving.server.constants import CONFLICTING_PARAMS_WARNING
 from ie_serving.server.start import serve as start_server
 from ie_serving.logger import get_logger, LOGGER_LVL
 from ie_serving.server.start import start_web_rest_server
 from jsonschema.exceptions import ValidationError
+from jsonschema import validate
 import os
 
 logger = get_logger(__name__)
+
+
+def set_engine_requests_queue_size(args):
+    GLOBAL_CONFIG['engine_requests_queue_size'] = args.grpc_workers
+    if args.rest_port > 0:
+        GLOBAL_CONFIG['engine_requests_queue_size'] += args.rest_workers
 
 
 def open_config(path):
@@ -38,29 +47,6 @@ def open_config(path):
         logger.error("Error occurred while opening config file {}".format(e))
         sys.exit()
     return data
-
-
-def check_config_structure(configs):
-    required_keys = ('base_path', 'name')
-    if 'model_config_list' in configs:
-        try:
-            for config in configs['model_config_list']:
-                if 'config' in config:
-                    if not all(k in config['config'] for k in required_keys):
-                        logger.error("Config objects in the config file must"
-                                     " contain 'base_path' and 'name' strings")
-                        sys.exit()
-                else:
-                    logger.error("'model_config_list' array in the config"
-                                 "must contain 'config' object")
-                    sys.exit()
-        except Exception as e:
-            logger.error("Error occurred while parsing config file: "
-                         "{}".format(e))
-            sys.exit()
-    else:
-        logger.error("Config file must contain 'model_config_list' array")
-        sys.exit()
 
 
 def get_model_spec(config):
@@ -77,7 +63,7 @@ def get_model_spec(config):
 
     model_ver_policy = config.get(
         'model_version_policy', None)
-    num_ireq = int(config.get('nireq', 1))
+    num_ireq = config.get('nireq', 1)
 
     model_spec = {
         'model_name': model_name,
@@ -91,8 +77,9 @@ def get_model_spec(config):
 
 
 def parse_config(args):
+    set_engine_requests_queue_size(args)
     configs = open_config(path=args.config_path)
-    check_config_structure(configs=configs)
+    validate(configs, models_config_schema)
     models = {}
     for config in configs['model_config_list']:
         try:
@@ -123,6 +110,7 @@ def parse_config(args):
 
 
 def parse_one_model(args):
+    set_engine_requests_queue_size(args)
     try:
         args.model_version_policy = json.loads(args.model_version_policy)
 
@@ -152,7 +140,9 @@ def parse_one_model(args):
         logger.info("Could not access provided model. Server will exit now.")
         sys.exit()
 
+    total_workers_number = args.grpc_workers
     if args.rest_port > 0:
+        total_workers_number += args.rest_workers
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port,
                                                 args.rest_workers])
@@ -183,7 +173,8 @@ def main():
                           required=False,
                           default=1)
     parser_a.add_argument('--rest_workers', type=int,
-                          help='Number of workers in REST server',
+                          help='Number of workers in REST server - has no '
+                               'effect if rest_port is not set',
                           required=False,
                           default=1)
     parser_a.set_defaults(func=parse_config)
@@ -219,7 +210,8 @@ def main():
                           required=False,
                           default=1)
     parser_b.add_argument('--rest_workers', type=int,
-                          help='Number of workers in REST server',
+                          help='Number of workers in REST server - has no '
+                               'effect if rest port not set',
                           required=False,
                           default=1)
     parser_b.add_argument('--nireq', type=int,
