@@ -28,6 +28,7 @@ from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_input_data, statusCodes
+from ie_serving.server.request import Request
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
@@ -175,31 +176,16 @@ class Predict():
                          .format(code))
             resp.body = json.dumps(err_out_json)
             return
-        ###############################################
-        # Reshape network inputs if needed
-        reshape_param = target_engine.detect_shapes_incompatibility(
-            inference_input)
-        if reshape_param is not None:
-            error_message = target_engine.reshape(reshape_param)
-            if error_message is not None:
-                resp.status = falcon.HTTP_400
-                err_out_json = {'error': error_message}
-                resp.body = json.dumps(err_out_json)
-                return
-        ##############################################
-        inference_start_time = datetime.datetime.now()
-        inference_output, error_message = target_engine.infer(
-            inference_input)
-        if error_message is not None:
+        inference_request = Request(inference_input)
+        target_engine.requests_queue.put(inference_request)
+        inference_output, used_ireq_index = inference_request.wait_for_result()
+        if inference_output is str:
             resp.status = falcon.HTTP_400
-            err_out_json = {'error': error_message}
+            err_out_json = {'error': inference_output}
             resp.body = json.dumps(err_out_json)
+            target_engine.free_ireq_index_queue.put(used_ireq_index)
             return
         inference_end_time = datetime.datetime.now()
-        duration = \
-            (inference_end_time - inference_start_time).total_seconds() * 1000
-        logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
-                     .format(model_name, version, duration))
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
 
@@ -215,6 +201,7 @@ class Predict():
              inference_end_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {}ms".format(model_name, version, duration))
+        target_engine.free_ireq_index_queue.put(used_ireq_index)
         return
 
 

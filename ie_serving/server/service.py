@@ -93,6 +93,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             context.set_details(inference_output)
             logger.debug("PREDICT, problem during inference execution. Exit "
                          "code {}".format(code))
+            target_engine.free_ireq_index_queue.put(used_ireq_index)
             return predict_pb2.PredictResponse()
         response = prepare_output_as_list(
             inference_output=inference_output,
