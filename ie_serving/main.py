@@ -65,13 +65,18 @@ def get_model_spec(config):
         'model_version_policy', None)
     num_ireq = config.get('nireq', 1)
 
+    target_device = config.get('target_device', 'CPU')
+    network_config = config.get('network_config', None)
+
     model_spec = {
         'model_name': model_name,
         'model_directory': model_path,
         'batch_size': batch_size,
         'shape': shape,
         'model_version_policy': model_ver_policy,
-        'num_ireq': num_ireq
+        'num_ireq': num_ireq,
+        'target_device': target_device,
+        'network_config': network_config
     }
     return model_spec
 
@@ -219,6 +224,16 @@ def main():
                                'number of inferences running in parallel',
                           required=False,
                           default=1)
+    parser_b.add_argument('--target_device', type=str,
+                          help='Device to load model to, default-CPU',
+                          required=False,
+                          default='CPU')
+    parser_b.add_argument('--network_config', type=str,
+                          help='Map of (param:value) pairs defining network '
+                               'configuration',
+                          required=False,
+                          default=None)
+
     parser_b.set_defaults(func=parse_one_model)
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))

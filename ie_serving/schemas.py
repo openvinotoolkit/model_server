@@ -50,6 +50,8 @@ models_config_schema = {
                         'model_version_policy': {'type': 'object'},
                         'shape': {'type': ['object', 'string']},
                         'nireq': {'type': 'integer'},
+                        'target_device': {'type': 'string'},
+                        'network_config': {'type': 'string'}
                     }
                 }
             }
