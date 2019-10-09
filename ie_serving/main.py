@@ -118,6 +118,7 @@ def parse_one_model(args):
     set_engine_requests_queue_size(args)
     try:
         args.model_version_policy = json.loads(args.model_version_policy)
+        args.network_config = json.loads(args.network_config)
 
         if args.shape is not None and args.batch_size is not None:
             logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))
@@ -131,7 +132,8 @@ def parse_one_model(args):
                      "Exception: {}".format(e_val))
         sys.exit()
     except json.decoder.JSONDecodeError as e_json:
-        logger.error("model_version_policy field must be in json format. "
+        logger.error("model_version_policy and network_config fields must be "
+                     "in json format. "
                      "Exception: {}".format(e_json))
         sys.exit()
     except Exception as e:

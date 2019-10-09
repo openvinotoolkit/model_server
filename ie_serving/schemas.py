@@ -51,7 +51,7 @@ models_config_schema = {
                         'shape': {'type': ['object', 'string']},
                         'nireq': {'type': 'integer'},
                         'target_device': {'type': 'string'},
-                        'network_config': {'type': 'string'}
+                        'network_config': {'type': 'object'}
                     }
                 }
             }
