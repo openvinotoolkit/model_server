@@ -118,7 +118,8 @@ def parse_one_model(args):
     set_engine_requests_queue_size(args)
     try:
         args.model_version_policy = json.loads(args.model_version_policy)
-        args.network_config = json.loads(args.network_config)
+        if args.network_config is not None:
+            args.network_config = json.loads(args.network_config)
 
         if args.shape is not None and args.batch_size is not None:
             logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))

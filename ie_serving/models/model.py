@@ -34,7 +34,7 @@ class Model(ABC):
                  batch_size_param, shape_param, available_versions: list,
                  engines: dict, version_policy_filter,
                  versions_statuses: dict, num_ireq: int,
-                 target_device: str, network_config: str):
+                 target_device: str, network_config):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
