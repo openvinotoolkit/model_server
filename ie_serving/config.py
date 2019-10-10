@@ -24,7 +24,6 @@ else:
                             "/intel64/libcpu_extension_avx2.so"
 
 GLOBAL_CONFIG = {
-    'device': os.environ.get('DEVICE', "CPU"),
     'cpu_extension': os.environ.get('CPU_EXTENSION', default_cpu_extension),
     'plugin_dir': os.environ.get('PLUGIN_DIR', None),
     'logging_level': os.getenv('LOG_LEVEL', 'INFO'),
