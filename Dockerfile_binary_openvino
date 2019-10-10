@@ -17,17 +17,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     usbutils \
     virtualenv \
     libboost-filesystem1.58.0 \
-    libboost-thread1.58.0
+    libboost-thread1.58.0 \
+    libjson-c2
 
 ADD l_openvino_toolkit*.tgz $TEMP_DIR/
 RUN cd $TEMP_DIR/l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     case $(pwd) in \
         *openvino_toolkit_p_2019*) \
-            COMPONENTS='intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-base-pset' \
+            COMPONENTS='intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__noarch;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver-ubuntu-xenial__x86_64;intel-openvino-base-pset' \
             ;; \
         *openvino_toolkit_fpga_2019*) \
-            COMPONENTS='intel-openvino-full__noarch;intel-openvino-dldt-full__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-full-pset' \
+            COMPONENTS='intel-openvino-full__noarch;intel-openvino-dldt-full__noarch;intel-openvino-setupvars__noarch;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver-ubuntu-xenial__x86_64;intel-openvino-full-pset' \
             ;; \
         *) \
             COMPONENTS=DEFAULTS \
