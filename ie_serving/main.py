@@ -94,7 +94,8 @@ def parse_config(args):
             if model is not None:
                 models[config['config']['name']] = model
         except ValidationError as e_val:
-            logger.warning("Model version policy for model {} is invalid. "
+            logger.warning("Model version policy or network config "
+                           "for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
                                                   e_val))
         except Exception as e:
@@ -121,15 +122,11 @@ def parse_one_model(args):
         if args.network_config is not None:
             args.network_config = json.loads(args.network_config)
 
-        if args.shape is not None and args.batch_size is not None:
-            logger.warning(CONFLICTING_PARAMS_WARNING.format(args.model_name))
-            args.batch_size = None
-
         model_spec = get_model_spec(vars(args))
 
         model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:
-        logger.error("Model version policy is invalid. "
+        logger.error("Model version policy or network config is invalid. "
                      "Exception: {}".format(e_val))
         sys.exit()
     except json.decoder.JSONDecodeError as e_json:

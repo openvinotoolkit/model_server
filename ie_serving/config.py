@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,9 +37,10 @@ GLOBAL_CONFIG = {
 }
 
 
-class S3_Config:
-    S3_ENDPOINT = os.environ.get('S3_ENDPOINT', None)
-    S3_REGION = os.environ.get('AWS_REGION', None)
-    S3_SIGNATURE = os.environ.get('S3_SIGNATURE', None)
-    S3_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'default')
-    S3_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'default')
+S3_CONFIG = {
+    'endpoint': os.environ.get('S3_ENDPOINT', None),
+    'region': os.environ.get('AWS_REGION', None),
+    'signature': os.environ.get('S3_SIGNATURE', None),
+    'access_key_id': os.environ.get('AWS_ACCESS_KEY_ID', 'default'),
+    'secret_access_key': os.environ.get('AWS_SECRET_ACCESS_KEY', 'default'),
+}

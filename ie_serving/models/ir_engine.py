@@ -22,7 +22,7 @@ from openvino.inference_engine import IENetwork, IEPlugin
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
-from ie_serving.models.constants import InferenceStatus
+from ie_serving.models import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
