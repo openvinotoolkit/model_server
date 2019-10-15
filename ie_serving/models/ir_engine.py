@@ -300,7 +300,9 @@ class IrEngine():
         logger.debug("[Model: {}, version: {}] --- Loading network...".
                      format(self.model_name, self.model_version))
         try:
-            self.exec_net = self.plugin.load(network=self.net)
+            self.exec_net = self.plugin.load(network=self.net,
+                                             num_requests=self.num_ireq,
+                                             config=self.network_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
@@ -323,7 +325,9 @@ class IrEngine():
         self.net.batch_size = batch_size
 
         try:
-            self.exec_net = self.plugin.load(network=self.net)
+            self.exec_net = self.plugin.load(network=self.net,
+                                             num_requests=self.num_ireq,
+                                             config=self.network_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
