@@ -15,13 +15,13 @@
 #
 
 import logging
-from ie_serving.config import LOG_PATH, LOGGING_LEVEL
+from ie_serving.config import GLOBAL_CONFIG
 
 available_lvl_of_logger = ['INFO', 'DEBUG', 'ERROR']
 
 
 def get_logger_lvl():
-    requested_lvl = LOGGING_LEVEL
+    requested_lvl = GLOBAL_CONFIG['logging_level']
     requested_lvl = requested_lvl.upper()
     global LOGGER_LVL
     if requested_lvl in available_lvl_of_logger:
@@ -42,8 +42,8 @@ def get_logger(name):
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
 
-    if LOG_PATH is not None:
-        file_handler = logging.FileHandler(LOG_PATH)
+    if GLOBAL_CONFIG['log_path'] is not None:
+        file_handler = logging.FileHandler(GLOBAL_CONFIG['log_path'])
         file_handler.setFormatter(log_formatter)
         logger.addHandler(file_handler)
 

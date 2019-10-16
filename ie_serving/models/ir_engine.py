@@ -15,12 +15,14 @@
 #
 import datetime
 import json
-from threading import Lock
+import queue
+from threading import Thread
 
 from openvino.inference_engine import IENetwork, IEPlugin
 
-from ie_serving.config import CPU_EXTENSION, DEVICE, PLUGIN_DIR
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
+from ie_serving.models import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
@@ -28,10 +30,26 @@ from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 logger = get_logger(__name__)
 
 
+def inference_callback(status, py_data):
+    ir_engine = py_data['ir_engine']
+    request = py_data['request']
+    ireq_index = py_data['ireq_index']
+
+    if status == InferenceStatus.OK:
+        request.set_result(ireq_index=ireq_index,
+                           result=ir_engine.exec_net.requests[ireq_index].
+                           outputs)
+    else:
+        request.set_result(ireq_index=ireq_index,
+                           result="Error occurred during inference execution")
+
+
 class IrEngine():
 
     def __init__(self, model_name, model_version, net, plugin,
-                 mapping_config, exec_net, batching_info, shape_info):
+                 mapping_config, exec_net, batching_info, shape_info,
+                 free_ireq_index_queue, num_ireq, requests_queue,
+                 target_device, network_config):
         self.model_name = model_name
         self.model_version = model_version
         self.exec_net = exec_net
@@ -43,15 +61,27 @@ class IrEngine():
         self.output_tensor_names = list(net.outputs.keys())
         self.model_keys = self.set_keys(mapping_config)
         self.input_key_names = list(self.model_keys['inputs'].keys())
-        self.in_use = Lock()
+
+        self.free_ireq_index_queue = free_ireq_index_queue
+        self.num_ireq = num_ireq
+        self.requests_queue = requests_queue
+
+        self.target_device = target_device
+        self.network_config = network_config
+
         logger.info("Matched keys for model: {}".format(self.model_keys))
+
+        self.inference_thread = Thread(target=self.start_inference_service)
+        self.inference_thread.start()
 
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batch_size_param, shape_param):
-        plugin = IEPlugin(device=DEVICE, plugin_dirs=PLUGIN_DIR)
-        if CPU_EXTENSION and 'CPU' in DEVICE:
-            plugin.add_cpu_extension(CPU_EXTENSION)
+              mapping_config, batch_size_param, shape_param, num_ireq,
+              target_device, network_config):
+        plugin = IEPlugin(device=target_device,
+                          plugin_dirs=GLOBAL_CONFIG['plugin_dir'])
+        if GLOBAL_CONFIG['cpu_extension'] and 'CPU' in target_device:
+            plugin.add_cpu_extension(GLOBAL_CONFIG['cpu_extension'])
         net = IENetwork(model=model_xml, weights=model_bin)
         batching_info = BatchingInfo(batch_size_param)
         shape_info = ShapeInfo(shape_param, net.inputs)
@@ -78,12 +108,24 @@ class IrEngine():
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
                          "default".format(model_name, model_version))
         ###############################
+        # Creating free infer requests indexes queue
+        free_ireq_index_queue = queue.Queue(maxsize=num_ireq)
+        for ireq_index in range(num_ireq):
+            free_ireq_index_queue.put(ireq_index)
+        ###############################
+        requests_queue = queue.Queue(maxsize=GLOBAL_CONFIG[
+            'engine_requests_queue_size'])
 
-        exec_net = plugin.load(network=net, num_requests=1)
+        exec_net = plugin.load(network=net, num_requests=num_ireq,
+                               config=network_config)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, batching_info=batching_info,
-                        shape_info=shape_info)
+                        shape_info=shape_info,
+                        free_ireq_index_queue=free_ireq_index_queue,
+                        num_ireq=num_ireq, requests_queue=requests_queue,
+                        target_device=target_device,
+                        network_config=network_config)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -138,16 +180,46 @@ class IrEngine():
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-    def infer(self, data: dict):
-        try:
-            results = self.exec_net.infer(inputs=data)
-        except Exception as e:
-            message = "Error occurred during inference execution: {}".format(
-                str(e))
-            logger.debug("[Model: {}, version: {}] --- {}".format(
-                self.model_name, self.model_version, message))
-            return None, message
-        return results, None
+    def start_inference_service(self):
+        while True:
+            request = self.requests_queue.get()
+            error_message = self.adjust_network_inputs_if_needed(
+                request.inference_input)
+            if error_message is not None:
+                request.result = error_message
+                continue
+            ireq_index = self.free_ireq_index_queue.get()
+            py_data = {
+                'ir_engine': self,
+                'ireq_index': ireq_index,
+                'request': request
+            }
+            self.exec_net.requests[ireq_index].set_completion_callback(
+                py_callback=inference_callback, py_data=py_data)
+            self.exec_net.requests[ireq_index].async_infer(
+                request.inference_input)
+
+    def suppress_inference(self):
+        # Wait for all inferences executed on deleted engines to end
+        logger.debug("[Model: {} Version: {}] --- Waiting for in progress "
+                     "inferences to finish...".
+                     format(self.model_name, self.model_version))
+        engine_suppressed = False
+        while not engine_suppressed:
+            if self.free_ireq_index_queue.full():
+                engine_suppressed = True
+        logger.debug("[Model: {} Version: {}] --- In progress inferences "
+                     "has been finalized...".
+                     format(self.model_name, self.model_version))
+
+    def adjust_network_inputs_if_needed(self, inference_input):
+        error_message = None
+        reshape_param = self.detect_shapes_incompatibility(
+            inference_input)
+        if reshape_param is not None:
+            self.suppress_inference()
+            error_message = self.reshape(reshape_param)
+        return error_message
 
     def detect_shapes_incompatibility(self, inference_input):
         # Compares workload shapes with engine inputs shapes. Returns
@@ -228,7 +300,9 @@ class IrEngine():
         logger.debug("[Model: {}, version: {}] --- Loading network...".
                      format(self.model_name, self.model_version))
         try:
-            self.exec_net = self.plugin.load(network=self.net)
+            self.exec_net = self.plugin.load(network=self.net,
+                                             num_requests=self.num_ireq,
+                                             config=self.network_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
@@ -251,7 +325,9 @@ class IrEngine():
         self.net.batch_size = batch_size
 
         try:
-            self.exec_net = self.plugin.load(network=self.net)
+            self.exec_net = self.plugin.load(network=self.net,
+                                             num_requests=self.num_ireq,
+                                             config=self.network_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
