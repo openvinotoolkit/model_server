@@ -98,13 +98,13 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         response = prepare_output_as_list(
             inference_output=inference_output,
             model_available_outputs=target_engine.model_keys['outputs'])
+        response.model_spec.name = model_name
+        response.model_spec.version.value = version
+        response.model_spec.signature_name = SIGNATURE_NAME
         duration = (datetime.datetime.now() -
                     serialization_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {} ms".format(model_name, version, duration))
-        response.model_spec.name = model_name
-        response.model_spec.version.value = version
-        response.model_spec.signature_name = SIGNATURE_NAME
         target_engine.free_ireq_index_queue.put(used_ireq_index)
         return response
 

@@ -191,13 +191,12 @@ class Predict():
         response = prepare_json_response(
             OUTPUT_REPRESENTATION[input_format], inference_output,
             target_engine.model_keys['outputs'])
+        resp.status = falcon.HTTP_200
+        resp.body = json.dumps(response)
         duration = (datetime.datetime.now() -
                     serialization_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
                      " {}; {}; {} ms".format(model_name, version, duration))
-
-        resp.status = falcon.HTTP_200
-        resp.body = json.dumps(response)
         target_engine.free_ireq_index_queue.put(used_ireq_index)
         return
 
