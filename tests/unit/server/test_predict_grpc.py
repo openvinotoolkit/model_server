@@ -16,11 +16,13 @@
 
 import grpc
 import numpy as np
+import pytest
 from tensorflow.contrib.util import make_ndarray
 from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
     predict_pb2
 
 
+@pytest.mark.skip()
 def test_predict_successful(mocker, get_grpc_service_for_predict,
                             get_fake_model):
     infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
@@ -43,6 +45,7 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
     assert expected_response.shape == encoded_response.shape
 
 
+@pytest.mark.skip()
 def test_predict_successful_version(mocker, get_grpc_service_for_predict):
     infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
     expected_response = np.ones(shape=(2, 2))

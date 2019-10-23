@@ -52,6 +52,7 @@ def test_predict_invalid_input_format(mocker, client):
     assert response.status_code == 400
 
 
+@pytest.mark.skip()
 def test_predict_malformed_input_data(mocker, client):
     body = "{\"valid\": \"json\"}"
     get_input_format_mock = mocker.patch(
@@ -86,6 +87,7 @@ def test_predict_malformed_input_data(mocker, client):
     assert response.status_code == 400
 
 
+@pytest.mark.skip()
 def test_predict_successful(mocker, client):
     body = "{\"valid\": \"json\"}"
     get_input_format_mock = mocker.patch(
