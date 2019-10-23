@@ -37,7 +37,7 @@ def test_init_class():
     shape_info = ShapeInfo(None, net.inputs)
     plugin = None
     requests_queue = queue.Queue()
-    free_ireq_index_queue = queue.Queue()
+    free_ireq_index_queue = queue.Queue(maxsize=1)
     free_ireq_index_queue.put(0)
     engine = IrEngine(model_name='test', model_version=1,
                       mapping_config=mapping_config,
