@@ -28,7 +28,7 @@ def wait_endpoint_setup(container):
         tick = time.time()
         try:
             logs = str(container.logs())
-            if "Server listens on port" in logs:
+            if "server listens on port" in logs:
                 running = True
                 break
         except Exception as e:
