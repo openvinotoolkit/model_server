@@ -178,7 +178,7 @@ class Predict():
         inference_request = Request(inference_input)
         target_engine.requests_queue.put(inference_request)
         inference_output, used_ireq_index = inference_request.wait_for_result()
-        if inference_output is str:
+        if type(inference_output) is str:
             resp.status = falcon.HTTP_400
             err_out_json = {'error': inference_output}
             resp.body = json.dumps(err_out_json)

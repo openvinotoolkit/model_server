@@ -19,6 +19,8 @@ from unittest import mock
 import pytest
 import json
 
+from config import PARSE_CONFIG_TEST_CASES
+
 
 class MockedArgs:
     def __init__(self, model_name, model_path, batch_size, shape,
@@ -38,6 +40,16 @@ class MockedArgs:
         self.network_config = network_config
 
 
+class MockedArgsConfig:
+    def __init__(self, config_path, port, rest_port, grpc_workers,
+                 rest_workers):
+        self.config_path = config_path
+        self.port = port
+        self.rest_port = rest_port
+        self.grpc_workers = grpc_workers
+        self.rest_workers = rest_workers
+
+
 def test_open_config(mocker):
     test_dict = {'config': 'test'}
     test_json = json.dumps(test_dict)
@@ -47,25 +59,6 @@ def test_open_config(mocker):
     actual = main.open_config(fake_file_path)
     open_mocker.assert_called_once_with(fake_file_path, 'r')
     assert actual == test_dict
-
-
-@pytest.mark.skip()
-@pytest.mark.parametrize("should_exit, test_config", [
-    (False, {'model_config_list': [{'config': {'base_path': '',
-                                               'name': ''}}]}),
-    (
-            True, {'model_config_list': [
-                {'config': {'base_path': '', 'test': ''}}]}),
-    (True, {'model_config_list': [{'config': ''}]}),
-    (True, {'model_config_list': 'test'}),
-    (True, {'model_config_list': 5}),
-    (True, {'test': 5})])
-def test_check_config_structure(should_exit, test_config):
-    if should_exit:
-        with pytest.raises(SystemExit):
-            main.check_config_structure(test_config)
-    else:
-        main.check_config_structure(test_config)
 
 
 def test_open_config_wrong_json(mocker):
@@ -78,20 +71,34 @@ def test_open_config_wrong_json(mocker):
     open_mocker.assert_called_once_with(fake_file_path, 'r')
 
 
-@pytest.mark.parametrize("should_fail, model_version_policy, "
+@pytest.mark.parametrize("should_fail, model_version_policy, network_config,"
                          "exceptions, unexpected_exception",
                          [(False, '{"specific": { "versions":[1,2] }}',
-                           None, False),
-                          (True, '{"specific": { "test": }}',
+                           '{"key": "value"}', None, False),
+
+                          (False, '{"specific": { "versions":[1,2] }}',
+                           None, None, False),
+
+                          (True, '{"specific": { "test": }}', None,
                            (SystemExit, json.decoder.JSONDecodeError), False),
-                          (True, '{"specific": { "ver":[1,2] }}',
-                           (SystemExit, main.ValidationError), False),
+
                           (True, '{"specific": { "versions":[1,2] }}',
+                           '{1:"key"}', (SystemExit,
+                                         json.decoder.JSONDecodeError), False),
+
+                          (True, '{"specific": { "ver":[1,2] }}', None,
+                           (SystemExit, main.ValidationError), False),
+
+                          (True, '{"specific": { "versions":[1,2] }}',
+                           "string", (SystemExit, main.ValidationError),
+                           False),
+
+                          (True, '{"specific": { "versions":[1,2] }}', None,
                            (SystemExit, Exception), True)])
 def test_parse_one_model(mocker, should_fail, model_version_policy,
-                         exceptions, unexpected_exception):
+                         network_config, exceptions, unexpected_exception):
     arguments = MockedArgs('test', 'test', None, None, model_version_policy,
-                           9000, 5555, 1, 1, 1, 'CPU', None)
+                           9000, 5555, 1, 1, 1, 'CPU', network_config)
     if should_fail:
         if unexpected_exception:
             builder_mocker = mocker.patch('ie_serving.main.'
@@ -110,6 +117,25 @@ def test_parse_one_model(mocker, should_fail, model_version_policy,
         assert start_server_mocker.called
         assert builder_mocker.called
 
+
+@pytest.mark.parametrize("should_fail, config", PARSE_CONFIG_TEST_CASES)
+def test_parse_config(mocker, should_fail, config):
+    arguments = MockedArgsConfig('test', 9000, 5555, 1, 1)
+    set_engine_requests_queue_size_mocker = mocker.patch(
+        'ie_serving.main.set_engine_requests_queue_size')
+    open_config_mocker = mocker.patch(
+        'ie_serving.main.open_config')
+    open_config_mocker.return_value = config
+    start_server_mocker = mocker.patch('ie_serving.main.start_server')
+    builder_mocker = mocker.patch('ie_serving.main.ModelBuilder.build')
+
+    if should_fail:
+        with pytest.raises(main.ValidationError):
+            main.parse_config(arguments)
+    else:
+        main.parse_config(arguments)
+        assert start_server_mocker.called
+        assert builder_mocker.called
 
 @pytest.mark.parametrize("args, should_fail", [
     (['python', 'test.py'], True),

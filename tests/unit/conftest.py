@@ -54,10 +54,23 @@ class MockedNet:
         self.outputs = outputs
 
 
+class MockedExecNet:
+
+    class MockerInferRequest:
+        def set_completion_callback(self, py_callback, py_data):
+            pass
+
+        def async_infer(self, inference_input):
+            pass
+
+    def __init__(self):
+        self.requests = [self.MockerInferRequest(), self.MockerInferRequest()]
+
+
 @pytest.fixture
 def get_fake_model():
     mapping_config = 'mapping_config.json'
-    exec_net = None
+    exec_net = MockedExecNet()
     net = MockedNet(
         inputs={DEFAULT_INPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
         outputs={DEFAULT_OUTPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')})

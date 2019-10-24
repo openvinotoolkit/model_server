@@ -86,7 +86,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         inference_request = Request(inference_input)
         target_engine.requests_queue.put(inference_request)
         inference_output, used_ireq_index = inference_request.wait_for_result()
-        if inference_output is str:
+        if type(inference_output) is str:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
             context.set_details(inference_output)
