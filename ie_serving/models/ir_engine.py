@@ -76,7 +76,9 @@ class IrEngine():
 
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
+        self.run_inference_service = True
         self.inference_thread = Thread(target=self.start_inference_service)
+        self.inference_thread.daemon = True
         self.inference_thread.start()
 
     @classmethod
@@ -186,8 +188,14 @@ class IrEngine():
             return self._set_names_in_config_as_keys(mapping_data)
 
     def start_inference_service(self):
-        while True:
-            request = self.requests_queue.get()
+        logger.debug("Starting inference service for model {} version {}"
+                     .format(self.model_name, self.model_version))
+        while self.run_inference_service:
+            try:
+                request = self.requests_queue.get(timeout=GLOBAL_CONFIG[
+                    'engine_requests_queue_timeout'])
+            except queue.Empty:
+                continue
             error_message = self.adjust_network_inputs_if_needed(
                 request.inference_input)
             if error_message is not None:
@@ -204,6 +212,12 @@ class IrEngine():
                 py_callback=inference_callback, py_data=py_data)
             self.exec_net.requests[ireq_index].async_infer(
                 request.inference_input)
+        logger.debug("Stopping inference service for model {} version {}"
+                     .format(self.model_name, self.model_version))
+
+    def stop_inference_service(self):
+        self.run_inference_service = False
+        self.inference_thread.join()
 
     def suppress_inference(self):
         # Wait for all inferences executed on deleted engines to end
