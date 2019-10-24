@@ -120,9 +120,7 @@ def test_parse_one_model(mocker, should_fail, model_version_policy,
 
 @pytest.mark.parametrize("should_fail, config", PARSE_CONFIG_TEST_CASES)
 def test_parse_config(mocker, should_fail, config):
-    arguments = MockedArgsConfig('test', 9000, 5555, 1, 1)
-    set_engine_requests_queue_size_mocker = mocker.patch(
-        'ie_serving.main.set_engine_requests_queue_size')
+    arguments = MockedArgsConfig('test', 9001, 5556, 1, 1)
     open_config_mocker = mocker.patch(
         'ie_serving.main.open_config')
     open_config_mocker.return_value = config
@@ -136,6 +134,7 @@ def test_parse_config(mocker, should_fail, config):
         main.parse_config(arguments)
         assert start_server_mocker.called
         assert builder_mocker.called
+
 
 @pytest.mark.parametrize("args, should_fail", [
     (['python', 'test.py'], True),

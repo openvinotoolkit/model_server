@@ -23,9 +23,26 @@ from config import RESHAPE_TEST_CASES, \
     SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
 from conftest import MockedNet, MockedIOInfo
 
-from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models import InferenceStatus
+from ie_serving.models.ir_engine import IrEngine, inference_callback
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
+from ie_serving.server.request import Request
+
+
+@pytest.mark.parametrize("status", [InferenceStatus.OK, InferenceStatus.ERROR])
+def test_inference_callback(get_fake_ir_engine, status):
+    py_data = {
+        'ir_engine': get_fake_ir_engine,
+        'request': Request({}),
+        'ireq_index': 0
+    }
+    inference_callback(status, py_data)
+    if status == InferenceStatus.OK:
+        assert py_data['request'].result == {}
+    else:
+        assert py_data['request'].result == \
+               "Error occurred during inference execution"
 
 
 def test_init_class():
@@ -51,6 +68,7 @@ def test_init_class():
     assert exec_net == engine.exec_net
     assert list(net.inputs.keys()) == engine.input_tensor_names
     assert list(net.outputs.keys()) == engine.output_tensor_names
+    assert engine.free_ireq_index_queue.qsize() == 1
 
 
 def test_build_device_cpu(mocker):
