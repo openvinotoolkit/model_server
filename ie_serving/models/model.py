@@ -174,6 +174,7 @@ class Model(ABC):
 
     def _delete_engine(self, version):
         self.engines[version].suppress_inference()
+        self.engines[version].stop_inference_service()
         del self.engines[version]
         logger.debug("Version {} of the {} model has been removed".format(
             version, self.model_name))

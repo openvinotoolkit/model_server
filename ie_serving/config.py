@@ -33,9 +33,10 @@ GLOBAL_CONFIG = {
     'mapping_config_filename': 'mapping_config.json',
     'rest_requests_queue_size': os.getenv('REST_REQUESTS_QUEUE_SIZE', 100),
     'engine_requests_queue_size': os.getenv('ENGINE_REQUESTS_QUEUE_SIZE',
-                                            None)
+                                            None),
+    'engine_requests_queue_timeout': os.getenv(
+        'ENGINE_REQUESTS_QUEUE_TIMEOUT', 5),
 }
-
 
 S3_CONFIG = {
     'endpoint': os.environ.get('S3_ENDPOINT', None),
