@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import datetime
 import json
 import queue
 from unittest import mock
@@ -35,7 +35,8 @@ def test_inference_callback(get_fake_ir_engine, status):
     py_data = {
         'ir_engine': get_fake_ir_engine,
         'request': Request({}),
-        'ireq_index': 0
+        'ireq_index': 0,
+        'start_time': datetime.datetime.now()
     }
     inference_callback(status, py_data)
     if status == InferenceStatus.OK:

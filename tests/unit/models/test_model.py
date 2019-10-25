@@ -68,7 +68,7 @@ def test_delete_engine(get_fake_model):
     process_thread = threading.Thread(target=model._delete_engine,
                                       args=[version])
     process_thread.start()
-    time.sleep(3)
+    time.sleep(7)
     assert version not in model.engines
     assert model.versions_statuses[version].state == ModelVersionState.END
 
