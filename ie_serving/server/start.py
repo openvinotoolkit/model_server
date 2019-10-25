@@ -39,9 +39,8 @@ GIGABYTE = 1024 ** 3
 
 def initialize_tf():
     initialization_list = np.zeros((1, 1), dtype=float)
-    make_ndarray(initialization_list,
-                                 shape=initialization_list.shape,
-                                 dtype=types_pb2.DT_FLOAT)
+    make_ndarray(initialization_list, shape=initialization_list.shape,
+                 dtype=types_pb2.DT_FLOAT)
     pass
 
 

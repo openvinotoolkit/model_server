@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from config import DEFAULT_INPUT_KEY, DEFAULT_OUTPUT_KEY
 from falcon import testing
-from tensorflow.contrib.util import make_tensor_proto
+from tensorflow.compat.v1 import make_tensor_proto
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2, \
