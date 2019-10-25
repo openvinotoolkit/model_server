@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-from tensorflow.python.saved_model.signature_def_utils import \
-    build_signature_def
-from tensorflow.python.saved_model.utils import build_tensor_info
-from tensorflow.python.ops import gen_array_ops
+from tensorflow.compat.v1.saved_model import build_signature_def
+from tensorflow.compat.v1.saved_model import build_tensor_info
+from tensorflow.python.ops import array_ops
+from tensorflow.compat.v1 import disable_eager_execution
 
 type_mapping = {
     'FP32': 1,
@@ -35,10 +35,11 @@ type_mapping = {
 
 
 def _prepare_signature(layers: dict, model_keys):
+    disable_eager_execution()
     signature = {}
     for key, value in model_keys.items():
         if value in layers.keys():
-            x = gen_array_ops.placeholder(
+            x = array_ops.placeholder(
                 dtype=type_mapping[layers[value].precision],
                 shape=layers[value].shape, name=value)
             x_tensor_info = build_tensor_info(x)

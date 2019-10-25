@@ -18,7 +18,7 @@ from concurrent import futures
 import time
 import grpc
 import sys
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow.compat.v1 import make_ndarray
 from tensorflow.core.framework import types_pb2
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import numpy as np
@@ -39,7 +39,7 @@ GIGABYTE = 1024 ** 3
 
 def initialize_tf():
     initialization_list = np.zeros((1, 1), dtype=float)
-    tf_contrib_util.make_ndarray(initialization_list,
+    make_ndarray(initialization_list,
                                  shape=initialization_list.shape,
                                  dtype=types_pb2.DT_FLOAT)
     pass

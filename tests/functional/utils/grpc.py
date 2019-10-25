@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-from tensorflow.contrib.util import make_ndarray
-from tensorflow.contrib.util import make_tensor_proto
+from tensorflow.compat.v1.make_tensor_proto import make_tensor_proto, \
+    make_ndarray
 from tensorflow_serving.apis import predict_pb2, get_model_metadata_pb2, \
     get_model_status_pb2
 
