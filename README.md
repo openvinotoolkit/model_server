@@ -40,6 +40,8 @@ It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerator
 
 [Custom CPU extensions](docs/cpu_extension.md)
 
+[Performance tuning](docs/performance_tuning.md)
+
 Using FPGA (TBD)
 
 
@@ -212,41 +214,6 @@ Every version of the model creates a separate inference engine object, so it is 
 
 OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or 
 kubernetes capabilities.
-
-### Performance tuning
-When you send the input data for inference execution try to adjust the numerical data type to reduce the message size.
-For example you might consider sending the image representation as uint8 instead to float data. For REST API calls,
-it might help to reduce the numbers precisions in the json message with a command similar to 
-`np.round(imgs.astype(np.float),decimals=2)`. It will reduce the network bandwidth usage. 
-
-Usually, there is no need to tune any environment variables according to the allocated resources. In some cases 
-it might be however beneficial to adjust the threading parameters to fit the allocated resources in optimal way.
-This is especially relevant in configuration when multiple services it being used on a single node. Another situation is 
-in horizontal scalability in Kubernetes when the throughput can be increased by employing big volume of small containers.
-
-Below are listed exemplary environment settings in 2 scenarios.
-
-**Optimization for latency** - 1 container consuming all 80vCPU on the node:
-```
-OMP_NUM_THREADS=40
-KMP_SETTINGS=1
-KMP_AFFINITY=granularity=fine,verbose,compact,1,0
-KMP_BLOCKTIME=1
-```
-**Optimization for throughput** - 20 containers on the node consuming 4vCPU each:
-```
-OMP_NUM_THREADS=4
-KMP_SETTINGS=1
-KMP_AFFINITY=granularity=fine,verbose,compact,1,0
-KMP_BLOCKTIME=1
-```
-
-*Note* With the version *2019 R2*, OpenVINO Model Server is using [TBB](https://software.intel.com/en-us/tbb) threading instead
- of [OMP](https://www.openmp.org/).
- 
-It gives better performance especially in scenarios with shared CPU and enabled multiple AI models. It also do not require
-tuning the environment variables, which was required with OMP. The model server with TBB will be more flexible and
-easier to deploy in environments with dynamic load and resource allocation.
 
 ### Usage monitoring
 It is possible to track the usage of the models including processing time while DEBUG mode is enabled.

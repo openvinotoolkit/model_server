@@ -127,8 +127,13 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
-                        [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT]
-                        [--rest_port PORT] 
+                        [--batch_size BATCH_SIZE] [--shape SHAPE]
+                        [--port PORT] [--rest_port REST_PORT]
+                        [--model_version_policy MODEL_VERSION_POLICY]
+                        [--grpc_workers GRPC_WORKERS]
+                        [--rest_workers REST_WORKERS] [--nireq NIREQ]
+                        [--target_device TARGET_DEVICE]
+                        [--network_config NETWORK_CONFIG]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -137,13 +142,27 @@ optional arguments:
   --model_path MODEL_PATH
                         absolute path to model,as in tf serving
   --batch_size BATCH_SIZE
-                        sets models batchsize, int value or auto
-  --shape SHAPE
-                        sets models shape (model must support reshaping). If set, batch_size parameter is ignored.                      
-  --model_version_policy MODEL_VERSION_POLICY 
-                        sets model version policy for model
+                        sets models batchsize, int value or auto. This
+                        parameter will be ignored if shape is set
+  --shape SHAPE         sets models shape (model must support reshaping). If
+                        set, batch_size parameter is ignored.
   --port PORT           gRPC server port
-  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
+  --rest_port REST_PORT
+                        REST server port, the REST server will not be started
+                        if rest_port is blank or set to 0
+  --model_version_policy MODEL_VERSION_POLICY
+                        model version policy
+  --grpc_workers GRPC_WORKERS
+                        Number of workers in gRPC server
+  --rest_workers REST_WORKERS
+                        Number of workers in REST server - has no effect if
+                        rest port not set
+  --nireq NIREQ         Number of infer requests for model
+  --target_device TARGET_DEVICE
+                        Device to load model to, default-CPU
+  --network_config NETWORK_CONFIG
+                        Map of (param:value) pairs defining network
+                        configuration
 
 ```
 
@@ -263,14 +282,24 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 
 Below is the explanation of the `ie_serving config` parameters
 ```bash
-usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest_port PORT]
+usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT]
+                         [--rest_port REST_PORT] [--grpc_workers GRPC_WORKERS]
+                         [--rest_workers REST_WORKERS]
 
 optional arguments:
   -h, --help            show this help message and exit
   --config_path CONFIG_PATH
                         absolute path to json configuration file
   --port PORT           gRPC server port
-  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
+  --rest_port REST_PORT
+                        REST server port, the REST server will not be started
+                        if rest_port is blank or set to 0
+  --grpc_workers GRPC_WORKERS
+                        Number of workers in gRPC server
+  --rest_workers REST_WORKERS
+                        Number of workers in REST server - has no effect if
+                        rest_port is not set
+
 ```
 
 ## Starting docker container with NCS
@@ -310,17 +339,13 @@ rules:
 To start server with NCS you can use command similar to:
 
 ```
-docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=MYRIAD -p 9001:9001 \
-ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
 
 `-v /dev:/dev` mounts USB drives.
- 
- <i>DEVICE</i> environment variable indicates that model will
- be loaded on Neural Compute Stick.
-
 
 A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
 chooses to which one the model is loaded. 
@@ -340,18 +365,16 @@ In order to run container that is using HDDL accelerator, _hddldaemon_ must
 To start server with HDDL you can use command similar to:
 
 ```
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -e DEVICE=HDDL -p 9001:9001 \
-ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
 
 `--device=/dev/ion:/dev/ion` mounts the accelerator.
 
 `-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
  host machine
- 
- <i>DEVICE</i> environment variable indicates that model will
- be loaded on HDDL device.
 
+Check out our recommendation for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
 ## Batch Processing
 

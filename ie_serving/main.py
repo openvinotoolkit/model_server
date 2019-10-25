@@ -220,8 +220,7 @@ def main():
                           required=False,
                           default=1)
     parser_b.add_argument('--nireq', type=int,
-                          help='Number of infer requests for model - max '
-                               'number of inferences running in parallel',
+                          help='Number of infer requests for model',
                           required=False,
                           default=1)
     parser_b.add_argument('--target_device', type=str,
