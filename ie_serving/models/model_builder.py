@@ -30,12 +30,12 @@ class ModelBuilder:
             return LocalModel.build(model_name, model_directory,
                                     batch_size, shape,
                                     model_version_policy, num_ireq,
-                                    target_device, network_config)
+                                    target_device, plugin_config)
         elif parsed_path.scheme == 'gs':
             return GSModel.build(model_name, model_directory, batch_size,
                                  shape, model_version_policy, num_ireq,
-                                 target_device, network_config)
+                                 target_device, plugin_config)
         elif parsed_path.scheme == 's3':
             return S3Model.build(model_name, model_directory, batch_size,
                                  shape, model_version_policy, num_ireq,
-                                 target_device, network_config)
+                                 target_device, plugin_config)
