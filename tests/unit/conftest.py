@@ -91,7 +91,7 @@ def get_fake_model():
                           net=net, plugin=plugin, batching_info=batching_info,
                           shape_info=shape_info, target_device="CPU",
                           free_ireq_index_queue=free_ireq_index_queue,
-                          network_config=None, num_ireq=1,
+                          plugin_config=None, num_ireq=1,
                           requests_queue=requests_queue)
         new_engines.update({version: engine})
     model_name = "test"
@@ -107,7 +107,7 @@ def get_fake_model():
                            shape_param=shape_param,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses,
-                           network_config=None, target_device="CPU",
+                           plugin_config=None, target_device="CPU",
                            num_ireq=1)
     return new_model
 
@@ -130,7 +130,7 @@ def get_fake_ir_engine():
                       net=net, plugin=plugin, batching_info=batching_info,
                       shape_info=shape_info, target_device="CPU",
                       free_ireq_index_queue=free_ireq_index_queue,
-                      network_config=None, num_ireq=1,
+                      plugin_config=None, num_ireq=1,
                       requests_queue=requests_queue)
     return engine
 

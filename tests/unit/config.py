@@ -370,7 +370,7 @@ PARSE_CONFIG_TEST_CASES = [
                     "base_path": "/opt/ml/pnasnet_large",
                     "batch_size": 4,
                     "shape": {"input": "(1, 2, 3, 4)"},
-                    "network_config": {"key": "value"}
+                    "plugin_config": {"key": "value"}
                 }
             }]
     }),
@@ -395,7 +395,7 @@ PARSE_CONFIG_TEST_CASES = [
                 "config": {
                     "name": "resnet_V1_50",
                     "base_path": "/opt/ml/resnet_V1_50",
-                    "network_config": 1
+                    "plugin_config": 1
                 }
             }
         ]
