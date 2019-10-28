@@ -25,7 +25,7 @@ from config import PARSE_CONFIG_TEST_CASES
 class MockedArgs:
     def __init__(self, model_name, model_path, batch_size, shape,
                  model_version_policy, port, rest_port, grpc_workers,
-                 rest_workers, nireq, target_device, network_config):
+                 rest_workers, nireq, target_device, plugin_config):
         self.model_name = model_name
         self.model_path = model_path
         self.batch_size = batch_size
