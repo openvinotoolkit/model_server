@@ -225,7 +225,8 @@ def main():
                           required=False,
                           default=1)
     parser_b.add_argument('--target_device', type=str,
-                          help='Target device to run the inference, default: CPU',
+                          help='Target device to run the inference, '
+                               'default: CPU',
                           required=False,
                           default='CPU')
     parser_b.add_argument('--plugin_config', type=str,
