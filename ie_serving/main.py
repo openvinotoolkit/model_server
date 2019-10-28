@@ -211,25 +211,26 @@ def main():
                           required=False,
                           default='{"latest": { "num_versions":1 }}')
     parser_b.add_argument('--grpc_workers', type=int,
-                          help='Number of workers in gRPC server',
+                          help='Number of workers in gRPC server. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--rest_workers', type=int,
                           help='Number of workers in REST server - has no '
-                               'effect if rest port not set',
+                               'effect if rest port not set. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--nireq', type=int,
-                          help='Number of infer requests for model',
+                          help='Number of parallel inference request '
+                               'executions for model. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--target_device', type=str,
-                          help='Device to load model to, default-CPU',
+                          help='Target device to run the inference, default: CPU',
                           required=False,
                           default='CPU')
-    parser_b.add_argument('--network_config', type=str,
-                          help='Map of (param:value) pairs defining network '
-                               'configuration',
+    parser_b.add_argument('--plugin_config', type=str,
+                          help='A dictionary of plugin configuration keys and'
+                               ' their values',
                           required=False,
                           default=None)
 

@@ -25,6 +25,10 @@ make docker_build_apt_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
+make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
+```
+or
+```bash
 make docker_build_src_intelpython http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 
@@ -133,7 +137,7 @@ usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
                         [--grpc_workers GRPC_WORKERS]
                         [--rest_workers REST_WORKERS] [--nireq NIREQ]
                         [--target_device TARGET_DEVICE]
-                        [--network_config NETWORK_CONFIG]
+                        [--plugin_config PLUGIN_CONFIG]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -153,16 +157,15 @@ optional arguments:
   --model_version_policy MODEL_VERSION_POLICY
                         model version policy
   --grpc_workers GRPC_WORKERS
-                        Number of workers in gRPC server
+                        Number of workers in gRPC server. Default: 1
   --rest_workers REST_WORKERS
                         Number of workers in REST server - has no effect if
-                        rest port not set
-  --nireq NIREQ         Number of infer requests for model
+                        rest port not set. Default: 1
+  --nireq NIREQ         Number of parallel inference requests for model. Default: 1
   --target_device TARGET_DEVICE
-                        Device to load model to, default-CPU
-  --network_config NETWORK_CONFIG
-                        Map of (param:value) pairs defining network
-                        configuration
+                        Target device to run the inference, default: CPU
+  --plugin_config PLUGIN_CONFIG
+                        A dictionary of plugin configuration keys and their values
 
 ```
 
@@ -374,7 +377,7 @@ ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_pat
 `-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
  host machine
 
-Check out our recommendation for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
+Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
 ## Batch Processing
 
