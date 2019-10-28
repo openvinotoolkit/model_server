@@ -17,3 +17,4 @@
 
 class InferenceStatus:
     OK = 0
+    ERROR = -1
