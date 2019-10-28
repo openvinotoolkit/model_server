@@ -65,15 +65,14 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
 
         target_engine = self.models[model_name].engines[version]
 
-        start_time = datetime.datetime.now()
+        deserialization_start_time = datetime.datetime.now()
         inference_input, error_message = \
             prepare_input_data(target_engine=target_engine,
                                data=request.inputs,
                                service_type=GRPC)
-        deserialization_end_time = datetime.datetime.now()
-        duration = \
-            (deserialization_end_time - start_time).total_seconds() * 1000
-        logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
+        duration = (datetime.datetime.now() -
+                    deserialization_start_time).total_seconds() * 1000
+        logger.debug("PREDICT; input deserialization completed; {}; {}; {} ms"
                      .format(model_name, version, duration))
         if error_message is not None:
             code = statusCodes['invalid_arg'][GRPC]
@@ -87,7 +86,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         inference_request = Request(inference_input)
         target_engine.requests_queue.put(inference_request)
         inference_output, used_ireq_index = inference_request.wait_for_result()
-        if inference_output is str:
+        if type(inference_output) is str:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)
             context.set_details(inference_output)
@@ -95,12 +94,17 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                          "code {}".format(code))
             target_engine.free_ireq_index_queue.put(used_ireq_index)
             return predict_pb2.PredictResponse()
+        serialization_start_time = datetime.datetime.now()
         response = prepare_output_as_list(
             inference_output=inference_output,
             model_available_outputs=target_engine.model_keys['outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME
+        duration = (datetime.datetime.now() -
+                    serialization_start_time).total_seconds() * 1000
+        logger.debug("PREDICT; inference results serialization completed;"
+                     " {}; {}; {} ms".format(model_name, version, duration))
         target_engine.free_ireq_index_queue.put(used_ireq_index)
         return response
 

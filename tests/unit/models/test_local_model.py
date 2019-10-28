@@ -41,7 +41,9 @@ def test_model_init(engines):
                            batch_size_param=None,
                            shape_param=None,
                            version_policy_filter=lambda versions: versions[:],
-                           versions_statuses=versions_statuses)
+                           versions_statuses=versions_statuses,
+                           num_ireq=1, target_device='CPU',
+                           network_config=None)
 
     not_available_versions = list(set(available_versions) ^
                                   set(engines.keys()))
@@ -88,12 +90,14 @@ def test_get_engines_for_model(mocker, is_error):
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 2, 'batch_size_param': None,
-                           'shape_param': None},
+                           'shape_param': None, 'num_ireq': 1,
+                           'target_device': 'CPU', 'network_config': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size_param': None,
-                           'shape_param': None}]
+                           'shape_param': None, 'num_ireq': 1,
+                           'target_device': 'CPU', 'network_config': None}]
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']
@@ -132,17 +136,20 @@ def test_get_engines_for_model_with_ir_raises(mocker):
                            'bin_file': 'modelv2.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 2, 'batch_size_param': None,
-                           'shape_param': None},
+                           'shape_param': None, 'num_ireq': 1,
+                           'target_device': 'CPU', 'network_config': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 3, 'batch_size_param': None,
-                           'shape_param': None},
+                           'shape_param': None, 'num_ireq': 1,
+                           'target_device': 'CPU', 'network_config': None},
                           {'xml_file': 'modelv4.xml',
                            'bin_file': 'modelv4.bin',
                            'mapping_config': 'mapping_config.json',
                            'version_number': 4, 'batch_size_param': None,
-                           'shape_param': None}]
+                           'shape_param': None, 'num_ireq': 1,
+                           'target_device': 'CPU', 'network_config': None}]
     versions_statuses = {}
     for version in available_versions:
         version_number = version['version_number']

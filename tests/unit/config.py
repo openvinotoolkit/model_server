@@ -286,7 +286,6 @@ PROCESS_SHAPE_PARAM_TEST_CASES = [
      )
 ]
 
-
 PROCESS_GET_SHAPE_FROM_STRING_TEST_CASES = [
     ("auto",
      {'load_shape': False,
@@ -313,7 +312,7 @@ PROCESS_GET_SHAPE_FROM_STRING_TEST_CASES = [
      {'load_shape': [1, 1, 1],
       'get_shape_tuple': (1, 1, 1),
       'get_shape_dict': NOT_CALLED},
-     (ShapeMode.FIXED,  (1, 1, 1))
+     (ShapeMode.FIXED, (1, 1, 1))
      ),
     ("(1, 1, 1)",
      {'load_shape': True,
@@ -331,7 +330,7 @@ PROCESS_GET_SHAPE_FROM_STRING_TEST_CASES = [
      {'load_shape': {"input": [1, 1, 1]},
       'get_shape_tuple': NOT_CALLED,
       'get_shape_dict': {"input": (1, 1, 1)}},
-     (ShapeMode.FIXED,  {"input": (1, 1, 1)})
+     (ShapeMode.FIXED, {"input": (1, 1, 1)})
      ),
     ("{\"input\": \"(1, 1, 1)\"}",
      {'load_shape': True,
@@ -340,6 +339,109 @@ PROCESS_GET_SHAPE_FROM_STRING_TEST_CASES = [
      {'load_shape': {"input": ["string", 1, 1]},
       'get_shape_tuple': NOT_CALLED,
       'get_shape_dict': None},
-     (ShapeMode.DEFAULT,  None)
+     (ShapeMode.DEFAULT, None)
      ),
+]
+
+PARSE_CONFIG_TEST_CASES = [
+    (False, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                }
+            },
+            {
+                "config": {
+                    "name": "pnasnet_large",
+                    "base_path": "/opt/ml/pnasnet_large",
+                    "batch_size": "auto",
+                    "shape": "auto",
+                    "target_device": "HDDL",
+                    "nireq": 4,
+                    "model_version_policy":
+                        {"specific": {"versions": [1, 2, 3]}}
+                }
+            },
+            {
+                "config": {
+                    "name": "pnasnet_large",
+                    "base_path": "/opt/ml/pnasnet_large",
+                    "batch_size": 4,
+                    "shape": {"input": "(1, 2, 3, 4)"},
+                    "network_config": {"key": "value"}
+                }
+            }]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                }
+            },
+            {
+                "config": {
+                    "name": "pnasnet_large"
+                }
+            }
+        ]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                    "network_config": 1
+                }
+            }
+        ]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                    "model_version_policy": "{specific: {versions: [1,2]}}"
+                }
+            }
+        ]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                    "nireq": "32"
+                }
+            }
+        ]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                    "target_device": 1
+                }
+            }
+        ]
+    }),
+    (True, {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "resnet_V1_50",
+                    "base_path": "/opt/ml/resnet_V1_50",
+                    "shape": 1
+                }
+            }
+        ]
+    })
 ]

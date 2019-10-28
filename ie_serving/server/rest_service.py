@@ -160,14 +160,13 @@ class Predict():
         inputs = preprocess_json_request(body, input_format,
                                          target_engine.input_key_names)
 
-        start_time = datetime.datetime.now()
+        deserialization_start_time = datetime.datetime.now()
         inference_input, error_message = \
             prepare_input_data(target_engine=target_engine, data=inputs,
                                service_type=REST)
-        deserialization_end_time = datetime.datetime.now()
-        duration = \
-            (deserialization_end_time - start_time).total_seconds() * 1000
-        logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
+        duration = (datetime.datetime.now() -
+                    deserialization_start_time).total_seconds() * 1000
+        logger.debug("PREDICT; input deserialization completed; {}; {}; {} ms"
                      .format(model_name, version, duration))
         if error_message is not None:
             resp.status = code = statusCodes['invalid_arg'][REST]
@@ -179,28 +178,25 @@ class Predict():
         inference_request = Request(inference_input)
         target_engine.requests_queue.put(inference_request)
         inference_output, used_ireq_index = inference_request.wait_for_result()
-        if inference_output is str:
+        if type(inference_output) is str:
             resp.status = falcon.HTTP_400
             err_out_json = {'error': inference_output}
             resp.body = json.dumps(err_out_json)
             target_engine.free_ireq_index_queue.put(used_ireq_index)
             return
-        inference_end_time = datetime.datetime.now()
+        serialization_start_time = datetime.datetime.now()
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
 
         response = prepare_json_response(
             OUTPUT_REPRESENTATION[input_format], inference_output,
             target_engine.model_keys['outputs'])
-
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
-        serialization_end_time = datetime.datetime.now()
-        duration = \
-            (serialization_end_time -
-             inference_end_time).total_seconds() * 1000
+        duration = (datetime.datetime.now() -
+                    serialization_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
-                     " {}; {}; {}ms".format(model_name, version, duration))
+                     " {}; {}; {} ms".format(model_name, version, duration))
         target_engine.free_ireq_index_queue.put(used_ireq_index)
         return
 

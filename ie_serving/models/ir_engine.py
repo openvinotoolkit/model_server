@@ -34,6 +34,8 @@ def inference_callback(status, py_data):
     ir_engine = py_data['ir_engine']
     request = py_data['request']
     ireq_index = py_data['ireq_index']
+    start_time = py_data['start_time']
+    duration = (datetime.datetime.now() - start_time).total_seconds() * 1000
 
     if status == InferenceStatus.OK:
         request.set_result(ireq_index=ireq_index,
@@ -42,6 +44,9 @@ def inference_callback(status, py_data):
     else:
         request.set_result(ireq_index=ireq_index,
                            result="Error occurred during inference execution")
+
+    logger.debug("[Inference callback] --- Inference completed in {} ms".
+                 format(duration))
 
 
 class IrEngine():
@@ -71,7 +76,9 @@ class IrEngine():
 
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
+        self.run_inference_service = True
         self.inference_thread = Thread(target=self.start_inference_service)
+        self.inference_thread.daemon = True
         self.inference_thread.start()
 
     @classmethod
@@ -181,8 +188,14 @@ class IrEngine():
             return self._set_names_in_config_as_keys(mapping_data)
 
     def start_inference_service(self):
-        while True:
-            request = self.requests_queue.get()
+        logger.debug("Starting inference service for model {} version {}"
+                     .format(self.model_name, self.model_version))
+        while self.run_inference_service:
+            try:
+                request = self.requests_queue.get(timeout=GLOBAL_CONFIG[
+                    'engine_requests_queue_timeout'])
+            except queue.Empty:
+                continue
             error_message = self.adjust_network_inputs_if_needed(
                 request.inference_input)
             if error_message is not None:
@@ -192,23 +205,30 @@ class IrEngine():
             py_data = {
                 'ir_engine': self,
                 'ireq_index': ireq_index,
-                'request': request
+                'request': request,
+                'start_time': datetime.datetime.now()
             }
             self.exec_net.requests[ireq_index].set_completion_callback(
                 py_callback=inference_callback, py_data=py_data)
             self.exec_net.requests[ireq_index].async_infer(
                 request.inference_input)
+        logger.debug("Stopping inference service for model {} version {}"
+                     .format(self.model_name, self.model_version))
+
+    def stop_inference_service(self):
+        self.run_inference_service = False
+        self.inference_thread.join()
 
     def suppress_inference(self):
         # Wait for all inferences executed on deleted engines to end
-        logger.debug("[Model: {} Version: {}] --- Waiting for in progress "
+        logger.debug("[Model: {} version: {}] --- Waiting for in progress "
                      "inferences to finish...".
                      format(self.model_name, self.model_version))
         engine_suppressed = False
         while not engine_suppressed:
             if self.free_ireq_index_queue.full():
                 engine_suppressed = True
-        logger.debug("[Model: {} Version: {}] --- In progress inferences "
+        logger.debug("[Model: {} version: {}] --- In progress inferences "
                      "has been finalized...".
                      format(self.model_name, self.model_version))
 
