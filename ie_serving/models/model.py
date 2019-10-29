@@ -34,7 +34,7 @@ class Model(ABC):
                  batch_size_param, shape_param, available_versions: list,
                  engines: dict, version_policy_filter,
                  versions_statuses: dict, num_ireq: int,
-                 target_device: str, network_config):
+                 target_device: str, plugin_config):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
@@ -47,7 +47,7 @@ class Model(ABC):
         self.versions_statuses = versions_statuses
 
         self.target_device = target_device
-        self.network_config = network_config
+        self.plugin_config = plugin_config
 
         [self.versions_statuses[version].set_available() for version in
          self.versions if version in self.engines.keys()]
@@ -61,7 +61,7 @@ class Model(ABC):
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size_param,
               shape_param, model_version_policy: dict = None,
-              num_ireq: int = 1, target_device='CPU', network_config=None):
+              num_ireq: int = 1, target_device='CPU', plugin_config=None):
 
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
@@ -70,7 +70,7 @@ class Model(ABC):
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
                 model_directory, batch_size_param, shape_param,
-                version_policy_filter, num_ireq, target_device, network_config)
+                version_policy_filter, num_ireq, target_device, plugin_config)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
@@ -100,7 +100,7 @@ class Model(ABC):
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses,
                     num_ireq=num_ireq, target_device=target_device,
-                    network_config=network_config)
+                    plugin_config=plugin_config)
         return model
 
     def update(self):
@@ -110,7 +110,7 @@ class Model(ABC):
                     self.model_directory,
                     self.batch_size_param, self.shape_param,
                     self.version_policy_filter, self.num_ireq,
-                    self.target_device, self.network_config)
+                    self.target_device, self.plugin_config)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(self.model_name))
@@ -183,13 +183,13 @@ class Model(ABC):
     @classmethod
     def get_version_metadata(cls, model_directory, batch_size_param,
                              shape_param, version_policy_filter, num_ireq,
-                             target_device, network_config):
+                             target_device, plugin_config):
         versions_attributes = cls.get_versions_attributes(model_directory,
                                                           batch_size_param,
                                                           shape_param,
                                                           num_ireq,
                                                           target_device,
-                                                          network_config)
+                                                          plugin_config)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()
@@ -199,7 +199,7 @@ class Model(ABC):
     @classmethod
     def get_versions_attributes(cls, model_directory, batch_size_param,
                                 shape_param, num_ireq, target_device,
-                                network_config):
+                                plugin_config):
         versions = cls.get_versions(model_directory)
         logger.debug(versions)
         versions_attributes = []
@@ -217,7 +217,7 @@ class Model(ABC):
                                           'shape_param': shape_param,
                                           'num_ireq': num_ireq,
                                           'target_device': target_device,
-                                          'network_config': network_config
+                                          'plugin_config': plugin_config
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
@@ -292,7 +292,7 @@ class Model(ABC):
             'shape_param': version_attributes['shape_param'],
             'num_ireq': version_attributes['num_ireq'],
             'target_device': version_attributes['target_device'],
-            'network_config': version_attributes['network_config']
+            'plugin_config': version_attributes['plugin_config']
         }
 
     #   Subclass interface
