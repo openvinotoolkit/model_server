@@ -238,10 +238,11 @@ All new features need to be covered by tests.
 
 ### Building
 Docker image with OpenVINO Model Server can be built with several options: 
-- `make docker_build_bin` - using Intel Distribution of OpenVINO binary package (ubuntu base image)
+- `make docker_build_bin dldt_package_url=<url>` - using Intel Distribution of OpenVINO binary package (ubuntu base image)
 - `make docker_build_src_ubuntu` - using OpenVINO source code with ubuntu base image
 - `make docker_build_src_intelpython` - using OpenVINO source code with 'intelpython/intelpython3_core' base image 
 (Intel optimized python distribution with conda and debian)
+- `make docker_build_clearlinux` - using clearlinux base image with DLDT package 
 
 
 ### Testing

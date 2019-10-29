@@ -5,19 +5,18 @@
 OpenVINO&trade; Model Server docker image can be built using various Dockerfiles:
 - [Dockerfile](../Dockerfile) - based on ubuntu with [apt-get package](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_apt.html) 
 - [Dockerfile_intelpython](../Dockerfile_intelpython) - with intelpython base image and Inference Engine compiled from [dldt sources](https://github.com/opencv/dldt) 
+- [Dockerfile_clearlinux](../Dockerfile_clearlinux) - [clearlinux](https://clearlinux.org/) based image with [DLDT package](https://github.com/clearlinux-pkgs/dldt) included
 - [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
 The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) 
 and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
-It is recommended to use online installation package because this way the resultant image will be smaller. 
-An example file looks like: `l_openvino_toolkit_p_2019.2.242_online.tgz`.
+Use the URL to the package from the registration web site as an argument in the make command. The the example below:
 
 
 From the root of the git repository, execute the commands:
 
 ```bash
-cp (download path)/l_openvino_toolkit_p_2019.1.094_online.tgz . 
-make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy
+make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy dldt_package_url=<url-to-openvino-package-after-registration>/l_openvino_toolkit_p_2019.3.376.tgz
 ```
 or
 ```bash
@@ -256,7 +255,9 @@ It uses `json` format as shown in the example below:
          "config":{
              "name":"model_name5",
              "base_path":"s3://bucket/models/model5",
-             "shape": "auto"
+             "shape": "auto",
+             "target_device": "HDDL",
+             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       }
    ]
@@ -310,7 +311,7 @@ optional arguments:
 Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
 version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
 You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
-- `make docker_build_bin` 
+- `make docker_build_bin dldt_package_url=<url>` 
 - `make docker_build_apt_ubuntu`
 - `make docker_build_src_intelpython`
 
@@ -358,7 +359,7 @@ chooses to which one the model is loaded.
 Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin
 , using OpenVINO toolkit binary distribution:
-- `make docker_build_bin` 
+- `make docker_build_bin dldt_package_url=<url>` 
 
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's  required to set up environment 

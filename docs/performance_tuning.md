@@ -25,7 +25,7 @@ Below are listed exemplary environment settings in 2 scenarios.
 
 While hosting multiple instances of OVMS, it is optimal to ensure CPU affinity for the containers. It can be arranged
 via [CPU manager for Kuburnetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/)
-An equivalent in the docker, would be starting the containers with the option `--cpus-cpuset`.
+An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus`.
 
 In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like:
 * KEY_CPU_THREADS_NUM
@@ -34,12 +34,12 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 Read about available parameters on [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
 
-Example docker command with setting `KEY_CPU_THROUGHPUT_STREAMS` to `KEY_CPU_THROUGHPUT_NUMA`:
+While passing the plugin configuration, omit the `KEY_` phase. Example docker command with setting `KEY_CPU_THROUGHPUT_STREAMS` to `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```
-docker run --rm -d --cpus-cpuset 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model \
+docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model \
 --model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 1 \
---plugin_config "{\"CPU_THROUGHPUT_STREAMS\": \"KEY_CPU_THROUGHPUT_NUMA\",\"KEY_CPU_THREADS_NUM\": \"4\"}"
+--plugin_config "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_NUMA\",\"CPU_THREADS_NUM\": \"4\"}"
 ```
 
 ## Inference execution threading 
@@ -84,7 +84,7 @@ For example if you have one HDDL accelerator with 8x VPUs you can start model se
 ```
 
 **Note** HDDL plugin is not available in the public docker image on [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
-It needs to be built using [OpenVINO binary package](https://github.com/IntelAI/OpenVINO-model-server/blob/r3-readme/docs/docker_container.md#building-the-image).
+It needs to be built using url to [full OpenVINO binary package](https://github.com/IntelAI/OpenVINO-model-server/blob/r3-readme/docs/docker_container.md#building-the-image).
 
 
 ### Plugin configuration
