@@ -24,7 +24,7 @@ class ModelBuilder:
     @staticmethod
     def build(model_name: str, model_directory: str,
               model_version_policy: dict, batch_size, shape, num_ireq: int,
-              target_device, network_config):
+              target_device, plugin_config):
         parsed_path = urlparse(model_directory)
         if parsed_path.scheme == '':
             return LocalModel.build(model_name, model_directory,
