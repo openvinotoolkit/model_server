@@ -58,7 +58,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
               "--port 9011 --rest_port 5566 " \
-              "--shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\"" \
+              "--shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\" " \
               "--grpc_workers 4 --rest_workers 2 --nireq 2"
 
     container = client.containers.run(image=get_image, detach=True,
