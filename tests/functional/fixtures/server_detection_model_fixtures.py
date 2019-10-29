@@ -29,7 +29,8 @@ def start_server_face_detection_model_auto_shape(request, get_image,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
-              "--port 9010 --rest_port 5565 --shape auto"
+              "--port 9010 --rest_port 5565 --shape auto " \
+              "--grpc_workers 4 --nireq 4"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-auto-shape',
@@ -57,7 +58,8 @@ def start_server_face_detection_model_named_shape(request, get_image,
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
               "--port 9011 --rest_port 5566 " \
-              "--shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\""
+              "--shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\"" \
+              "--grpc_workers 4 --rest_workers 2 --nireq 2"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-named-shape',
@@ -85,7 +87,8 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
               "--port 9012 --rest_port 5567 " \
-              "--shape \"(1, 3, 600, 600)\""
+              "--shape \"(1, 3, 600, 600)\" " \
+              "--rest_workers 4 --nireq 2"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-nonamed-shape',
