@@ -25,7 +25,7 @@ from config import PARSE_CONFIG_TEST_CASES
 class MockedArgs:
     def __init__(self, model_name, model_path, batch_size, shape,
                  model_version_policy, port, rest_port, grpc_workers,
-                 rest_workers, nireq, target_device, network_config):
+                 rest_workers, nireq, target_device, plugin_config):
         self.model_name = model_name
         self.model_path = model_path
         self.batch_size = batch_size
@@ -37,7 +37,7 @@ class MockedArgs:
         self.rest_workers = rest_workers
         self.nireq = nireq
         self.target_device = target_device
-        self.network_config = network_config
+        self.plugin_config = plugin_config
 
 
 class MockedArgsConfig:
@@ -71,7 +71,7 @@ def test_open_config_wrong_json(mocker):
     open_mocker.assert_called_once_with(fake_file_path, 'r')
 
 
-@pytest.mark.parametrize("should_fail, model_version_policy, network_config,"
+@pytest.mark.parametrize("should_fail, model_version_policy, plugin_config,"
                          "exceptions, unexpected_exception",
                          [(False, '{"specific": { "versions":[1,2] }}',
                            '{"key": "value"}', None, False),
@@ -96,9 +96,9 @@ def test_open_config_wrong_json(mocker):
                           (True, '{"specific": { "versions":[1,2] }}', None,
                            (SystemExit, Exception), True)])
 def test_parse_one_model(mocker, should_fail, model_version_policy,
-                         network_config, exceptions, unexpected_exception):
+                         plugin_config, exceptions, unexpected_exception):
     arguments = MockedArgs('test', 'test', None, None, model_version_policy,
-                           9000, 5555, 1, 1, 1, 'CPU', network_config)
+                           9000, 5555, 1, 1, 1, 'CPU', plugin_config)
     if should_fail:
         if unexpected_exception:
             builder_mocker = mocker.patch('ie_serving.main.'

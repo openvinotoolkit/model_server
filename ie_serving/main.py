@@ -66,7 +66,7 @@ def get_model_spec(config):
     num_ireq = config.get('nireq', 1)
 
     target_device = config.get('target_device', 'CPU')
-    network_config = config.get('network_config', None)
+    plugin_config = config.get('plugin_config', None)
 
     model_spec = {
         'model_name': model_name,
@@ -76,7 +76,7 @@ def get_model_spec(config):
         'model_version_policy': model_ver_policy,
         'num_ireq': num_ireq,
         'target_device': target_device,
-        'network_config': network_config
+        'plugin_config': plugin_config
     }
     return model_spec
 
@@ -94,7 +94,7 @@ def parse_config(args):
             if model is not None:
                 models[config['config']['name']] = model
         except ValidationError as e_val:
-            logger.warning("Model version policy or network config "
+            logger.warning("Model version policy or plugin config "
                            "for model {} is invalid. "
                            "Exception: {}".format(config['config']['name'],
                                                   e_val))
@@ -119,18 +119,18 @@ def parse_one_model(args):
     set_engine_requests_queue_size(args)
     try:
         args.model_version_policy = json.loads(args.model_version_policy)
-        if args.network_config is not None:
-            args.network_config = json.loads(args.network_config)
+        if args.plugin_config is not None:
+            args.plugin_config = json.loads(args.plugin_config)
 
         model_spec = get_model_spec(vars(args))
 
         model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:
-        logger.error("Model version policy or network config is invalid. "
+        logger.error("Model version policy or plugin config is invalid. "
                      "Exception: {}".format(e_val))
         sys.exit()
     except json.decoder.JSONDecodeError as e_json:
-        logger.error("model_version_policy and network_config fields must be "
+        logger.error("model_version_policy and plugin_config fields must be "
                      "in json format. "
                      "Exception: {}".format(e_json))
         sys.exit()
@@ -211,26 +211,27 @@ def main():
                           required=False,
                           default='{"latest": { "num_versions":1 }}')
     parser_b.add_argument('--grpc_workers', type=int,
-                          help='Number of workers in gRPC server',
+                          help='Number of workers in gRPC server. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--rest_workers', type=int,
                           help='Number of workers in REST server - has no '
-                               'effect if rest port not set',
+                               'effect if rest port not set. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--nireq', type=int,
-                          help='Number of infer requests for model - max '
-                               'number of inferences running in parallel',
+                          help='Number of parallel inference request '
+                               'executions for model. Default: 1',
                           required=False,
                           default=1)
     parser_b.add_argument('--target_device', type=str,
-                          help='Device to load model to, default-CPU',
+                          help='Target device to run the inference, '
+                               'default: CPU',
                           required=False,
                           default='CPU')
-    parser_b.add_argument('--network_config', type=str,
-                          help='Map of (param:value) pairs defining network '
-                               'configuration',
+    parser_b.add_argument('--plugin_config', type=str,
+                          help='A dictionary of plugin configuration keys and'
+                               ' their values',
                           required=False,
                           default=None)
 

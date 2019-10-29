@@ -54,7 +54,7 @@ class IrEngine():
     def __init__(self, model_name, model_version, net, plugin,
                  mapping_config, exec_net, batching_info, shape_info,
                  free_ireq_index_queue, num_ireq, requests_queue,
-                 target_device, network_config):
+                 target_device, plugin_config):
         self.model_name = model_name
         self.model_version = model_version
         self.exec_net = exec_net
@@ -72,7 +72,7 @@ class IrEngine():
         self.requests_queue = requests_queue
 
         self.target_device = target_device
-        self.network_config = network_config
+        self.plugin_config = plugin_config
 
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
@@ -84,7 +84,7 @@ class IrEngine():
     @classmethod
     def build(cls, model_name, model_version, model_xml, model_bin,
               mapping_config, batch_size_param, shape_param, num_ireq,
-              target_device, network_config):
+              target_device, plugin_config):
         plugin = IEPlugin(device=target_device,
                           plugin_dirs=GLOBAL_CONFIG['plugin_dir'])
         if GLOBAL_CONFIG['cpu_extension'] and 'CPU' in target_device:
@@ -124,7 +124,7 @@ class IrEngine():
             'engine_requests_queue_size'])
 
         exec_net = plugin.load(network=net, num_requests=num_ireq,
-                               config=network_config)
+                               config=plugin_config)
         ir_engine = cls(model_name=model_name, model_version=model_version,
                         mapping_config=mapping_config, net=net, plugin=plugin,
                         exec_net=exec_net, batching_info=batching_info,
@@ -132,7 +132,7 @@ class IrEngine():
                         free_ireq_index_queue=free_ireq_index_queue,
                         num_ireq=num_ireq, requests_queue=requests_queue,
                         target_device=target_device,
-                        network_config=network_config)
+                        plugin_config=plugin_config)
         return ir_engine
 
     def _get_mapping_data_if_exists(self, mapping_config):
@@ -322,7 +322,7 @@ class IrEngine():
         try:
             self.exec_net = self.plugin.load(network=self.net,
                                              num_requests=self.num_ireq,
-                                             config=self.network_config)
+                                             config=self.plugin_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
@@ -347,7 +347,7 @@ class IrEngine():
         try:
             self.exec_net = self.plugin.load(network=self.net,
                                              num_requests=self.num_ireq,
-                                             config=self.network_config)
+                                             config=self.plugin_config)
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))

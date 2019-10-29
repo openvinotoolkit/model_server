@@ -65,7 +65,7 @@ def test_init_class():
                       free_ireq_index_queue=free_ireq_index_queue,
                       requests_queue=requests_queue,
                       target_device='CPU',
-                      network_config=None)
+                      plugin_config=None)
     assert exec_net == engine.exec_net
     assert list(net.inputs.keys()) == engine.input_tensor_names
     assert list(net.outputs.keys()) == engine.output_tensor_names
@@ -86,7 +86,7 @@ def test_build_device_cpu(mocker):
                        mapping_config=mapping_config,
                        batch_size_param=batch_size_param,
                        shape_param=shape_param, num_ireq=1,
-                       target_device='CPU', network_config=None)
+                       target_device='CPU', plugin_config=None)
         cpu_extension_mock.assert_called_once_with()
 
 
@@ -104,7 +104,7 @@ def test_build_device_other(mocker):
                        mapping_config=mapping_config,
                        batch_size_param=batch_size_param,
                        shape_param=shape_param, num_ireq=1,
-                       target_device='other', network_config=None)
+                       target_device='other', plugin_config=None)
         assert not cpu_extension_mock.assert_called_once_with()
 
 
