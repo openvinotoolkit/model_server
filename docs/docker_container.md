@@ -248,7 +248,8 @@ It uses `json` format as shown in the example below:
              "shape": {
                 "input1": "(1,3,200,200)",
                 "input2": "(1,3,50,50)"
-             }
+             },
+             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       },
       {
@@ -256,8 +257,8 @@ It uses `json` format as shown in the example below:
              "name":"model_name5",
              "base_path":"s3://bucket/models/model5",
              "shape": "auto",
+             "nireq": 32,
              "target_device": "HDDL",
-             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       }
    ]
