@@ -99,7 +99,7 @@ docker_build_bin:
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
 	@echo docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t ie-serving-py:latest .
-	@docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t ie-serving-py:latest .
 
 docker_build_src_intelpython:
 	@echo "Building docker image"

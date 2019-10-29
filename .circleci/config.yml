@@ -48,7 +48,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: make docker_build_bin dldt_package_url=$OPENVINO_DOWNLOAD_LINK_R3
+          command: make docker_build_bin dldt_package_url=${OPENVINO_DOWNLOAD_LINK_R3}
       - run:
           name: Get Google Cloud credentials
           command: echo "${GOOGLE_KEY}" | base64 -d > ${GOOGLE_APPLICATION_CREDENTIALS}
