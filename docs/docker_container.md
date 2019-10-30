@@ -8,12 +8,8 @@ OpenVINO&trade; Model Server docker image can be built using various Dockerfiles
 - [Dockerfile_clearlinux](../Dockerfile_clearlinux) - [clearlinux](https://clearlinux.org/) based image with [DLDT package](https://github.com/clearlinux-pkgs/dldt) included
 - [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
-The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) 
-and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
-Use the URL to the package from the registration web site as an argument in the make command. The the example below:
-
-
-From the root of the git repository, execute the commands:
+The last option requires URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
+Use this URL as an argument in the `make` command as shown in example below:
 
 ```bash
 make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy dldt_package_url=<url-to-openvino-package-after-registration>/l_openvino_toolkit_p_2019.3.376.tgz
