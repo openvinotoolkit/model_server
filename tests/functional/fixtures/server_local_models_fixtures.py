@@ -29,7 +29,9 @@ def start_server_single_model(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000 --rest_port 5555"
+              "--port 9000 --rest_port 5555 --plugin_config " \
+              "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
+              "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single',

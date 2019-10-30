@@ -4,7 +4,8 @@
       "config":{
         "name":"resnet_V1_50",
         "base_path":"/opt/ml/resnet_V1_50",
-        "batch_size":"auto"
+        "batch_size":"auto",
+        "nireq": 4
       }
     },
     {
@@ -18,13 +19,15 @@
       "config": {
         "name": "resnet",
         "base_path": "/opt/ml/resnet",
-        "model_version_policy": {"all": {}}
+        "model_version_policy": {"all": {}},
+        "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"}
       }
     },
     {
       "config": {
         "name": "resnet_gs",
-        "base_path": "gs://inference-eu/ml-test"
+        "base_path": "gs://inference-eu/ml-test",
+        "target_device": "CPU"
       }
     },
     {

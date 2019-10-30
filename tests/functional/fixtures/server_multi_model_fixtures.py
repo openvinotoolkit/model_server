@@ -44,7 +44,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
                         {'bind': '/etc/gcp.json', 'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port 9001 " \
-              "--rest_port 5561"
+              "--rest_port 5561 --grpc_workers 2 --rest_workers 2"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi',
