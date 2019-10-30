@@ -15,7 +15,7 @@
 #
 import glob
 
-from ie_serving.config import MAPPING_CONFIG_FILENAME
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
@@ -45,7 +45,8 @@ class LocalModel(Model):
 
     @classmethod
     def _get_mapping_config(cls, version):
-        mapping_config = glob.glob(version + MAPPING_CONFIG_FILENAME)
+        mapping_config = glob.glob(version + GLOBAL_CONFIG[
+            'mapping_config_filename'])
         if len(mapping_config) == 1:
             return mapping_config[0]
         return None

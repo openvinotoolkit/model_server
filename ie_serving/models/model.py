@@ -15,7 +15,6 @@
 #
 import re
 import threading
-import time
 from abc import ABC, abstractmethod
 
 from jsonschema import validate
@@ -31,9 +30,11 @@ logger = get_logger(__name__)
 
 class Model(ABC):
 
-    def __init__(self, model_name: str, model_directory: str, batch_size_param,
-                 shape_param, available_versions: list, engines: dict,
-                 version_policy_filter, versions_statuses: dict):
+    def __init__(self, model_name: str, model_directory: str,
+                 batch_size_param, shape_param, available_versions: list,
+                 engines: dict, version_policy_filter,
+                 versions_statuses: dict, num_ireq: int,
+                 target_device: str, plugin_config):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
@@ -41,8 +42,12 @@ class Model(ABC):
         self.default_version = max(self.versions, default=-1)
         self.batch_size_param = batch_size_param
         self.shape_param = shape_param
+        self.num_ireq = num_ireq
         self.version_policy_filter = version_policy_filter
         self.versions_statuses = versions_statuses
+
+        self.target_device = target_device
+        self.plugin_config = plugin_config
 
         [self.versions_statuses[version].set_available() for version in
          self.versions if version in self.engines.keys()]
@@ -55,7 +60,8 @@ class Model(ABC):
 
     @classmethod
     def build(cls, model_name: str, model_directory: str, batch_size_param,
-              shape_param, model_version_policy: dict = None):
+              shape_param, model_version_policy: dict = None,
+              num_ireq: int = 1, target_device='CPU', plugin_config=None):
 
         logger.info("Server start loading model: {}".format(model_name))
         version_policy_filter = cls.get_model_version_policy_filter(
@@ -64,7 +70,7 @@ class Model(ABC):
         try:
             versions_attributes, available_versions = cls.get_version_metadata(
                 model_directory, batch_size_param, shape_param,
-                version_policy_filter)
+                version_policy_filter, num_ireq, target_device, plugin_config)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(model_name))
@@ -92,7 +98,9 @@ class Model(ABC):
                     batch_size_param=batch_size_param,
                     shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
-                    versions_statuses=versions_statuses)
+                    versions_statuses=versions_statuses,
+                    num_ireq=num_ireq, target_device=target_device,
+                    plugin_config=plugin_config)
         return model
 
     def update(self):
@@ -101,7 +109,8 @@ class Model(ABC):
                 self.get_version_metadata(
                     self.model_directory,
                     self.batch_size_param, self.shape_param,
-                    self.version_policy_filter)
+                    self.version_policy_filter, self.num_ireq,
+                    self.target_device, self.plugin_config)
         except Exception as error:
             logger.error("Error occurred while getting versions "
                          "of the model {}".format(self.model_name))
@@ -113,7 +122,8 @@ class Model(ABC):
         if available_versions == self.versions:
             return
 
-        logger.info("Server start updating model: {}".format(self.model_name))
+        logger.info("Server will start updating model: {}".format(
+            self.model_name))
         to_create, to_delete = self._mark_differences(available_versions)
         logger.debug("Server will try to add {} versions".format(to_create))
         logger.debug(
@@ -163,30 +173,23 @@ class Model(ABC):
         return to_create, to_delete
 
     def _delete_engine(self, version):
-        start_time = time.time()
-        tick = start_time
-        lock_counter = 0
-        while tick - start_time < 120:
-            time.sleep(0.1)
-            if not self.engines[version].in_use.locked():
-                lock_counter += 1
-            else:
-                lock_counter = 0
-            if lock_counter >= 10:
-                del self.engines[version]
-                logger.debug("Version {} of the {} model "
-                             "has been removed".format(version,
-                                                       self.model_name))
-                self.versions_statuses[version].set_end()
-                break
-            tick = time.time()
+        self.engines[version].suppress_inference()
+        self.engines[version].stop_inference_service()
+        del self.engines[version]
+        logger.debug("Version {} of the {} model has been removed".format(
+            version, self.model_name))
+        self.versions_statuses[version].set_end()
 
     @classmethod
     def get_version_metadata(cls, model_directory, batch_size_param,
-                             shape_param, version_policy_filter):
+                             shape_param, version_policy_filter, num_ireq,
+                             target_device, plugin_config):
         versions_attributes = cls.get_versions_attributes(model_directory,
                                                           batch_size_param,
-                                                          shape_param)
+                                                          shape_param,
+                                                          num_ireq,
+                                                          target_device,
+                                                          plugin_config)
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
         available_versions.sort()
@@ -195,7 +198,8 @@ class Model(ABC):
 
     @classmethod
     def get_versions_attributes(cls, model_directory, batch_size_param,
-                                shape_param):
+                                shape_param, num_ireq, target_device,
+                                plugin_config):
         versions = cls.get_versions(model_directory)
         logger.debug(versions)
         versions_attributes = []
@@ -210,7 +214,10 @@ class Model(ABC):
                                           'mapping_config': mapping_config,
                                           'version_number': version_number,
                                           'batch_size_param': batch_size_param,
-                                          'shape_param': shape_param
+                                          'shape_param': shape_param,
+                                          'num_ireq': num_ireq,
+                                          'target_device': target_device,
+                                          'plugin_config': plugin_config
                                           }
                     versions_attributes.append(version_attributes)
         return versions_attributes
@@ -282,7 +289,10 @@ class Model(ABC):
             'model_xml': version_attributes['xml_file'],
             'mapping_config': version_attributes['mapping_config'],
             'batch_size_param': version_attributes['batch_size_param'],
-            'shape_param': version_attributes['shape_param']
+            'shape_param': version_attributes['shape_param'],
+            'num_ireq': version_attributes['num_ireq'],
+            'target_device': version_attributes['target_device'],
+            'plugin_config': version_attributes['plugin_config']
         }
 
     #   Subclass interface

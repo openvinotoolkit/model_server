@@ -16,6 +16,7 @@
 import grpc_testing
 import numpy as np
 import pytest
+import queue
 from config import DEFAULT_INPUT_KEY, DEFAULT_OUTPUT_KEY
 from falcon import testing
 from tensorflow.contrib.util import make_tensor_proto
@@ -53,10 +54,26 @@ class MockedNet:
         self.outputs = outputs
 
 
+class MockedExecNet:
+
+    class MockerInferRequest:
+        def __init__(self):
+            self.outputs = {}
+
+        def set_completion_callback(self, py_callback, py_data):
+            pass
+
+        def async_infer(self, inference_input):
+            pass
+
+    def __init__(self):
+        self.requests = [self.MockerInferRequest(), self.MockerInferRequest()]
+
+
 @pytest.fixture
 def get_fake_model():
     mapping_config = 'mapping_config.json'
-    exec_net = None
+    exec_net = MockedExecNet()
     net = MockedNet(
         inputs={DEFAULT_INPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
         outputs={DEFAULT_OUTPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')})
@@ -65,12 +82,17 @@ def get_fake_model():
     shape_info = ShapeInfo(None, net.inputs)
     new_engines = {}
     available_versions = [1, 2, 3]
+    requests_queue = queue.Queue()
+    free_ireq_index_queue = queue.Queue(maxsize=1)
+    free_ireq_index_queue.put(0)
     for version in available_versions:
         engine = IrEngine(model_name='test', model_version=version,
                           mapping_config=mapping_config, exec_net=exec_net,
                           net=net, plugin=plugin, batching_info=batching_info,
-                          shape_info=shape_info
-                          )
+                          shape_info=shape_info, target_device="CPU",
+                          free_ireq_index_queue=free_ireq_index_queue,
+                          plugin_config=None, num_ireq=1,
+                          requests_queue=requests_queue)
         new_engines.update({version: engine})
     model_name = "test"
     versions_statuses = {}
@@ -84,25 +106,32 @@ def get_fake_model():
                            batch_size_param=batch_size_param,
                            shape_param=shape_param,
                            version_policy_filter=lambda versions: versions[:],
-                           versions_statuses=versions_statuses)
+                           versions_statuses=versions_statuses,
+                           plugin_config=None, target_device="CPU",
+                           num_ireq=1)
     return new_model
 
 
 @pytest.fixture
 def get_fake_ir_engine():
     mapping_config = 'mapping_config.json'
-    exec_net = None
+    exec_net = MockedExecNet()
     net = MockedNet(
         inputs={DEFAULT_INPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
         outputs={DEFAULT_OUTPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')})
     plugin = None
     batching_info = BatchingInfo(None)
     shape_info = ShapeInfo(None, net.inputs)
+    requests_queue = queue.Queue()
+    free_ireq_index_queue = queue.Queue(maxsize=1)
+    free_ireq_index_queue.put(0)
     engine = IrEngine(model_name='test', model_version=1,
                       mapping_config=mapping_config, exec_net=exec_net,
                       net=net, plugin=plugin, batching_info=batching_info,
-                      shape_info=shape_info
-                      )
+                      shape_info=shape_info, target_device="CPU",
+                      free_ireq_index_queue=free_ireq_index_queue,
+                      plugin_config=None, num_ireq=1,
+                      requests_queue=requests_queue)
     return engine
 
 
