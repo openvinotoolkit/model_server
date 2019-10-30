@@ -76,8 +76,8 @@ class IrEngine():
 
         logger.info("Matched keys for model: {}".format(self.model_keys))
 
-        self.run_inference_service = True
-        self.inference_thread = Thread(target=self.start_inference_service)
+        self.engine_active = True
+        self.inference_thread = Thread(target=self.start_inference_thread)
         self.inference_thread.daemon = True
         self.inference_thread.start()
 
@@ -187,10 +187,10 @@ class IrEngine():
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-    def start_inference_service(self):
+    def start_inference_thread(self):
         logger.debug("Starting inference service for model {} version {}"
                      .format(self.model_name, self.model_version))
-        while self.run_inference_service:
+        while self.engine_active:
             try:
                 request = self.requests_queue.get(timeout=GLOBAL_CONFIG[
                     'engine_requests_queue_timeout'])
@@ -216,7 +216,7 @@ class IrEngine():
                      .format(self.model_name, self.model_version))
 
     def stop_inference_service(self):
-        self.run_inference_service = False
+        self.engine_active = False
         self.inference_thread.join()
 
     def suppress_inference(self):
