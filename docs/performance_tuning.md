@@ -11,7 +11,7 @@ it might help to reduce the numbers precisions in the json message with a comman
 
 OpenVINO Model Server can be scaled horizontally by adding more instances of the service and including any type
 of the load-balancing. Beside scaling the inference across multiple nodes, it is also advantageous for the throughout 
-results, to multiple the instances on a single machine. 
+results, to multiply the instances on a single machine. 
 
 It could be easily accomplished in Kubernetes by setting a deployment configuration with many replicas. In case 
 of latency optimization, create the replicas with high CPU allocation. When throughput is most important, add
@@ -34,7 +34,8 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 Read about available parameters on [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
 
-While passing the plugin configuration, omit the `KEY_` phase. Example docker command with setting `KEY_CPU_THROUGHPUT_STREAMS` to `KEY_CPU_THROUGHPUT_NUMA`:
+While passing the plugin configuration, omit the `KEY_` phase. Example docker command, setting `KEY_CPU_THROUGHPUT_STREAMS` parameter
+ to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```
 docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model \
@@ -67,7 +68,7 @@ for model with `nireq` parameter. This parameter defines how many inference oper
 You should have at least as many server workers as inference requests set in `nireq` parameter in your models 
 (**grpc_wokers >= nireq** and **rest_workers >= nireq**).
 
-**Note**: When using CPU plugin, the vertical scalability (adding mode cores to the OVMS instnace) is a bit less efficient 
+**Note**: When using CPU plugin, the vertical scalability (adding mode cores to the OVMS instance) is a bit less efficient 
 then horizontal (adding more smaller OVMS instances). Add more instances if you need to maximize the throughput and you
 don't have restrictions of the number of instances and their RAM usage.
 
@@ -84,7 +85,7 @@ For example if you have one HDDL accelerator with 8x VPUs you can start model se
 ```
 
 **Note** HDDL plugin is not available in the public docker image on [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
-It needs to be built using url to [full OpenVINO binary package](https://github.com/IntelAI/OpenVINO-model-server/blob/r3-readme/docs/docker_container.md#building-the-image).
+It needs to be built using url to [full OpenVINO binary package](docker_container.md#building-the-image).
 
 
 ### Plugin configuration
@@ -95,7 +96,7 @@ They are listed on [supported configuration parameters for CPU Plugin](https://d
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load.
 You can set it with `plugin_config` parameter. 
 
-Example docker command with setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `KEY_CPU_THROUGHPUT_AUTO`:
+Example docker command, setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `KEY_CPU_THROUGHPUT_AUTO`:
 
 ```
 docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model \
