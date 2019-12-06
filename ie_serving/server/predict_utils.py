@@ -128,14 +128,16 @@ prepare_output_as_list
 
 def prepare_output_with_tf(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
-
     for output in model_available_outputs:
+        logger.debug("preparing output:{}".format(
+            output))
+        model_output = model_available_outputs[output]
         response.outputs[output].CopyFrom(
-            tf_contrib_util.make_tensor_proto(inference_output[output],
-                                              shape=inference_output[output].
+            tf_contrib_util.make_tensor_proto(inference_output[model_output],
+                                              shape=inference_output[model_output].
                                               shape,
                                               dtype=dtypes.as_dtype(
                                                   inference_output
-                                                  [output].dtype).
+                                                  [model_output].dtype).
                                               as_datatype_enum))
     return response
