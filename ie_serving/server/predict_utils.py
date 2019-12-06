@@ -133,11 +133,9 @@ def prepare_output_with_tf(inference_output, model_available_outputs):
             output))
         model_output = model_available_outputs[output]
         response.outputs[output].CopyFrom(
-            tf_contrib_util.make_tensor_proto(inference_output[model_output],
-                                              shape=inference_output[model_output].
-                                              shape,
-                                              dtype=dtypes.as_dtype(
-                                                  inference_output
-                                                  [model_output].dtype).
-                                              as_datatype_enum))
+            tf_contrib_util.make_tensor_proto(
+                inference_output[model_output],
+                shape=inference_output[model_output].shape,
+                dtype=dtypes.as_dtype(inference_output[model_output].dtype).
+                as_datatype_enum))
     return response
