@@ -119,9 +119,10 @@ def prepare_output_as_list(inference_output, model_available_outputs):
 
 
 '''
-The function prepare_output_with_tf implements faster serialization mechanizm 
-It returns slightly different format of output but it can be processed 
-by make_ndarray on the client side the same way like with prepare_output_as_list
+The function prepare_output_with_tf implements faster serialization mechanizm
+It returns slightly different format of output but it can be processed
+by make_ndarray on the client side the same way like with
+prepare_output_as_list
 '''
 
 
