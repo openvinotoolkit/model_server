@@ -129,8 +129,6 @@ prepare_output_as_list
 def prepare_output_with_tf(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
     for output in model_available_outputs:
-        logger.debug("preparing output:{}".format(
-            output))
         model_output = model_available_outputs[output]
         response.outputs[output].CopyFrom(
             tf_contrib_util.make_tensor_proto(
