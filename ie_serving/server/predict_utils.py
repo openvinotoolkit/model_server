@@ -122,7 +122,7 @@ def prepare_output_as_list(inference_output, model_available_outputs):
 The function is not used.
 Probably preparing the output would be faster,
 but you need a change of grpc clients.
-
+'''
 def prepare_output_with_tf(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
 
@@ -136,4 +136,4 @@ def prepare_output_with_tf(inference_output, model_available_outputs):
                                                   [output].dtype).
                                               as_datatype_enum))
     return response
-'''
+

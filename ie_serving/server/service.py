@@ -27,7 +27,7 @@ from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
-from ie_serving.server.predict_utils import prepare_output_as_list, \
+from ie_serving.server.predict_utils import prepare_output_with_tf, \
     prepare_input_data, StatusCode, statusCodes
 from ie_serving.server.request import Request
 from ie_serving.server.service_utils import \
@@ -95,7 +95,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             target_engine.free_ireq_index_queue.put(used_ireq_index)
             return predict_pb2.PredictResponse()
         serialization_start_time = datetime.datetime.now()
-        response = prepare_output_as_list(
+        response = prepare_output_with_tf(
             inference_output=inference_output,
             model_available_outputs=target_engine.model_keys['outputs'])
         response.model_spec.name = model_name
