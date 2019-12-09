@@ -1,8 +1,7 @@
-futures
-grpcio
-grpcio-tools
-numpy
-opencv-python
-protobuf
-tensorflow
-tensorflow-serving-api
+futures==3.1.1
+grpcio==1.25.0
+grpcio-tools==1.25.0
+opencv-python==4.1.2.30
+protobuf==3.11.1
+tensorflow==1.14.0
+tensorflow-serving-api==1.14.0
