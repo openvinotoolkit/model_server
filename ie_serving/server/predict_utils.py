@@ -17,6 +17,7 @@
 import falcon
 import numpy as np
 from grpc import StatusCode
+import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2
 from tensorflow.python.framework import tensor_shape
 from tensorflow_serving.apis import predict_pb2
@@ -104,14 +105,7 @@ def prepare_output_as_list(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
     for key, value in model_available_outputs.items():
         if value in inference_output:
-            dtype = dtypes.as_dtype(inference_output[value].dtype)
-            output_tensor = tensor_pb2.TensorProto(
-                dtype=dtype.as_datatype_enum,
-                tensor_shape=tensor_shape.as_shape(
-                    inference_output[value].shape).as_proto())
-            result = inference_output[value].flatten()
-            tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
-                                                               result)
+            output_tensor = tf.make_tensor_proto(inference_output[value])
             response.outputs[key].CopyFrom(output_tensor)
     return response
 
