@@ -20,19 +20,16 @@ from ie_serving import config
 
 
 def test_config_default_values():
-    assert config.DEVICE is "CPU"
-    assert config.CPU_EXTENSION == config.default_cpu_extension
-    assert config.PLUGIN_DIR is None
+    assert config.GLOBAL_CONFIG['cpu_extension'] == \
+           config.default_cpu_extension
+    assert config.GLOBAL_CONFIG['plugin_dir'] is None
 
 
 def test_setting_env_variables():
-    device_test_value = "device_test"
     cpu_extension_test_value = "cpu_extension_test"
     plugin_dir_test_value = "plugin_dir_test"
-    os.environ['DEVICE'] = device_test_value
     os.environ['CPU_EXTENSION'] = cpu_extension_test_value
     os.environ['PLUGIN_DIR'] = plugin_dir_test_value
     importlib.reload(config)
-    assert config.DEVICE == device_test_value
-    assert config.PLUGIN_DIR == plugin_dir_test_value
-    assert config.CPU_EXTENSION == cpu_extension_test_value
+    assert config.GLOBAL_CONFIG['plugin_dir'] == plugin_dir_test_value
+    assert config.GLOBAL_CONFIG['cpu_extension'] == cpu_extension_test_value

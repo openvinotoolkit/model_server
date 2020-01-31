@@ -28,6 +28,7 @@ from ie_serving.server.constants import WRONG_MODEL_SPEC, INVALID_FORMAT, \
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_input_data, statusCodes
+from ie_serving.server.request import Request
 from ie_serving.server.rest_msg_processing import preprocess_json_request, \
     prepare_json_response
 from ie_serving.server.rest_msg_validation import get_input_format
@@ -100,7 +101,6 @@ class GetModelMetadata(object):
             return
 
         target_engine = self.models[model_name].engines[version]
-        target_engine.in_use.acquire()
 
         inputs = target_engine.net.inputs
         outputs = target_engine.net.outputs
@@ -119,7 +119,6 @@ class GetModelMetadata(object):
         response.model_spec.version.value = version
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
-        target_engine.in_use.release()
         resp.status = falcon.HTTP_200
         resp.body = MessageToJson(response)
 
@@ -161,14 +160,13 @@ class Predict():
         inputs = preprocess_json_request(body, input_format,
                                          target_engine.input_key_names)
 
-        start_time = datetime.datetime.now()
+        deserialization_start_time = datetime.datetime.now()
         inference_input, error_message = \
             prepare_input_data(target_engine=target_engine, data=inputs,
                                service_type=REST)
-        deserialization_end_time = datetime.datetime.now()
-        duration = \
-            (deserialization_end_time - start_time).total_seconds() * 1000
-        logger.debug("PREDICT; input deserialization completed; {}; {}; {}ms"
+        duration = (datetime.datetime.now() -
+                    deserialization_start_time).total_seconds() * 1000
+        logger.debug("PREDICT; input deserialization completed; {}; {}; {} ms"
                      .format(model_name, version, duration))
         if error_message is not None:
             resp.status = code = statusCodes['invalid_arg'][REST]
@@ -177,50 +175,29 @@ class Predict():
                          .format(code))
             resp.body = json.dumps(err_out_json)
             return
-        target_engine.in_use.acquire()
-        ###############################################
-        # Reshape network inputs if needed
-        reshape_param = target_engine.detect_shapes_incompatibility(
-            inference_input)
-        if reshape_param is not None:
-            error_message = target_engine.reshape(reshape_param)
-            if error_message is not None:
-                resp.status = falcon.HTTP_400
-                err_out_json = {'error': error_message}
-                resp.body = json.dumps(err_out_json)
-                target_engine.in_use.release()
-                return
-        ##############################################
-        inference_start_time = datetime.datetime.now()
-        inference_output, error_message = target_engine.infer(
-            inference_input)
-        if error_message is not None:
+        inference_request = Request(inference_input)
+        target_engine.requests_queue.put(inference_request)
+        inference_output, used_ireq_index = inference_request.wait_for_result()
+        if type(inference_output) is str:
             resp.status = falcon.HTTP_400
-            err_out_json = {'error': error_message}
+            err_out_json = {'error': inference_output}
             resp.body = json.dumps(err_out_json)
-            target_engine.in_use.release()
+            target_engine.free_ireq_index_queue.put(used_ireq_index)
             return
-        inference_end_time = datetime.datetime.now()
-        target_engine.in_use.release()
-        duration = \
-            (inference_end_time - inference_start_time).total_seconds() * 1000
-        logger.debug("PREDICT; inference execution completed; {}; {}; {}ms"
-                     .format(model_name, version, duration))
+        serialization_start_time = datetime.datetime.now()
         for key, value in inference_output.items():
             inference_output[key] = value.tolist()
 
         response = prepare_json_response(
             OUTPUT_REPRESENTATION[input_format], inference_output,
             target_engine.model_keys['outputs'])
-
         resp.status = falcon.HTTP_200
         resp.body = json.dumps(response)
-        serialization_end_time = datetime.datetime.now()
-        duration = \
-            (serialization_end_time -
-             inference_end_time).total_seconds() * 1000
+        duration = (datetime.datetime.now() -
+                    serialization_start_time).total_seconds() * 1000
         logger.debug("PREDICT; inference results serialization completed;"
-                     " {}; {}; {}ms".format(model_name, version, duration))
+                     " {}; {}; {} ms".format(model_name, version, duration))
+        target_engine.free_ireq_index_queue.put(used_ireq_index)
         return
 
 

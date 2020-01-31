@@ -73,15 +73,13 @@ with Movidius VPU support installed.
 In order to do that follow [OpenVINO installation instruction](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux).
 Don't forget about [additional steps for NCS](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux#inpage-nav-4-2).
 
-Before starting server, you need to specify that you want to load model on Neural Compute 
-Stick for inference execution. You can do that by setting environment variable <i>DEVICE</i> to <i>MYRIAD</i>. If it's not 
+On server startup, you need to specify that you want to load model on Neural Compute 
+Stick for inference execution. You can do that by setting `target_device` parameter to `MYRIAD`. If it's not 
 specified, OpenVINO will try to load model on CPU.
 
 Example:
 ```
-export DEVICE=MYRIAD
-
-ie_serving model --model_path /opt/model --model_name my_model --port 9001
+ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 You can also [run it in Docker container](docker_container.md#starting-docker-container-with-ncs)
@@ -101,20 +99,19 @@ with Intel® Vision Accelerator Design with Intel® Movidius™ VPU support inst
 In order to do that follow [OpenVINO installation instruction](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux).
 Don't forget about [additional steps for Intel® Movidius™ VPU](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_linux.html#install-VPU).
 
-Before starting server, you need to specify that you want to load model on
-HDDL card for inference execution. You can do that by setting environment
-variable <i>DEVICE</i> to <i>HDDL</i>. If it's not 
+On server startup, you need to specify that you want to load model on
+HDDL card for inference execution. You can do that by setting `target_device` parameter to `HDDL`. If it's not 
 specified, OpenVINO will try to load model on CPU.
 
 Example:
 ```
-export DEVICE=HDDL
-
-ie_serving model --model_path /opt/model --model_name my_model --port 9001
+ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
+
+Check out our recommendation for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
 You can also [run it in Docker container](docker_container.md#starting-docker-container-with-hddl)
 
-**Note**: Checkout [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+**Note**: Check out [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
 Look at VPU Plugins to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
 and convert your model to desired format.

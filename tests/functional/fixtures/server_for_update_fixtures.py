@@ -27,7 +27,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007 --rest_port 5562"
+              "--port 9007 --rest_port 5562 --grpc_workers 1 --nireq 1"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-latest',

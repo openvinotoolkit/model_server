@@ -14,15 +14,20 @@
 # limitations under the License.
 #
 
+from tensorflow  import __version__ as tf_version
+if tf_version.split(".")[0] == "2":
+    from tensorflow.compat.v1 import make_ndarray
+else:  # TF version 1.x
+    from tensorflow.contrib.util import make_ndarray
+
 import falcon
-import numpy as np
 from grpc import StatusCode
+import numpy as np
 from tensorflow.core.framework import tensor_pb2
 from tensorflow.python.framework import tensor_shape
 from tensorflow_serving.apis import predict_pb2
 from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
-from tensorflow.compat.v1 import make_ndarray
 
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 from ie_serving.server.constants import \

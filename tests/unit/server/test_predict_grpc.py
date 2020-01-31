@@ -23,9 +23,10 @@ from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
 
 def test_predict_successful(mocker, get_grpc_service_for_predict,
                             get_fake_model):
-    infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
+    results_mock = mocker.patch(
+        'ie_serving.server.request.Request.wait_for_result')
     expected_response = np.ones(shape=(2, 2))
-    infer_mocker.return_value = ({'output': expected_response}, None)
+    results_mock.return_value = ({'output': expected_response}, 0)
 
     request = get_fake_request(model_name='test',
                                data_shape=(1, 1, 1), input_blob='input')
@@ -44,9 +45,10 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
 
 
 def test_predict_successful_version(mocker, get_grpc_service_for_predict):
-    infer_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.infer')
+    results_mock = mocker.patch(
+        'ie_serving.server.request.Request.wait_for_result')
     expected_response = np.ones(shape=(2, 2))
-    infer_mocker.return_value = ({'output': expected_response}, None)
+    results_mock.return_value = ({'output': expected_response}, None)
     requested_version = 1
     request = get_fake_request(model_name='test', data_shape=(1, 1, 1),
                                input_blob='input', version=requested_version)

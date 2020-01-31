@@ -65,14 +65,10 @@ def test_delete_engine(get_fake_model):
     model = get_fake_model
     version = 2
     assert version in model.engines
-    model.engines[version].in_use.acquire()
     process_thread = threading.Thread(target=model._delete_engine,
                                       args=[version])
     process_thread.start()
-    time.sleep(1)
-    assert version in model.engines
-    model.engines[version].in_use.release()
-    time.sleep(2)
+    time.sleep(7)
     assert version not in model.engines
     assert model.versions_statuses[version].state == ModelVersionState.END
 
@@ -94,6 +90,7 @@ def test_get_version_metadata(mocker):
         "ie_serving.models.model.Model.get_versions_attributes")
     attributes_mock.return_value = test_attributes
     output_attributes, output_versions = Model.get_version_metadata(
-        'test', None, None, lambda versions: versions[:])
+        'test', None, None, lambda versions: versions[:], num_ireq=1,
+        target_device='CPU', plugin_config=None)
     assert output_attributes == test_attributes
     assert output_versions == [1]

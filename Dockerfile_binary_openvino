@@ -8,7 +8,7 @@ ARG DL_DIR=/tmp
 ARG https_proxy
 
 ENV TEMP_DIR $TEMP_DIR
-
+ARG DLDT_PACKAGE_URL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cpio \
     python3-dev \
@@ -17,10 +17,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     usbutils \
     virtualenv \
     libboost-filesystem1.58.0 \
-    libboost-thread1.58.0
+    libboost-thread1.58.0 \
+    libjson-c2 \
+    wget
 
-ADD l_openvino_toolkit*.tgz $TEMP_DIR/
-RUN cd $TEMP_DIR/l_openvino_toolkit* && \
+RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
+    tar -zxf l_openvino_toolkit*.tgz && \
+    cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     case $(pwd) in \
         *openvino_toolkit_p_2019.2) \

@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import datetime
 import json
+import queue
 from unittest import mock
 
 import pytest
@@ -22,9 +23,27 @@ from config import RESHAPE_TEST_CASES, \
     SCAN_INPUT_SHAPES_TEST_CASES, DETECT_SHAPES_INCOMPATIBILITY_TEST_CASES
 from conftest import MockedNet, MockedIOInfo
 
-from ie_serving.models.ir_engine import IrEngine
+from ie_serving.models import InferenceStatus
+from ie_serving.models.ir_engine import IrEngine, inference_callback
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
+from ie_serving.server.request import Request
+
+
+@pytest.mark.parametrize("status", [InferenceStatus.OK, InferenceStatus.ERROR])
+def test_inference_callback(get_fake_ir_engine, status):
+    py_data = {
+        'ir_engine': get_fake_ir_engine,
+        'request': Request({}),
+        'ireq_index': 0,
+        'start_time': datetime.datetime.now()
+    }
+    inference_callback(status, py_data)
+    if status == InferenceStatus.OK:
+        assert py_data['request'].result == {}
+    else:
+        assert py_data['request'].result == \
+               "Error occurred during inference execution"
 
 
 def test_init_class():
@@ -35,14 +54,22 @@ def test_init_class():
     batching_info = BatchingInfo(None)
     shape_info = ShapeInfo(None, net.inputs)
     plugin = None
+    requests_queue = queue.Queue()
+    free_ireq_index_queue = queue.Queue(maxsize=1)
+    free_ireq_index_queue.put(0)
     engine = IrEngine(model_name='test', model_version=1,
                       mapping_config=mapping_config,
                       exec_net=exec_net,
                       net=net, plugin=plugin, batching_info=batching_info,
-                      shape_info=shape_info)
+                      shape_info=shape_info, num_ireq=1,
+                      free_ireq_index_queue=free_ireq_index_queue,
+                      requests_queue=requests_queue,
+                      target_device='CPU',
+                      plugin_config=None)
     assert exec_net == engine.exec_net
     assert list(net.inputs.keys()) == engine.input_tensor_names
     assert list(net.outputs.keys()) == engine.output_tensor_names
+    assert engine.free_ireq_index_queue.qsize() == 1
 
 
 def test_build_device_cpu(mocker):
@@ -58,14 +85,13 @@ def test_build_device_cpu(mocker):
                        model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
                        batch_size_param=batch_size_param,
-                       shape_param=shape_param)
+                       shape_param=shape_param, num_ireq=1,
+                       target_device='CPU', plugin_config=None)
         cpu_extension_mock.assert_called_once_with()
 
 
 def test_build_device_other(mocker):
     mocker.patch("ie_serving.models.ir_engine.IEPlugin")
-    device_mocker = mocker.patch("ie_serving.models.ir_engine.DEVICE")
-    device_mocker.return_value = 'other'
     cpu_extension_mock = mocker.patch(
         "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
     model_xml = 'model1.xml'
@@ -77,7 +103,8 @@ def test_build_device_other(mocker):
                        model_bin=model_bin, model_xml=model_xml,
                        mapping_config=mapping_config,
                        batch_size_param=batch_size_param,
-                       shape_param=shape_param)
+                       shape_param=shape_param, num_ireq=1,
+                       target_device='other', plugin_config=None)
         assert not cpu_extension_mock.assert_called_once_with()
 
 

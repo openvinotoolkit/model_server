@@ -5,23 +5,22 @@
 OpenVINO&trade; Model Server docker image can be built using various Dockerfiles:
 - [Dockerfile](../Dockerfile) - based on ubuntu with [apt-get package](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_apt.html) 
 - [Dockerfile_intelpython](../Dockerfile_intelpython) - with intelpython base image and Inference Engine compiled from [dldt sources](https://github.com/opencv/dldt) 
+- [Dockerfile_clearlinux](../Dockerfile_clearlinux) - [clearlinux](https://clearlinux.org/) based image with [DLDT package](https://github.com/clearlinux-pkgs/dldt) included
 - [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
-The latter option requires downloaded [OpenVINO&trade; toolkit](https://software.intel.com/en-us/openvino-toolkit/choose-download) 
-and placed in the repository root folder along the Dockerfile. A registration process is required to download the toolkit.
-It is recommended to use online installation package because this way the resultant image will be smaller. 
-An example file looks like: `l_openvino_toolkit_p_2019.2.242_online.tgz`.
-
-
-From the root of the git repository, execute the commands:
+The last option requires URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
+Use this URL as an argument in the `make` command as shown in example below:
 
 ```bash
-cp (download path)/l_openvino_toolkit_p_2019.1.094_online.tgz . 
-make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy
+make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy dldt_package_url=<url-to-openvino-package-after-registration>/l_openvino_toolkit_p_2019.3.376.tgz
 ```
 or
 ```bash
 make docker_build_apt_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
+```
+or
+```bash
+make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 or
 ```bash
@@ -127,8 +126,13 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 
 ```bash
 usage: ie_serving model [-h] --model_name MODEL_NAME --model_path MODEL_PATH
-                        [--batch_size BATCH_SIZE] [--model_version_policy MODEL_VERSION_POLICY] [--port PORT]
-                        [--rest_port PORT] 
+                        [--batch_size BATCH_SIZE] [--shape SHAPE]
+                        [--port PORT] [--rest_port REST_PORT]
+                        [--model_version_policy MODEL_VERSION_POLICY]
+                        [--grpc_workers GRPC_WORKERS]
+                        [--rest_workers REST_WORKERS] [--nireq NIREQ]
+                        [--target_device TARGET_DEVICE]
+                        [--plugin_config PLUGIN_CONFIG]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -137,13 +141,26 @@ optional arguments:
   --model_path MODEL_PATH
                         absolute path to model,as in tf serving
   --batch_size BATCH_SIZE
-                        sets models batchsize, int value or auto
-  --shape SHAPE
-                        sets models shape (model must support reshaping). If set, batch_size parameter is ignored.                      
-  --model_version_policy MODEL_VERSION_POLICY 
-                        sets model version policy for model
+                        sets models batchsize, int value or auto. This
+                        parameter will be ignored if shape is set
+  --shape SHAPE         sets models shape (model must support reshaping). If
+                        set, batch_size parameter is ignored.
   --port PORT           gRPC server port
-  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
+  --rest_port REST_PORT
+                        REST server port, the REST server will not be started
+                        if rest_port is blank or set to 0
+  --model_version_policy MODEL_VERSION_POLICY
+                        model version policy
+  --grpc_workers GRPC_WORKERS
+                        Number of workers in gRPC server. Default: 1
+  --rest_workers REST_WORKERS
+                        Number of workers in REST server - has no effect if
+                        rest port not set. Default: 1
+  --nireq NIREQ         Number of parallel inference requests for model. Default: 1
+  --target_device TARGET_DEVICE
+                        Target device to run the inference, default: CPU
+  --plugin_config PLUGIN_CONFIG
+                        A dictionary of plugin configuration keys and their values
 
 ```
 
@@ -227,14 +244,17 @@ It uses `json` format as shown in the example below:
              "shape": {
                 "input1": "(1,3,200,200)",
                 "input2": "(1,3,50,50)"
-             }
+             },
+             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       },
       {
          "config":{
              "name":"model_name5",
              "base_path":"s3://bucket/models/model5",
-             "shape": "auto"
+             "shape": "auto",
+             "nireq": 32,
+             "target_device": "HDDL",
          }
       }
    ]
@@ -263,14 +283,24 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-
 
 Below is the explanation of the `ie_serving config` parameters
 ```bash
-usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT] [--rest_port PORT]
+usage: ie_serving config [-h] --config_path CONFIG_PATH [--port PORT]
+                         [--rest_port REST_PORT] [--grpc_workers GRPC_WORKERS]
+                         [--rest_workers REST_WORKERS]
 
 optional arguments:
   -h, --help            show this help message and exit
   --config_path CONFIG_PATH
                         absolute path to json configuration file
   --port PORT           gRPC server port
-  --rest_port PORT      REST server port, the REST server will not be started if rest_port is blank or set to 0
+  --rest_port REST_PORT
+                        REST server port, the REST server will not be started
+                        if rest_port is blank or set to 0
+  --grpc_workers GRPC_WORKERS
+                        Number of workers in gRPC server
+  --rest_workers REST_WORKERS
+                        Number of workers in REST server - has no effect if
+                        rest_port is not set
+
 ```
 
 ## Starting docker container with NCS
@@ -278,7 +308,7 @@ optional arguments:
 Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
 version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
 You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
-- `make docker_build_bin` 
+- `make docker_build_bin dldt_package_url=<url>` 
 - `make docker_build_apt_ubuntu`
 - `make docker_build_src_intelpython`
 
@@ -310,17 +340,13 @@ rules:
 To start server with NCS you can use command similar to:
 
 ```
-docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -e DEVICE=MYRIAD -p 9001:9001 \
-ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
 
 `-v /dev:/dev` mounts USB drives.
- 
- <i>DEVICE</i> environment variable indicates that model will
- be loaded on Neural Compute Stick.
-
 
 A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
 chooses to which one the model is loaded. 
@@ -330,7 +356,7 @@ chooses to which one the model is loaded.
 Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
 is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin
 , using OpenVINO toolkit binary distribution:
-- `make docker_build_bin` 
+- `make docker_build_bin dldt_package_url=<url>` 
 
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's  required to set up environment 
@@ -340,18 +366,16 @@ In order to run container that is using HDDL accelerator, _hddldaemon_ must
 To start server with HDDL you can use command similar to:
 
 ```
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -e DEVICE=HDDL -p 9001:9001 \
-ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
 
 `--device=/dev/ion:/dev/ion` mounts the accelerator.
 
 `-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
  host machine
- 
- <i>DEVICE</i> environment variable indicates that model will
- be loaded on HDDL device.
 
+Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
 ## Batch Processing
 
