@@ -14,15 +14,10 @@
 # limitations under the License.
 #
 
-from tensorflow  import __version__ as tf_version
-if tf_version.split(".")[0] == "2":
-    from tensorflow.compat.v1 import make_ndarray
-else:  # TF version 1.x
-    from tensorflow.contrib.util import make_ndarray
-
 from concurrent import futures
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import grpc
+import numpy as np
 import sys
 from tensorflow.core.framework import types_pb2
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -34,6 +29,13 @@ from ie_serving.logger import get_logger
 from ie_serving.server.rest_service import create_rest_api
 from ie_serving.server.service import PredictionServiceServicer, \
     ModelServiceServicer
+
+from tensorflow import __version__ as tf_version
+if tf_version.split(".")[0] == "2":
+    from tensorflow.compat.v1 import make_ndarray
+else:  # TF version 1.x
+    from tensorflow.contrib.util import make_ndarray
+
 
 logger = get_logger(__name__)
 

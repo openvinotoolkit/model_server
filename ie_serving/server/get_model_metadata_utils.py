@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from tensorflow  import __version__ as tf_version
+from tensorflow import __version__ as tf_version
 if tf_version.split(".")[0] == "2":
     from tensorflow.compat.v1.saved_model import build_signature_def
     from tensorflow.compat.v1.saved_model import build_tensor_info
