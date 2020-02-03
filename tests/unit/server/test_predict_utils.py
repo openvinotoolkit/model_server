@@ -16,7 +16,7 @@
 
 from ie_serving.server import predict_utils
 import pytest
-from tensorflow.compat.v1 import make_ndarray
+from tensorflow import make_ndarray
 import numpy as np
 
 

@@ -16,8 +16,7 @@
 
 import grpc
 import numpy as np
-from tensorflow.compat.v1.make_tensor_proto import make_tensor_proto, \
-    make_ndarray
+from tensorflow import make_tensor_proto, make_ndarray
 import classes
 import datetime
 import argparse

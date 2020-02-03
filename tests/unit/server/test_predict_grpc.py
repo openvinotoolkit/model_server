@@ -16,7 +16,7 @@
 
 import grpc
 import numpy as np
-from tensorflow.compat.v1 import make_ndarray
+from tensorflow import make_ndarray
 from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
     predict_pb2
 

@@ -16,10 +16,10 @@
 
 from tensorflow import __version__ as tf_version
 if tf_version.split(".")[0] == "2":
-    from tensorflow.compat.v1.saved_model import build_signature_def
-    from tensorflow.compat.v1.saved_model import build_tensor_info
+    from tensorflow.saved_model import build_signature_def
+    from tensorflow.saved_model import build_tensor_info
     from tensorflow.python.ops import array_ops
-    from tensorflow.compat.v1 import disable_eager_execution
+    from tensorflow import disable_eager_execution
 else:  # TF version 1.x
     from tensorflow.python.saved_model.signature_def_utils import \
         build_signature_def

@@ -20,8 +20,7 @@ import datetime
 import grpc
 import numpy as np
 import os
-from tensorflow.compat.v1.make_tensor_proto import make_tensor_proto, \
-    make_ndarray
+from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics

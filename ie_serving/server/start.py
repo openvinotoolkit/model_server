@@ -32,7 +32,7 @@ from ie_serving.server.service import PredictionServiceServicer, \
 
 from tensorflow import __version__ as tf_version
 if tf_version.split(".")[0] == "2":
-    from tensorflow.compat.v1 import make_ndarray
+    from tensorflow import make_ndarray
 else:  # TF version 1.x
     from tensorflow.contrib.util import make_ndarray
 
