@@ -15,15 +15,13 @@
 #
 
 from tensorflow import __version__ as tf_version
+from tensorflow.python.saved_model.signature_def_utils import \
+    build_signature_def
+from tensorflow.python.saved_model.utils import build_tensor_info
 if tf_version.split(".")[0] == "2":
-    from tensorflow.python.saved_model.utils_impl import build_tensor_info
-    from tensorflow.python.ops import array_ops
     from tensorflow.python.ops import array_ops
     from tensorflow.python.framework.ops import disable_eager_execution
 else:  # TF version 1.x
-    from tensorflow.python.saved_model.signature_def_utils import \
-        build_signature_def
-    from tensorflow.python.saved_model.utils import build_tensor_info
     from tensorflow.python.ops import gen_array_ops as array_ops
 
 type_mapping = {
