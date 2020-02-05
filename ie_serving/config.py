@@ -36,6 +36,12 @@ GLOBAL_CONFIG = {
                                             None),
     'engine_requests_queue_timeout': os.getenv(
         'ENGINE_REQUESTS_QUEUE_TIMEOUT', 5),
+
+    # legacy option introduced to keep older solutions available:
+    # 0 - legacy off, use recommended functions
+    # 1 - legacy on, use deprecated functions
+    # By default set ot 0, to use recommended settings
+    'configuration': os.getenv('CONFIGURATION', 'latest')
 }
 
 S3_CONFIG = {

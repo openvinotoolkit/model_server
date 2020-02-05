@@ -240,6 +240,8 @@ def main():
     logger.info("Log level set: {}".format(LOGGER_LVL))
     logger.debug("ie_serving_py arguments: {}".format(args))
     logger.debug("configured environment variables: {}".format(os.environ))
+    if GLOBAL_CONFIG['configuration'] == 'legacy':
+        logger.warning("Running in legacy configuration")
     args.func(args)
 
 
