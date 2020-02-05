@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2019-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-from tensorflow.contrib.util import make_ndarray
-from tensorflow.contrib.util import make_tensor_proto
+from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2, get_model_metadata_pb2, \
     get_model_status_pb2
 

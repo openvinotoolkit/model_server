@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2019-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import datetime
 import grpc
 import numpy as np
 import os
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics
@@ -73,14 +73,14 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     request.model_spec.name = "face-detection"
     img = imgs[x:(x + batch_size)]
     print("\nRequest shape", img.shape)
-    request.inputs["data"].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+    request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
     end_time = datetime.datetime.now()
 
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = tf_contrib_util.make_ndarray(result.outputs["detection_out"])
+    output = make_ndarray(result.outputs["detection_out"])
     print("Response shape", output.shape)
     for y in range(0,img.shape[0]):  # iterate over responses from all images in the batch
         img_out = img[y,:,:,:]

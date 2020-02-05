@@ -86,7 +86,8 @@ COPY requirements.txt /ie-serving-py/
 RUN conda create --name myenv -y
 ENV PATH /opt/conda/envs/myenv/bin:$PATH
 
-RUN pip --no-cache-dir install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip --no-cache-dir install -r requirements.txt
 
 COPY start_server.sh setup.py version /ie-serving-py/
 RUN sed -i '/activate/d' start_server.sh

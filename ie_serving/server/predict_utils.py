@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Intel Corporation
+# Copyright (c) 2018-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,19 +15,22 @@
 #
 
 import falcon
-import numpy as np
 from grpc import StatusCode
+import numpy as np
 from tensorflow.core.framework import tensor_pb2
 from tensorflow.python.framework import tensor_shape
 from tensorflow_serving.apis import predict_pb2
 from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
-import tensorflow.contrib.util as tf_contrib_util
-# import tensorflow.contrib.util as tf_contrib_util
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 from ie_serving.server.constants import \
     INVALID_INPUT_KEY, INVALID_SHAPE, INVALID_BATCHSIZE, GRPC, REST
 from ie_serving.logger import get_logger
+from tensorflow import __version__ as tf_version
+if tf_version.split(".")[0] == "2":
+    from tensorflow import make_ndarray
+else:  # TF version 1.x
+    from tensorflow.contrib.util import make_ndarray
 
 logger = get_logger(__name__)
 
@@ -55,8 +58,7 @@ def prepare_input_data(target_engine, data, service_type):
         tensor_name = target_engine.model_keys['inputs'][requested_input_blob]
         if service_type == GRPC:
             try:
-                tensor_input = tf_contrib_util. \
-                    make_ndarray(data[requested_input_blob])
+                tensor_input = make_ndarray(data[requested_input_blob])
             except Exception as e:
                 message = str(e)
                 logger.debug("PREDICT prepare_input_data make_ndarray error: "

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Intel Corporation
+# Copyright (c) 2018-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import grpc
 import numpy as np
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow import make_tensor_proto, make_ndarray
 import classes
 import datetime
 import argparse
@@ -101,7 +101,7 @@ while iteration <= iterations:
         img = imgs[x:(x + batch_size)]
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
-        request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
@@ -113,7 +113,7 @@ while iteration <= iterations:
             exit(1)
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+        output = make_ndarray(result.outputs[args['output_name']])
 
         nu = np.array(output)
         # for object classification models show imagenet class

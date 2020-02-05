@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2019-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import grpc
 import numpy as np
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow import make_tensor_proto, make_ndarray
 import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
@@ -97,7 +97,7 @@ for line in lines:
         exit(1)
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = tf_contrib_util.make_ndarray(result.outputs[args['output_name']])
+    output = make_ndarray(result.outputs[args['output_name']])
     nu = np.array(output)
     # for object classification models show imagenet class
     print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration), 2),

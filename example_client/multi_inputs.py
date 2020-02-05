@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2019-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,9 +36,8 @@ import os
 import cv2
 import grpc
 import threading
-import numpy as np
 import logging as log
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow import make_tensor_proto, make_ndarray
 
 # global data (shared between threads & main)
 CLASSES = ["None", "Pedestrian", "Vehicle", "Bike", "Other"]
@@ -181,7 +180,7 @@ def thread_function(thr_id, network_name, input_layer, output_layer, input_dimen
     inf_time = time()
     # send the input as protobuf
     request.inputs[input_layer].CopyFrom(
-        tf_contrib_util.make_tensor_proto(image, shape=None))
+        make_tensor_proto(image, shape=None))
 
     try:
       result = stub.Predict(request, 10.0)
@@ -192,7 +191,7 @@ def thread_function(thr_id, network_name, input_layer, output_layer, input_dimen
     duration = time() - inf_time
 
     # decode the received output as protobuf
-    res = tf_contrib_util.make_ndarray(result.outputs[output_layer])
+    res = make_ndarray(result.outputs[output_layer])
 
     if not res.any():
       log.error('Thr{}: Predictions came back with wrong output layer name'.format(thr_id))

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,28 @@
 # limitations under the License.
 #
 
-import sys
-import time
 from concurrent import futures
-
+from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 import grpc
 import numpy as np
-import tensorflow.contrib.util as tf_contrib_util
-from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
+import sys
 from tensorflow.core.framework import types_pb2
 from tensorflow_serving.apis import model_service_pb2_grpc
 from tensorflow_serving.apis import prediction_service_pb2_grpc
+import time
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.server.rest_service import create_rest_api
 from ie_serving.server.service import PredictionServiceServicer, \
     ModelServiceServicer
+
+from tensorflow import __version__ as tf_version
+if tf_version.split(".")[0] == "2":
+    from tensorflow import make_ndarray
+else:  # TF version 1.x
+    from tensorflow.contrib.util import make_ndarray
+
 
 logger = get_logger(__name__)
 
@@ -40,9 +45,8 @@ GIGABYTE = 1024 ** 3
 
 def initialize_tf():
     initialization_list = np.zeros((1, 1), dtype=float)
-    tf_contrib_util.make_ndarray(initialization_list,
-                                 shape=initialization_list.shape,
-                                 dtype=types_pb2.DT_FLOAT)
+    make_ndarray(initialization_list, shape=initialization_list.shape,
+                 dtype=types_pb2.DT_FLOAT)
     pass
 
 

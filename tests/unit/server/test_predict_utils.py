@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2018-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 from ie_serving.server import predict_utils
 import pytest
-import tensorflow.contrib.util as tf_contrib_util
+from tensorflow import make_ndarray
 import numpy as np
 
 
@@ -42,8 +42,7 @@ def test_prepare_output_as_list(outputs_names, shapes, types):
 
     x = 0
     for key, value in outputs_names.items():
-        temp_output = tf_contrib_util.make_ndarray(output.outputs
-                                                   [key])
+        temp_output = make_ndarray(output.outputs[key])
         assert temp_output.shape == shapes[x]
         assert temp_output.dtype == types[x]
         x += 1
