@@ -103,13 +103,6 @@ def prepare_input_data(target_engine, data, service_type):
     return inference_input, None
 
 
-def prepare_output(inference_output, model_available_outputs):
-    if GLOBAL_CONFIG['serialization_method'] == 'legacy':
-        return _prepare_output_as_list(inference_output,
-                                       model_available_outputs)
-    return _prepare_output_with_tf(inference_output, model_available_outputs)
-
-
 def _prepare_output_as_list(inference_output, model_available_outputs):
     response = predict_pb2.PredictResponse()
     for key, value in model_available_outputs.items():
@@ -141,3 +134,11 @@ def _prepare_output_with_tf(inference_output, model_available_outputs):
         response.outputs[output].CopyFrom(
             make_tensor_proto(inference_output[model_output]))
     return response
+
+
+# Serialization method selection
+prepare_output = None
+if GLOBAL_CONFIG['serialization_method'] == 'legacy':
+    prepare_output = _prepare_output_as_list
+else:
+    prepare_output = _prepare_output_with_tf
