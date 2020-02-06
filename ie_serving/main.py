@@ -240,8 +240,8 @@ def main():
     logger.info("Log level set: {}".format(LOGGER_LVL))
     logger.debug("ie_serving_py arguments: {}".format(args))
     logger.debug("configured environment variables: {}".format(os.environ))
-    if GLOBAL_CONFIG['configuration'] == 'legacy':
-        logger.warning("Running in legacy configuration")
+    if GLOBAL_CONFIG['serialization_method'] == 'legacy':
+        logger.warning("Legacy method used in inference results serialization")
     args.func(args)
 
 

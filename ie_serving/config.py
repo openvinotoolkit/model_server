@@ -36,8 +36,11 @@ GLOBAL_CONFIG = {
                                             None),
     'engine_requests_queue_timeout': os.getenv(
         'ENGINE_REQUESTS_QUEUE_TIMEOUT', 5),
-
-    'configuration': os.getenv('CONFIGURATION', 'latest')
+    # Serialization method option indicates usage of deprecated or recommended
+    # serialization method.
+    # 'latest' - default, recommended value with faster serialization method.
+    # 'legacy' - slower method, compatible with tf-serving output format
+    'serialization_method': os.getenv('SERIALIZATION', 'latest')
 }
 
 S3_CONFIG = {

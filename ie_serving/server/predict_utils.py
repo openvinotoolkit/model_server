@@ -104,8 +104,9 @@ def prepare_input_data(target_engine, data, service_type):
 
 
 def prepare_output(inference_output, model_available_outputs):
-    if GLOBAL_CONFIG['configuration'] == 'legacy':
-        return _prepare_output_as_list(inference_output, model_available_outputs)
+    if GLOBAL_CONFIG['serialization_method'] == 'legacy':
+        return _prepare_output_as_list(inference_output,
+                                       model_available_outputs)
     return _prepare_output_with_tf(inference_output, model_available_outputs)
 
 

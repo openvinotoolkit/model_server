@@ -96,7 +96,8 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             return predict_pb2.PredictResponse()
         serialization_start_time = datetime.datetime.now()
         response = prepare_output(inference_output=inference_output,
-                                  model_available_outputs=target_engine.model_keys['outputs'])
+                                  model_available_outputs=target_engine.
+                                  model_keys['outputs'])
         response.model_spec.name = model_name
         response.model_spec.version.value = version
         response.model_spec.signature_name = SIGNATURE_NAME

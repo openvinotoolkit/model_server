@@ -226,6 +226,19 @@ You can parse the logs to analyze: volume of requests, processing statistics and
 *Classify*, *Regress* and *MultiInference* are planned to be added.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
 
+## Serialization configuration
+
+Model server supports two different output serialization methods. 
+
+* latest - default, faster one, but it's output format is slightly different than in tf-serving.
+* legacy - slower, but compatible with tf-serving output format and has been used as default
+in model server up to 2019 R3 version.
+
+To use slower version, used in OVMS 2019 R3 and earlier releases please specify environment variable:
+`SERIALIZATION=legacy`
+
+**Note:** If you're using tensorflow's `make_ndarray` to read output
+ in your client application, then the transition between those methods is transparent.
 ## Contribution
 
 ### Contribution rules
