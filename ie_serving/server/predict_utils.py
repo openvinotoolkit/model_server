@@ -102,13 +102,15 @@ def prepare_input_data(target_engine, data, service_type):
         inference_input[tensor_name] = tensor_input
     return inference_input, None
 
+
 '''
 function _prepare_output_as_AppendArrayToTensorProto returns inference
 results in a form of flattened list of array elements. It is serialized
 using tensor_util._NP_TO_APPEND_FN function which employs module
 fast_tensor_util and functions Append<dtype>ArrayToTensorProto.
-Despite the module name, it is slower from make_tensor_proto. 
+Despite the module name, it is slower from make_tensor_proto.
 '''
+
 
 def _prepare_output_as_AppendArrayToTensorProto(
         inference_output,
@@ -130,7 +132,7 @@ def _prepare_output_as_AppendArrayToTensorProto(
 
 
 '''
-The function prepare_output_with_make_tensor_proto implements faster 
+The function prepare_output_with_make_tensor_proto implements faster
 serialization mechanism. For most of the models it will return
 data in string format converted via numpy.toString calls.
 On the client side the inference response can be deserialized using

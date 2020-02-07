@@ -47,7 +47,7 @@ def test_prepare_output_as_list(serialization_function, outputs_names, shapes,
         outputs[value] = np.ones(shape=shapes[x], dtype=types[x])
         x += 1
 
-    output = SERIALIZATION_FUNCTION[serialization_function](
+    output = SERIALIZATION_FUNCTIONS[serialization_function](
         inference_output=outputs, model_available_outputs=outputs_names)
 
     x = 0

@@ -44,7 +44,8 @@ def start_server_single_model(request, get_image, get_test_dir,
             volumes=volumes_dict,
             # In this case, slower,
             # non-default serialization method is used
-            environment=['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
+            environment=[
+                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
             command=command)
     request.addfinalizer(container.kill)
 
