@@ -19,13 +19,17 @@ import pytest
 from tensorflow import make_ndarray
 import numpy as np
 
-SERIALIZATION_METHODS = {
-    'latest': predict_utils._prepare_output_with_tf,
-    'legacy': predict_utils._prepare_output_as_list
+SERIALIZATION_FUNCTIONS = {
+    '_prepare_output_with_make_tensor_proto':
+        predict_utils._prepare_output_with_make_tensor_proto,
+    '_prepare_output_as_AppendArrayToTensorProto':
+        predict_utils._prepare_output_as_AppendArrayToTensorProto
 }
 
 
-@pytest.mark.parametrize("serialization_method", ['latest', 'legacy'])
+@pytest.mark.parametrize("serialization_function",
+                         ['_prepare_output_with_make_tensor_proto',
+                          '_prepare_output_as_AppendArrayToTensorProto'])
 @pytest.mark.parametrize("outputs_names, shapes, types", [
     ({'resnet': 'test'}, [(1, 1)], [np.int32]),
     ({'resnet': 'test'}, [(2, 2)], [np.float32]),
@@ -35,7 +39,7 @@ SERIALIZATION_METHODS = {
     ({'resnet': 'test', 'model': 'tensor'}, [(3, 4), (5, 6, 7)],
      [np.double, np.int32, np.float32])
 ])
-def test_prepare_output_as_list(serialization_method, outputs_names, shapes,
+def test_prepare_output_as_list(serialization_function, outputs_names, shapes,
                                 types):
     outputs = {}
     x = 0
@@ -43,7 +47,7 @@ def test_prepare_output_as_list(serialization_method, outputs_names, shapes,
         outputs[value] = np.ones(shape=shapes[x], dtype=types[x])
         x += 1
 
-    output = SERIALIZATION_METHODS[serialization_method](
+    output = SERIALIZATION_FUNCTION[serialization_function](
         inference_output=outputs, model_available_outputs=outputs_names)
 
     x = 0

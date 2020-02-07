@@ -36,11 +36,15 @@ GLOBAL_CONFIG = {
                                             None),
     'engine_requests_queue_timeout': os.getenv(
         'ENGINE_REQUESTS_QUEUE_TIMEOUT', 5),
-    # Serialization method option indicates usage of deprecated or recommended
-    # serialization method.
-    # 'latest' - default, recommended value with faster serialization method.
-    # 'legacy' - slower method, compatible with tf-serving output format
-    'serialization_method': os.getenv('SERIALIZATION', 'latest')
+
+    # SERIALIZATION_FUNCTION option indicates which function should be
+    # used to serialize the inference results
+    # _prepare_output_with_make_tensor_proto employs make_tensor_proto
+    # function and is recommended
+    # In versions prior to 2020.1 there was used function
+    # _prepare_output_as_AppendArrayToTensorProto
+    'serialization_function': os.getenv(
+        'SERIALIZATION_FUNCTION', '_prepare_output_with_make_tensor_proto')
 }
 
 S3_CONFIG = {
