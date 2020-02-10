@@ -87,7 +87,8 @@ class IrEngine():
               target_device, plugin_config):
         plugin = IEPlugin(device=target_device,
                           plugin_dirs=GLOBAL_CONFIG['plugin_dir'])
-        if GLOBAL_CONFIG['cpu_extension'] and 'CPU' in target_device:
+        if GLOBAL_CONFIG['cpu_extension'] is not None \
+                and 'CPU' in target_device:
             plugin.add_cpu_extension(GLOBAL_CONFIG['cpu_extension'])
         net = IENetwork(model=model_xml, weights=model_bin)
         batching_info = BatchingInfo(batch_size_param)
