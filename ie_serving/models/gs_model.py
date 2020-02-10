@@ -91,8 +91,8 @@ class GSModel(Model):
         xml_file = list(filter(xml_pattern.match, content_list))
         bin_file = list(filter(bin_pattern.match, content_list))
         if len(xml_file) != 0 and len(bin_file) != 0:
-            if xml_file[0].replace('xml', '') == \
-                    bin_file[0].replace('bin', ''):
+            if os.path.splitext(xml_file[0])[0] == \
+                    os.path.splitext(bin_file[0])[0]:
                 xml_file[0] = urlunparse(
                     (parsed_version_path.scheme, parsed_version_path.netloc,
                      xml_file[0], parsed_version_path.params,
