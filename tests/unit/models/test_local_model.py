@@ -49,10 +49,10 @@ def test_model_init(engines):
                                   set(engines.keys()))
     for loaded_version in engines.keys():
         assert new_model.versions_statuses[loaded_version].state == \
-               ModelVersionState.AVAILABLE
+            ModelVersionState.AVAILABLE
     for not_available_version in not_available_versions:
         assert new_model.versions_statuses[not_available_version].state != \
-               ModelVersionState.AVAILABLE
+            ModelVersionState.AVAILABLE
 
     assert new_model.default_version == 3
     assert new_model.model_name == 'test'
@@ -63,6 +63,13 @@ def test_model_init(engines):
 @pytest.mark.parametrize("mocker_values, expected_output", [
     ([['/data/model/3/model.bin'], ['/data/model/3/model.xml'], []],
      ['/data/model/3/model.xml', '/data/model/3/model.bin', None]),
+    ([['/data/model/3/model_binary.bin'], ['/data/model/3/model_binary.xml'],
+      []], ['/data/model/3/model_binary.xml', '/data/model/3/model_binary.bin',
+            None]),
+    ([['/data/model/3/model_xml.bin'], ['/data/model/3/model_xml.xml'], []],
+     ['/data/model/3/model_xml.xml', '/data/model/3/model_xml.bin', None]),
+    ([['/data/model/3/model.xml.bin'], ['/data/model/3/model.xml.xml'], []],
+     ['/data/model/3/model.xml.xml', '/data/model/3/model.xml.bin', None]),
     ([[], ['/data/model/3/model.xml'], []],
      [None, None, None]),
     ([['/data/model/3/model.bin'], [], []],
