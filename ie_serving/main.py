@@ -239,7 +239,9 @@ def main():
     args = parser.parse_args()
     logger.info("Log level set: {}".format(LOGGER_LVL))
     logger.debug("ie_serving_py arguments: {}".format(args))
-    logger.debug("configured environment variables: {}".format(os.environ))
+    logger.debug("Configured environment variables: {}".format(os.environ))
+    logger.debug("Serialization function: {}".format(
+        GLOBAL_CONFIG['serialization_function']))
     args.func(args)
 
 

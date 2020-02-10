@@ -33,12 +33,20 @@ def start_server_single_model(request, get_image, get_test_dir,
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
               "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
 
-    container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single',
-                                      ports={'9000/tcp': 9000,
-                                             '5555/tcp': 5555},
-                                      remove=True, volumes=volumes_dict,
-                                      command=command)
+    container = \
+        client.containers.run(
+            image=get_image,
+            detach=True,
+            name='ie-serving-py-test-single',
+            ports={'9000/tcp': 9000,
+                   '5555/tcp': 5555},
+            remove=True,
+            volumes=volumes_dict,
+            # In this case, slower,
+            # non-default serialization method is used
+            environment=[
+                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
+            command=command)
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)

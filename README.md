@@ -220,11 +220,33 @@ It is possible to track the usage of the models including processing time while 
 With this setting model server logs will store information about all the incoming requests.
 You can parse the logs to analyze: volume of requests, processing statistics and most used models.
 
+## Inference results serialization
+
+Model server employs configurable serialization function. 
+
+The default implementation starting from 2020.1 version is
+ [_prepare_output_with_make_tensor_proto](ie_serving/server/predict_utils.py).
+It employs TensorFlow function [make_tensor_proto](https://www.tensorflow.org/api_docs/python/tf/make_tensor_proto). 
+For most of the models it returns TensorProto response with inference results serialized to string via a call numpy.toString. 
+This method achieves low latency, especially for models with big size of the output.
+
+Prior 2020.1 version, serialization was using function [_prepare_output_as_AppendArrayToTensorProto](ie_serving/server/predict_utils.py).
+Contrary to make_tensor_proto, it returns the inference results as TensorProto object containing a list of numerical elements.
+
+
+In both cases, the results can be deserialized on the client side with [make_ndarray](https://www.tensorflow.org/api_docs/python/tf/make_ndarray).
+If you're using tensorflow's `make_ndarray` to read output
+ in your client application, then the transition between those methods is transparent.
+ 
+Add environment variable `SERIALIZATION_FUNCTION=_prepare_output_as_AppendArrayToTensorProto` to enforce the usage 
+of legacy serialization method.
+ 
 ## Known limitations and plans
 
 * Currently, *Predict*, *GetModelMetadata* and *GetModelStatus* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
 * Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
+
 
 ## Contribution
 

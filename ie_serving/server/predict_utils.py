@@ -22,15 +22,16 @@ from tensorflow.python.framework import tensor_shape
 from tensorflow_serving.apis import predict_pb2
 from tensorflow.python.framework import dtypes as dtypes
 from tensorflow.python.framework import tensor_util as tensor_util
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 from ie_serving.server.constants import \
     INVALID_INPUT_KEY, INVALID_SHAPE, INVALID_BATCHSIZE, GRPC, REST
 from ie_serving.logger import get_logger
 from tensorflow import __version__ as tf_version
 if tf_version.split(".")[0] == "2":
-    from tensorflow import make_ndarray
+    from tensorflow import make_ndarray, make_tensor_proto
 else:  # TF version 1.x
-    from tensorflow.contrib.util import make_ndarray
+    from tensorflow.contrib.util import make_ndarray, make_tensor_proto
 
 logger = get_logger(__name__)
 
@@ -102,38 +103,58 @@ def prepare_input_data(target_engine, data, service_type):
     return inference_input, None
 
 
-def prepare_output_as_list(inference_output, model_available_outputs):
+'''
+function _prepare_output_as_AppendArrayToTensorProto returns inference
+results in a form of flattened list of array elements. It is serialized
+using tensor_util._NP_TO_APPEND_FN function which employs module
+fast_tensor_util and functions Append<dtype>ArrayToTensorProto.
+Despite the module name, it is slower from make_tensor_proto.
+'''
+
+
+def _prepare_output_as_AppendArrayToTensorProto(
+        inference_output,
+        model_available_outputs):
     response = predict_pb2.PredictResponse()
-    for key, value in model_available_outputs.items():
-        if value in inference_output:
-            dtype = dtypes.as_dtype(inference_output[value].dtype)
+    for response_output_name, model_output_name in \
+            model_available_outputs.items():
+        if model_output_name in inference_output:
+            dtype = dtypes.as_dtype(inference_output[model_output_name].dtype)
             output_tensor = tensor_pb2.TensorProto(
                 dtype=dtype.as_datatype_enum,
                 tensor_shape=tensor_shape.as_shape(
-                    inference_output[value].shape).as_proto())
-            result = inference_output[value].flatten()
+                    inference_output[model_output_name].shape).as_proto())
+            result = inference_output[model_output_name].flatten()
             tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
                                                                result)
-            response.outputs[key].CopyFrom(output_tensor)
+            response.outputs[response_output_name].CopyFrom(output_tensor)
     return response
 
 
 '''
-The function is not used.
-Probably preparing the output would be faster,
-but you need a change of grpc clients.
+The function prepare_output_with_make_tensor_proto implements faster
+serialization mechanism. For most of the models it will return
+data in string format converted via numpy.toString calls.
+On the client side the inference response can be deserialized using
+Tensorflow make_ndarray function.
+'''
 
-def prepare_output_with_tf(inference_output, model_available_outputs):
+
+def _prepare_output_with_make_tensor_proto(
+        inference_output,
+        model_available_outputs):
     response = predict_pb2.PredictResponse()
-
-    for output in model_available_outputs:
-        response.outputs[output].CopyFrom(
-            tf_contrib_util.make_tensor_proto(inference_output[output],
-                                              shape=inference_output[output].
-                                              shape,
-                                              dtype=dtypes.as_dtype(
-                                                  inference_output
-                                                  [output].dtype).
-                                              as_datatype_enum))
+    for response_output_name in model_available_outputs:
+        model_output_name = model_available_outputs[response_output_name]
+        response.outputs[response_output_name].CopyFrom(
+            make_tensor_proto(inference_output[model_output_name]))
     return response
-'''
+
+
+# Serialization method selection
+prepare_output = None
+if GLOBAL_CONFIG['serialization_function'] == \
+        '_prepare_output_as_AppendArrayToTensorProto':
+    prepare_output = _prepare_output_as_AppendArrayToTensorProto
+else:
+    prepare_output = _prepare_output_with_make_tensor_proto
