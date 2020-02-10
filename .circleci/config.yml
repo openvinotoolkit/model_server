@@ -29,7 +29,7 @@ jobs:
             tar xf l_openvino_toolkit*.tgz &&
             cd l_openvino_toolkit* &&
             sed -i 's/decline/accept/g' silent.cfg &&
-            sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-base-pset/g' silent.cfg &&
+            sed -i 's/COMPONENTS=DEFAULTS/COMPONENTS=intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__noarch;intel-openvino-eula__noarch;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-bin-python-tools-ubuntu-xenial__x86_64;intel-openvino-ie-samples__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-bin-3rd-debug__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-gpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-gna-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-omz-tools__x86_64;intel-openvino-docs__noarch;intel-openvino-gfx-driver-ubuntu-xenial__x86_64;intel-openvino-base-pset/g' silent.cfg &&
             ./install.sh -s silent.cfg --ignore-signature
       - run:
           name: Install ie-serving-py
