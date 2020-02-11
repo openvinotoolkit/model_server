@@ -17,10 +17,10 @@
 import os
 
 DEFAULT_CPU_EXTENSION_PATHS = ["/usr/local/lib/libcpu_extension.so",
-                              "/usr/lib64/libcpu_extension.so",
-                              "/opt/intel/openvino/deployment_tools/"
-                              "inference_engine/lib/intel64/"
-                              "libcpu_extension_avx2.so"]
+                               "/usr/lib64/libcpu_extension.so",
+                               "/opt/intel/openvino/deployment_tools/"
+                               "inference_engine/lib/intel64/"
+                               "libcpu_extension_avx2.so"]
 
 default_cpu_extension = None
 for default_cpu_extension_path in DEFAULT_CPU_EXTENSION_PATHS:
