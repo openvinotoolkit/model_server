@@ -16,16 +16,16 @@
 
 import os
 
-LOCAL_LIB_CPU_EXTENSION = "/usr/local/lib/libcpu_extension.so"
-OV_LIB_CPU_EXTENSION = "/opt/intel/openvino/deployment_tools/" \
-                       "inference_engine/lib/intel64/libcpu_extension_avx2.so"
+DEFAULT_CPU_EXTENSION_PATHS = ["/usr/local/lib/libcpu_extension.so",
+                              "/usr/lib64/libcpu_extension.so",
+                              "/opt/intel/openvino/deployment_tools/"
+                              "inference_engine/lib/intel64/"
+                              "libcpu_extension_avx2.so"]
 
-if os.path.isfile(LOCAL_LIB_CPU_EXTENSION):
-    default_cpu_extension = LOCAL_LIB_CPU_EXTENSION
-elif os.path.isfile(OV_LIB_CPU_EXTENSION):
-    default_cpu_extension = OV_LIB_CPU_EXTENSION
-else:
-    default_cpu_extension = None
+default_cpu_extension = None
+for default_cpu_extension_path in DEFAULT_CPU_EXTENSION_PATHS:
+    if os.path.isfile(default_cpu_extension_path):
+        default_cpu_extension = default_cpu_extension_path
 
 GLOBAL_CONFIG = {
     'cpu_extension': os.environ.get('CPU_EXTENSION', default_cpu_extension),

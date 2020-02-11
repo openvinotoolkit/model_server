@@ -10,8 +10,6 @@ WORKDIR /ie-serving-py
 
 RUN pip --no-cache-dir install -r requirements_clearlinux.txt
 
-
-ENV CPU_EXTENSION=/usr/lib64/libcpu_extension.so
 RUN pip install .
 
 RUN sed -i '/activate/d' start_server.sh
