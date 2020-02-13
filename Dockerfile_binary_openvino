@@ -49,7 +49,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
 
 ENV HDDL_INSTALL_DIR="$DL_INSTALL_DIR/inference_engine/external/hddl"
 ENV PYTHONPATH="$INSTALL_DIR/python/python3.5"
-ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/external/hddl/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64:/opt/intel/openvino/deployment_tools/ngraph/lib"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/external/hddl/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64:$DL_INSTALL_DIR/ngraph/lib"
 
 WORKDIR /ie-serving-py
 

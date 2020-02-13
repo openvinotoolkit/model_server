@@ -9,14 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
             usbutils \
             gnupg2
 
-RUN curl -o GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-RUN apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-RUN echo "deb https://apt.repos.intel.com/openvino/2019/ all main" > /etc/apt/sources.list.d/intel-openvino-2019.list
+RUN curl -o GPG-PUB-KEY-INTEL-OPENVINO-2020 https://apt.repos.intel.com/openvino/2020/GPG-PUB-KEY-INTEL-OPENVINO-2020
+RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2020
+RUN echo "deb https://apt.repos.intel.com/openvino/2020/ all main" > /etc/apt/sources.list.d/intel-openvino-2020.list
 
-RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2019.3.344
+RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2020.1.023
 
+ENV DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ENV PYTHONPATH="/opt/intel/openvino/python/python3.6"
-ENV LD_LIBRARY_PATH="/opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib:/opt/intel/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64"
+ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTALL_DIR/inference_engine/external/mkltiny_lnx/lib:$DL_INSTALL_DIR/inference_engine/lib/intel64:$DL_INSTALL_DIR/ngraph/lib"
 
 WORKDIR /ie-serving-py
 
