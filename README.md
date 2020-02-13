@@ -38,7 +38,7 @@ It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerator
 
 ## Advanced configuration
 
-[Custom CPU extensions](docs/cpu_extension.md)
+[Custom layer extensions](docs/cpu_extension.md)
 
 [Performance tuning](docs/performance_tuning.md)
 
