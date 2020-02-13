@@ -1,41 +1,30 @@
-# Setting custom CPU Extension Library
+# Setting custom Extension Library
 
 ## Overview 
 
-CPU extension is an integral part of Inference Engine. This library contains code of graph layers, which _are not_ a part
-of CPU plugin. 
+Inference engine can be extended by creating custom kernel for network layers.
+It might be useful when the graph include layers and operations not supported by default 
+by the device plugin.
 
-By default OpenVINO&trade; Model server is using the library location in:
- `/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64/libcpu_extension_avx2.so`
- 
-You might need to change this value by setting environment variable `CPU_EXTENSION` to match the correct path in the following cases:
-* You installed Intel OpenVINO&trade; in non default path which is `/opt/intel/computer_vision_sdk`.
-* You use non-Ubuntu* OS to host `ie-serving-py` service.
+Implementation of such custom layers can be included in OpenVINO&trade; Model Server for handling the inference
+requests.
 
-There might be also situations when you need to recompile this library:
-* Your hardware _does not_ support AVX2 CPU feature.
-* You would like to take advantage of all CPU optimization features like AVX-512.
-* You would like to add support for extra layer types not supported out-of-the-box.
+The process of creating the extension is documented on 
+[docs.openvinotoolkit.org](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_Integrate_your_kernels_into_IE.html)
 
-## Compiling CPU Extension
+The extension should be compiled as a separate library and copied to the OpenVINO Model Server.
 
-When you compile the entire list of the OpenVINO&trade; samples via: 
-`/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/samples/build_samples.sh`,
- the `cpu_extension` library is also compiled. 
+OVMS will look for the extension library in the path defined by environment variable `CPU_EXTENSION`.
+Without this variable, a [standard set of layers](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_prepare_model_Supported_Frameworks_Layers.html)
+ will be supported.
 
-For performance, the library's `cmake` script detects your computer configuration and enables platform optimizations. 
 
-Alternatively, you can explicitly use `cmake` flags: `-DENABLE_AVX2=ON, -DENABLE_AVX512F=ON or -DENABLE_SSE42=ON` when cross-compiling this library for another platform.
-
-More information about customizing the CPU extensions is in:
- [OpenVINO&trade; documentation](https://software.intel.com/en-us/articles/OpenVINO-InferEngine#Adding%20your%20own%20kernels) 
- 
- 
-**Note:** The Docker image with OpenVINO&trade; model server _does not_ include all the tools and sub-components needed to recompile the CPU extension, so you might need to execute this process on a separate host.
+**Note:** The Docker image with OpenVINO Model Server _does not_ include all the tools and sub-components needed to compile the extension library, 
+so you might need to execute this process on a separate host.
 
 ## Using custom CPU Extension in the Model Server
 
-While the CPU extension is recompiled, you can attach it to the docker container with OpenVINO&trade; model server and reference it be setting its path like in the example:
+While the CPU extension is compiled, you can attach it to the docker container with OpenVINO Model Server and reference it be setting its path like in the example:
 
 ```bash
 docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 --env CPU_EXTENSION=/opt/ml/libcpu_extension.so  ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
