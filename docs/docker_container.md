@@ -4,7 +4,6 @@
 
 OpenVINO&trade; Model Server docker image can be built using various Dockerfiles:
 - [Dockerfile](../Dockerfile) - based on ubuntu with [apt-get package](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_apt.html) 
-- [Dockerfile_intelpython](../Dockerfile_intelpython) - with intelpython base image and Inference Engine compiled from [dldt sources](https://github.com/opencv/dldt) 
 - [Dockerfile_clearlinux](../Dockerfile_clearlinux) - [clearlinux](https://clearlinux.org/) based image with [DLDT package](https://github.com/clearlinux-pkgs/dldt) included
 - [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
@@ -21,10 +20,6 @@ make docker_build_apt_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
 or
 ```bash
 make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
-```
-or
-```bash
-make docker_build_src_intelpython http_proxy=$http_proxy https_proxy=$https_proxy
 ```
 
 **Note:** You can use also publicly available docker image from [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
