@@ -21,6 +21,7 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from ie_serving.logger import get_logger
+from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model_version_status import ModelVersionStatus
 from ie_serving.models.models_utils import ErrorCode
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
@@ -86,15 +87,16 @@ class Model(ABC):
             versions_statuses[version] = ModelVersionStatus(model_name,
                                                             version)
 
-        engines = cls.get_engines_for_model(model_name,
-                                            versions_attributes,
-                                            versions_statuses)
+        engines_processes = cls.get_engines_for_model(model_name,
+                                                      versions_attributes,
+                                                      versions_statuses)
 
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
 
         model = cls(model_name=model_name, model_directory=model_directory,
-                    available_versions=available_versions, engines=engines,
+                    available_versions=available_versions,
+                    engines=engines_processes,
                     batch_size_param=batch_size_param,
                     shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
@@ -253,7 +255,7 @@ class Model(ABC):
     @classmethod
     def get_engines_for_model(cls, model_name, versions_attributes,
                               versions_statuses):
-        inference_engines = {}
+        inference_engine_processes = {}
         failures = []
         for version_attributes in versions_attributes:
             version_number = version_attributes['version_number']
@@ -263,8 +265,9 @@ class Model(ABC):
 
                 versions_statuses[version_number].set_loading()
 
-                inference_engines[version_number] = \
-                    cls.get_engine_for_version(model_name, version_attributes)
+                inference_engine_processes[version_number] = \
+                    cls.get_engine_process_for_version(
+                        model_name, version_attributes)
             except Exception as e:
                 logger.error("Error occurred while loading model "
                              "version: {}".format(version_attributes))
@@ -278,7 +281,7 @@ class Model(ABC):
         for failure in failures:
             versions_attributes.remove(failure)
 
-        return inference_engines
+        return inference_engine_processes
 
     @classmethod
     def _get_engine_spec(cls, model_name, version_attributes):
@@ -294,6 +297,15 @@ class Model(ABC):
             'target_device': version_attributes['target_device'],
             'plugin_config': version_attributes['plugin_config']
         }
+
+    @classmethod
+    def _start_engine_process_for_version(
+            cls, version_attributes, engine_spec):
+        IrEngine.build(**engine_spec)
+        cls.delete_local_mirror([version_attributes['xml_file'],
+                                 version_attributes['bin_file'],
+                                 version_attributes['mapping_config']])
+        logger.info('Deleted temporary files')
 
     #   Subclass interface
     @classmethod
@@ -313,5 +325,5 @@ class Model(ABC):
 
     @classmethod
     @abstractmethod
-    def get_engine_for_version(cls, model_name, version_attributes):
+    def get_engine_process_for_version(cls, model_name, version_attributes):
         pass

@@ -18,6 +18,7 @@ import argparse
 import json
 import sys
 import threading
+import multiprocessing
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.models.model_builder import ModelBuilder
@@ -50,7 +51,6 @@ def open_config(path):
 
 
 def get_model_spec(config):
-
     model_name = config.get('name', config.get('model_name', None))
     model_path = config.get('base_path', config.get('model_path', None))
 
@@ -92,15 +92,15 @@ def parse_config(args):
 
             model = ModelBuilder.build(**model_spec)
             if model is not None:
-                models[config['config']['name']] = model
+                models[model_spec['model_name']] = model
         except ValidationError as e_val:
             logger.warning("Model version policy or plugin config "
                            "for model {} is invalid. "
-                           "Exception: {}".format(config['config']['name'],
+                           "Exception: {}".format(model_spec['model_name'],
                                                   e_val))
         except Exception as e:
             logger.warning("Unexpected error occurred in {} model. "
-                           "Exception: {}".format(config['config']['name'],
+                           "Exception: {}".format(model_spec['model_name'],
                                                   e))
     if not models:
         logger.info("Could not access any of provided models. Server will "
@@ -123,7 +123,6 @@ def parse_one_model(args):
             args.plugin_config = json.loads(args.plugin_config)
 
         model_spec = get_model_spec(vars(args))
-
         model = ModelBuilder.build(**model_spec)
     except ValidationError as e_val:
         logger.error("Model version policy or plugin config is invalid. "
@@ -145,16 +144,20 @@ def parse_one_model(args):
         logger.info("Could not access provided model. Server will exit now.")
         sys.exit()
 
-    total_workers_number = args.grpc_workers
     if args.rest_port > 0:
-        total_workers_number += args.rest_workers
         process_thread = threading.Thread(target=start_web_rest_server,
                                           args=[models, args.rest_port,
                                                 args.rest_workers])
         process_thread.setDaemon(True)
         process_thread.start()
-    start_server(models=models, max_workers=args.grpc_workers,
-                 port=args.port)
+
+    num_servers = int(os.getenv("NUM_SERVERS", 1))
+    server_processes_handlers = []
+    for i in range(num_servers):
+        server_process_handler = multiprocessing.Process(
+            target=start_server, args=(args.grpc_workers, args.port))
+        server_process_handler.start()
+        server_processes_handlers.append(server_process_handler)
 
 
 def main():

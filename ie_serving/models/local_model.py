@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+import os
 import glob
+import multiprocessing
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
-import os
 
 logger = get_logger(__name__)
 
@@ -52,7 +54,9 @@ class LocalModel(Model):
         return None
 
     @classmethod
-    def get_engine_for_version(cls, model_name, version_attributes):
+    def get_engine_process_for_version(cls, model_name, version_attributes):
         engine_spec = cls._get_engine_spec(model_name, version_attributes)
-        engine = IrEngine.build(**engine_spec)
-        return engine
+        engine_process = multiprocessing.Process(target=IrEngine.build,
+                                                 args=engine_spec.values())
+        engine_process.start()
+        return engine_process
