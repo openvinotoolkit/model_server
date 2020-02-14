@@ -41,7 +41,7 @@ statusCodes = {
 }
 
 
-def prepare_input_data(target_engine, data, service_type):
+def prepare_input_data(data, service_type):
     # returns:
     # inference_input, None on success
     # None, error_message on error

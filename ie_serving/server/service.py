@@ -15,6 +15,9 @@
 #
 
 import datetime
+import zmq
+import os
+import multiprocessing.shared_memory
 
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import get_model_status_pb2
@@ -22,6 +25,7 @@ from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
 
+from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
     INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
@@ -42,6 +46,8 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
 
     def __init__(self, models):
         self.models = models
+        self.zmq_context = zmq.Context()
+        self.process_id = os.getpid()
 
     def Predict(self, request, context):
         """
@@ -51,11 +57,12 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         # is available on server with proper version
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
-        valid_model_spec, version = check_availability_of_requested_model(
-            models=self.models, requested_version=requested_version,
-            model_name=model_name)
-
-        if not valid_model_spec:
+        if requested_version == 0:
+            requested_version = "default"
+        target_socket_name =os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
+                                         "{}-{}-endpoint.sock".format(
+                                             model_name, requested_version))
+        if not os.path.exists(target_socket_name):
             context.set_code(StatusCode.NOT_FOUND)
             context.set_details(WRONG_MODEL_SPEC.format(model_name,
                                                         requested_version))
@@ -63,17 +70,15 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
 
-        target_engine = self.models[model_name].engines[version]
+        target_socket = self.zmq_context.socket(zmq.REQ)
+        target_socket.connect("ipc://{}".format(target_socket_name))
+
+
 
         deserialization_start_time = datetime.datetime.now()
         inference_input, error_message = \
-            prepare_input_data(target_engine=target_engine,
-                               data=request.inputs,
+            prepare_input_data(data=request.inputs,
                                service_type=GRPC)
-        duration = (datetime.datetime.now() -
-                    deserialization_start_time).total_seconds() * 1000
-        logger.debug("PREDICT; input deserialization completed; {}; {}; {} ms"
-                     .format(model_name, version, duration))
         if error_message is not None:
             code = statusCodes['invalid_arg'][GRPC]
             context.set_code(code)

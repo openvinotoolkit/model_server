@@ -48,7 +48,8 @@ GLOBAL_CONFIG = {
     # In versions prior to 2020.1 there was used function
     # _prepare_output_as_AppendArrayToTensorProto
     'serialization_function': os.getenv(
-        'SERIALIZATION_FUNCTION', '_prepare_output_with_make_tensor_proto')
+        'SERIALIZATION_FUNCTION', '_prepare_output_with_make_tensor_proto'),
+    'tmp_files_dir': os.getenv('TMP_FILES_DIR', '/tmp')
 }
 
 S3_CONFIG = {
