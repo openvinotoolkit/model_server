@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package ovms_ipc;
+
+message EndpointRequest{
+    oneof type{
+        PredictRequest predict_request = 1;
+        ModelMetadataRequest model_metadata_request = 2;
+        ModelStatusRequest model_status_request = 3;
+    }
+}
+
+message EndpointResponse{
+    oneof type{
+        PredictResponse predict_response = 1;
+        ModelMetadataResponse model_metadata_response = 2;
+        ModelStatusResponse model_status_response = 3;
+        ErrorResponse error_response = 4;
+    }
+}
+
+message PredictRequest{
+    message Data{
+        string input_name = 1;
+        string shm_name = 2;
+    }
+    repeated Data inputs = 1;
+}
+
+message PredictResponse{
+    message Data{
+        string output_name = 1;
+        string shm_name = 2;
+    }
+    repeated Data outputs = 1;
+}
+
+message ModelMetadataRequest{
+    int32 requested_version = 1;
+}
+
+message ModelMetadataResponse{
+    //TODO
+}
+
+message ModelStatusRequest{
+    int32 requested_version = 1;
+}
+
+message ModelStatusResponse{
+    //TODO
+}
+
+message ErrorResponse{
+    string error_message = 1;
+}
+
+
