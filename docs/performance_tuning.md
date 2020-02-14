@@ -43,17 +43,6 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001
 --plugin_config "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_NUMA\",\"CPU_THREADS_NUM\": \"4\"}"
 ```
 
-## Inference execution threading 
-
-Starting with the version *2019 R2*, OpenVINO Model Server is using [TBB](https://software.intel.com/en-us/tbb) threading instead
- of [OMP](https://www.openmp.org/).
- 
-It gives better performance especially in scenarios with shared CPU and enabled multiple AI models.
-The model server with TBB will be more flexible and easier to deploy in environments with dynamic load and resource allocation.
-
-If you need to use OpenMP for inference execution, adjust [Dockerfile_intelpython](../Dockerfile_intelpython) and add `-DTHREADING=OMP`
-in DLDT compilation command. Refer to [DLDT documentation](https://github.com/opencv/dldt/tree/2019/inference-engine).
-
 ## Multi worker configuration
 
 Starting from version 2019 R3, it's possible to run OpenVINO Model Server with multiple server workers. It enables concurrent processing of

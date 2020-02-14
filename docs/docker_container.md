@@ -4,7 +4,6 @@
 
 OpenVINO&trade; Model Server docker image can be built using various Dockerfiles:
 - [Dockerfile](../Dockerfile) - based on ubuntu with [apt-get package](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_apt.html) 
-- [Dockerfile_intelpython](../Dockerfile_intelpython) - with intelpython base image and Inference Engine compiled from [dldt sources](https://github.com/opencv/dldt) 
 - [Dockerfile_clearlinux](../Dockerfile_clearlinux) - [clearlinux](https://clearlinux.org/) based image with [DLDT package](https://github.com/clearlinux-pkgs/dldt) included
 - [Dockerfile_binary_openvino](../Dockerfile_binary_openvino) - ubuntu image based on Intel Distribution of OpenVINO&trade; [toolkit package](https://software.intel.com/en-us/openvino-toolkit)
 
@@ -22,13 +21,9 @@ or
 ```bash
 make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
 ```
-or
-```bash
-make docker_build_src_intelpython http_proxy=$http_proxy https_proxy=$https_proxy
-```
 
 **Note:** You can use also publicly available docker image from [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
-based on intelpython base image.
+based on clearlinux base image.
 
 ```bash
 docker pull intelaipg/openvino-model-server
@@ -310,7 +305,6 @@ version 2019 R1.1 is distributed both in a binary package and [source code](http
 You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
 - `make docker_build_bin dldt_package_url=<url>` 
 - `make docker_build_apt_ubuntu`
-- `make docker_build_src_intelpython`
 
 Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
 rules:
