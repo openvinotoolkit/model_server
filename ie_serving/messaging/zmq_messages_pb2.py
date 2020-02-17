@@ -18,10 +18,92 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ovms_ipc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x12zmq_messages.proto\x12\x08ovms_ipc\"\xce\x01\n\x0f\x45ndpointRequest\x12\x33\n\x0fpredict_request\x18\x01 \x01(\x0b\x32\x18.ovms_ipc.PredictRequestH\x00\x12@\n\x16model_metadata_request\x18\x02 \x01(\x0b\x32\x1e.ovms_ipc.ModelMetadataRequestH\x00\x12<\n\x14model_status_request\x18\x03 \x01(\x0b\x32\x1c.ovms_ipc.ModelStatusRequestH\x00\x42\x06\n\x04type\"\x88\x02\n\x10\x45ndpointResponse\x12\x35\n\x10predict_response\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.PredictResponseH\x00\x12\x42\n\x17model_metadata_response\x18\x02 \x01(\x0b\x32\x1f.ovms_ipc.ModelMetadataResponseH\x00\x12>\n\x15model_status_response\x18\x03 \x01(\x0b\x32\x1d.ovms_ipc.ModelStatusResponseH\x00\x12\x31\n\x0e\x65rror_response\x18\x04 \x01(\x0b\x32\x17.ovms_ipc.ErrorResponseH\x00\x42\x06\n\x04type\"m\n\x0ePredictRequest\x12-\n\x06inputs\x18\x01 \x03(\x0b\x32\x1d.ovms_ipc.PredictRequest.Data\x1a,\n\x04\x44\x61ta\x12\x12\n\ninput_name\x18\x01 \x01(\t\x12\x10\n\x08shm_name\x18\x02 \x01(\t\"q\n\x0fPredictResponse\x12/\n\x07outputs\x18\x01 \x03(\x0b\x32\x1e.ovms_ipc.PredictResponse.Data\x1a-\n\x04\x44\x61ta\x12\x13\n\x0boutput_name\x18\x01 \x01(\t\x12\x10\n\x08shm_name\x18\x02 \x01(\t\".\n\x14ModelMetadataRequest\x12\x16\n\x0emetadata_field\x18\x01 \x01(\x08\"\x17\n\x15ModelMetadataResponse\"*\n\x12ModelStatusRequest\x12\x14\n\x0cstatus_field\x18\x01 \x01(\x08\"\x15\n\x13ModelStatusResponse\"&\n\rErrorResponse\x12\x15\n\rerror_message\x18\x01 \x01(\tb\x06proto3'
+  serialized_pb=b'\n\x12zmq_messages.proto\x12\x08ovms_ipc\"\xce\x01\n\x0f\x45ndpointRequest\x12\x33\n\x0fpredict_request\x18\x01 \x01(\x0b\x32\x18.ovms_ipc.PredictRequestH\x00\x12@\n\x16model_metadata_request\x18\x02 \x01(\x0b\x32\x1e.ovms_ipc.ModelMetadataRequestH\x00\x12<\n\x14model_status_request\x18\x03 \x01(\x0b\x32\x1c.ovms_ipc.ModelStatusRequestH\x00\x42\x06\n\x04type\"\x88\x02\n\x10\x45ndpointResponse\x12\x35\n\x10predict_response\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.PredictResponseH\x00\x12\x42\n\x17model_metadata_response\x18\x02 \x01(\x0b\x32\x1f.ovms_ipc.ModelMetadataResponseH\x00\x12>\n\x15model_status_response\x18\x03 \x01(\x0b\x32\x1d.ovms_ipc.ModelStatusResponseH\x00\x12\x31\n\x0e\x65rror_response\x18\x04 \x01(\x0b\x32\x17.ovms_ipc.ErrorResponseH\x00\x42\x06\n\x04type\"\xee\x01\n\x0ePredictRequest\x12\x34\n\tdata_type\x18\x01 \x01(\x0e\x32!.ovms_ipc.PredictRequest.DataType\x12-\n\x06inputs\x18\x02 \x03(\x0b\x32\x1d.ovms_ipc.PredictRequest.Data\x12\x1a\n\x12return_socket_name\x18\x03 \x01(\t\x1a,\n\x04\x44\x61ta\x12\x12\n\ninput_name\x18\x01 \x01(\t\x12\x10\n\x08shm_name\x18\x02 \x01(\t\"-\n\x08\x44\x61taType\x12\t\n\x05NUMPY\x10\x00\x12\n\n\x06STRING\x10\x02\x12\n\n\x06\x42INARY\x10\x03\"q\n\x0fPredictResponse\x12/\n\x07outputs\x18\x01 \x03(\x0b\x32\x1e.ovms_ipc.PredictResponse.Data\x1a-\n\x04\x44\x61ta\x12\x13\n\x0boutput_name\x18\x01 \x01(\t\x12\x10\n\x08shm_name\x18\x02 \x01(\t\"1\n\x14ModelMetadataRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\"\x17\n\x15ModelMetadataResponse\"/\n\x12ModelStatusRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\"\x91\x03\n\x13ModelStatusResponse\x1a\x85\x01\n\x06Status\x12\x42\n\nerror_code\x18\x01 \x01(\x0e\x32..ovms_ipc.ModelStatusResponse.Status.ErrorCode\x12\x15\n\rerror_message\x18\x02 \x01(\t\" \n\tErrorCode\x12\x06\n\x02OK\x10\x00\x12\x0b\n\x07UNKNOWN\x10\x01\x1a\xa9\x01\n\x12ModelVersionStatus\x12\x12\n\nmodel_name\x18\x01 \x01(\t\x12\x15\n\rmodel_version\x18\x02 \x01(\x05\x12\x32\n\x05state\x18\x03 \x01(\x0e\x32#.ovms_ipc.ModelStatusResponse.State\x12\x34\n\x06status\x18\x04 \x01(\x0b\x32$.ovms_ipc.ModelStatusResponse.Status\"F\n\x05State\x12\t\n\x05START\x10\x00\x12\x0b\n\x07LOADING\x10\x01\x12\r\n\tAVAILABLE\x10\x02\x12\r\n\tUNLOADING\x10\x03\x12\x07\n\x03\x45ND\x10\x04\"&\n\rErrorResponse\x12\x15\n\rerror_message\x18\x01 \x01(\tb\x06proto3'
 )
 
 
+
+_PREDICTREQUEST_DATATYPE = _descriptor.EnumDescriptor(
+  name='DataType',
+  full_name='ovms_ipc.PredictRequest.DataType',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='NUMPY', index=0, number=0,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='STRING', index=1, number=2,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BINARY', index=2, number=3,
+      serialized_options=None,
+      type=None),
+  ],
+  containing_type=None,
+  serialized_options=None,
+  serialized_start=702,
+  serialized_end=747,
+)
+_sym_db.RegisterEnumDescriptor(_PREDICTREQUEST_DATATYPE)
+
+_MODELSTATUSRESPONSE_STATUS_ERRORCODE = _descriptor.EnumDescriptor(
+  name='ErrorCode',
+  full_name='ovms_ipc.ModelStatusResponse.Status.ErrorCode',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='OK', index=0, number=0,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNKNOWN', index=1, number=1,
+      serialized_options=None,
+      type=None),
+  ],
+  containing_type=None,
+  serialized_options=None,
+  serialized_start=1115,
+  serialized_end=1147,
+)
+_sym_db.RegisterEnumDescriptor(_MODELSTATUSRESPONSE_STATUS_ERRORCODE)
+
+_MODELSTATUSRESPONSE_STATE = _descriptor.EnumDescriptor(
+  name='State',
+  full_name='ovms_ipc.ModelStatusResponse.State',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='START', index=0, number=0,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LOADING', index=1, number=1,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AVAILABLE', index=2, number=2,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNLOADING', index=3, number=3,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='END', index=4, number=4,
+      serialized_options=None,
+      type=None),
+  ],
+  containing_type=None,
+  serialized_options=None,
+  serialized_start=1321,
+  serialized_end=1391,
+)
+_sym_db.RegisterEnumDescriptor(_MODELSTATUSRESPONSE_STATE)
 
 
 _ENDPOINTREQUEST = _descriptor.Descriptor(
@@ -160,8 +242,8 @@ _PREDICTREQUEST_DATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=573,
-  serialized_end=617,
+  serialized_start=656,
+  serialized_end=700,
 )
 
 _PREDICTREQUEST = _descriptor.Descriptor(
@@ -172,9 +254,23 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='inputs', full_name='ovms_ipc.PredictRequest.inputs', index=0,
-      number=1, type=11, cpp_type=10, label=3,
+      name='data_type', full_name='ovms_ipc.PredictRequest.data_type', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='inputs', full_name='ovms_ipc.PredictRequest.inputs', index=1,
+      number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='return_socket_name', full_name='ovms_ipc.PredictRequest.return_socket_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -183,6 +279,7 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   ],
   nested_types=[_PREDICTREQUEST_DATA, ],
   enum_types=[
+    _PREDICTREQUEST_DATATYPE,
   ],
   serialized_options=None,
   is_extendable=False,
@@ -190,8 +287,8 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=508,
-  serialized_end=617,
+  serialized_start=509,
+  serialized_end=747,
 )
 
 
@@ -228,8 +325,8 @@ _PREDICTRESPONSE_DATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=687,
-  serialized_end=732,
+  serialized_start=817,
+  serialized_end=862,
 )
 
 _PREDICTRESPONSE = _descriptor.Descriptor(
@@ -258,8 +355,8 @@ _PREDICTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=619,
-  serialized_end=732,
+  serialized_start=749,
+  serialized_end=862,
 )
 
 
@@ -271,9 +368,9 @@ _MODELMETADATAREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='metadata_field', full_name='ovms_ipc.ModelMetadataRequest.metadata_field', index=0,
-      number=1, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
+      name='requested_version', full_name='ovms_ipc.ModelMetadataRequest.requested_version', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -289,8 +386,8 @@ _MODELMETADATAREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=734,
-  serialized_end=780,
+  serialized_start=864,
+  serialized_end=913,
 )
 
 
@@ -313,8 +410,8 @@ _MODELMETADATARESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=782,
-  serialized_end=805,
+  serialized_start=915,
+  serialized_end=938,
 )
 
 
@@ -326,9 +423,9 @@ _MODELSTATUSREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='status_field', full_name='ovms_ipc.ModelStatusRequest.status_field', index=0,
-      number=1, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
+      name='requested_version', full_name='ovms_ipc.ModelStatusRequest.requested_version', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -344,18 +441,84 @@ _MODELSTATUSREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=807,
-  serialized_end=849,
+  serialized_start=940,
+  serialized_end=987,
 )
 
 
-_MODELSTATUSRESPONSE = _descriptor.Descriptor(
-  name='ModelStatusResponse',
-  full_name='ovms_ipc.ModelStatusResponse',
+_MODELSTATUSRESPONSE_STATUS = _descriptor.Descriptor(
+  name='Status',
+  full_name='ovms_ipc.ModelStatusResponse.Status',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
+    _descriptor.FieldDescriptor(
+      name='error_code', full_name='ovms_ipc.ModelStatusResponse.Status.error_code', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='error_message', full_name='ovms_ipc.ModelStatusResponse.Status.error_message', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+    _MODELSTATUSRESPONSE_STATUS_ERRORCODE,
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1014,
+  serialized_end=1147,
+)
+
+_MODELSTATUSRESPONSE_MODELVERSIONSTATUS = _descriptor.Descriptor(
+  name='ModelVersionStatus',
+  full_name='ovms_ipc.ModelStatusResponse.ModelVersionStatus',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='model_name', full_name='ovms_ipc.ModelStatusResponse.ModelVersionStatus.model_name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='model_version', full_name='ovms_ipc.ModelStatusResponse.ModelVersionStatus.model_version', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='state', full_name='ovms_ipc.ModelStatusResponse.ModelVersionStatus.state', index=2,
+      number=3, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='status', full_name='ovms_ipc.ModelStatusResponse.ModelVersionStatus.status', index=3,
+      number=4, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -368,8 +531,32 @@ _MODELSTATUSRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=851,
-  serialized_end=872,
+  serialized_start=1150,
+  serialized_end=1319,
+)
+
+_MODELSTATUSRESPONSE = _descriptor.Descriptor(
+  name='ModelStatusResponse',
+  full_name='ovms_ipc.ModelStatusResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[_MODELSTATUSRESPONSE_STATUS, _MODELSTATUSRESPONSE_MODELVERSIONSTATUS, ],
+  enum_types=[
+    _MODELSTATUSRESPONSE_STATE,
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=990,
+  serialized_end=1391,
 )
 
 
@@ -399,8 +586,8 @@ _ERRORRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=874,
-  serialized_end=912,
+  serialized_start=1393,
+  serialized_end=1431,
 )
 
 _ENDPOINTREQUEST.fields_by_name['predict_request'].message_type = _PREDICTREQUEST
@@ -432,9 +619,18 @@ _ENDPOINTRESPONSE.oneofs_by_name['type'].fields.append(
   _ENDPOINTRESPONSE.fields_by_name['error_response'])
 _ENDPOINTRESPONSE.fields_by_name['error_response'].containing_oneof = _ENDPOINTRESPONSE.oneofs_by_name['type']
 _PREDICTREQUEST_DATA.containing_type = _PREDICTREQUEST
+_PREDICTREQUEST.fields_by_name['data_type'].enum_type = _PREDICTREQUEST_DATATYPE
 _PREDICTREQUEST.fields_by_name['inputs'].message_type = _PREDICTREQUEST_DATA
+_PREDICTREQUEST_DATATYPE.containing_type = _PREDICTREQUEST
 _PREDICTRESPONSE_DATA.containing_type = _PREDICTRESPONSE
 _PREDICTRESPONSE.fields_by_name['outputs'].message_type = _PREDICTRESPONSE_DATA
+_MODELSTATUSRESPONSE_STATUS.fields_by_name['error_code'].enum_type = _MODELSTATUSRESPONSE_STATUS_ERRORCODE
+_MODELSTATUSRESPONSE_STATUS.containing_type = _MODELSTATUSRESPONSE
+_MODELSTATUSRESPONSE_STATUS_ERRORCODE.containing_type = _MODELSTATUSRESPONSE_STATUS
+_MODELSTATUSRESPONSE_MODELVERSIONSTATUS.fields_by_name['state'].enum_type = _MODELSTATUSRESPONSE_STATE
+_MODELSTATUSRESPONSE_MODELVERSIONSTATUS.fields_by_name['status'].message_type = _MODELSTATUSRESPONSE_STATUS
+_MODELSTATUSRESPONSE_MODELVERSIONSTATUS.containing_type = _MODELSTATUSRESPONSE
+_MODELSTATUSRESPONSE_STATE.containing_type = _MODELSTATUSRESPONSE
 DESCRIPTOR.message_types_by_name['EndpointRequest'] = _ENDPOINTREQUEST
 DESCRIPTOR.message_types_by_name['EndpointResponse'] = _ENDPOINTRESPONSE
 DESCRIPTOR.message_types_by_name['PredictRequest'] = _PREDICTREQUEST
@@ -512,11 +708,27 @@ ModelStatusRequest = _reflection.GeneratedProtocolMessageType('ModelStatusReques
 _sym_db.RegisterMessage(ModelStatusRequest)
 
 ModelStatusResponse = _reflection.GeneratedProtocolMessageType('ModelStatusResponse', (_message.Message,), {
+
+  'Status' : _reflection.GeneratedProtocolMessageType('Status', (_message.Message,), {
+    'DESCRIPTOR' : _MODELSTATUSRESPONSE_STATUS,
+    '__module__' : 'zmq_messages_pb2'
+    # @@protoc_insertion_point(class_scope:ovms_ipc.ModelStatusResponse.Status)
+    })
+  ,
+
+  'ModelVersionStatus' : _reflection.GeneratedProtocolMessageType('ModelVersionStatus', (_message.Message,), {
+    'DESCRIPTOR' : _MODELSTATUSRESPONSE_MODELVERSIONSTATUS,
+    '__module__' : 'zmq_messages_pb2'
+    # @@protoc_insertion_point(class_scope:ovms_ipc.ModelStatusResponse.ModelVersionStatus)
+    })
+  ,
   'DESCRIPTOR' : _MODELSTATUSRESPONSE,
   '__module__' : 'zmq_messages_pb2'
   # @@protoc_insertion_point(class_scope:ovms_ipc.ModelStatusResponse)
   })
 _sym_db.RegisterMessage(ModelStatusResponse)
+_sym_db.RegisterMessage(ModelStatusResponse.Status)
+_sym_db.RegisterMessage(ModelStatusResponse.ModelVersionStatus)
 
 ErrorResponse = _reflection.GeneratedProtocolMessageType('ErrorResponse', (_message.Message,), {
   'DESCRIPTOR' : _ERRORRESPONSE,

@@ -24,7 +24,14 @@ message PredictRequest{
         string input_name = 1;
         string shm_name = 2;
     }
-    repeated Data inputs = 1;
+    enum DataType{
+        NUMPY = 0;
+        STRING = 2;
+        BINARY = 3;
+    }
+    DataType data_type = 1;
+    repeated Data inputs = 2;
+    string return_socket_name = 3;
 }
 
 message PredictResponse{
@@ -48,7 +55,27 @@ message ModelStatusRequest{
 }
 
 message ModelStatusResponse{
-    //TODO
+    enum State{
+        START = 0;
+        LOADING = 1;
+        AVAILABLE = 2;
+        UNLOADING = 3;
+        END = 4;
+    }
+    message Status{
+        enum ErrorCode{
+            OK = 0;
+            UNKNOWN = 1;
+        }
+        ErrorCode error_code = 1;
+        string error_message = 2;
+    }
+    message ModelVersionStatus{
+        string model_name = 1;
+        int32 model_version = 2;
+        State state = 3;
+        Status status = 4;
+    }
 }
 
 message ErrorResponse{
