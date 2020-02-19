@@ -2,14 +2,6 @@ syntax = "proto3";
 
 package ovms_ipc;
 
-message EndpointRequest{
-    oneof type{
-        PredictRequest predict_request = 1;
-        ModelMetadataRequest model_metadata_request = 2;
-        ModelStatusRequest model_status_request = 3;
-    }
-}
-
 message EndpointResponse{
     oneof type{
         PredictResponse predict_response = 1;
@@ -19,31 +11,12 @@ message EndpointResponse{
     }
 }
 
-message PredictRequest{
-    message Data{
-        string input_name = 1;
-        string shm_name = 2;
-    }
-    enum DataType{
-        NUMPY = 0;
-        STRING = 2;
-        BINARY = 3;
-    }
-    DataType data_type = 1;
-    repeated Data inputs = 2;
-    string return_socket_name = 3;
-}
-
 message PredictResponse{
     message Data{
         string output_name = 1;
         string shm_name = 2;
     }
     repeated Data outputs = 1;
-}
-
-message ModelMetadataRequest{
-    int32 requested_version = 1;
 }
 
 message ModelMetadataResponse{
@@ -59,10 +32,6 @@ message ModelMetadataResponse{
     repeated Signature inputs_signature = 1;
     repeated Signature outputs_signature = 2;
     string method_name = 3;
-}
-
-message ModelStatusRequest{
-    int32 requested_version = 1;
 }
 
 message ModelStatusResponse{
