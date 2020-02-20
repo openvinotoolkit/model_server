@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ovms_ipc;
 
+import "data_attributes.proto";
+
 message EndpointRequest{
     oneof type{
         PredictRequest predict_request = 1;
@@ -12,17 +14,12 @@ message EndpointRequest{
 
 message PredictRequest{
     message Data{
-        string input_name = 1;
-        string shm_name = 2;
+        DataAttributes attributes = 1;
+        string input_name = 2;
+        string shm_name = 3;
     }
-    enum DataType{
-        NUMPY = 0;
-        STRING = 2;
-        BINARY = 3;
-    }
-    DataType data_type = 1;
-    repeated Data inputs = 2;
-    string return_socket_name = 3;
+    repeated Data inputs = 1;
+    string return_socket_name = 2;
 }
 
 message ModelMetadataRequest{

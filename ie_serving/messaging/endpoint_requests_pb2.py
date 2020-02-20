@@ -11,6 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import data_attributes_pb2 as data__attributes__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -18,36 +19,11 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ovms_ipc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x17\x65ndpoint_requests.proto\x12\x08ovms_ipc\"\xce\x01\n\x0f\x45ndpointRequest\x12\x33\n\x0fpredict_request\x18\x01 \x01(\x0b\x32\x18.ovms_ipc.PredictRequestH\x00\x12@\n\x16model_metadata_request\x18\x02 \x01(\x0b\x32\x1e.ovms_ipc.ModelMetadataRequestH\x00\x12<\n\x14model_status_request\x18\x03 \x01(\x0b\x32\x1c.ovms_ipc.ModelStatusRequestH\x00\x42\x06\n\x04type\"\xee\x01\n\x0ePredictRequest\x12\x34\n\tdata_type\x18\x01 \x01(\x0e\x32!.ovms_ipc.PredictRequest.DataType\x12-\n\x06inputs\x18\x02 \x03(\x0b\x32\x1d.ovms_ipc.PredictRequest.Data\x12\x1a\n\x12return_socket_name\x18\x03 \x01(\t\x1a,\n\x04\x44\x61ta\x12\x12\n\ninput_name\x18\x01 \x01(\t\x12\x10\n\x08shm_name\x18\x02 \x01(\t\"-\n\x08\x44\x61taType\x12\t\n\x05NUMPY\x10\x00\x12\n\n\x06STRING\x10\x02\x12\n\n\x06\x42INARY\x10\x03\"1\n\x14ModelMetadataRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\"/\n\x12ModelStatusRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\x62\x06proto3'
-)
+  serialized_pb=b'\n\x17\x65ndpoint_requests.proto\x12\x08ovms_ipc\x1a\x15\x64\x61ta_attributes.proto\"\xce\x01\n\x0f\x45ndpointRequest\x12\x33\n\x0fpredict_request\x18\x01 \x01(\x0b\x32\x18.ovms_ipc.PredictRequestH\x00\x12@\n\x16model_metadata_request\x18\x02 \x01(\x0b\x32\x1e.ovms_ipc.ModelMetadataRequestH\x00\x12<\n\x14model_status_request\x18\x03 \x01(\x0b\x32\x1c.ovms_ipc.ModelStatusRequestH\x00\x42\x06\n\x04type\"\xb7\x01\n\x0ePredictRequest\x12-\n\x06inputs\x18\x01 \x03(\x0b\x32\x1d.ovms_ipc.PredictRequest.Data\x12\x1a\n\x12return_socket_name\x18\x02 \x01(\t\x1aZ\n\x04\x44\x61ta\x12,\n\nattributes\x18\x01 \x01(\x0b\x32\x18.ovms_ipc.DataAttributes\x12\x12\n\ninput_name\x18\x02 \x01(\t\x12\x10\n\x08shm_name\x18\x03 \x01(\t\"1\n\x14ModelMetadataRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\"/\n\x12ModelStatusRequest\x12\x19\n\x11requested_version\x18\x01 \x01(\x05\x62\x06proto3'
+  ,
+  dependencies=[data__attributes__pb2.DESCRIPTOR,])
 
 
-
-_PREDICTREQUEST_DATATYPE = _descriptor.EnumDescriptor(
-  name='DataType',
-  full_name='ovms_ipc.PredictRequest.DataType',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='NUMPY', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='STRING', index=1, number=2,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='BINARY', index=2, number=3,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=440,
-  serialized_end=485,
-)
-_sym_db.RegisterEnumDescriptor(_PREDICTREQUEST_DATATYPE)
 
 
 _ENDPOINTREQUEST = _descriptor.Descriptor(
@@ -93,8 +69,8 @@ _ENDPOINTREQUEST = _descriptor.Descriptor(
       name='type', full_name='ovms_ipc.EndpointRequest.type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=38,
-  serialized_end=244,
+  serialized_start=61,
+  serialized_end=267,
 )
 
 
@@ -106,15 +82,22 @@ _PREDICTREQUEST_DATA = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='input_name', full_name='ovms_ipc.PredictRequest.Data.input_name', index=0,
-      number=1, type=9, cpp_type=9, label=1,
+      name='attributes', full_name='ovms_ipc.PredictRequest.Data.attributes', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='input_name', full_name='ovms_ipc.PredictRequest.Data.input_name', index=1,
+      number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='shm_name', full_name='ovms_ipc.PredictRequest.Data.shm_name', index=1,
-      number=2, type=9, cpp_type=9, label=1,
+      name='shm_name', full_name='ovms_ipc.PredictRequest.Data.shm_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -131,8 +114,8 @@ _PREDICTREQUEST_DATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=394,
-  serialized_end=438,
+  serialized_start=363,
+  serialized_end=453,
 )
 
 _PREDICTREQUEST = _descriptor.Descriptor(
@@ -143,22 +126,15 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='data_type', full_name='ovms_ipc.PredictRequest.data_type', index=0,
-      number=1, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='inputs', full_name='ovms_ipc.PredictRequest.inputs', index=1,
-      number=2, type=11, cpp_type=10, label=3,
+      name='inputs', full_name='ovms_ipc.PredictRequest.inputs', index=0,
+      number=1, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='return_socket_name', full_name='ovms_ipc.PredictRequest.return_socket_name', index=2,
-      number=3, type=9, cpp_type=9, label=1,
+      name='return_socket_name', full_name='ovms_ipc.PredictRequest.return_socket_name', index=1,
+      number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -168,7 +144,6 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   ],
   nested_types=[_PREDICTREQUEST_DATA, ],
   enum_types=[
-    _PREDICTREQUEST_DATATYPE,
   ],
   serialized_options=None,
   is_extendable=False,
@@ -176,8 +151,8 @@ _PREDICTREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=247,
-  serialized_end=485,
+  serialized_start=270,
+  serialized_end=453,
 )
 
 
@@ -207,8 +182,8 @@ _MODELMETADATAREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=487,
-  serialized_end=536,
+  serialized_start=455,
+  serialized_end=504,
 )
 
 
@@ -238,8 +213,8 @@ _MODELSTATUSREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=538,
-  serialized_end=585,
+  serialized_start=506,
+  serialized_end=553,
 )
 
 _ENDPOINTREQUEST.fields_by_name['predict_request'].message_type = _PREDICTREQUEST
@@ -254,10 +229,9 @@ _ENDPOINTREQUEST.fields_by_name['model_metadata_request'].containing_oneof = _EN
 _ENDPOINTREQUEST.oneofs_by_name['type'].fields.append(
   _ENDPOINTREQUEST.fields_by_name['model_status_request'])
 _ENDPOINTREQUEST.fields_by_name['model_status_request'].containing_oneof = _ENDPOINTREQUEST.oneofs_by_name['type']
+_PREDICTREQUEST_DATA.fields_by_name['attributes'].message_type = data__attributes__pb2._DATAATTRIBUTES
 _PREDICTREQUEST_DATA.containing_type = _PREDICTREQUEST
-_PREDICTREQUEST.fields_by_name['data_type'].enum_type = _PREDICTREQUEST_DATATYPE
 _PREDICTREQUEST.fields_by_name['inputs'].message_type = _PREDICTREQUEST_DATA
-_PREDICTREQUEST_DATATYPE.containing_type = _PREDICTREQUEST
 DESCRIPTOR.message_types_by_name['EndpointRequest'] = _ENDPOINTREQUEST
 DESCRIPTOR.message_types_by_name['PredictRequest'] = _PREDICTREQUEST
 DESCRIPTOR.message_types_by_name['ModelMetadataRequest'] = _MODELMETADATAREQUEST

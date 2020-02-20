@@ -17,7 +17,9 @@
 import datetime
 import zmq
 import os
-import multiprocessing.shared_memory
+from multiprocessing import shared_memory
+import threading
+import numpy as np
 
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import get_model_status_pb2
@@ -32,8 +34,7 @@ from ie_serving.server.constants import WRONG_MODEL_SPEC, \
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output, \
-    prepare_input_data, StatusCode, statusCodes
-from ie_serving.server.request import Request
+    prepare_ipc_predict_request, StatusCode, statusCodes
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
     check_availability_of_requested_status, add_status_to_response
@@ -60,7 +61,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         if requested_version == 0:
             requested_version = "default"
         target_socket_name =os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
-                                         "{}-{}-endpoint.sock".format(
+                                         "{}-{}.sock".format(
                                              model_name, requested_version))
         if not os.path.exists(target_socket_name):
             context.set_code(StatusCode.NOT_FOUND)
@@ -73,44 +74,39 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         target_socket = self.zmq_context.socket(zmq.REQ)
         target_socket.connect("ipc://{}".format(target_socket_name))
 
+        thread_id = threading.get_ident()
+        return_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
+                                          "{}-{}.sock".format(self.process_id,
+                                                              thread_id))
 
+        ipc_predict_request, allocated_shm_names = \
+            prepare_ipc_predict_request(None, data=request.inputs,
+                                        return_socket_name=return_socket_name)
 
-        deserialization_start_time = datetime.datetime.now()
-        inference_input, error_message = \
-            prepare_input_data(data=request.inputs,
-                               service_type=GRPC)
-        if error_message is not None:
-            code = statusCodes['invalid_arg'][GRPC]
-            context.set_code(code)
-            context.set_details(error_message)
-            logger.debug("PREDICT, problem with input data. Exit code {}"
-                         .format(code))
-            return predict_pb2.PredictResponse()
+        target_socket.send(ipc_predict_request)
+        target_socket.recv()
 
-        target_engine = self.models[model_name].engines[version]
-        inference_request = Request(inference_input)
-        target_engine.requests_queue.put(inference_request)
-        inference_output, used_ireq_index = inference_request.wait_for_result()
-        if type(inference_output) is str:
-            code = statusCodes['invalid_arg'][GRPC]
-            context.set_code(code)
-            context.set_details(inference_output)
-            logger.debug("PREDICT, problem during inference execution. Exit "
-                         "code {}".format(code))
-            target_engine.free_ireq_index_queue.put(used_ireq_index)
-            return predict_pb2.PredictResponse()
-        serialization_start_time = datetime.datetime.now()
-        response = prepare_output(inference_output=inference_output,
-                                  model_available_outputs=target_engine.
-                                  model_keys['outputs'])
+        return_socket = self.zmq_context.socket(zmq.REP)
+        return_socket.bind("ipc://{}".format(return_socket_name))
+        ipc_predict_response = return_socket.recv()
+
+        inference_output = {}
+        for output in ipc_predict_response.outputs:
+            output_shm = shared_memory.SharedMemory(name=output.shm_name)
+            allocated_shm_names.append(output.shm_name)
+            output_results = np.ndarray(shape=tuple(output.shape),
+                                        dtype=np.dtype(output.data_type),
+                                        buffer=output_shm.buf)
+            inference_output[output.output_name] = output_results
+
+        response = prepare_output(inference_output=inference_output)
         response.model_spec.name = model_name
-        response.model_spec.version.value = version
+        response.model_spec.version.value = requested_version
         response.model_spec.signature_name = SIGNATURE_NAME
-        duration = (datetime.datetime.now() -
-                    serialization_start_time).total_seconds() * 1000
-        logger.debug("PREDICT; inference results serialization completed;"
-                     " {}; {}; {} ms".format(model_name, version, duration))
-        target_engine.free_ireq_index_queue.put(used_ireq_index)
+
+        for shm_name in allocated_shm_names:
+            shared_memory.SharedMemory(name=shm_name).close().unlink()
+
         return response
 
     def GetModelMetadata(self, request, context):
