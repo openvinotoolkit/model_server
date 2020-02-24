@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ovms_ipc;
 
-import "data_attributes.proto";
+import "ie_serving/messaging/data_attributes.proto";
 
 message EndpointResponse{
     oneof type{
@@ -15,11 +15,16 @@ message EndpointResponse{
 
 message PredictResponse{
     message Data{
-        DataAttributes attributes = 1;
-        string output_name = 2;
-        string shm_name = 3;
+        oneof type{
+            NumpyAttributes numpy_attributes = 1;
+            StringAttributes string_attributes = 2;
+            BinaryAttributes binary_attributes = 3;
+        }
+        string output_name = 4;
+        string shm_name = 5;
     }
     repeated Data outputs = 1;
+    int32 responding_version = 2;
 }
 
 message ModelMetadataResponse{

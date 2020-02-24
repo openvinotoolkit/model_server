@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import datetime
 
 import falcon
 from grpc import StatusCode
@@ -36,7 +37,7 @@ else:  # TF version 1.x
 from multiprocessing import shared_memory
 from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest, \
     PredictRequest
-from ie_serving.messaging.data_attributes_pb2 import DataAttributes
+from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
 
 logger = get_logger(__name__)
 
@@ -44,6 +45,68 @@ statusCodes = {
     'invalid_arg': {GRPC: StatusCode.INVALID_ARGUMENT,
                     REST: falcon.HTTP_BAD_REQUEST},
 }
+
+
+def prepare_input_data(target_engine, data, service_type):
+    # returns:
+    # inference_input, None on success
+    # None, error_message on error
+    model_inputs_in_input_request = list(dict(data).keys())
+    input_keys = target_engine.input_key_names
+    inference_input = {}
+
+    for requested_input_blob in model_inputs_in_input_request:
+        if requested_input_blob not in input_keys:
+            message = INVALID_INPUT_KEY % (model_inputs_in_input_request,
+                                           input_keys)
+            logger.debug("PREDICT error: {}".format(message))
+            return None, message
+
+        tensor_name = target_engine.model_keys['inputs'][requested_input_blob]
+        if service_type == GRPC:
+            try:
+                tensor_input = make_ndarray(data[requested_input_blob])
+            except Exception as e:
+                message = str(e)
+                logger.debug("PREDICT prepare_input_data make_ndarray error: "
+                             "{}".format(message))
+                return None, message
+        else:
+            tensor_input = np.asarray(data[requested_input_blob])
+        # Validate shape if shape not in auto mode
+        if target_engine.shape_info.mode != ShapeMode.AUTO:
+            shape_required_in_model = target_engine.net.inputs[
+                tensor_name].shape
+
+            # For reshapable models check all dimensions,
+            # for non-reshapable, check all starting from the second (omit
+            # batch size)
+            if target_engine.shape_info.mode == ShapeMode.DISABLED:
+                starting_dim = 1
+            else:
+                starting_dim = 0
+
+            # check requested shape and model shape
+            if shape_required_in_model[starting_dim:] != list(
+                    tensor_input.shape)[starting_dim:]:
+                message = INVALID_SHAPE.format(list(tensor_input.shape),
+                                               shape_required_in_model)
+                logger.debug("PREDICT error: {}".format(message))
+                return None, message
+
+            # check if input batch size match the model only if not auto mode
+            if target_engine.batching_info.mode != \
+                    BatchingMode.AUTO and shape_required_in_model[0] != \
+                    tensor_input.shape[0]:
+                message = INVALID_BATCHSIZE.format(
+                    tensor_input.shape[0],
+                    target_engine.batching_info.batch_size)
+                logger.debug("PREDICT error,Invalid batchsize:{}".format(
+                    message))
+                return None, message
+
+        inference_input[tensor_name] = tensor_input
+    return inference_input, None
 
 
 def prepare_ipc_predict_request(data_type, data, return_socket_name):
@@ -55,32 +118,48 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
 
     inputs = dict(data)
     for input_name in list(inputs.keys()):
+        start_time = datetime.datetime.now()
         single_input = make_ndarray(inputs[input_name])
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Numpy deserialization: - {} ms".format(duration))
 
-        input_shm_name = shared_memory.SharedMemory(
-            create=True, size=single_input.nbytes)
+        start_time = datetime.datetime.now()
+        input_shm = shared_memory.SharedMemory(create=True,
+                                               size=single_input.nbytes)
         shm_array = np.ndarray(single_input.shape, dtype=single_input.dtype,
-                               buffer=single_input.buf)
-        shm_array[:] = single_input[:]
+                               buffer=input_shm.buf)
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Shared memory allocation - {} ms".format(duration))
 
-        ipc_numpy_attributes = DataAttributes.NumpyAttributes()
+        start_time = datetime.datetime.now()
+        shm_array[:] = single_input[:]
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Input data copying to shared memory - {} ms".format(
+            duration))
+
+        start_time = datetime.datetime.now()
+        ipc_numpy_attributes = NumpyAttributes()
         ipc_numpy_attributes.shape.extend(list(shm_array.shape))
         ipc_numpy_attributes.data_type = shm_array.dtype.name
 
-        ipc_data_attributes = DataAttributes()
-        ipc_data_attributes.numpy_attributes.CopyFrom(ipc_numpy_attributes)
-
         ipc_input_data = PredictRequest.Data()
-        ipc_input_data.attributes.CopyFrom(ipc_data_attributes)
+        ipc_input_data.numpy_attributes.CopyFrom(ipc_numpy_attributes)
         ipc_input_data.input_name = input_name
-        ipc_input_data.shm_name = input_shm_name
+        ipc_input_data.shm_name = input_shm.name
         ipc_inputs.append(ipc_input_data)
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Single input IPC message preparation - {} ms".format(
+            duration))
 
-        allocated_shm_names.append(input_shm_name)
+        allocated_shm_names.append(input_shm.name)
 
+    start_time = datetime.datetime.now()
     ipc_predict_request.return_socket_name = return_socket_name
     ipc_predict_request.inputs.extend(ipc_inputs)
     ipc_endpoint_request.predict_request.CopyFrom(ipc_predict_request)
+    duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+    logger.debug("Final request IPC message preparation - {} ms".format(
+        duration))
     return ipc_endpoint_request, allocated_shm_names
 
 '''
@@ -103,7 +182,7 @@ def _prepare_output_as_AppendArrayToTensorProto(
                 inference_output[response_output_name].shape).as_proto())
         result = inference_output[response_output_name].flatten()
         tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
-                                                               result)
+                                                           result)
         response.outputs[response_output_name].CopyFrom(output_tensor)
     return response
 

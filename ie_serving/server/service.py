@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import datetime
-import zmq
 import os
-from multiprocessing import shared_memory
 import threading
-import numpy as np
+from multiprocessing import shared_memory
 
+import numpy as np
+import zmq
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import get_model_status_pb2
 from tensorflow_serving.apis import predict_pb2
@@ -29,12 +28,13 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
+from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse
 from ie_serving.server.constants import WRONG_MODEL_SPEC, \
-    INVALID_METADATA_FIELD, SIGNATURE_NAME, GRPC
+    INVALID_METADATA_FIELD, SIGNATURE_NAME
 from ie_serving.server.get_model_metadata_utils import \
     prepare_get_metadata_output
 from ie_serving.server.predict_utils import prepare_output, \
-    prepare_ipc_predict_request, StatusCode, statusCodes
+    prepare_ipc_predict_request, StatusCode
 from ie_serving.server.service_utils import \
     check_availability_of_requested_model, \
     check_availability_of_requested_status, add_status_to_response
@@ -58,11 +58,15 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         # is available on server with proper version
         model_name = request.model_spec.name
         requested_version = request.model_spec.version.value
+
+        start_time = datetime.datetime.now()
+
         if requested_version == 0:
-            requested_version = "default"
-        target_socket_name =os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
-                                         "{}-{}.sock".format(
-                                             model_name, requested_version))
+            #requested_version = "default"
+            requested_version = 1
+        target_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
+                                          "{}-{}.sock".format(
+                                              model_name, requested_version))
         if not os.path.exists(target_socket_name):
             context.set_code(StatusCode.NOT_FOUND)
             context.set_details(WRONG_MODEL_SPEC.format(model_name,
@@ -71,41 +75,65 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
 
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Version existence check - {} ms".format(duration))
+
+        start_time = datetime.datetime.now()
         target_socket = self.zmq_context.socket(zmq.REQ)
         target_socket.connect("ipc://{}".format(target_socket_name))
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Engine connection setup - {} ms".format(duration))
 
         thread_id = threading.get_ident()
         return_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
                                           "{}-{}.sock".format(self.process_id,
                                                               thread_id))
-
+        logger.debug("Preparing IPC message")
         ipc_predict_request, allocated_shm_names = \
             prepare_ipc_predict_request(None, data=request.inputs,
                                         return_socket_name=return_socket_name)
 
-        target_socket.send(ipc_predict_request)
+        logger.debug("Sending IPC message")
+        target_socket.send(ipc_predict_request.SerializeToString())
         target_socket.recv()
 
         return_socket = self.zmq_context.socket(zmq.REP)
         return_socket.bind("ipc://{}".format(return_socket_name))
-        ipc_predict_response = return_socket.recv()
-
+        logger.debug("Awaiting return IPC message")
+        ipc_endpoint_response = EndpointResponse()
+        ipc_endpoint_response.MergeFromString(return_socket.recv())
+        return_socket.send(b'ACK')
+        logger.debug("Received return IPC message")
+        logger.debug(ipc_endpoint_response)
+        ipc_predict_response = ipc_endpoint_response.predict_response
         inference_output = {}
+
+        start_time = datetime.datetime.now()
         for output in ipc_predict_response.outputs:
             output_shm = shared_memory.SharedMemory(name=output.shm_name)
             allocated_shm_names.append(output.shm_name)
-            output_results = np.ndarray(shape=tuple(output.shape),
-                                        dtype=np.dtype(output.data_type),
-                                        buffer=output_shm.buf)
+            output_results = np.ndarray(
+                shape=tuple(output.numpy_attributes.shape),
+                dtype=np.dtype(output.numpy_attributes.data_type),
+                buffer=output_shm.buf)
             inference_output[output.output_name] = output_results
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Output extraction - {} ms".format(duration))
 
+        start_time = datetime.datetime.now()
         response = prepare_output(inference_output=inference_output)
+        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        logger.debug("Output serialization - {} ms".format(duration))
+
         response.model_spec.name = model_name
-        response.model_spec.version.value = requested_version
+        response.model_spec.version.value = ipc_predict_response.\
+            responding_version
         response.model_spec.signature_name = SIGNATURE_NAME
 
         for shm_name in allocated_shm_names:
-            shared_memory.SharedMemory(name=shm_name).close().unlink()
+            shm = shared_memory.SharedMemory(name=shm_name)
+            shm.close()
+            shm.unlink()
 
         return response
 

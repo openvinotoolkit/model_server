@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ovms_ipc;
 
-import "data_attributes.proto";
+import "ie_serving/messaging/data_attributes.proto";
 
 message EndpointRequest{
     oneof type{
@@ -14,9 +14,13 @@ message EndpointRequest{
 
 message PredictRequest{
     message Data{
-        DataAttributes attributes = 1;
-        string input_name = 2;
-        string shm_name = 3;
+        oneof attributes{
+            NumpyAttributes numpy_attributes = 1;
+            StringAttributes string_attributes = 2;
+            BinaryAttributes binary_attributes = 3;
+        }
+        string input_name = 4;
+        string shm_name = 5;
     }
     repeated Data inputs = 1;
     string return_socket_name = 2;
