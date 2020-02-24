@@ -15,6 +15,7 @@
 #
 import sys
 
+import pytest
 import numpy as np
 from constants import PREDICTION_SERVICE, MODEL_SERVICE, ERROR_SHAPE
 from utils.grpc import infer, infer_batch, get_model_metadata, \
@@ -27,6 +28,7 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 class TestMuiltModelInference():
 
     def test_run_inference(self, download_two_models,

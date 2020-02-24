@@ -29,6 +29,7 @@ sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, _ERROR_MESSAGE # noqa
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 class TestModelVerPolicy():
 
     @pytest.mark.parametrize("model_name, throw_error", [

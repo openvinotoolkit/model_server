@@ -16,11 +16,13 @@
 
 import grpc
 import numpy as np
+import pytest
 from tensorflow import make_ndarray
 from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
     predict_pb2
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_successful(mocker, get_grpc_service_for_predict,
                             get_fake_model):
     results_mock = mocker.patch(
@@ -44,6 +46,7 @@ def test_predict_successful(mocker, get_grpc_service_for_predict,
     assert expected_response.shape == encoded_response.shape
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_successful_version(mocker, get_grpc_service_for_predict):
     results_mock = mocker.patch(
         'ie_serving.server.request.Request.wait_for_result')
@@ -66,6 +69,7 @@ def test_predict_successful_version(mocker, get_grpc_service_for_predict):
     assert expected_response.shape == encoded_response.shape
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_wrong_model_name(get_grpc_service_for_predict):
     wrong_model_name = 'wrong_name'
     request = get_fake_request(model_name=wrong_model_name, data_shape=(1, 1),
@@ -80,6 +84,7 @@ def test_predict_wrong_model_name(get_grpc_service_for_predict):
     assert grpc.StatusCode.NOT_FOUND == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_wrong_model_version(get_grpc_service_for_predict):
     wrong_requested_version = 999
     request = get_fake_request(model_name='test', data_shape=(1, 1),
@@ -95,6 +100,7 @@ def test_predict_wrong_model_version(get_grpc_service_for_predict):
     assert grpc.StatusCode.NOT_FOUND == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_wrong_shape(get_grpc_service_for_predict):
     wrong_shape = (4, 4)
     request = get_fake_request(model_name='test', data_shape=wrong_shape,
@@ -109,6 +115,7 @@ def test_predict_wrong_shape(get_grpc_service_for_predict):
     assert grpc.StatusCode.INVALID_ARGUMENT == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_wrong_input_blob(get_grpc_service_for_predict):
     wrong_input_blob = 'wrong_input_blob'
     request = get_fake_request(model_name='test', data_shape=(1, 1),
@@ -123,6 +130,7 @@ def test_predict_wrong_input_blob(get_grpc_service_for_predict):
     assert grpc.StatusCode.INVALID_ARGUMENT == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_predict_problem_with_serialize_data(get_grpc_service_for_predict):
     request = predict_pb2.PredictRequest()
     request.model_spec.name = 'test'

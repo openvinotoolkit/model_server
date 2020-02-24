@@ -37,9 +37,6 @@ jobs:
       - run:
           name: run unit tests
           command: make unit
-      - run:
-          name: check coverage
-          command: make coverage
   functional_tests_bin:
     machine:
       enabled: true
@@ -91,7 +88,5 @@ workflows:
     jobs:
       - unit_tests
       - style
-      - functional_tests_bin
-      - functional_tests_apt_ubuntu
       - functional_tests_clearlinux
       
