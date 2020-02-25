@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ovms_ipc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n-ie_serving/messaging/endpoint_responses.proto\x12\x08ovms_ipc\x1a*ie_serving/messaging/data_attributes.proto\"\x88\x02\n\x10\x45ndpointResponse\x12\x35\n\x10predict_response\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.PredictResponseH\x00\x12\x42\n\x17model_metadata_response\x18\x02 \x01(\x0b\x32\x1f.ovms_ipc.ModelMetadataResponseH\x00\x12>\n\x15model_status_response\x18\x03 \x01(\x0b\x32\x1d.ovms_ipc.ModelStatusResponseH\x00\x12\x31\n\x0e\x65rror_response\x18\x04 \x01(\x0b\x32\x17.ovms_ipc.ErrorResponseH\x00\x42\x06\n\x04type\"\xbf\x02\n\x0fPredictResponse\x12/\n\x07outputs\x18\x01 \x03(\x0b\x32\x1e.ovms_ipc.PredictResponse.Data\x12\x1a\n\x12responding_version\x18\x02 \x01(\x05\x1a\xde\x01\n\x04\x44\x61ta\x12\x35\n\x10numpy_attributes\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.NumpyAttributesH\x00\x12\x37\n\x11string_attributes\x18\x02 \x01(\x0b\x32\x1a.ovms_ipc.StringAttributesH\x00\x12\x37\n\x11\x62inary_attributes\x18\x03 \x01(\x0b\x32\x1a.ovms_ipc.BinaryAttributesH\x00\x12\x13\n\x0boutput_name\x18\x04 \x01(\t\x12\x10\n\x08shm_name\x18\x05 \x01(\tB\x06\n\x04type\"\xc7\x02\n\x15ModelMetadataResponse\x12\x43\n\x10inputs_signature\x18\x01 \x03(\x0b\x32).ovms_ipc.ModelMetadataResponse.Signature\x12\x44\n\x11outputs_signature\x18\x02 \x03(\x0b\x32).ovms_ipc.ModelMetadataResponse.Signature\x12\x13\n\x0bmethod_name\x18\x03 \x01(\t\x1a=\n\x05Layer\x12\x12\n\nlayer_name\x18\x01 \x01(\t\x12\x11\n\tprecision\x18\x02 \x01(\t\x12\r\n\x05shape\x18\x03 \x03(\x05\x1aO\n\tSignature\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x34\n\x05layer\x18\x02 \x01(\x0b\x32%.ovms_ipc.ModelMetadataResponse.Layer\"\x91\x03\n\x13ModelStatusResponse\x1a\x85\x01\n\x06Status\x12\x42\n\nerror_code\x18\x01 \x01(\x0e\x32..ovms_ipc.ModelStatusResponse.Status.ErrorCode\x12\x15\n\rerror_message\x18\x02 \x01(\t\" \n\tErrorCode\x12\x06\n\x02OK\x10\x00\x12\x0b\n\x07UNKNOWN\x10\x01\x1a\xa9\x01\n\x12ModelVersionStatus\x12\x12\n\nmodel_name\x18\x01 \x01(\t\x12\x15\n\rmodel_version\x18\x02 \x01(\x05\x12\x32\n\x05state\x18\x03 \x01(\x0e\x32#.ovms_ipc.ModelStatusResponse.State\x12\x34\n\x06status\x18\x04 \x01(\x0b\x32$.ovms_ipc.ModelStatusResponse.Status\"F\n\x05State\x12\t\n\x05START\x10\x00\x12\x0b\n\x07LOADING\x10\x01\x12\r\n\tAVAILABLE\x10\x02\x12\r\n\tUNLOADING\x10\x03\x12\x07\n\x03\x45ND\x10\x04\"&\n\rErrorResponse\x12\x15\n\rerror_message\x18\x01 \x01(\tb\x06proto3'
+  serialized_pb=b'\n-ie_serving/messaging/endpoint_responses.proto\x12\x08ovms_ipc\x1a*ie_serving/messaging/data_attributes.proto\"\x88\x02\n\x10\x45ndpointResponse\x12\x35\n\x10predict_response\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.PredictResponseH\x00\x12\x42\n\x17model_metadata_response\x18\x02 \x01(\x0b\x32\x1f.ovms_ipc.ModelMetadataResponseH\x00\x12>\n\x15model_status_response\x18\x03 \x01(\x0b\x32\x1d.ovms_ipc.ModelStatusResponseH\x00\x12\x31\n\x0e\x65rror_response\x18\x04 \x01(\x0b\x32\x17.ovms_ipc.ErrorResponseH\x00\x42\x06\n\x04type\"\xbf\x02\n\x0fPredictResponse\x12/\n\x07outputs\x18\x01 \x03(\x0b\x32\x1e.ovms_ipc.PredictResponse.Data\x12\x1a\n\x12responding_version\x18\x02 \x01(\x05\x1a\xde\x01\n\x04\x44\x61ta\x12\x35\n\x10numpy_attributes\x18\x01 \x01(\x0b\x32\x19.ovms_ipc.NumpyAttributesH\x00\x12\x37\n\x11string_attributes\x18\x02 \x01(\x0b\x32\x1a.ovms_ipc.StringAttributesH\x00\x12\x37\n\x11\x62inary_attributes\x18\x03 \x01(\x0b\x32\x1a.ovms_ipc.BinaryAttributesH\x00\x12\x13\n\x0boutput_name\x18\x04 \x01(\t\x12\x10\n\x08shm_name\x18\x05 \x01(\tB\x06\n\x04type\"\xc7\x02\n\x15ModelMetadataResponse\x12\x43\n\x10inputs_signature\x18\x01 \x03(\x0b\x32).ovms_ipc.ModelMetadataResponse.Signature\x12\x44\n\x11outputs_signature\x18\x02 \x03(\x0b\x32).ovms_ipc.ModelMetadataResponse.Signature\x12\x13\n\x0bmethod_name\x18\x03 \x01(\t\x1a=\n\x05Layer\x12\x12\n\nlayer_name\x18\x01 \x01(\t\x12\x11\n\tprecision\x18\x02 \x01(\t\x12\r\n\x05shape\x18\x03 \x03(\x05\x1aO\n\tSignature\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x34\n\x05layer\x18\x02 \x01(\x0b\x32%.ovms_ipc.ModelMetadataResponse.Layer\"\x91\x03\n\x13ModelStatusResponse\x1a\x85\x01\n\x06Status\x12\x42\n\nerror_code\x18\x01 \x01(\x0e\x32..ovms_ipc.ModelStatusResponse.Status.ErrorCode\x12\x15\n\rerror_message\x18\x02 \x01(\t\" \n\tErrorCode\x12\x06\n\x02OK\x10\x00\x12\x0b\n\x07UNKNOWN\x10\x01\x1a\xa9\x01\n\x12ModelVersionStatus\x12\x12\n\nmodel_name\x18\x01 \x01(\t\x12\x15\n\rmodel_version\x18\x02 \x01(\x05\x12\x32\n\x05state\x18\x03 \x01(\x0e\x32#.ovms_ipc.ModelStatusResponse.State\x12\x34\n\x06status\x18\x04 \x01(\x0b\x32$.ovms_ipc.ModelStatusResponse.Status\"F\n\x05State\x12\t\n\x05START\x10\x00\x12\x0b\n\x07LOADING\x10\x01\x12\r\n\tAVAILABLE\x10\x02\x12\r\n\tUNLOADING\x10\x03\x12\x07\n\x03\x45ND\x10\x04\":\n\rErrorResponse\x12\x12\n\nerror_code\x18\x01 \x01(\x05\x12\x15\n\rerror_message\x18\x02 \x01(\tb\x06proto3'
   ,
   dependencies=[ie__serving_dot_messaging_dot_data__attributes__pb2.DESCRIPTOR,])
 
@@ -484,8 +484,15 @@ _ERRORRESPONSE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='error_message', full_name='ovms_ipc.ErrorResponse.error_message', index=0,
-      number=1, type=9, cpp_type=9, label=1,
+      name='error_code', full_name='ovms_ipc.ErrorResponse.error_code', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='error_message', full_name='ovms_ipc.ErrorResponse.error_message', index=1,
+      number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -503,7 +510,7 @@ _ERRORRESPONSE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1426,
-  serialized_end=1464,
+  serialized_end=1484,
 )
 
 _ENDPOINTRESPONSE.fields_by_name['predict_response'].message_type = _PREDICTRESPONSE

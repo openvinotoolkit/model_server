@@ -15,7 +15,6 @@
 #
 from tensorflow_serving.util import status_pb2
 
-
 def check_availability_of_requested_model(models, model_name,
                                           requested_version):
     version = 0

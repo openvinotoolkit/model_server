@@ -34,11 +34,10 @@ from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse, Predic
 from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
 from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest, PredictRequest
 
-def prepare_ipc_predict_response():
+def prepare_ipc_endpoint_response():
     outputs = {"output": np.zeros((1,100))}
     ipc_endpoint_response = EndpointResponse()
     ipc_predict_response = PredictResponse()
-    allocated_shm_names = []
     ipc_outputs = []
 
     for output_name in list(outputs.keys()):
@@ -60,16 +59,18 @@ def prepare_ipc_predict_response():
         ipc_output_data.shm_name = output_shm.name
         ipc_outputs.append(ipc_output_data)
 
-        allocated_shm_names.append(output_shm.name)
-
     ipc_predict_response.outputs.extend(ipc_outputs)
     ipc_predict_response.responding_version = 1
     ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
     return ipc_endpoint_response
 
+def free_inputs_shm(ipc_predict_request):
+    for ipc_input in ipc_predict_request.inputs:
+        shm = shared_memory.SharedMemory(name=ipc_input.shm_name)
+        shm.close()
+        shm.unlink()
 
 def run_fake_engine():
-    prepare_ipc_predict_response()
     zmq_context = zmq.Context()
     engine_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
                                       "{}-{}.sock".format("fake-model", 1))
@@ -79,18 +80,20 @@ def run_fake_engine():
     print("Starting listening for inference requests")
     while True:
         print("Awaiting request...")
-        ipc_predict_response = prepare_ipc_predict_response()
+        ipc_endpoint_response = prepare_ipc_endpoint_response()
         ipc_endpoint_request = EndpointRequest()
         ipc_endpoint_request.MergeFromString(engine_socket.recv())
         print(ipc_endpoint_request)
+
         # TODO: validate request
         engine_socket.send(b'ACK')
         return_socket_name = ipc_endpoint_request.predict_request.\
             return_socket_name
         return_socket = zmq_context.socket(zmq.REQ)
         return_socket.connect("ipc://{}".format(return_socket_name))
-        return_socket.send(ipc_predict_response.SerializeToString())
+        return_socket.send(ipc_endpoint_response.SerializeToString())
         return_socket.recv()
+        free_inputs_shm(ipc_endpoint_request.predict_request)
 
 # This script imitates inference engine with a name "fake-model", version 1.
 # It listens for requests from the server process and sends back a valid message.

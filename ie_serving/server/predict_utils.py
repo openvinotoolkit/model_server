@@ -33,12 +33,7 @@ if tf_version.split(".")[0] == "2":
     from tensorflow import make_ndarray, make_tensor_proto
 else:  # TF version 1.x
     from tensorflow.contrib.util import make_ndarray, make_tensor_proto
-
-from multiprocessing import shared_memory
-from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest, \
-    PredictRequest
-from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
-
+    
 logger = get_logger(__name__)
 
 statusCodes = {
@@ -107,60 +102,6 @@ def prepare_input_data(target_engine, data, service_type):
 
         inference_input[tensor_name] = tensor_input
     return inference_input, None
-
-
-def prepare_ipc_predict_request(data_type, data, return_socket_name):
-    # TODO: handling various data types
-    ipc_endpoint_request = EndpointRequest()
-    ipc_predict_request = PredictRequest()
-    allocated_shm_names = []
-    ipc_inputs = []
-
-    inputs = dict(data)
-    for input_name in list(inputs.keys()):
-        start_time = datetime.datetime.now()
-        single_input = make_ndarray(inputs[input_name])
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
-        logger.debug("Numpy deserialization: - {} ms".format(duration))
-
-        start_time = datetime.datetime.now()
-        input_shm = shared_memory.SharedMemory(create=True,
-                                               size=single_input.nbytes)
-        shm_array = np.ndarray(single_input.shape, dtype=single_input.dtype,
-                               buffer=input_shm.buf)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
-        logger.debug("Shared memory allocation - {} ms".format(duration))
-
-        start_time = datetime.datetime.now()
-        shm_array[:] = single_input[:]
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
-        logger.debug("Input data copying to shared memory - {} ms".format(
-            duration))
-
-        start_time = datetime.datetime.now()
-        ipc_numpy_attributes = NumpyAttributes()
-        ipc_numpy_attributes.shape.extend(list(shm_array.shape))
-        ipc_numpy_attributes.data_type = shm_array.dtype.name
-
-        ipc_input_data = PredictRequest.Data()
-        ipc_input_data.numpy_attributes.CopyFrom(ipc_numpy_attributes)
-        ipc_input_data.input_name = input_name
-        ipc_input_data.shm_name = input_shm.name
-        ipc_inputs.append(ipc_input_data)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
-        logger.debug("Single input IPC message preparation - {} ms".format(
-            duration))
-
-        allocated_shm_names.append(input_shm.name)
-
-    start_time = datetime.datetime.now()
-    ipc_predict_request.return_socket_name = return_socket_name
-    ipc_predict_request.inputs.extend(ipc_inputs)
-    ipc_endpoint_request.predict_request.CopyFrom(ipc_predict_request)
-    duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
-    logger.debug("Final request IPC message preparation - {} ms".format(
-        duration))
-    return ipc_endpoint_request, allocated_shm_names
 
 '''
 function _prepare_output_as_AppendArrayToTensorProto returns inference
