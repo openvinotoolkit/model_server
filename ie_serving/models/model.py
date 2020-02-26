@@ -21,7 +21,6 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from ie_serving.logger import get_logger
-from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model_version_status import ModelVersionStatus
 from ie_serving.models.models_utils import ErrorCode
 from ie_serving.schemas import latest_schema, all_schema, versions_schema
@@ -298,15 +297,6 @@ class Model(ABC):
             'plugin_config': version_attributes['plugin_config']
         }
 
-    @classmethod
-    def _start_engine_process_for_version(
-            cls, version_attributes, engine_spec):
-        IrEngine.build(**engine_spec)
-        cls.delete_local_mirror([version_attributes['xml_file'],
-                                 version_attributes['bin_file'],
-                                 version_attributes['mapping_config']])
-        logger.info('Deleted temporary files')
-
     #   Subclass interface
     @classmethod
     @abstractmethod
@@ -326,4 +316,10 @@ class Model(ABC):
     @classmethod
     @abstractmethod
     def get_engine_process_for_version(cls, model_name, version_attributes):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def _start_engine_process_for_version(
+            cls, engine_spec, version_attributes):
         pass

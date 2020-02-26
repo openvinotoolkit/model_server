@@ -25,6 +25,7 @@ from botocore.client import Config
 
 from ie_serving.config import GLOBAL_CONFIG, S3_CONFIG
 from ie_serving.logger import get_logger
+from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
 
 logger = get_logger(__name__)
@@ -134,7 +135,7 @@ class S3Model(Model):
         engine_spec = cls._get_engine_spec(model_name, version_attributes)
         engine_process = multiprocessing.Process(
             target=cls._start_engine_process_for_version,
-            args=(version_attributes, engine_spec))
+            args=(engine_spec, version_attributes))
         engine_process.start()
 
         return engine_process
@@ -152,3 +153,12 @@ class S3Model(Model):
         for file_path in files_paths:
             if file_path is not None:
                 os.remove(file_path)
+
+    @classmethod
+    def _start_engine_process_for_version(
+            cls, engine_spec, version_attributes):
+        IrEngine.build(**engine_spec)
+        cls.delete_local_mirror([version_attributes['xml_file'],
+                                 version_attributes['bin_file'],
+                                 version_attributes['mapping_config']])
+        logger.info('Deleted temporary files')

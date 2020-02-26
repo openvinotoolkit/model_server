@@ -56,7 +56,13 @@ class LocalModel(Model):
     @classmethod
     def get_engine_process_for_version(cls, model_name, version_attributes):
         engine_spec = cls._get_engine_spec(model_name, version_attributes)
-        engine_process = multiprocessing.Process(target=IrEngine.build,
-                                                 args=engine_spec.values())
+        engine_process = multiprocessing.Process(
+            target=cls._start_engine_process_for_version,
+            args=(engine_spec, version_attributes))
         engine_process.start()
         return engine_process
+
+    @classmethod
+    def _start_engine_process_for_version(
+            cls, engine_spec, version_attributes):
+        IrEngine.build(**engine_spec)
