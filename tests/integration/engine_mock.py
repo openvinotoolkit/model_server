@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,24 +18,17 @@ import zmq
 import os
 import numpy as np
 
-
 from ie_serving.config import GLOBAL_CONFIG
-from ie_serving.logger import get_logger
-
-
-from tensorflow import __version__ as tf_version
-if tf_version.split(".")[0] == "2":
-    from tensorflow import make_ndarray, make_tensor_proto
-else:  # TF version 1.x
-    from tensorflow.contrib.util import make_ndarray, make_tensor_proto
 
 from multiprocessing import shared_memory
-from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse, PredictResponse
+from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse, \
+    PredictResponse
 from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
-from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest, PredictRequest
+from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest
+
 
 def prepare_ipc_endpoint_response():
-    outputs = {"output": np.zeros((1,100))}
+    outputs = {"output": np.zeros((1, 100))}
     ipc_endpoint_response = EndpointResponse()
     ipc_predict_response = PredictResponse()
     ipc_outputs = []
@@ -64,11 +57,13 @@ def prepare_ipc_endpoint_response():
     ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
     return ipc_endpoint_response
 
+
 def free_inputs_shm(ipc_predict_request):
     for ipc_input in ipc_predict_request.inputs:
         shm = shared_memory.SharedMemory(name=ipc_input.shm_name)
         shm.close()
         shm.unlink()
+
 
 def run_fake_engine():
     zmq_context = zmq.Context()
@@ -96,8 +91,10 @@ def run_fake_engine():
         free_inputs_shm(ipc_endpoint_request.predict_request)
 
 # This script imitates inference engine with a name "fake-model", version 1.
-# It listens for requests from the server process and sends back a valid message.
-# To run it with docker container, mount this script and run it alongside model server.
-#
+# It listens for requests from the server process and sends back a valid
+# message. To run it with docker container, mount this script and run it
+# alongside model server.
+
+
 if __name__ == "__main__":
     run_fake_engine()

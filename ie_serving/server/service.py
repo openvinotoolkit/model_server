@@ -18,8 +18,6 @@ import os
 import threading
 
 import zmq
-from tensorflow_serving.apis import get_model_metadata_pb2
-from tensorflow_serving.apis import get_model_status_pb2
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc
@@ -27,16 +25,10 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
 from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse
-from ie_serving.server.constants import WRONG_MODEL_SPEC, \
-    INVALID_METADATA_FIELD, SIGNATURE_NAME
-from ie_serving.server.get_model_metadata_utils import \
-    prepare_get_metadata_output
+from ie_serving.server.constants import WRONG_MODEL_SPEC, SIGNATURE_NAME
 from ie_serving.server.predict_utils import prepare_output, StatusCode
-from ie_serving.server.service_utils import \
-    check_availability_of_requested_model, \
-    check_availability_of_requested_status, add_status_to_response
 from ie_serving.messaging.predict_msg_processing import \
-    prepare_ipc_predict_request, extract_inference_output
+    prepare_ipc_predict_request
 from ie_serving.messaging.msg_processing import extract_ipc_response
 from ie_serving.shm_management import free_outputs_shm
 
@@ -48,8 +40,7 @@ logger = get_logger(__name__)
 class PredictionServiceServicer(prediction_service_pb2_grpc.
                                 PredictionServiceServicer):
 
-    def __init__(self, models):
-        self.models = models
+    def __init__(self):
         self.zmq_context = zmq.Context()
         self.process_id = os.getpid()
 
@@ -61,7 +52,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
 
         start_time = datetime.datetime.now()
         if requested_version == 0:
-            #requested_version = "default"
+            # requested_version = "default"
             requested_version = 1
         target_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
                                           "{}-{}.sock".format(
@@ -73,13 +64,15 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             logger.debug("PREDICT, invalid model spec from request, {} - {}"
                          .format(model_name, requested_version))
             return predict_pb2.PredictResponse()
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Version existence check - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
         target_socket = self.zmq_context.socket(zmq.REQ)
         target_socket.connect("ipc://{}".format(target_socket_name))
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Engine connection setup - {} ms".format(duration))
 
         thread_id = threading.get_ident()
@@ -120,13 +113,15 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
                 dtype=np.dtype(output.numpy_attributes.data_type),
                 buffer=output_shm.buf)
             inference_output[output.output_name] = output_results
-        #inference_output = extract_inference_output(ipc_predict_response)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        # inference_output = extract_inference_output(ipc_predict_response)
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Output extraction - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
         response = prepare_output(inference_output=inference_output)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Output serialization - {} ms".format(duration))
 
         response.model_spec.name = model_name
@@ -136,6 +131,11 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         free_outputs_shm(ipc_predict_response)
         return response
 
+    # GetModelMetadata and GetModelStatus endpoints will be
+    # enabled in future development phases
+
+
+"""
     def GetModelMetadata(self, request, context):
 
         # check if model with was requested
@@ -180,12 +180,14 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         logger.debug("MODEL_METADATA created a response for {} - {}"
                      .format(model_name, version))
         return response
+"""
 
 
 class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
 
-    def __init__(self, models):
-        self.models = models
+    def __init__(self):
+        pass
+    """
 
     def GetModelStatus(self, request, context):
         logger.debug("MODEL_STATUS, get request: {}".format(request))
@@ -215,3 +217,4 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         logger.debug("MODEL_STATUS created a response for {} - {}"
                      .format(model_name, requested_version))
         return response
+    """

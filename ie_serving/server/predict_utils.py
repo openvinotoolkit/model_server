@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import datetime
 
 import falcon
 from grpc import StatusCode
@@ -33,7 +32,8 @@ if tf_version.split(".")[0] == "2":
     from tensorflow import make_ndarray, make_tensor_proto
 else:  # TF version 1.x
     from tensorflow.contrib.util import make_ndarray, make_tensor_proto
-    
+
+
 logger = get_logger(__name__)
 
 statusCodes = {
@@ -102,6 +102,7 @@ def prepare_input_data(target_engine, data, service_type):
 
         inference_input[tensor_name] = tensor_input
     return inference_input, None
+
 
 '''
 function _prepare_output_as_AppendArrayToTensorProto returns inference

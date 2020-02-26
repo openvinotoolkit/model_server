@@ -16,6 +16,7 @@
 
 from multiprocessing import shared_memory
 
+
 def free_outputs_shm(ipc_predict_response):
     for ipc_output in ipc_predict_response.outputs:
         shm = shared_memory.SharedMemory(name=ipc_output.shm_name)
