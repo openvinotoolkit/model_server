@@ -15,9 +15,11 @@
 #
 
 import grpc
+import pytest
 from conftest import get_fake_model_metadata_request, PREDICT_SERVICE
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_get_model_metadata_wrong_model_version(get_grpc_service_for_predict):
     wrong_requested_version = 999
     request = get_fake_model_metadata_request(model_name='test',
@@ -33,6 +35,7 @@ def test_get_model_metadata_wrong_model_version(get_grpc_service_for_predict):
     assert grpc.StatusCode.NOT_FOUND == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_get_model_metadata_wrong_model(get_grpc_service_for_predict):
     wrong_model_name = "wrong"
     request = get_fake_model_metadata_request(model_name=wrong_model_name,
@@ -48,6 +51,7 @@ def test_get_model_metadata_wrong_model(get_grpc_service_for_predict):
     assert grpc.StatusCode.NOT_FOUND == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_get_model_metadata_wrong_metadata_field(get_grpc_service_for_predict):
     wrong_metadata = "wrong"
     request = get_fake_model_metadata_request(model_name='test',
@@ -63,6 +67,7 @@ def test_get_model_metadata_wrong_metadata_field(get_grpc_service_for_predict):
     assert grpc.StatusCode.INVALID_ARGUMENT == code
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_get_model_metadata_correct_response(get_grpc_service_for_predict):
     request = get_fake_model_metadata_request(model_name='test',
                                               metadata_field='signature_'

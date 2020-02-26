@@ -87,6 +87,7 @@ def test_get_versions_files(mocker, mocker_values, expected_output):
     assert expected_output[2] is mapping
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 @pytest.mark.parametrize("is_error", [False, True])
 def test_get_engines_for_model(mocker, is_error):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
@@ -135,6 +136,7 @@ def test_get_engines_for_model(mocker, is_error):
         assert 'modelv4' == output[4]
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 def test_get_engines_for_model_with_ir_raises(mocker):
     engines_mocker = mocker.patch('ie_serving.models.ir_engine.IrEngine.'
                                   'build')

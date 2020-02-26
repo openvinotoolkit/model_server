@@ -16,6 +16,7 @@
 import shutil
 import sys
 import time
+import pytest
 
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
 from utils.grpc import get_model_metadata, model_metadata_response, \
@@ -29,6 +30,7 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 
+@pytest.mark.skip(reason="To be updated for 2020R2 release")
 class TestSingleModelInference():
 
     def test_specific_version(self, download_two_model_versions,

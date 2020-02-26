@@ -106,6 +106,7 @@ class TestBatchModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     def test_get_model_metadata(self, resnet_8_batch_model_downloader,
                                 start_server_batch_model,
                                 create_grpc_channel):
@@ -245,6 +246,7 @@ class TestBatchModelInference():
                                   request_format=request_format)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     def test_get_model_metadata_rest(self, resnet_8_batch_model_downloader,
                                      start_server_batch_model):
 

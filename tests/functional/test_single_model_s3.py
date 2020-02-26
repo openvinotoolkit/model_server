@@ -16,6 +16,7 @@
 
 import sys
 
+import pytest
 import numpy as np
 from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
@@ -64,6 +65,7 @@ class TestSingleModelInferenceS3():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     def test_get_model_metadata(self, start_server_single_model_from_s3,
                                 create_grpc_channel):
 
@@ -84,6 +86,7 @@ class TestSingleModelInferenceS3():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     def test_get_model_status(self, start_server_single_model_from_s3,
                               create_grpc_channel):
 

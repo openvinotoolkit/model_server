@@ -112,6 +112,7 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, out_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     def test_multi_local_model_reshaping_auto(
             self, face_detection_model_downloader,
             start_server_multi_model,
@@ -129,6 +130,7 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, out_name, shape['out'], True,
                                     model_name, stub)
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), ((1, 3, 300, 300),
                                                           False)])
@@ -152,6 +154,7 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, out_name, fixed_shape['out'],
                                     is_correct, model_name, stub)
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
                               ('column_name'), ('column_noname')])
@@ -168,6 +171,7 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, out_name, shape['out'], True,
                                     request_format, rest_url)
 
+    @pytest.mark.skip(reason="To be updated for 2020R2 release")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), ((1, 3, 300, 300),
                                                           False)])
