@@ -1,42 +1,28 @@
-# OpenVINO&trade; model server
+# OpenVINO&trade; Model Server
+OpenVINO&trade; Model Server is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. The server provides an inference service via gRPC enpoint or REST API -- making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit). 
 
-Inference model server implementation, compatible with TensorFlow Serving API and OpenVINO&trade; as the execution backend.
-It provides both gRPC and RESTfull API interfaces.
-
-
-## Project overview
-
-“OpenVINO&trade; Model Server” is a flexible, high-performance inference serving component for artificial intelligence models.  
-The software makes it easy to deploy new algorithms and AI experiments, 
-while keeping the same server architecture and APIs like in [TensorFlow Serving](https://github.com/tensorflow/serving). 
-
-It provides out-of-the-box integration with models supported by [OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
-and allows frameworks such as [AWS Sagemaker](https://github.com/aws/sagemaker-tensorflow-containers) to serve AI models with OpenVINO&trade;. 
-
-OpenVINO Model Server supports for the models storage, beside local filesystem, also GCS, S3 and Minio. 
-
-It is implemented as a python service using gRPC interface library; falcon REST API framework;  data serialization and deserialization 
-using TensorFlow; and OpenVINO&trade; for inference execution. It acts as an integrator and a bridge exposing CPU optimized 
-inference engine over network interfaces. 
+The server is implemented as a python service using the gRPC interface library or falcon REST API framework with data serialization and deserialization using TensorFlow, and OpenVINO&trade; as the inference execution provider. Model repositories may reside on a locally accessible file system (e.g. NFS), Google Cloud Storage (GCS), Amazon S3 or MinIO.
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
-OpenVINO Model Server, beside CPU, can employ:
- - [Intel® Movidius™ NeuralCompute Sticks](https://software.intel.com/en-us/neural-compute-stick) AI accelerator.
-It can be enabled both [on Bare Metal Hosts](docs/host.md#using-neural-compute-sticks) or 
-[in Docker containers](docs/docker_container.md#starting-docker-container-with-ncs).
-- Intel HDDL accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
-It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or 
-[in Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
+A few key features: 
+- Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
+- Deploy new [model versions](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-version-policy) without changing client code.
+- Support for AI accelerators including [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj). The server can be enabled both on [Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or in
+[Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
+- [Kubernetes deployments](example_k8s). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
+- [Sagemaker integration](example_sagemaker). The server supports using AWS SageMaker containers for serving inferece execution.  
+- Supports [multi-worker configuration](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multi-worker-configuration) and [parallel inference execution](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multiple-model-server-instances).
+- [Model reshaping](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-reshaping). The server supports reshaphing models in runtime. 
 
-## Getting it up and running
+## Getting Up and Running
 
 [Using a docker container](docs/docker_container.md)
 
 [Landing on bare metal or virtual machine](docs/host.md)
 
 
-## Advanced configuration
+## Advanced Configuration
 
 [Custom layer extensions](docs/cpu_extension.md)
 
@@ -45,10 +31,9 @@ It can be enabled both [on Bare Metal Hosts](docs/host.md#using-hddl-accelerator
 Using FPGA (TBD)
 
 
-## gRPC API documentation
+## gRPC API Documentation
 
-OpenVINO&trade; Model Server gRPC API is documented in proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis).
-**Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
+OpenVINO&trade; Model Server gRPC API is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis). **Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
 
 [predict function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
@@ -64,12 +49,11 @@ These are the most generic function calls and should address most of the usage s
 [get model status function spec](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/get_model_status.proto) can be used to report
 all exposed versions including their state in their lifecycle. 
 
-Refer to the [example client code](example_client) to learn how to use this API and submit the requests using gRPC interface.
+Refer to the [example client code](example_client) to learn how to use this API and submit the requests using the gRPC interface.
 
-gRPC interface is recommended for performance reasons because it has faster implementation of input data deserialization.
-It can achieve shorter latency especially for big input messages like images. 
+Using the gRPC interface is recommended for optimal performace due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
 
-## RESTful API documentation 
+## RESTful API Documentation 
 
 OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
 
@@ -82,29 +66,19 @@ Review the exemplary clients below to find out more how to connect and run infer
 
 REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
 
-## Usage examples
-
-[Kubernetes deployments](example_k8s)
-
-[Sagemaker integration](example_sagemaker)
-
-Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
+## Usage Examples
+- Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
 and [RESTful API](example_client/#rest-api-client-to-predict-function) with numpy data input
-
-[Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
-
-[Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
-
-[Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
-
-[Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
-
-[Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
+- [Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
+- [Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
+- [Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
+- [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
+- [Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
 
-## Benchmarking results
+## Benchmarking Results
 
-[Report for resnet models](docs/benchmark.md)
+[ResNet Benchmarks](docs/benchmark.md)
 
 ## References
 
@@ -121,7 +95,7 @@ and [RESTful API](example_client/#rest-api-client-to-predict-function) with nump
 [OpenVINO Model Server boosts AI](https://www.intel.ai/openvino-model-server-boosts-ai-inference-operations/)
 
 ## Troubleshooting
-### Server logging
+### Server Logging
 
 OpenVINO&trade; model server accepts 3 logging levels:
 
@@ -146,7 +120,7 @@ docker logs ie-serving
 ```  
 
 
-### Model import issues
+### Model Import Issues
 OpenVINO&trade; Model Server loads all defined models versions according 
 to set [version policy](docs/docker_container.md#model-version-policy). 
 A model version is represented by a numerical directory in a model path, 
@@ -196,7 +170,7 @@ are loaded successfully (in AVAILABLE state).
 The server will fail to start if it can not list the content of configured model paths.
 
 
-### Client request issues
+### Client Request Issues
 When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors 
 in the request handling. 
 The information about the failure reason is passed to the gRPC client in the response. It is also logged on the 
@@ -207,7 +181,7 @@ The possible issues could be:
 * Incorrect input key name which does not match the tensor name or set input key name in `mapping_config.json`.
 * Incorrectly serialized data on the client side.
 
-### Resource allocation
+### Resource Allocation
 RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, 
 however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
@@ -215,12 +189,12 @@ Every version of the model creates a separate inference engine object, so it is 
 OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or 
 kubernetes capabilities.
 
-### Usage monitoring
+### Usage Monitoring
 It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
 With this setting model server logs will store information about all the incoming requests.
 You can parse the logs to analyze: volume of requests, processing statistics and most used models.
 
-## Inference results serialization
+## Inference Results Serialization
 
 Model server employs configurable serialization function. 
 
@@ -241,7 +215,7 @@ If you're using tensorflow's `make_ndarray` to read output
 Add environment variable `SERIALIZATION_FUNCTION=_prepare_output_as_AppendArrayToTensorProto` to enforce the usage 
 of legacy serialization method.
  
-## Known limitations and plans
+## Known Limitations and Plans
 
 * Currently, *Predict*, *GetModelMetadata* and *GetModelStatus* calls are implemented using Tensorflow Serving API. 
 *Classify*, *Regress* and *MultiInference* are planned to be added.
@@ -250,7 +224,7 @@ of legacy serialization method.
 
 ## Contribution
 
-### Contribution rules
+### Contribution Rules
 
 All contributed code must be compatible with the [Apache 2](https://www.apache.org/licenses/LICENSE-2.0) license.
 
@@ -284,3 +258,5 @@ To run tests limited to models to locally downloaded models use command:
 Submit Github issue to ask question, request a feature or report a bug.
 
 
+---
+\* Other names and brands may be claimed as the property of others.
