@@ -1,10 +1,13 @@
 /logs/*
 .idea
 .venv
+.venv3
 *~
+*.swp
 *.pyc
 *.pyo
 *.log
+.pytest_cache
 *__pycache__/
 *.cache
 .cache
