@@ -8,7 +8,7 @@ pipeline {
             }
         }
 
-        stage('style') {
+        stage('style tests') {
             steps {
                 sh './tests/scripts/style.sh'
             }
