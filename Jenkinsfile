@@ -14,9 +14,9 @@ pipeline {
             }
         }
 
-        stage('test') {
+        stage('unit tests') {
             steps {
-                sh 'echo "Hello"'
+                sh './tests/scripts/unit-tests.sh'
             }
         }
 

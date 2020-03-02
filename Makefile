@@ -15,7 +15,7 @@
 #
 
 PY_VERSION := 3
-VIRTUALENV_EXE=$(if $(subst 2,,$(PY_VERSION)),python3 -m venv,virtualenv)
+VIRTUALENV_EXE=$(if $(subst 2,,$(PY_VERSION)),python3 -m virtualenv)
 VIRTUALENV_DIR=$(if $(subst 2,,$(PY_VERSION)),.venv3,.venv)
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
