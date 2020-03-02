@@ -44,14 +44,17 @@ def extract_inference_output(ipc_predict_response):
 
 def prepare_ipc_predict_request(data_type, data, return_socket_name):
     # TODO: handling various data types
+    start_time = datetime.datetime.now()
     ipc_endpoint_request = EndpointRequest()
     ipc_predict_request = PredictRequest()
     ipc_inputs = []
-
+    logger.debug(type(data))
     inputs = dict(data)
-    for input_name in list(inputs.keys()):
+    duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+    logger.debug("Init - {} ms".format(duration))
+    for input_name, input_data in inputs.items():
         start_time = datetime.datetime.now()
-        single_input = make_ndarray(inputs[input_name])
+        single_input = make_ndarray(input_data)
         duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
         logger.debug("Numpy deserialization: - {} ms".format(duration))
 
@@ -64,7 +67,7 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
         logger.debug("Shared memory allocation - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
-        shm_array[:] = single_input[:]
+        shm_array[:] = single_input
         duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
         logger.debug("Input data copying to shared memory - {} ms".format(
             duration))

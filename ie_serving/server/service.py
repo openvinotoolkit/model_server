@@ -43,6 +43,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
     def __init__(self):
         self.zmq_context = zmq.Context()
         self.process_id = os.getpid()
+        self.predict_return_sockets = {}
 
     def Predict(self, request, context):
         # check if requested model
@@ -79,25 +80,45 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         return_socket_name = os.path.join(GLOBAL_CONFIG['tmp_files_dir'],
                                           "{}-{}.sock".format(self.process_id,
                                                               thread_id))
-        logger.debug("Preparing IPC message")
+        start_time = datetime.datetime.now()
         ipc_predict_request = prepare_ipc_predict_request(
             None, data=request.inputs, return_socket_name=return_socket_name)
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
+        logger.debug("Preparing IPC message - {} ms"
+                     .format(duration))
 
-        logger.debug("Sending IPC message")
+        start_time = datetime.datetime.now()
         target_socket.send(ipc_predict_request.SerializeToString())
         target_socket.recv()
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
+        logger.debug("Sending IPC message and receiving confirmation - {} ms"
+                     .format(duration))
 
-        return_socket = self.zmq_context.socket(zmq.REP)
-        return_socket.bind("ipc://{}".format(return_socket_name))
+        if return_socket_name not in self.predict_return_sockets:
+            return_socket = self.zmq_context.socket(zmq.REP)
+            return_socket.bind("ipc://{}".format(return_socket_name))
+            self.predict_return_sockets[return_socket_name] = return_socket
+
+        return_socket = self.predict_return_sockets[return_socket_name]
         logger.debug("Awaiting return IPC message")
+        start_time = datetime.datetime.now()
         ipc_raw_response = return_socket.recv()
-        logger.debug("Received return IPC message")
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
+        logger.debug("Backend processing and communication time - {} ms"
+                     .format(duration))
         return_socket.send(b'ACK')
 
+        start_time = datetime.datetime.now()
         ipc_endpoint_response = EndpointResponse()
         ipc_endpoint_response.MergeFromString(ipc_raw_response)
         ipc_predict_response, status = extract_ipc_response(
             ipc_endpoint_response, "predict_response")
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
+        logger.debug("IPC response unpacking - {} ms".format(duration))
 
         if status['error_code'] != StatusCode.OK:
             context.set_code(status['error_code'])
@@ -116,7 +137,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
         # inference_output = extract_inference_output(ipc_predict_response)
         duration = (datetime.datetime.now()
                     - start_time).total_seconds() * 1000
-        logger.debug("Output extraction - {} ms".format(duration))
+        logger.debug("Preparing output - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
         response = prepare_output(inference_output=inference_output)
