@@ -20,5 +20,11 @@ pipeline {
             }
         }
 
+        stage('functional tests') {
+            steps {
+                sh './tests/scripts/functional-tests.sh'
+            }
+        }
+
     }
 }
