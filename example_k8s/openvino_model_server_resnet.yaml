@@ -31,7 +31,7 @@ spec:
         - name: "GOOGLE_APPLICATION_CREDENTIALS"
           value: ""
         command: ["/ie-serving-py/start_server.sh"]
-        args: ["ie_serving", "model", "--model_path", "gs://intelai_public_models/resnet_50_i8", "--model_name", "resnet", "--port", "80", "--batch_size", "auto"]
+        args: ["ie_serving", "model", "--model_path", "gs://public-artifacts/intelai_public_models/resnet_50_i8", "--model_name", "resnet", "--port", "80", "--batch_size", "auto"]
 ---
 apiVersion: v1
 kind: Service

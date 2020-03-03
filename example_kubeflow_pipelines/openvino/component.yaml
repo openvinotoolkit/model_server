@@ -16,9 +16,9 @@ inputs:
   - name: mo-option
     default: '--saved_model_dir .'
   - name: input-numpy-file
-    default: 'gs://intelai_public_models/images/imgs.npy'
+    default: 'gs://public_artifacts/intelai_public_models/images/imgs.npy'
   - name: 'label-numpy-file'
-    default: 'gs://intelai_public_models/images/lbs.npy'
+    default: 'gs://public_artifacts/intelai_public_models/images/lbs.npy'
 outputs:
   - name: generated-model-dir
 
