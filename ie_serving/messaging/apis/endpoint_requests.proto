@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ovms_ipc;
 
-import "ie_serving/messaging/data_attributes.proto";
+import "ie_serving/messaging/apis/data_attributes.proto";
 
 message EndpointRequest{
     oneof type{

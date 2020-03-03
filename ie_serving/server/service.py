@@ -24,7 +24,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
-from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse
+from ie_serving.messaging.apis.endpoint_responses_pb2 import EndpointResponse
 from ie_serving.server.constants import WRONG_MODEL_SPEC, SIGNATURE_NAME
 from ie_serving.server.predict_utils import prepare_output, StatusCode
 from ie_serving.messaging.predict_msg_processing import \

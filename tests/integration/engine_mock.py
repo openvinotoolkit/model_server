@@ -21,13 +21,13 @@ import numpy as np
 from ie_serving.config import GLOBAL_CONFIG
 
 from multiprocessing import shared_memory
-from ie_serving.messaging.endpoint_responses_pb2 import EndpointResponse, \
-    PredictResponse
-from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
-from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest
-import datetime
+from ie_serving.messaging.apis.endpoint_responses_pb2 \
+    import EndpointResponse, PredictResponse
+from ie_serving.messaging.apis.data_attributes_pb2 import NumpyAttributes
+from ie_serving.messaging.apis.endpoint_requests_pb2 import EndpointRequest
 
 outputs = {"output": np.zeros((1, 1000), dtype=np.float32)}
+
 
 def prepare_ipc_endpoint_response():
     ipc_endpoint_response = EndpointResponse()
@@ -75,42 +75,21 @@ def run_fake_engine():
 
     print("Starting listening for inference requests")
     while True:
-        start_time = datetime.datetime.now()
         ipc_raw_request = engine_socket.recv()
-        duration = (datetime.datetime.now()
-                    - start_time).total_seconds() * 1000
-        #print("Awaiting request time - {} ms".format(duration))
-        start_time = datetime.datetime.now()
         ipc_endpoint_response = prepare_ipc_endpoint_response()
         ipc_endpoint_request = EndpointRequest()
         ipc_endpoint_request.MergeFromString(ipc_raw_request)
-        duration = (datetime.datetime.now()
-                    - start_time).total_seconds() * 1000
-        #print("Msg preparation and deserialization - {} ms".format(duration))
-        #print(ipc_endpoint_request)
+
         # TODO: validate request
         engine_socket.send(b'ACK')
         return_socket_name = ipc_endpoint_request.predict_request.\
             return_socket_name
         return_socket = zmq_context.socket(zmq.REQ)
         return_socket.connect("ipc://{}".format(return_socket_name))
-        start_time = datetime.datetime.now()
         msg = ipc_endpoint_response.SerializeToString()
-        duration = (datetime.datetime.now()
-                    - start_time).total_seconds() * 1000
-        #print("Output serialization - {} ms".format(duration))
         return_socket.send(msg)
-        start_time = datetime.datetime.now()
         return_socket.recv()
-        duration = (datetime.datetime.now()
-                    - start_time).total_seconds() * 1000
-        #print("Receiving confirmation - {} ms".format(duration))
-
-        start_time = datetime.datetime.now()
         free_inputs_shm(ipc_endpoint_request.predict_request)
-        duration = (datetime.datetime.now()
-                    - start_time).total_seconds() * 1000
-        #print("Memory cleanup - {} ms".format(duration))
 
 # This script imitates inference engine with a name "fake-model", version 1.
 # It listens for requests from the server process and sends back a valid

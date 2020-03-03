@@ -15,21 +15,23 @@
 #
 
 import datetime
-import numpy as np
-
 from multiprocessing import shared_memory
-from ie_serving.messaging.endpoint_requests_pb2 import EndpointRequest, \
-    PredictRequest
-from ie_serving.messaging.data_attributes_pb2 import NumpyAttributes
 
+import numpy as np
 from tensorflow import __version__ as tf_version
-if tf_version.split(".")[0] == "2":
-    from tensorflow import make_ndarray, make_tensor_proto
-else:  # TF version 1.x
-    from tensorflow.contrib.util import make_ndarray, make_tensor_proto
 
+from ie_serving.messaging.apis.data_attributes_pb2 import NumpyAttributes
+from ie_serving.messaging.apis.endpoint_requests_pb2 import EndpointRequest, \
+    PredictRequest
 from ie_serving.logger import get_logger
+
+if tf_version.split(".")[0] == "2":
+    from tensorflow import make_ndarray
+else:  # TF version 1.x
+    from tensorflow.contrib.util import make_ndarray
+
 logger = get_logger(__name__)
+
 
 def extract_inference_output(ipc_predict_response):
     inference_output = {}
@@ -42,6 +44,7 @@ def extract_inference_output(ipc_predict_response):
         inference_output[output.output_name] = output_results
     return inference_output
 
+
 def prepare_ipc_predict_request(data_type, data, return_socket_name):
     # TODO: handling various data types
     start_time = datetime.datetime.now()
@@ -50,12 +53,13 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
     ipc_inputs = []
     logger.debug(type(data))
     inputs = dict(data)
-    duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+    duration = (datetime.datetime.now() - start_time).total_seconds() * 1000
     logger.debug("Init - {} ms".format(duration))
     for input_name, input_data in inputs.items():
         start_time = datetime.datetime.now()
         single_input = make_ndarray(input_data)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Numpy deserialization: - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
@@ -63,12 +67,14 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
                                                size=single_input.nbytes)
         shm_array = np.ndarray(single_input.shape, dtype=single_input.dtype,
                                buffer=input_shm.buf)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Shared memory allocation - {} ms".format(duration))
 
         start_time = datetime.datetime.now()
         shm_array[:] = single_input
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Input data copying to shared memory - {} ms".format(
             duration))
 
@@ -82,7 +88,8 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
         ipc_input_data.input_name = input_name
         ipc_input_data.shm_name = input_shm.name
         ipc_inputs.append(ipc_input_data)
-        duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+        duration = (datetime.datetime.now()
+                    - start_time).total_seconds() * 1000
         logger.debug("Single input IPC message preparation - {} ms".format(
             duration))
 
@@ -90,7 +97,7 @@ def prepare_ipc_predict_request(data_type, data, return_socket_name):
     ipc_predict_request.return_socket_name = return_socket_name
     ipc_predict_request.inputs.extend(ipc_inputs)
     ipc_endpoint_request.predict_request.CopyFrom(ipc_predict_request)
-    duration = (datetime.datetime.now() -start_time).total_seconds() * 1000
+    duration = (datetime.datetime.now() - start_time).total_seconds() * 1000
     logger.debug("Final request IPC message preparation - {} ms".format(
         duration))
     return ipc_endpoint_request

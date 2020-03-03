@@ -16,6 +16,7 @@
 
 from grpc import StatusCode
 
+
 def extract_ipc_response(ipc_endpoint_response, expected_response_type):
     error_code = StatusCode.OK
     error_message = None
