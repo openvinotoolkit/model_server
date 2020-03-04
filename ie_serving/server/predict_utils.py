@@ -33,6 +33,7 @@ if tf_version.split(".")[0] == "2":
 else:  # TF version 1.x
     from tensorflow.contrib.util import make_ndarray, make_tensor_proto
 
+
 logger = get_logger(__name__)
 
 statusCodes = {
@@ -90,7 +91,7 @@ def prepare_input_data(target_engine, data, service_type):
 
             # check if input batch size match the model only if not auto mode
             if target_engine.batching_info.mode != \
-                BatchingMode.AUTO and shape_required_in_model[0] != \
+                    BatchingMode.AUTO and shape_required_in_model[0] != \
                     tensor_input.shape[0]:
                 message = INVALID_BATCHSIZE.format(
                     tensor_input.shape[0],
@@ -113,21 +114,18 @@ Despite the module name, it is slower from make_tensor_proto.
 
 
 def _prepare_output_as_AppendArrayToTensorProto(
-        inference_output,
-        model_available_outputs):
+        inference_output):
     response = predict_pb2.PredictResponse()
-    for response_output_name, model_output_name in \
-            model_available_outputs.items():
-        if model_output_name in inference_output:
-            dtype = dtypes.as_dtype(inference_output[model_output_name].dtype)
-            output_tensor = tensor_pb2.TensorProto(
-                dtype=dtype.as_datatype_enum,
-                tensor_shape=tensor_shape.as_shape(
-                    inference_output[model_output_name].shape).as_proto())
-            result = inference_output[model_output_name].flatten()
-            tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
-                                                               result)
-            response.outputs[response_output_name].CopyFrom(output_tensor)
+    for response_output_name in inference_output:
+        dtype = dtypes.as_dtype(inference_output[response_output_name].dtype)
+        output_tensor = tensor_pb2.TensorProto(
+            dtype=dtype.as_datatype_enum,
+            tensor_shape=tensor_shape.as_shape(
+                inference_output[response_output_name].shape).as_proto())
+        result = inference_output[response_output_name].flatten()
+        tensor_util._NP_TO_APPEND_FN[dtype.as_numpy_dtype](output_tensor,
+                                                           result)
+        response.outputs[response_output_name].CopyFrom(output_tensor)
     return response
 
 
@@ -140,14 +138,11 @@ Tensorflow make_ndarray function.
 '''
 
 
-def _prepare_output_with_make_tensor_proto(
-        inference_output,
-        model_available_outputs):
+def _prepare_output_with_make_tensor_proto(inference_output):
     response = predict_pb2.PredictResponse()
-    for response_output_name in model_available_outputs:
-        model_output_name = model_available_outputs[response_output_name]
+    for response_output_name in inference_output:
         response.outputs[response_output_name].CopyFrom(
-            make_tensor_proto(inference_output[model_output_name]))
+            make_tensor_proto(inference_output[response_output_name]))
     return response
 
 
