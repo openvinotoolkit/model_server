@@ -19,15 +19,26 @@ import ie_serving.messaging.endpoint_requests_pb2 as ovms_ipc
 import zmq
 import multiprocessing
 
+from threading import Thread
+
 
 class Engine(ABC):
 
-    def __init__(self, model_name, model_version, net, plugin,
+    def __init__(self, model_name, model_version, engine_properties, net, plugin,
                  mapping_config, exec_net, batching_info, shape_info,
                  free_ireq_index_queue, num_ireq, requests_queue,
                  target_device, plugin_config):
         self.model_name = model_name
         self.model_version = model_version
+        self.build_engine(engine_properties)
+
+        self.socket_name = model_name + model_version
+        self.dispatcher = Thread(
+            target=self.prediction_listener, args=(self.socket_name,))
+        self.dispatcher.start()
+        self.dispatcher.join()
+
+    def build_engine(self):
         self.exec_net = exec_net
         self.net = net
         self.batching_info = batching_info
@@ -42,11 +53,7 @@ class Engine(ABC):
         self.plugin_config = plugin_config
 
         self.engine_active = True
-        self.socket_name = model_name + model_version
-        self.dispatcher = multiprocessing.Process(
-            target=self.prediction_listener, args=(self.socket_name,))
-        self.dispatcher.start()
-        self.dispatcher.join()
+        pass
 
     def prediction_listener(self, socket_name):
         self.zmq_context = zmq.Context()
@@ -56,23 +63,28 @@ class Engine(ABC):
         while True:
             req = self.zmq_socket.recv()
             self.zmq_socket.send(b'ACK')
-            data = self.parse_request(req)
-            if data:
-                self.run_inference(data)
+            data, return_socket_name = self.parse_inference_request(req)
+            if data is None or return_socket_name is None:
+                continue
+            self.predict(data, return_socket_name)
 
-    def management_listener(self):
-        pass
-
-    def parse_request(self, req):
+    def parse_inference_request(self, req):
         data = {}
         request = ovms_ipc.EndpointRequest()
-        request.ParseFromString(req)
+        request.MergeFromString(req)
         if not request.HasField("predict_request"):
-            return None
+            return None, None
         for inference_input in request.predict_request.inputs:
             data[inference_input.input_name] = inference_input.shm_name
-        return data
+        return_socket_name = request.predict_request.return_socket_name
+        return data, return_socket_name
 
     @abstractmethod
-    def run_inference(self, data):
+    def predict(self, data, return_socket_name):
         return
+
+    def return_results(self, inference_output, return_socket_name):
+        self.zmq_context = zmq.Context()
+        self.zmq_socket = self.zmq_context.socket(zmq.REP)
+        self.zmq_socket.bind(
+            "ipc:///tmp/{}.sock".format(return_socket_name))
