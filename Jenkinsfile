@@ -20,9 +20,15 @@ pipeline {
             }
         }
 
-        stage('functional tests') {
+        stage('functional tests bin') {
             steps {
-                sh './tests/scripts/functional-tests.sh'
+                sh './tests/scripts/functional-tests-bin.sh'
+            }
+        }
+
+        stage('functional tests apt ubuntu') {
+            steps {
+                sh './tests/scripts/functional-tests-apt-ubuntu.sh'
             }
         }
 
