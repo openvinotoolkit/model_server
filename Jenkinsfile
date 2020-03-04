@@ -32,5 +32,11 @@ pipeline {
             }
         }
 
+        stage('functional tests clearlinux') {
+            steps {
+                sh './tests/scripts/functional-tests-clearlinux.sh'
+            }
+        }
+
     }
 }
