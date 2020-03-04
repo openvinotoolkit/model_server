@@ -7,10 +7,9 @@ message NumpyAttributes{
     string data_type = 2;
 }
 message StringAttributes{
-    int32 length =1;
+    int32 length = 1;
     string encoding = 2;
 }
 message BinaryAttributes{
     int32 length = 1;
 }
-

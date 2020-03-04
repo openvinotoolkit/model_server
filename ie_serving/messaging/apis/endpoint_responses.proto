@@ -70,5 +70,3 @@ message ErrorResponse{
     int32 error_code = 1;
     string error_message = 2;
 }
-
-
