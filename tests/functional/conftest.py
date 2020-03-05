@@ -26,6 +26,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
 pytest_plugins = [
     'fixtures.input_data_download_fixtures',
     'fixtures.model_download_fixtures',
+    'fixtures.model_conversion_fixtures',
     'fixtures.server_detection_model_fixtures',
     'fixtures.server_for_update_fixtures',
     'fixtures.server_local_models_fixtures',
