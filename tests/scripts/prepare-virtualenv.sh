@@ -4,10 +4,10 @@ set -ex
 # Check if pip is installed
 python3 -m pip --version || bash -c "echo pip3 is not installed; exit 1"
 
-python3 -m pip install -U virtualenv
-python3 -m virtualenv .venv
+python3 -m pip install --user -U virtualenv
+python3 -m virtualenv .venv-jenkins
 
-source .venv/bin/activate
+. .venv-jenkins/bin/activate
 
 pip install -r requirements.txt
 pip install -r requirements-dev.txt

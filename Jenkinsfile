@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     stages {
-        // stage('prepare virtualenv') {
-        //     steps {
-        //         sh './tests/scripts/prepare-virtualenv.sh'
-        //     }
-        // }
+        stage('prepare virtualenv') {
+            steps {
+                sh './tests/scripts/prepare-virtualenv.sh'
+            }
+        }
 
         stage('style tests') {
             steps {
