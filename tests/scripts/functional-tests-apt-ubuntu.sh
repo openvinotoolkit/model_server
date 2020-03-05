@@ -5,6 +5,6 @@ TEST_DIRS=tests
 
 make docker_build_apt_ubuntu
 
-. .venv/bin/activate
+. .venv-jenkins/bin/activate
 
 py.test ${TEST_DIRS}/functional/ -v --test_dir=/var/jenkins_home/test_models
