@@ -34,6 +34,9 @@ def wait_endpoint_setup(container):
         except Exception as e:
             time.sleep(1)
     print("Logs from container: ", logs)
+    # NOTE(kromanow): this sleep was added to check if occasionall fail on
+    #                 tests are caused by server not beeing ready yet.
+    time.sleep(2)
     return running
 
 
