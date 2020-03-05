@@ -30,6 +30,7 @@ docker run -t --rm \
     $OVMS_TESTS_IMAGE \
     bash -c "
     set -ex;
+    source /opt/intel/openvino/bin/setupvars.sh
     make install;
     make unit;
     make coverage"
