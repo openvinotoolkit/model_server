@@ -1,0 +1,11 @@
+ARG OPEN_VINO_DOCKER_IMAGE
+FROM ${OPEN_VINO_DOCKER_IMAGE}
+
+USER root
+
+RUN apt-get update && apt-get install -y \
+        python3-dev
+
+RUN pip3 install virtualenv
+
+USER openvino

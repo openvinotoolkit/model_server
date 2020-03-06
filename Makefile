@@ -15,8 +15,8 @@
 #
 
 PY_VERSION := 3
-VIRTUALENV_EXE=$(if $(subst 2,,$(PY_VERSION)),python3 -m venv,virtualenv)
-VIRTUALENV_DIR=$(if $(subst 2,,$(PY_VERSION)),.venv3,.venv)
+VIRTUALENV_EXE := python3 -m virtualenv
+VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
 STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
