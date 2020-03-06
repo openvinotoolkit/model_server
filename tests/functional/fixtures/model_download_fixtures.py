@@ -19,74 +19,73 @@ import os
 import pytest
 import requests
 
+resnet_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/resnet50-binary-0001/FP32-INT1/" # noqa
+face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/" # noqa
+age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/" # noqa
+pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/" # noqa
 
-def download_model(model_name, model_folder, model_version_folder, dir):
-    model_url_base = "https://storage.googleapis.com/inference-eu/models_zoo/"\
-                     + model_name + "/frozen_" + model_name
-
-    if not os.path.exists(dir + model_folder + model_version_folder):
+def download_model(model_url, model_name, model_version, dir):
+    model_url_base = model_url + model_name
+    local_model_path = os.path.join(dir, model_name, model_version)
+    local_bin_path = os.path.join(local_model_path,
+                                  "{}.{}".format(model_name, "bin"))
+    local_xml_path = os.path.join(local_model_path,
+                                  "{}.{}".format(model_name, "xml"))
+    if not os.path.exists(local_model_path):
         print("Downloading " + model_name + " model...")
         print(dir)
-        os.makedirs(dir + model_folder + model_version_folder)
+        os.makedirs(local_model_path)
         response = requests.get(model_url_base + '.bin', stream=True)
-        with open(
-                dir + model_folder + model_version_folder + model_name +
-                '.bin', 'wb') as output:
+        with open(local_bin_path, 'wb') as output:
             output.write(response.content)
         response = requests.get(model_url_base + '.xml', stream=True)
-        with open(
-                dir + model_folder + model_version_folder + model_name +
-                '.xml', 'wb') as output:
+        with open(local_xml_path, 'wb') as output:
             output.write(response.content)
-    return dir + model_folder + model_version_folder + model_name + '.bin', \
-        dir + model_folder + model_version_folder + model_name + '.xml'
+    return local_bin_path, local_xml_path
 
 
 @pytest.fixture(autouse=True, scope="session")
 def face_detection_model_downloader(get_test_dir):
-    return download_model('face-detection-retail-0004',
-                          'face-detection-retail-0004/',
-                          '1/',
+    return download_model(face_detection_model_url,
+                          'face-detection-retail-0004',
+                          '1',
                           get_test_dir + '/saved_models/')
 
 
 @pytest.fixture(autouse=True, scope="session")
-def resnet_v1_50_model_downloader(get_test_dir):
-    return download_model('resnet_V1_50', 'resnet_V1_50/', '1/',
+def resnet_50_bin_model_downloader(get_test_dir):
+    return download_model(resnet_model_url, 'resnet50-binary-0001', '1',
                           get_test_dir + '/saved_models/')
 
 
 @pytest.fixture(autouse=True, scope="session")
-def pnasnet_large_model_downloader(get_test_dir):
-    return download_model('pnasnet_large', 'pnasnet_large/', '1/',
+def age_gender_model_downloader(get_test_dir):
+    return download_model(age_gender_recognition_model_url,
+                          'age-gender-recognition-retail-0013', '1',
                           get_test_dir + '/saved_models/')
 
 
 @pytest.fixture(autouse=True, scope="session")
-def resnet_2_out_model_downloader(get_test_dir):
-    return download_model('resnet_2_out', 'resnet_2_out/', '1/',
-                          get_test_dir + '/saved_models/')
-
-
-@pytest.fixture(autouse=True, scope="session")
-def resnet_8_batch_model_downloader(get_test_dir):
-    return download_model('resnet_V1_50_batch8', 'resnet_V1_50_batch8/', '1/',
+def pvb_model_downloader(get_test_dir):
+    return download_model(pvb_detection_model_url,
+                          'person-vehicle-bike-detection-crossroad-0078', '1',
                           get_test_dir + '/saved_models/')
 
 
 @pytest.fixture(autouse=True, scope="session")
 def download_two_models(get_test_dir):
-    model1_info = download_model('resnet_V1_50', 'resnet_V1_50/', '1/',
+    model1_info = download_model(resnet_model_url, 'resnet50-binary-0001', '1',
                                  get_test_dir + '/saved_models/')
-    model2_info = download_model('pnasnet_large', 'pnasnet_large/', '1/',
+    model2_info = download_model(face_detection_model_url,
+                                 'face-detection-retail-0004', '1',
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]
 
 
 @pytest.fixture(autouse=True, scope="session")
 def download_two_model_versions(get_test_dir):
-    model1_info = download_model('resnet_V1_50', 'resnet/', '1/',
+    model1_info = download_model(resnet_model_url, 'resnet50-binary-0001', '1',
                                  get_test_dir + '/saved_models/')
-    model2_info = download_model('resnet_V2_50', 'resnet/', '2/',
+    model2_info = download_model(resnet_model_url, 'resnet50-binary-0001', '2',
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]

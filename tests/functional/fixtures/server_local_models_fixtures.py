@@ -28,7 +28,8 @@ def start_server_single_model(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
+              "--model_name resnet50_binary " \
+              "--model_path /opt/ml/resnet50-binary-0001 " \
               "--port 9000 --rest_port 5555 --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
               "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
@@ -59,14 +60,16 @@ def start_server_single_model(request, get_image, get_test_dir,
 def start_server_with_mapping(request, get_image, get_test_dir,
                               get_docker_context):
     shutil.copyfile('tests/functional/mapping_config.json',
-                    get_test_dir + '/saved_models/resnet_2_out/1/'
+                    get_test_dir + '/saved_models/'
+                                   'age-gender-recognition-retail-0013/1/'
                                    'mapping_config.json')
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
+              "--model_name age_gender " \
+              "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port 9002 --rest_port 5556"
 
     container = client.containers.run(image=get_image, detach=True,
