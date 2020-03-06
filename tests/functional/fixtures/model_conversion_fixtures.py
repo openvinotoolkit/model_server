@@ -1,9 +1,5 @@
 #
-<<<<<<< HEAD
 # Copyright (c) 2020 Intel Corporation
-=======
-# Copyright (c) 2019 Intel Corporation
->>>>>>> Add resnet model conversion fixture with multiple batch sizes
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
