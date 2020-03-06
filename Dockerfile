@@ -7,7 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
             python3-pip \
             virtualenv \
             usbutils \
-            gnupg2
+            gnupg2 \
+            # g++ package is needed for grpcio==1.27.1 to install from source
+            g++
 
 RUN curl -o GPG-PUB-KEY-INTEL-OPENVINO-2020 https://apt.repos.intel.com/openvino/2020/GPG-PUB-KEY-INTEL-OPENVINO-2020
 RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2020
@@ -22,8 +24,7 @@ ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTA
 WORKDIR /ie-serving-py
 
 COPY requirements.txt /ie-serving-py/
-RUN virtualenv -p python3 .venv && \
-    . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
+RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
 
 COPY start_server.sh setup.py version /ie-serving-py/
 COPY ie_serving /ie-serving-py/ie_serving
