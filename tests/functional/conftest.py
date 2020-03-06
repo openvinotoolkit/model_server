@@ -24,7 +24,6 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 
 pytest_plugins = [
-    'fixtures.input_data_download_fixtures',
     'fixtures.model_download_fixtures',
     'fixtures.model_conversion_fixtures',
     'fixtures.server_detection_model_fixtures',

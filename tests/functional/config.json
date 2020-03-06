@@ -2,23 +2,23 @@
   "model_config_list":[
     {
       "config":{
-        "name":"resnet_V1_50",
-        "base_path":"/opt/ml/resnet_V1_50",
+        "name":"resnet50_binary",
+        "base_path":"/opt/ml/resnet50-binary-0001",
         "batch_size":"auto",
         "nireq": 4
       }
     },
     {
       "config": {
-        "name": "pnasnet_large",
-        "base_path": "/opt/ml/pnasnet_large",
+        "name": "pvb_detection",
+        "base_path": "/opt/ml/person-vehicle-bike-detection-crossroad-0078",
         "batch_size":"4"
       }
     },
     {
       "config": {
-        "name": "resnet",
-        "base_path": "/opt/ml/resnet",
+        "name": "resnet50_binary_multiversion",
+        "base_path": "/opt/ml/resnet50-binary-0001",
         "model_version_policy": {"all": {}},
         "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"}
       }
