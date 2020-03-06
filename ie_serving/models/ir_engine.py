@@ -82,7 +82,7 @@ class IrEngine():
         self.inference_thread.start()
 
     @classmethod
-    def build(cls, model_name, model_version, model_xml, model_bin,
+    def build(cls, model_name, model_version, model_bin, model_xml,
               mapping_config, batch_size_param, shape_param, num_ireq,
               target_device, plugin_config):
         plugin = IEPlugin(device=target_device,

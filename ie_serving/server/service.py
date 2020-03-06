@@ -208,8 +208,8 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
 
     def __init__(self):
         pass
-    """
 
+    """
     def GetModelStatus(self, request, context):
         logger.debug("MODEL_STATUS, get request: {}".format(request))
         model_name = request.model_spec.name

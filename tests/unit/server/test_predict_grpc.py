@@ -16,8 +16,8 @@
 
 import grpc
 import numpy as np
-import pytest
 from tensorflow import make_ndarray
+import pytest
 from conftest import get_fake_request, PREDICT_SERVICE, make_tensor_proto, \
     predict_pb2
 

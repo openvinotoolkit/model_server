@@ -35,7 +35,7 @@ jobs:
           name: Install ie-serving-py
           command: make install
       - run:
-          name: run unit tests
+          name: Run unit tests
           command: make unit
   functional_tests_bin:
     machine:

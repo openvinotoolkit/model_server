@@ -15,6 +15,7 @@
 #
 import os
 import re
+import multiprocessing
 from urllib.parse import urlparse, urlunparse
 
 import boto3
@@ -125,20 +126,19 @@ class S3Model(Model):
             return None
 
     @classmethod
-    def get_engine_for_version(cls, model_name, version_attributes):
+    def get_engine_process_for_version(cls, model_name, version_attributes):
         version_attributes['xml_file'], version_attributes['bin_file'], \
             version_attributes['mapping_config'] = cls.create_local_mirror(
             version_attributes)
         logger.info('Downloaded files from S3')
 
         engine_spec = cls._get_engine_spec(model_name, version_attributes)
-        engine = IrEngine.build(**engine_spec)
+        engine_process = multiprocessing.Process(
+            target=cls._start_engine_process_for_version,
+            args=(engine_spec, version_attributes))
+        engine_process.start()
 
-        cls.delete_local_mirror([version_attributes['xml_file'],
-                                 version_attributes['bin_file'],
-                                 version_attributes['mapping_config']])
-        logger.info('Deleted temporary files')
-        return engine
+        return engine_process
 
     @classmethod
     def create_local_mirror(cls, version_attributes):
@@ -153,3 +153,12 @@ class S3Model(Model):
         for file_path in files_paths:
             if file_path is not None:
                 os.remove(file_path)
+
+    @classmethod
+    def _start_engine_process_for_version(
+            cls, engine_spec, version_attributes):
+        IrEngine.build(**engine_spec)
+        cls.delete_local_mirror([version_attributes['xml_file'],
+                                 version_attributes['bin_file'],
+                                 version_attributes['mapping_config']])
+        logger.info('Deleted temporary files')

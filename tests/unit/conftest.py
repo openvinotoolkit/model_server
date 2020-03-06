@@ -151,7 +151,7 @@ def get_grpc_service_for_predict(get_fake_model):
 @pytest.fixture
 def get_grpc_service_for_model_status(get_fake_model):
     _real_time = grpc_testing.strict_real_time()
-    servicer = ModelServiceServicer(models={'test': get_fake_model})
+    servicer = ModelServiceServicer()
     descriptors_to_servicers = {
         MODEL_SERVICE: servicer
     }
