@@ -54,10 +54,10 @@ class TestSingleModelInferenceGc():
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        out_name = 'prob'
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='input', grpc_stub=stub,
+                           input_tensor='data', grpc_stub=stub,
                            model_spec_name='resnet',
                            model_spec_version=None,
                            output_tensors=[out_name])
@@ -70,9 +70,9 @@ class TestSingleModelInferenceGc():
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+        out_name = 'prob'
+        expected_input_metadata = {'data': {'dtype': 1,
+                                   'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1000]}}
         request = get_model_metadata(model_name='resnet')
@@ -92,7 +92,7 @@ class TestSingleModelInferenceGc():
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
-        assert version_status.version == 2
+        assert version_status.version == 1
         assert version_status.state == ModelVersionState.AVAILABLE
         assert version_status.status.error_code == ErrorCode.OK
         assert version_status.status.error_message == _ERROR_MESSAGE[
