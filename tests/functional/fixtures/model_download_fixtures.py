@@ -19,7 +19,6 @@ import os
 import pytest
 import requests
 
-resnet_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/resnet50-binary-0001/FP32-INT1/" # noqa
 face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/" # noqa
 age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/" # noqa
 pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/" # noqa
@@ -51,13 +50,6 @@ def face_detection_model_downloader(get_test_dir):
                           '1',
                           get_test_dir + '/saved_models/')
 
-
-@pytest.fixture(autouse=True, scope="session")
-def resnet_50_bin_model_downloader(get_test_dir):
-    return download_model(resnet_model_url, 'resnet50-binary-0001', '1',
-                          get_test_dir + '/saved_models/')
-
-
 @pytest.fixture(autouse=True, scope="session")
 def age_gender_model_downloader(get_test_dir):
     return download_model(age_gender_recognition_model_url,
@@ -72,6 +64,9 @@ def pvb_model_downloader(get_test_dir):
                           get_test_dir + '/saved_models/')
 
 
+"""
+Use converted models instead
+
 @pytest.fixture(autouse=True, scope="session")
 def download_two_models(get_test_dir):
     model1_info = download_model(resnet_model_url, 'resnet50-binary-0001', '1',
@@ -80,12 +75,14 @@ def download_two_models(get_test_dir):
                                  'face-detection-retail-0004', '1',
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]
-
+"""
 
 @pytest.fixture(autouse=True, scope="session")
 def download_two_model_versions(get_test_dir):
-    model1_info = download_model(resnet_model_url, 'resnet50-binary-0001', '1',
+    model1_info = download_model(face_detection_model_url,
+                                 'face-detection-retail-0004-multi', '1',
                                  get_test_dir + '/saved_models/')
-    model2_info = download_model(resnet_model_url, 'resnet50-binary-0001', '2',
+    model2_info = download_model(face_detection_model_url,
+                                 'face-detection-retail-0004-multi', '2',
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]

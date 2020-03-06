@@ -2,8 +2,8 @@
   "model_config_list":[
     {
       "config":{
-        "name":"resnet50_binary",
-        "base_path":"/opt/ml/resnet50-binary-0001",
+        "name":"resnet",
+        "base_path":"/opt/ml/resnet_V1_50",
         "batch_size":"auto",
         "nireq": 4
       }
@@ -17,8 +17,8 @@
     },
     {
       "config": {
-        "name": "resnet50_binary_multiversion",
-        "base_path": "/opt/ml/resnet50-binary-0001",
+        "name": "face_detection_multi",
+        "base_path": "/opt/ml/face-detection-retail-0004-multi",
         "model_version_policy": {"all": {}},
         "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"}
       }
