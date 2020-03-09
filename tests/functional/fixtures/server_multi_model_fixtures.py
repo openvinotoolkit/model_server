@@ -34,10 +34,12 @@ def start_server_multi_model(request, get_image, get_test_dir,
     AWS_REGION = os.getenv('AWS_REGION')
 
     client = get_docker_context
+    """
     envs = ['GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json',
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
+    """
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'},
                     GOOGLE_APPLICATION_CREDENTIALS:
@@ -51,7 +53,7 @@ def start_server_multi_model(request, get_image, get_test_dir,
                                       ports={'9001/tcp': 9001,
                                              '5561/tcp': 5561},
                                       remove=True, volumes=volumes_dict,
-                                      environment=envs,
+                                      #environment=envs,
                                       command=command)
     request.addfinalizer(container.kill)
 

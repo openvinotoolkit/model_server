@@ -40,47 +40,21 @@ class TestModelVerPolicy():
                                 start_server_model_ver_policy,
                                 create_grpc_channel,
                                 model_name, throw_error):
-        """
-        <b>Description</b>
-        Execute GetModelMetadata request using gRPC interface
-        hosting multiple models
-
-        <b>input data</b>
-        - directory with 2 models in IR format
-        - docker image
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - response contains proper response about model metadata for both
-        models set in config file:
-        model resnet_v1_50, pnasnet_large
-        - both served models handles appropriate input formats
-
-        """
         print("Downloaded model files:", model_version_policy_models)
-
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
-
-        print("Getting info about resnet model")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {'resnet_v1_50/predictions/Reshape_1': {'dtype': 1,
-                                                    'shape': [1, 1000]}},
-            {'resnet_v2_50/predictions/Reshape_1': {'dtype': 1,
-                                                    'shape': [1, 1001]}},
-            {'mask': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
-             'output': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}]
+            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
+            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
+            {'age': {'dtype': 1, 'shape': [1, 1, 1, 1]},
+             'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
         expected_inputs_metadata = [
-            {'input': {'dtype': 1, 'shape': [1, 3, 224, 224]}},
-            {'input': {'dtype': 1, 'shape': [1, 3, 224, 224]}},
-            {'new_key': {'dtype': 1, 'shape': [1, 3, 224, 224]}}]
+            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
         for x in range(len(versions)):
-            print("Getting info about resnet model version:".format(
+            print("Getting info about model version:".format(
                 versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
@@ -176,21 +150,19 @@ class TestModelVerPolicy():
         """
         print("Downloaded model files:", model_version_policy_models)
 
-        print("Getting info about resnet model")
+        print("Getting info about model")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {'resnet_v1_50/predictions/Reshape_1': {'dtype': 1,
-                                                    'shape': [1, 1000]}},
-            {'resnet_v2_50/predictions/Reshape_1': {'dtype': 1,
-                                                    'shape': [1, 1001]}},
-            {'mask': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
-             'output': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}]
+            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
+            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
+            {'age': {'dtype': 1, 'shape': [1, 1, 1, 1]},
+             'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
         expected_inputs_metadata = [
-            {'input': {'dtype': 1, 'shape': [1, 3, 224, 224]}},
-            {'input': {'dtype': 1, 'shape': [1, 3, 224, 224]}},
-            {'new_key': {'dtype': 1, 'shape': [1, 3, 224, 224]}}]
+            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
         for x in range(len(versions)):
-            print("Getting info about resnet model version:".format(
+            print("Getting info about model version:".format(
                 versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
