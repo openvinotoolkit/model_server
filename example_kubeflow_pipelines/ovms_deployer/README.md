@@ -12,7 +12,7 @@ It includes 2 tasks:
 ## Parameters
 
 - model_export_path - shared storage location( google storage, persistent storage or NFS) pointing to the folder with numerical subfolders storing OpenVINO models. 
-For example: path 'gs://public_artifacts/intelai_public_models/resnet_50_i8' includes subfolder '1' which stores model files .bin and .xml in Intermediate Representation format.
+For example: path 'gs://public-artifacts/intelai_public_models/resnet_50_i8' includes subfolder '1' which stores model files .bin and .xml in Intermediate Representation format.
 Refer to [OVMS documentation](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#preparing-the-models)
 - server_name - Kubernetes service name to be deployed. The model name in the grpc endpoint has the same name.
 - log_level - DEBUG/INFO/ERROR - sets the logging level in OVMS pods

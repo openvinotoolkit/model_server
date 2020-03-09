@@ -6,7 +6,7 @@ import kfp.dsl as dsl
     description='Deploy OpenVINO Model Server instance in Kubernetes'
 )
 def openvino_predict(
-        model_export_path = dsl.PipelineParam(name='model-export-path', value='gs://public_artifacts/intelai_public_models/resnet_50_i8'),
+        model_export_path = dsl.PipelineParam(name='model-export-path', value='gs://public-artifacts/intelai_public_models/resnet_50_i8'),
         server_name = dsl.PipelineParam(name='server-name', value='resnet'),
         log_level = dsl.PipelineParam(name='log-level', value='DEBUG'),
         batch_size = dsl.PipelineParam(name='batch-size', value='auto'),

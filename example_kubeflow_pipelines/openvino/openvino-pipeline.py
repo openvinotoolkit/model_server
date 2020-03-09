@@ -12,8 +12,8 @@ def tf_slim_optimize(
         export_dir = dsl.PipelineParam(name='tf-export-dir', value='/tmp/export'),
         generated_model_dir = dsl.PipelineParam(name='generated-model-dir', value='gs://your-bucket/folder'),
         mo_options = dsl.PipelineParam(name='mo-option', value='--saved_model_dir .'),
-        input_numpy_file = dsl.PipelineParam(name='input-numpy-file', value='gs://public_artifacts/intelai_public_models/images/imgs.npy'),
-        label_numpy_file = dsl.PipelineParam(name='label-numpy-file', value='gs://public_artifacts/intelai_public_models/images/lbs.npy')):
+        input_numpy_file = dsl.PipelineParam(name='input-numpy-file', value='gs://public-artifacts/intelai_public_models/images/imgs.npy'),
+        label_numpy_file = dsl.PipelineParam(name='label-numpy-file', value='gs://public-artifacts/intelai_public_models/images/lbs.npy')):
 
     slim = dsl.ContainerOp(
         name='Create_model',
