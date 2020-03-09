@@ -14,23 +14,27 @@
 # limitations under the License.
 #
 from abc import ABC, abstractmethod
-import ie_serving.messaging.endpoint_requests_pb2 as ovms_ipc
+import ie_serving.messaging.apis.endpoint_requests_pb2 as ovms_ipc
+from ie_serving.messaging.apis.endpoint_responses_pb2 \
+    import EndpointResponse, PredictResponse
+from ie_serving.messaging.apis.data_attributes_pb2 import NumpyAttributes
+import numpy as np
 
 import zmq
-import multiprocessing
+import multiprocessing.shared_memory
 
 from threading import Thread
 
 
 class Engine(ABC):
 
-    def __init__(self, model_name, model_version, engine_properties, net, plugin,
-                 mapping_config, exec_net, batching_info, shape_info,
-                 free_ireq_index_queue, num_ireq, requests_queue,
-                 target_device, plugin_config):
+    def __init__(self, model_name, model_version, engine_properties):
         self.model_name = model_name
         self.model_version = model_version
-        self.build_engine(engine_properties)
+        # engine properties should be a dict that will
+        # be used by build_engine method
+        self.engine_properties = engine_properties
+        self.build_engine()
 
         self.socket_name = model_name + model_version
         self.dispatcher = Thread(
@@ -38,21 +42,12 @@ class Engine(ABC):
         self.dispatcher.start()
         self.dispatcher.join()
 
+    @abstractmethod
     def build_engine(self):
-        self.exec_net = exec_net
-        self.net = net
-        self.batching_info = batching_info
-        self.shape_info = shape_info
-        self.plugin = plugin
+        pass
 
-        self.free_ireq_index_queue = free_ireq_index_queue
-        self.num_ireq = num_ireq
-        self.requests_queue = requests_queue
-
-        self.target_device = target_device
-        self.plugin_config = plugin_config
-
-        self.engine_active = True
+    @abstractmethod
+    def predict(self, data, return_socket_name):
         pass
 
     def prediction_listener(self, socket_name):
@@ -75,16 +70,43 @@ class Engine(ABC):
         if not request.HasField("predict_request"):
             return None, None
         for inference_input in request.predict_request.inputs:
-            data[inference_input.input_name] = inference_input.shm_name
+            shm = multiprocessing.shared_memory.SharedMemory(
+                name=inference_input.shm_name)
+            data[inference_input.input_name] = np.ndarray(
+                inference_input.numpy_attributes.shape, dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
         return_socket_name = request.predict_request.return_socket_name
         return data, return_socket_name
 
-    @abstractmethod
-    def predict(self, data, return_socket_name):
-        return
-
     def return_results(self, inference_output, return_socket_name):
-        self.zmq_context = zmq.Context()
-        self.zmq_socket = self.zmq_context.socket(zmq.REP)
-        self.zmq_socket.bind(
+        zmq_return_context = zmq.Context()
+        zmq_return_socket = zmq_return_context.socket(zmq.REQ)
+        zmq_return_socket.connect(
             "ipc:///tmp/{}.sock".format(return_socket_name))
+        ipc_endpoint_response = EndpointResponse()
+        ipc_predict_response = PredictResponse()
+        ipc_outputs = []
+
+        for output_name in list(inference_output.keys()):
+            single_output = inference_output[output_name]
+            output_shm = multiprocessing.shared_memory.SharedMemory(create=True,
+                                                                    size=single_output.nbytes)
+            shm_array = np.ndarray(single_output.shape, dtype=single_output.dtype,
+                                   buffer=output_shm.buf)
+            shm_array[:] = single_output
+
+            ipc_numpy_attributes = NumpyAttributes()
+            ipc_numpy_attributes.shape.extend(list(shm_array.shape))
+            ipc_numpy_attributes.data_type = shm_array.dtype.name
+
+            ipc_output_data = PredictResponse.Data()
+            ipc_output_data.numpy_attributes.CopyFrom(ipc_numpy_attributes)
+            ipc_output_data.output_name = output_name
+            ipc_output_data.shm_name = output_shm.name
+            ipc_outputs.append(ipc_output_data)
+
+        ipc_predict_response.outputs.extend(ipc_outputs)
+        ipc_predict_response.responding_version = 1
+        ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
+        msg = ipc_endpoint_response.SerializeToString()
+        zmq_return_socket.send(msg)
+        zmq_return_socket.recv()
