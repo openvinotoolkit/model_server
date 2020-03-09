@@ -27,7 +27,7 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 
-class TestMuiltModelInference():
+class TestMultiModelInference():
 
     def test_run_inference(self, download_two_models,
                            input_data_downloader_v1_224,
@@ -73,10 +73,10 @@ class TestMuiltModelInference():
             assert output[out_name].shape == (2, 1000), ERROR_SHAPE
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        out_name = 'prob'
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='input', grpc_stub=stub,
+                           input_tensor='data', grpc_stub=stub,
                            model_spec_name='resnet_gs',
                            model_spec_version=None,
                            output_tensors=[out_name])

@@ -26,7 +26,7 @@
     {
       "config": {
         "name": "resnet_gs",
-        "base_path": "gs://inference-eu/ml-test",
+        "base_path": "gs://public-artifacts/intelai_public_models/resnet_50_i8",
         "target_device": "CPU"
       }
     },

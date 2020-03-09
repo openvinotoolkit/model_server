@@ -6,7 +6,7 @@ inputs:
   - name: Log level
     default: DEBUG
   - name: Model export path
-    default: 'gs://intelai_public_models/resnet_50_i8'
+    default: 'gs://public-artifacts/intelai_public_models/resnet_50_i8'
   - name: Model version policy
     default: '{"latest": { "num_versions":2 }}'
   - name: Replicas

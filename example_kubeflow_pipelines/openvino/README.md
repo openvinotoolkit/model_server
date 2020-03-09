@@ -60,8 +60,8 @@ batch-size - 1
 tf-export-dir = /tmp/export
 generated-model-dir = gs://your-bucket/folder
 mo_options - saved_model_dir .
-input_numpy_file - gs://intelai_public_models/images/imgs.npy
-label-numpy-file - gs://intelai_public_models/images/lbs.npy
+input_numpy_file - gs://public-artifacts/intelai_public_models/images/imgs.npy
+label-numpy-file - gs://public-artifacts/intelai_public_models/images/lbs.npy
 ```
 
 ## building the pipeline
