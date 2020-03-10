@@ -39,9 +39,7 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
     def build_engine(self, engine_properties):
         self.exec_net = engine_properties["exec_net"]
         self.shape_info = engine_properties["shape_info"]
-        self.input_tensor_names = list(net.inputs.keys())
-        self.output_tensor_names = list(net.outputs.keys())
-        self.model_keys = self._set_keys(mapping_config)
+        self.model_keys = self._set_keys(engine_properties["mapping_config"])
         self.input_key_names = list(self.model_keys['inputs'].keys())
 
         self.free_ireq_index_queue = engine_properties["free_ireq_index_queue"]
@@ -59,6 +57,8 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
                                device_name='CPU')
         self.net = IENetwork(model=engine_properties["model_xml"],
                 weights=engine_properties["model_bin"])
+        self.input_tensor_names = list(self.net.inputs.keys())
+        self.output_tensor_names = list(self.net.outputs.keys())
         self.batching_info = BatchingInfo(engine_properties["batch_size_param"])
         self.shape_info = ShapeInfo(engine_properties["shape_param", self.net.inputs)
         if batching_info.mode == BatchingMode.FIXED:
