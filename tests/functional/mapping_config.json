@@ -1,6 +1,6 @@
  {
     "inputs":
-        { "input":"new_key"},
+        { "data":"new_key"},
     "outputs":
         { "age_conv3":"age",
           "prob":"gender"}

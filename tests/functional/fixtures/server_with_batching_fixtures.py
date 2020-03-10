@@ -51,7 +51,7 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age-gender " \
+              "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port 9006 --rest_port 5560"
 
@@ -102,7 +102,7 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age-gender " \
+              "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port 9007 --batch_size auto --rest_port 5561"
 
@@ -153,7 +153,7 @@ def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age-gender " \
+              "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port 9008 --batch_size 4 --rest_port 5562"
 
