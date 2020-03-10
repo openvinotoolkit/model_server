@@ -20,6 +20,7 @@ import queue
 from openvino.inference_engine import IENetwork, IECore
 
 from ie_serving.config import GLOBAL_CONFIG
+from ie_serving.engines.engine import Engine
 from ie_serving.logger import get_logger
 from ie_serving.models import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
@@ -29,95 +30,72 @@ from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
 logger = get_logger(__name__)
 
 
-class OpenvinoEngine():  # Engine class inheritance
-
-    def __init__(self, model_name, model_version, net, core,
-                 mapping_config, exec_net, batching_info, shape_info,
-                 free_ireq_index_queue, num_ireq, requests_queue,
-                 target_device, plugin_config):
-        self.model_name = model_name
-        self.model_version = model_version
-        self.exec_net = exec_net
-        self.net = net
-        self.batching_info = batching_info
-        self.shape_info = shape_info
-        self.core = core
-        self.input_tensor_names = list(net.inputs.keys())
-        self.output_tensor_names = list(net.outputs.keys())
-        self.model_keys = self._set_keys(mapping_config)
-        self.input_key_names = list(self.model_keys['inputs'].keys())
-
-        self.free_ireq_index_queue = free_ireq_index_queue
-        self.num_ireq = num_ireq
-        self.requests_queue = requests_queue
-
-        self.target_device = target_device
-        self.plugin_config = plugin_config
-
-        logger.info("Matched keys for model: {}".format(self.model_keys))
-
-        self.engine_active = True
+class OpenvinoEngine(Engine):  # Engine class inheritance
 
 ###################################
 # ENGINE INTERFACE IMPLEMENTATION #
 ###################################
 
-    @classmethod
-    def build(cls, model_name, model_version, model_xml, model_bin,
-              mapping_config, batch_size_param, shape_param, num_ireq,
-              target_device, plugin_config):
-        core = IECore()
-        if GLOBAL_CONFIG['cpu_extension'] is not None \
-                and 'CPU' in target_device:
-            core.add_extension(extension_path=GLOBAL_CONFIG['cpu_extension'],
-                               device_name='CPU')
-        net = IENetwork(model=model_xml, weights=model_bin)
-        batching_info = BatchingInfo(batch_size_param)
-        shape_info = ShapeInfo(shape_param, net.inputs)
-        if batching_info.mode == BatchingMode.FIXED:
-            net.batch_size = batching_info.batch_size
-        else:
-            batching_info.batch_size = net.batch_size
+    def build_engine(self, engine_properties):
+        self.exec_net = engine_properties["exec_net"]
+        self.shape_info = engine_properties["shape_info"]
+        self.input_tensor_names = list(net.inputs.keys())
+        self.output_tensor_names = list(net.outputs.keys())
+        self.model_keys = self._set_keys(mapping_config)
+        self.input_key_names = list(self.model_keys['inputs'].keys())
 
-        effective_batch_size = batching_info.get_effective_batch_size()
+        self.free_ireq_index_queue = engine_properties["free_ireq_index_queue"]
+        self.num_ireq = engine_properties["num_ireq"]
+        self.requests_queue = engine_properties["requests_queue"]
+
+        self.target_device = engine_properties["target_device"]
+        self.plugin_config = engine_properties["plugin_config"]
+        logger.info("Matched keys for model: {}".format(self.model_keys))
+
+        self.core = IECore()
+        if GLOBAL_CONFIG['cpu_extension'] is not None \
+                and 'CPU' in self.target_device:
+            self.core.add_extension(extension_path=GLOBAL_CONFIG['cpu_extension'],
+                               device_name='CPU')
+        self.net = IENetwork(model=engine_properties["model_xml"],
+                weights=engine_properties["model_bin"])
+        self.batching_info = BatchingInfo(engine_properties["batch_size_param"])
+        self.shape_info = ShapeInfo(engine_properties["shape_param", self.net.inputs)
+        if batching_info.mode == BatchingMode.FIXED:
+            self.net.batch_size = self.batching_info.batch_size
+        else:
+            self.batching_info.batch_size = self.net.batch_size
+
+        self.effective_batch_size = self.batching_info.get_effective_batch_size()
         logger.debug("[Model: {}, version: {}] --- effective batch size - {}"
-                     .format(model_name, model_version, effective_batch_size))
+                     .format(self.model_name, self.model_version, self.effective_batch_size))
         ###############################
         # Initial shape setup
-        if shape_info.mode == ShapeMode.FIXED:
+        if self.shape_info.mode == ShapeMode.FIXED:
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
-                         "fixed value: {}".format(model_name, model_version,
-                                                  shape_info.shape))
-            net.reshape(shape_info.shape)
-        elif shape_info.mode == ShapeMode.AUTO:
+                         "fixed value: {}".format(self.model_name, self.model_version,
+                                                  self.shape_info.shape))
+            self.net.reshape(self.shape_info.shape)
+        elif self.shape_info.mode == ShapeMode.AUTO:
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
-                         "automatic".format(model_name, model_version))
-            net.reshape({})
-        elif shape_info.mode == ShapeMode.DEFAULT:
+                         "automatic".format(self.model_name, self.model_version))
+            self.net.reshape({})
+        elif self.shape_info.mode == ShapeMode.DEFAULT:
             logger.debug("[Model: {}, version: {}] --- Setting shape to "
-                         "default".format(model_name, model_version))
+                         "default".format(self.model_name, self.model_version))
         ###############################
         # Creating free infer requests indexes queue
-        free_ireq_index_queue = queue.Queue(maxsize=num_ireq)
-        for ireq_index in range(num_ireq):
-            free_ireq_index_queue.put(ireq_index)
+        self.free_ireq_index_queue = queue.Queue(maxsize=self.num_ireq)
+        for ireq_index in range(self.num_ireq):
+            self.free_ireq_index_queue.put(ireq_index)
         ###############################
-        requests_queue = queue.Queue(maxsize=GLOBAL_CONFIG[
+        self.requests_queue = queue.Queue(maxsize=GLOBAL_CONFIG[
             'engine_requests_queue_size'])
 
-        exec_net = core.load_network(network=net,
-                                     device_name=target_device,
-                                     config=plugin_config,
-                                     num_requests=num_ireq)
-        ir_engine = cls(model_name=model_name, model_version=model_version,
-                        mapping_config=mapping_config, net=net, core=core,
-                        exec_net=exec_net, batching_info=batching_info,
-                        shape_info=shape_info,
-                        free_ireq_index_queue=free_ireq_index_queue,
-                        num_ireq=num_ireq, requests_queue=requests_queue,
-                        target_device=target_device,
-                        plugin_config=plugin_config)
-        return ir_engine
+        self.exec_net = self.core.load_network(network=self.net,
+                                     device_name=self.target_device,
+                                     config=self.plugin_config,
+                                     num_requests=self.num_ireq)
 
     def predict(self, data, return_socket_name):
             # TODO: Error handling
