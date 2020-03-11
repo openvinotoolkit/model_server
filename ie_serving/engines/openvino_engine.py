@@ -42,9 +42,7 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
         self.model_keys = self._set_keys(engine_properties["mapping_config"])
         self.input_key_names = list(self.model_keys['inputs'].keys())
 
-        self.free_ireq_index_queue = engine_properties["free_ireq_index_queue"]
         self.num_ireq = engine_properties["num_ireq"]
-        self.requests_queue = engine_properties["requests_queue"]
 
         self.target_device = engine_properties["target_device"]
         self.plugin_config = engine_properties["plugin_config"]
@@ -60,7 +58,7 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
         self.input_tensor_names = list(self.net.inputs.keys())
         self.output_tensor_names = list(self.net.outputs.keys())
         self.batching_info = BatchingInfo(engine_properties["batch_size_param"])
-        self.shape_info = ShapeInfo(engine_properties["shape_param", self.net.inputs)
+        self.shape_info = ShapeInfo(engine_properties["shape_param"], self.net.inputs)
         if batching_info.mode == BatchingMode.FIXED:
             self.net.batch_size = self.batching_info.batch_size
         else:
