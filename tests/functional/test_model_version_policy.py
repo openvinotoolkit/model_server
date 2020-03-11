@@ -52,7 +52,7 @@ class TestModelVerPolicy():
              'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
         expected_inputs_metadata = [
             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
-            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
             {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
         for x in range(len(versions)):
             print("Getting info about model version:".format(
@@ -160,7 +160,7 @@ class TestModelVerPolicy():
              'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
         expected_inputs_metadata = [
             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
-            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
+            {'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
             {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
         for x in range(len(versions)):
             print("Getting info about model version:".format(
