@@ -35,7 +35,7 @@ def start_server_update_flow_latest(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-'
-                                      'latest {}'.
+                                      'latest-{}'.
                                       format(get_container_suffix),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
