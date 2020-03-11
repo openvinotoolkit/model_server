@@ -9,6 +9,20 @@
       }
     },
     {
+      "config":{
+        "name":"resnet_bs4",
+        "base_path":"/opt/ml/resnet_V1_50_batch4",
+        "nireq": 1
+      }
+    },
+    {
+      "config":{
+        "name":"resnet_bs8",
+        "base_path":"/opt/ml/resnet_V1_50_batch8",
+        "nireq": 1
+      }
+    },
+    {
       "config": {
         "name": "pvb_detection",
         "base_path": "/opt/ml/person-vehicle-bike-detection-crossroad-0078",
@@ -17,8 +31,8 @@
     },
     {
       "config": {
-        "name": "face_detection_multi",
-        "base_path": "/opt/ml/face-detection-retail-0004-multi",
+        "name": "pvb_face_multi_version",
+        "base_path": "/opt/ml/pvb_face_multi_version",
         "model_version_policy": {"all": {}},
         "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"}
       }

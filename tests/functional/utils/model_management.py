@@ -73,6 +73,7 @@ def convert_model(client,
     image = 'openvino/ubuntu18_dev:latest'
     volumes = {input_dir:   {'bind': '/mnt/input_dir',  'mode': 'ro'},
                output_dir:  {'bind': '/mnt/output_dir', 'mode': 'rw'}}
+    user_id = os.getuid()
 
     command = ' '.join([
         'python3 deployment_tools/model_optimizer/mo.py',
@@ -84,6 +85,6 @@ def convert_model(client,
 
     client.containers.run(image=image,
                           volumes=volumes,
+                          user=user_id,
                           command=command)
-
     return files

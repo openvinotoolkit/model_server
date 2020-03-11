@@ -16,9 +16,9 @@
 import pytest
 import numpy as np
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
-from utils.grpc import infer_batch, get_model_metadata, \
+from utils.grpc import infer, get_model_metadata, \
     model_metadata_response
-from utils.rest import infer_batch_rest, get_model_metadata_response_rest
+from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
 class TestBatchModelInference():
@@ -51,10 +51,10 @@ class TestBatchModelInference():
         batch_input = np.ones((8, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
+        output = infer(batch_input, input_tensor=in_name,
+                       grpc_stub=stub, model_spec_name='resnet',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
 
@@ -70,10 +70,10 @@ class TestBatchModelInference():
         batch_input = np.ones((4, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
+        output = infer(batch_input, input_tensor=in_name,
+                       grpc_stub=stub, model_spec_name='resnet',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
@@ -89,20 +89,20 @@ class TestBatchModelInference():
         batch_input = np.ones((6, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
+        output = infer(batch_input, input_tensor=in_name,
+                       grpc_stub=stub, model_spec_name='resnet',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (6, 1001), ERROR_SHAPE
 
         batch_input = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
-                             grpc_stub=stub, model_spec_name='resnet',
-                             model_spec_version=None,
-                             output_tensors=[out_name])
+        output = infer(batch_input, input_tensor=in_name,
+                       grpc_stub=stub, model_spec_name='resnet',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
@@ -160,10 +160,10 @@ class TestBatchModelInference():
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
         rest_url = 'http://localhost:5560/v1/models/age_gender:predict'
-        output = infer_batch_rest(batch_input,
-                                  input_tensor=in_name, rest_url=rest_url,
-                                  output_tensors=out_names,
-                                  request_format=request_format)
+        output = infer_rest(batch_input, input_tensor=in_name,
+                            rest_url=rest_url,
+                            output_tensors=out_names,
+                            request_format=request_format)
         assert output[out_names[0]].shape == (1, 1, 1, 1), ERROR_SHAPE
         assert output[out_names[1]].shape == (1, 2, 1, 1), ERROR_SHAPE
 
@@ -198,10 +198,10 @@ class TestBatchModelInference():
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
         rest_url = 'http://localhost:5562/v1/models/age_gender:predict'
-        output = infer_batch_rest(batch_input,
-                                  input_tensor=in_name, rest_url=rest_url,
-                                  output_tensors=out_names,
-                                  request_format=request_format)
+        output = infer_rest(batch_input, input_tensor=in_name,
+                            rest_url=rest_url,
+                            output_tensors=out_names,
+                            request_format=request_format)
         assert output[out_names[0]].shape == (4, 1, 1, 1), ERROR_SHAPE
         assert output[out_names[1]].shape == (4, 2, 1, 1), ERROR_SHAPE
 
@@ -234,18 +234,18 @@ class TestBatchModelInference():
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
         rest_url = 'http://localhost:5561/v1/models/age_gender:predict'
-        output = infer_batch_rest(batch_input,
-                                  input_tensor=in_name, rest_url=rest_url,
-                                  output_tensors=out_names,
-                                  request_format=request_format)
+        output = infer_rest(batch_input,
+                            input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=out_names,
+                            request_format=request_format)
         assert output[out_names[0]].shape == (6, 1, 1, 1), ERROR_SHAPE
         assert output[out_names[1]].shape == (6, 2, 1, 1), ERROR_SHAPE
 
         batch_input = np.ones((3, 3, 62, 62))
-        output = infer_batch_rest(batch_input,
-                                  input_tensor=in_name, rest_url=rest_url,
-                                  output_tensors=out_names,
-                                  request_format=request_format)
+        output = infer_rest(batch_input, input_tensor=in_name,
+                            rest_url=rest_url,
+                            output_tensors=out_names,
+                            request_format=request_format)
         assert output[out_names[0]].shape == (3, 1, 1, 1), ERROR_SHAPE
         assert output[out_names[1]].shape == (3, 2, 1, 1), ERROR_SHAPE
 

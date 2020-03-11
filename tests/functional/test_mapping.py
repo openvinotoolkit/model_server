@@ -48,14 +48,12 @@ class TestSingleModelMappingInference():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.ones((10, 3, 62, 62))
+        imgs_v1_224 = np.ones((1, 3, 62, 62))
 
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='new_key', grpc_stub=stub,
-                           model_spec_name='age_gender',
-                           model_spec_version=None,
-                           output_tensors=['age', 'gender'])
+        output = infer(imgs_v1_224, input_tensor='new_key', grpc_stub=stub,
+                       model_spec_name='age_gender',
+                       model_spec_version=None,
+                       output_tensors=['age', 'gender'])
         print("output shape", output['age'].shape)
         print("output shape", output['gender'].shape)
         assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
@@ -110,18 +108,17 @@ class TestSingleModelMappingInference():
 
         print("Downloaded model files:", age_gender_model_downloader)
 
-        imgs_v1_224 = np.ones((10, 3, 62, 62))
+        imgs_v1_224 = np.ones((1, 3, 62, 62))
         rest_url = 'http://localhost:5556/v1/models/age_gender:predict'
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor='new_key', rest_url=rest_url,
-                                output_tensors=['age', 'gender'],
-                                request_format=request_format)
-            print("output shape", output['age'].shape)
-            print("output shape", output['gender'].shape)
-            print(output)
-            assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
-            assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
+        output = infer_rest(imgs_v1_224, input_tensor='new_key',
+                            rest_url=rest_url,
+                            output_tensors=['age', 'gender'],
+                            request_format=request_format)
+        print("output shape", output['age'].shape)
+        print("output shape", output['gender'].shape)
+        print(output)
+        assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
+        assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
 
     def test_get_model_metadata_rest(self, age_gender_model_downloader,
                                      start_server_with_mapping):

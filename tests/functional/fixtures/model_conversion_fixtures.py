@@ -45,18 +45,18 @@ def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
                       'resnet_v1-50.pb')
 
     return \
-        convert_model(get_docker_context,
+        (convert_model(get_docker_context,
                       tensorflow_model,
                       get_test_dir + '/saved_models/resnet_V1_50/1',
                       'resnet_V1_50',
-                      [1, 224, 224, 3]) + \
+                      [1, 224, 224, 3]),
         convert_model(get_docker_context,
                       tensorflow_model,
                       get_test_dir + '/saved_models/resnet_V1_50_batch4/1',
                       'resnet_V1_50_batch4',
-                      [4, 224, 224, 3]) + \
+                      [4, 224, 224, 3]),
         convert_model(get_docker_context,
                       tensorflow_model,
                       get_test_dir + '/saved_models/resnet_V1_50_batch8/1',
                       'resnet_V1_50_batch8',
-                      [8, 224, 224, 3])
+                      [8, 224, 224, 3]))

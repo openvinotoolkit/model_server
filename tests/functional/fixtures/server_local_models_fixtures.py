@@ -15,7 +15,7 @@
 #
 
 import shutil
-
+import os
 import pytest
 from utils.model_management import wait_endpoint_setup
 
@@ -78,6 +78,13 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                              '5556/tcp': 5556},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
+    def delete_mapping_file():
+        path = get_test_dir + '/saved_models/' \
+                              'age-gender-recognition-retail-0013/1/' \
+                              'mapping_config.json'
+        os.remove(path)
+
+    request.addfinalizer(delete_mapping_file)
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
