@@ -55,15 +55,13 @@ class TestSingleModelInference():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.ones((10, 3, 224, 224))
+        imgs_v1_224 = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor=in_name, grpc_stub=stub,
-                           model_spec_name='resnet',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+        output = infer(imgs_v1_224, input_tensor=in_name, grpc_stub=stub,
+                        model_spec_name='resnet',
+                        model_spec_version=None,
+                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
@@ -133,17 +131,16 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        imgs_v1_224 = np.ones((10, 3, 224, 224))
+        imgs_v1_224 = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
         rest_url = 'http://localhost:5555/v1/models/resnet:predict'
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor=in_name, rest_url=rest_url,
-                                output_tensors=[out_name],
-                                request_format=request_format)
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+        output = infer_rest(imgs_v1_224, input_tensor=in_name,
+                            rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format=request_format)
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_single_model):
