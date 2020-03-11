@@ -36,6 +36,7 @@ class TestSingleModelInference():
                               create_grpc_channel):
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        shutil.rmtree(dir) # ensure model dir is empty at the beginning
         stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
         status_stub = create_grpc_channel('localhost:9008', MODEL_SERVICE)
 
@@ -203,6 +204,7 @@ class TestSingleModelInference():
 
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        shutil.rmtree(dir) # ensure model dir is empty at the beginning
         resnet_v1_copy_dir = copy_model(resnet, 1, dir)
         time.sleep(8)
         stub = create_grpc_channel('localhost:9007', PREDICTION_SERVICE)
@@ -285,6 +287,7 @@ class TestSingleModelInference():
                                    start_server_update_flow_specific):
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        shutil.rmtree(dir) # ensure model dir is empty at the beginning
         resnet_copy_dir = copy_model(resnet, 1, dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(8)
@@ -450,6 +453,7 @@ class TestSingleModelInference():
                                  start_server_update_flow_latest):
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        shutil.rmtree(dir) # ensure model dir is empty at the beginning
         resnet_copy_dir = copy_model(resnet, 1, dir)
         time.sleep(8)
 
@@ -528,6 +532,7 @@ class TestSingleModelInference():
                               create_grpc_channel):
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        shutil.rmtree(dir) # ensure model dir is empty at the beginning
         stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
         resnet_copy_dir = copy_model(resnet, 1, dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
