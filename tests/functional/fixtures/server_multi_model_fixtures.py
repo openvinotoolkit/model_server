@@ -23,8 +23,8 @@ from utils.ports import get_ports_for_fixture
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_image, get_test_dir,
-                             get_docker_context):
+def start_server_multi_model(request, get_image, get_container_suffix,
+                             get_test_dir, get_docker_context):
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -45,7 +45,8 @@ def start_server_multi_model(request, get_image, get_test_dir,
               format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-multi',
+                                      name='ie-serving-py-test-multi-{}'.
+                                      format(get_container_suffix),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):

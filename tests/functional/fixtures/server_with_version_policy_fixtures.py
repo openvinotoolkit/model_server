@@ -24,8 +24,8 @@ from utils.ports import get_ports_for_fixture
 
 
 @pytest.fixture(scope="class")
-def start_server_model_ver_policy(request, get_image, get_test_dir,
-                                  get_docker_context):
+def start_server_model_ver_policy(request, get_image, get_container_suffix,
+                                  get_test_dir, get_docker_context):
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     get_test_dir +
                     '/saved_models/model_ver_policy_config.json')
@@ -45,7 +45,8 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-policy',
+                                      name='ie-serving-py-test-policy-{}'.
+                                      format(get_container_suffix),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):

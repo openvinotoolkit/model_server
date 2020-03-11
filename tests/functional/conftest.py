@@ -74,3 +74,8 @@ def create_grpc_channel():
         return None
 
     return _create_channel
+
+
+@pytest.fixture(scope="session")
+def get_container_suffix():
+    return os.environ.get("CONTAINER_SUFFIX", "default")
