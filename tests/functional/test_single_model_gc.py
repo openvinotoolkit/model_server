@@ -28,8 +28,7 @@ from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
 
 class TestSingleModelInferenceGc():
 
-    def test_run_inference(self, input_data_downloader_v1_224,
-                           start_server_single_model_from_gc,
+    def test_run_inference(self, start_server_single_model_from_gc,
                            create_grpc_channel):
         """
         <b>Description</b>
@@ -53,14 +52,12 @@ class TestSingleModelInferenceGc():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        imgs_v1_224 = np.ones((1, 3, 224, 224))
         out_name = 'prob'
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='data', grpc_stub=stub,
-                           model_spec_name='resnet',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
+        output = infer(imgs_v1_224, input_tensor='data', grpc_stub=stub,
+                        model_spec_name='resnet',
+                        model_spec_version=None,
+                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 

@@ -62,26 +62,6 @@ class TestMultiModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
-        """
-        img = np.ones((1, 3, 224, 224))
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer(img, input_tensor='input', grpc_stub=stub,
-                        model_spec_name='resnet_gs',
-                        model_spec_version=None,
-                        output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        for x in range(0, 10):
-            output = infer(img, input_tensor='input', grpc_stub=stub,
-                           model_spec_name='resnet_s3',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-        """
-
         model_name = "resnet_bs8"
         imgs = np.ones((8, 3, 224, 224))
         print("Starting inference using resnet model")
@@ -92,6 +72,25 @@ class TestMultiModelInference():
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+
+        img = np.ones((1, 3, 224, 224))
+        in_name = 'data'
+        out_name = 'prob'
+        output = infer(img, input_tensor=in_name, grpc_stub=stub,
+                        model_spec_name='resnet_gs',
+                        model_spec_version=None,
+                        output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+        in_name = 'input'
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        output = infer(img, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='resnet_s3',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
 
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
@@ -180,24 +179,6 @@ class TestMultiModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
-        """
-        model_name = 'resnet_gs'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(model_name)
-        output = infer_rest(img, input_tensor='input', rest_url=rest_url,
-                            output_tensors=[out_name],
-                            request_format='column_noname')
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-
-        model_name = 'resnet_s3'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(model_name)
-        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
-                            output_tensors=[out_name],
-                            request_format='row_name')
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-        """
-
         imgs = np.ones((4, 3, 224 ,224))
         model_name = 'resnet_bs4'
         rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(model_name)
@@ -215,6 +196,25 @@ class TestMultiModelInference():
                             request_format='row_noname')
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+
+        in_name = 'input'
+        out_name = 'resnet_v1_50/predictions/Reshape_1'
+
+        model_name = 'resnet_gs'
+        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(model_name)
+        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='column_noname')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+
+        model_name = 'resnet_s3'
+        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(model_name)
+        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='row_name')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_multi_model):
