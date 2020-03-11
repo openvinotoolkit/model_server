@@ -90,7 +90,7 @@ docker_build_apt_ubuntu:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R3 apt >> version
+	@echo OpenVINO version: $(OVMS_VERSION) apt >> version
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 
@@ -106,7 +106,7 @@ docker_build_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R2 clearlinux >> version
+	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
 	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 

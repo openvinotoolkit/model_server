@@ -5,7 +5,7 @@ TEST_DIRS=tests
 DOCKER_OVMS_TAG="ie-serving-bin:latest"
 PORT_RANGE=2
 
-make docker_build_bin dldt_package_url=${OPENVINO_DOWNLOAD_LINK_2020_1}
+make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_bin dldt_package_url=${OPENVINO_DOWNLOAD_LINK_2020_1}
 
 . .venv-jenkins/bin/activate
 

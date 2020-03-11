@@ -5,7 +5,7 @@ TEST_DIRS=tests
 DOCKER_OVMS_TAG="ie-serving-apt-ubuntu:latest"
 PORT_RANGE=1
 
-make docker_build_apt_ubuntu
+make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_apt_ubuntu
 
 . .venv-jenkins/bin/activate
 
