@@ -64,13 +64,13 @@ def start_server_face_detection_model_named_shape(request, get_image,
     ports = get_ports_for_fixture()
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
 
-    # TODO: remove f-string
-    command = f"/ie-serving-py/start_server.sh ie_serving model " \
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
-              "--port {grpc_port} --rest_port {rest_port} " \
-              "--shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\" " \
-              "--grpc_workers 4 --rest_workers 2 --nireq 2"
+              "--port " + grpc_port + " --rest_port " + rest_port + \
+              " --shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\" " \
+              "--grpc_workers 4 --rest_workers 2 " \
+              "--nireq 2"
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-named-shape',

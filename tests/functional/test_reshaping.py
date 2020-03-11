@@ -43,7 +43,7 @@ class TestModelReshaping:
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["rest_port"]),
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
         out_name = 'detection_out'
@@ -201,7 +201,7 @@ class TestModelReshaping:
         imgs = np.zeros(shape)
         for model_name in models_names:
             rest_url = 'http://localhost:{}/v1/models/{}' \
-                       ':predict'.format(ports["rest_ports"], model_name)
+                       ':predict'.format(ports["rest_port"], model_name)
             self.run_inference_rest(imgs, out_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
