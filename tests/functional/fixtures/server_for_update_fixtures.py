@@ -16,6 +16,7 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
+from utils.ports import get_ports_for_fixture
 
 
 @pytest.fixture(scope="function")
@@ -25,14 +26,19 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+    ports = get_ports_for_fixture()
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update " \
-              "--port 9007 --rest_port 5562 --grpc_workers 1 --nireq 1"
+              "--port {} --rest_port {} --grpc_workers 1 --nireq 1".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-update-latest',
-                                      ports={'9007/tcp': 9007,
-                                             '5562/tcp': 5562},
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -40,7 +46,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="function")
@@ -50,17 +56,23 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    command = '/ie-serving-py/start_server.sh ie_serving model ' \
+    ports = get_ports_for_fixture()
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
+    # TODO: remove f-string
+    command = f'/ie-serving-py/start_server.sh ie_serving model ' \
               '--model_name resnet --model_path /opt/ml/update ' \
-              '--port 9008 --model_version_policy' \
+              '--port {grpc_port} --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
-              '--rest_port 5563'
+              '--rest_port {rest_port}'
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-'
                                            'update-specific',
-                                      ports={'9008/tcp': 9008,
-                                             '5563/tcp': 5563},
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -68,4 +80,4 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports

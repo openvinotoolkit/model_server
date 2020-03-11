@@ -45,10 +45,12 @@ class TestBatchModelInference():
 
         """
 
+        _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:8, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -64,10 +66,12 @@ class TestBatchModelInference():
                                start_server_batch_model_bs4,
                                create_grpc_channel):
 
+        _, ports = start_server_batch_model_bs4
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9004', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:4, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -83,10 +87,12 @@ class TestBatchModelInference():
                                 start_server_batch_model_auto,
                                 create_grpc_channel):
 
+        _, ports = start_server_batch_model_auto
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9005', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         batch_input = input_data_downloader_v1_224[:6, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -110,9 +116,11 @@ class TestBatchModelInference():
                                 start_server_batch_model,
                                 create_grpc_channel):
 
+        _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
-        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -154,11 +162,13 @@ class TestBatchModelInference():
 
         """
 
+        _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         batch_input = input_data_downloader_v1_224[:8, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5557/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         output = infer_batch_rest(batch_input,
                                   input_tensor='input', rest_url=rest_url,
                                   output_tensors=[out_name],
@@ -191,11 +201,13 @@ class TestBatchModelInference():
 
         """
 
+        _, ports = start_server_batch_model_bs4
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         batch_input = input_data_downloader_v1_224[:4, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5558/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         output = infer_batch_rest(batch_input,
                                   input_tensor='input', rest_url=rest_url,
                                   output_tensors=[out_name],
@@ -228,10 +240,12 @@ class TestBatchModelInference():
 
         """
 
+        _, ports = start_server_batch_model_auto
         print("Downloaded model files:", resnet_2_out_model_downloader)
         batch_input = input_data_downloader_v1_224[:6, :, :, :]
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5559/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         output = infer_batch_rest(batch_input,
                                   input_tensor='input', rest_url=rest_url,
                                   output_tensors=[out_name],
@@ -248,6 +262,7 @@ class TestBatchModelInference():
     def test_get_model_metadata_rest(self, resnet_8_batch_model_downloader,
                                      start_server_batch_model):
 
+        _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_8_batch_model_downloader)
 
         model_name = 'resnet'
@@ -256,7 +271,8 @@ class TestBatchModelInference():
                                              'shape': [8, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [8, 1000]}}
-        rest_url = 'http://localhost:5557/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                    ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)

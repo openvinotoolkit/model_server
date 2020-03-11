@@ -53,10 +53,12 @@ class TestSingleModelInference():
 
         """
 
+        _, ports = start_server_single_model
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -73,9 +75,10 @@ class TestSingleModelInference():
                                 start_server_single_model,
                                 create_grpc_channel):
 
+        _, ports = start_server_single_model
         print("Downloaded model files:", resnet_v1_50_model_downloader)
-
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -98,7 +101,9 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
-        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
+        _, ports = start_server_single_model
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
@@ -137,9 +142,11 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
+        _, ports = start_server_single_model
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5555/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
@@ -153,13 +160,15 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
+        _, ports = start_server_single_model
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1000]}}
-        rest_url = 'http://localhost:5555/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                    ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -173,7 +182,9 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_v1_50_model_downloader)
 
-        rest_url = 'http://localhost:5555/v1/models/resnet'
+        _, ports = start_server_single_model
+        rest_url = 'http://localhost:{}/v1/models/resnet'.format(
+                    ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

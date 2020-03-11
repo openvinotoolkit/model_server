@@ -51,7 +51,9 @@ class TestSingleModelInferenceS3():
         """
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        _, ports = start_server_single_model_from_s3
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -67,7 +69,9 @@ class TestSingleModelInferenceS3():
     def test_get_model_metadata(self, start_server_single_model_from_s3,
                                 create_grpc_channel):
 
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        _, ports = start_server_single_model_from_s3
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
@@ -87,7 +91,9 @@ class TestSingleModelInferenceS3():
     def test_get_model_status(self, start_server_single_model_from_s3,
                               create_grpc_channel):
 
-        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
+        _, ports = start_server_single_model_from_s3
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

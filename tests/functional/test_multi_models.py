@@ -55,10 +55,12 @@ class TestMultiModelInference():
 
         """
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         input_data = input_data_downloader_v1_224[:2, :, :, :]
         print("Starting inference using resnet model")
@@ -128,10 +130,13 @@ class TestMultiModelInference():
         - both served models handles appropriate input formats
 
         """
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet_V1_50'
@@ -170,9 +175,11 @@ class TestMultiModelInference():
                               start_server_multi_model,
                               create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
-        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         request = get_model_status(model_name='resnet_V1_50', version=1)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
@@ -219,12 +226,14 @@ class TestMultiModelInference():
 
         """
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
         input_data = input_data_downloader_v1_224[:2, :, :, :]
         print("Starting inference using resnet model")
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5561/v1/models/resnet_V1_50:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50:predict'.\
+            format(ports["rest_port"])
         for x in range(0, 10):
             output = infer_batch_rest(input_data,
                                       input_tensor='input', rest_url=rest_url,
@@ -235,7 +244,8 @@ class TestMultiModelInference():
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5561/v1/models/resnet_gs:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet_gs:predict'. \
+            format(ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
@@ -245,7 +255,8 @@ class TestMultiModelInference():
             assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5561/v1/models/resnet_s3:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet_s3:predict'. \
+            format(ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
@@ -257,7 +268,8 @@ class TestMultiModelInference():
         input_data = input_data_downloader_v3_331[:4, :, :, :]
         print("Starting inference using pnasnet_large model")
         out_name = 'final_layer/predictions'
-        rest_url = 'http://localhost:5561/v1/models/pnasnet_large:predict'
+        rest_url = 'http://localhost:{}/v1/models/pnasnet_large:predict'. \
+            format(ports["rest_port"])
         for x in range(0, 10):
             output = infer_batch_rest(input_data,
                                       input_tensor='input', rest_url=rest_url,
@@ -289,6 +301,8 @@ class TestMultiModelInference():
         - both served models handles appropriate input formats
 
         """
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
         print("Getting info about resnet model")
@@ -298,7 +312,8 @@ class TestMultiModelInference():
                                              'shape': [2, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [2, 1000]}}
-        rest_url = 'http://localhost:5561/v1/models/resnet_V1_50/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50/metadata'. \
+            format(ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -310,7 +325,8 @@ class TestMultiModelInference():
 
         model_name = 'pnasnet_large'
         out_name = 'final_layer/predictions'
-        rest_url = 'http://localhost:5561/v1/models/pnasnet_large/metadata'
+        rest_url = 'http://localhost:{}/v1/models/pnasnet_large/metadata'. \
+            format(ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -327,9 +343,11 @@ class TestMultiModelInference():
     def test_get_model_status_rest(self, download_two_models,
                                    start_server_multi_model):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_models)
 
-        rest_url = 'http://localhost:5561/v1/models/resnet_V1_50'
+        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50'. \
+            format(ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
@@ -339,7 +357,8 @@ class TestMultiModelInference():
         assert version_status.status.error_message == _ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-        rest_url = 'http://localhost:5561/v1/models/pnasnet_large/versions/1'
+        rest_url = 'http://localhost:{}/v1/models/pnasnet_large/versions/1'. \
+            format(ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

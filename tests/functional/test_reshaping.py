@@ -39,10 +39,12 @@ class TestModelReshaping:
             start_server_face_detection_model_auto_shape,
             create_grpc_channel):
 
+        _, ports = start_server_face_detection_model_auto_shape
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9010', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["rest_port"]),
+                                   PREDICTION_SERVICE)
 
         out_name = 'detection_out'
         model_name = 'face_detection'
@@ -60,11 +62,15 @@ class TestModelReshaping:
             start_server_face_detection_model_nonamed_shape,
             create_grpc_channel, shape, is_correct):
 
+        _, ports_named = start_server_face_detection_model_named_shape
+        _, ports_nonamed = start_server_face_detection_model_nonamed_shape
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stubs = [create_grpc_channel('localhost:9011', PREDICTION_SERVICE),
-                 create_grpc_channel('localhost:9012', PREDICTION_SERVICE)]
+        stubs = [create_grpc_channel('localhost:{}'.
+                 format(ports_named["grpc_port"]), PREDICTION_SERVICE),
+                 create_grpc_channel('localhost:{}'.
+                 format(ports_nonamed["grpc_port"]), PREDICTION_SERVICE)]
 
         out_name = 'detection_out'
         model_name = 'face_detection'
@@ -80,12 +86,13 @@ class TestModelReshaping:
             self, face_detection_model_downloader,
             start_server_face_detection_model_auto_shape, request_format):
 
+        _, ports = start_server_face_detection_model_auto_shape
         print("Downloaded model files:", face_detection_model_downloader)
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
-            rest_url = 'http://localhost:5565/v1/models/face_detection' \
-                       ':predict'
+            rest_url = 'http://localhost:{}/v1/models/face_detection' \
+                       ':predict'.format(ports["rest_port"])
             self.run_inference_rest(imgs, out_name, shape['out'], True,
                                     request_format, rest_url)
 
@@ -101,10 +108,12 @@ class TestModelReshaping:
             start_server_face_detection_model_nonamed_shape,
             shape, is_correct, request_format):
 
+        _, ports_named = start_server_face_detection_model_named_shape
+        _, ports_nonamed = start_server_face_detection_model_nonamed_shape
         print("Downloaded model files:", face_detection_model_downloader)
 
         out_name = 'detection_out'
-        rest_ports = ['5566', '5567']
+        rest_ports = [ports_named["rest_port"], ports_nonamed["rest_port"]]
         for rest_port in rest_ports:
             imgs = np.zeros(shape)
             rest_url = 'http://localhost:{}/v1/models/face_detection:predict' \
@@ -117,10 +126,12 @@ class TestModelReshaping:
             start_server_multi_model,
             create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         out_name = 'detection_out'
         model_name = 'face_detection_auto'
@@ -137,10 +148,12 @@ class TestModelReshaping:
             start_server_multi_model,
             create_grpc_channel, shape, is_correct):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", face_detection_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         models_names = ["face_detection_fixed_nonamed",
                         "face_detection_fixed_named"]
@@ -159,12 +172,13 @@ class TestModelReshaping:
             self, face_detection_model_downloader,
             start_server_multi_model, request_format):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", face_detection_model_downloader)
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
-            rest_url = 'http://localhost:5561/v1/models/face_detection_auto' \
-                       ':predict'
+            rest_url = 'http://localhost:{}/v1/models/face_detection_auto' \
+                       ':predict'.format(ports["rest_port"])
             self.run_inference_rest(imgs, out_name, shape['out'], True,
                                     request_format, rest_url)
 
@@ -178,6 +192,7 @@ class TestModelReshaping:
             self, face_detection_model_downloader,
             start_server_multi_model, shape, is_correct, request_format):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", face_detection_model_downloader)
 
         models_names = ["face_detection_fixed_nonamed",
@@ -185,8 +200,8 @@ class TestModelReshaping:
         out_name = 'detection_out'
         imgs = np.zeros(shape)
         for model_name in models_names:
-            rest_url = 'http://localhost:5561/v1/models/{}' \
-                       ':predict'.format(model_name)
+            rest_url = 'http://localhost:{}/v1/models/{}' \
+                       ':predict'.format(ports["rest_ports"], model_name)
             self.run_inference_rest(imgs, out_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 

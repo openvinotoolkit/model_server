@@ -35,11 +35,14 @@ class TestSingleModelInference():
                               resnet_2_out_model_downloader, get_test_dir,
                               start_server_update_flow_specific,
                               create_grpc_channel):
+        _, ports = start_server_update_flow_specific
         resnet_v1, resnet_v2 = download_two_model_versions
         resnet_2_out = resnet_2_out_model_downloader
         dir = get_test_dir + '/saved_models/' + 'update/'
-        stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
-        status_stub = create_grpc_channel('localhost:9008', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
+        status_stub = create_grpc_channel('localhost:{}'.format(
+                                   ports["grpc_port"]), MODEL_SERVICE)
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(8)
@@ -200,12 +203,15 @@ class TestSingleModelInference():
     def test_latest_version(self, download_two_model_versions, get_test_dir,
                             start_server_update_flow_latest,
                             create_grpc_channel):
+        _, ports = start_server_update_flow_latest
         resnet_v1, resnet_v2 = download_two_model_versions
         dir = get_test_dir + '/saved_models/' + 'update/'
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         time.sleep(8)
-        stub = create_grpc_channel('localhost:9007', PREDICTION_SERVICE)
-        status_stub = create_grpc_channel('localhost:9007', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
+        status_stub = create_grpc_channel('localhost:{}'.format(
+                                   ports["grpc_port"]), MODEL_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
@@ -283,6 +289,7 @@ class TestSingleModelInference():
                                    resnet_2_out_model_downloader,
                                    get_test_dir,
                                    start_server_update_flow_specific):
+        _, ports = start_server_update_flow_specific
         resnet_v1, resnet_v2 = download_two_model_versions
         resnet_2_out = resnet_2_out_model_downloader
         dir = get_test_dir + '/saved_models/' + 'update/'
@@ -299,8 +306,8 @@ class TestSingleModelInference():
                                                 'shape': [1, 3, 224, 224]}}
         expected_output_metadata_v1 = {out_name_v1: {'dtype': 1,
                                                      'shape': [1, 1000]}}
-        rest_url_latest = 'http://localhost:5563/v1/models/resnet/' \
-                          'versions/1/metadata'
+        rest_url_latest = 'http://localhost:{}/v1/models/resnet/' \
+                          'versions/1/metadata'.format(ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url_latest)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -310,14 +317,15 @@ class TestSingleModelInference():
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
-        rest_url = 'http://localhost:5563/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                   ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
         print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
 
-        rest_url_v4 = 'http://localhost:5563/v1/models/resnet/' \
-                      'versions/1/metadata'
+        rest_url_v4 = 'http://localhost:{}/v1/models/resnet/' \
+                      'versions/1/metadata'.format(ports["rest_port"])
         response_v4 = get_model_metadata_response_rest(rest_url_v4)
         print("response", response_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
@@ -328,7 +336,8 @@ class TestSingleModelInference():
         assert output_metadata_v4 == output_metadata_latest
 
         # Model status check
-        rest_status_url = 'http://localhost:5563/v1/models/resnet'
+        rest_status_url = 'http://localhost:{}/v1/models/resnet'.format(
+                          ports["rest_port"])
         status_response = get_model_status_response_rest(rest_status_url)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 2
@@ -346,14 +355,15 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3
 
-        rest_url = 'http://localhost:5563/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                   ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
         print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
 
-        rest_url_v3 = 'http://localhost:5563/v1/models/resnet/' \
-                      'versions/3/metadata'
+        rest_url_v3 = 'http://localhost:{}/v1/models/resnet/' \
+                      'versions/3/metadata'.format(ports["rest_port"])
         response_v3 = get_model_metadata_response_rest(rest_url_v3)
         print("response", response_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
@@ -364,7 +374,8 @@ class TestSingleModelInference():
         assert output_metadata_v3 == output_metadata_latest
 
         # Model status check
-        rest_status_url = 'http://localhost:5563/v1/models/resnet'
+        rest_status_url = 'http://localhost:{}/v1/models/resnet'.format(
+                          ports["rest_port"])
         status_response = get_model_status_response_rest(rest_status_url)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
@@ -387,8 +398,8 @@ class TestSingleModelInference():
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(10)
 
-        rest_url_v1 = 'http://localhost:5563/v1/models/resnet/' \
-                      'versions/1/metadata'
+        rest_url_v1 = 'http://localhost:{}/v1/models/resnet/' \
+                      'versions/1/metadata'.format(ports["rest_port"])
         response_v1 = get_model_metadata_response_rest(rest_url_v1)
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
@@ -403,8 +414,8 @@ class TestSingleModelInference():
         expected_output_metadata_v3 = {out_name_v3: {'dtype': 1,
                                                      'shape': [1, 1001]}}
 
-        rest_url_v3 = 'http://localhost:5563/v1/models/resnet/' \
-                      'versions/3/metadata'
+        rest_url_v3 = 'http://localhost:{}/v1/models/resnet/' \
+                      'versions/3/metadata'.format(ports["rest_port"])
         response_v3 = get_model_metadata_response_rest(rest_url_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
@@ -418,7 +429,8 @@ class TestSingleModelInference():
         expected_output_metadata_v4 = {
             'res5c_branch2c1': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
             'res5c_branch2c2': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}
-        rest_url = 'http://localhost:5563/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                   ports["rest_port"])
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
@@ -428,7 +440,8 @@ class TestSingleModelInference():
         assert expected_output_metadata_v4 == output_metadata_v4
 
         # Model status check
-        rest_status_url = 'http://localhost:5563/v1/models/resnet'
+        rest_status_url = 'http://localhost:{}/v1/models/resnet'.format(
+                          ports["rest_port"])
         status_response = get_model_status_response_rest(rest_status_url)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
@@ -448,6 +461,7 @@ class TestSingleModelInference():
     def test_latest_version_rest(self, download_two_model_versions,
                                  get_test_dir,
                                  start_server_update_flow_latest):
+        _, ports = start_server_update_flow_latest
         resnet_v1, resnet_v2 = download_two_model_versions
         dir = get_test_dir + '/saved_models/' + 'update/'
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
@@ -460,7 +474,8 @@ class TestSingleModelInference():
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1000]}}
-        rest_url = 'http://localhost:5562/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                   ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -471,7 +486,8 @@ class TestSingleModelInference():
         assert expected_output_metadata == output_metadata
 
         # Model status check before update
-        rest_status_url = 'http://localhost:5562/v1/models/resnet'
+        rest_status_url = 'http://localhost:{}/v1/models/resnet'.format(
+                          ports["rest_port"])
         status_response = get_model_status_response_rest(rest_status_url)
         versions_statuses = status_response.model_version_status
         version_status = versions_statuses[0]
@@ -526,10 +542,12 @@ class TestSingleModelInference():
                               resnet_2_out_model_downloader, get_test_dir,
                               start_server_update_flow_specific,
                               create_grpc_channel):
+        _, ports = start_server_update_flow_specific
         resnet_v1, resnet_v2 = download_two_model_versions
         resnet_2_out = resnet_2_out_model_downloader
         dir = get_test_dir + '/saved_models/' + 'update/'
-        stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(8)
@@ -553,7 +571,8 @@ class TestSingleModelInference():
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
-        rest_url = 'http://localhost:5563/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                   ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
         print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
@@ -581,7 +600,8 @@ class TestSingleModelInference():
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
 
-        rest_url = 'http://localhost:5563/v1/models/resnet/versions/3/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/versions/3/metadata'.\
+                   format(ports["rest_port"])
         response_v3 = get_model_metadata_response_rest(rest_url)
         print("response", response_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
@@ -595,7 +615,8 @@ class TestSingleModelInference():
 
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
         time.sleep(3)
-        rest_url = 'http://localhost:5563/v1/models/resnet/versions/1/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.\
+                   format(ports["rest_port"])
         response_v1 = get_model_metadata_response_rest(rest_url)
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
@@ -624,7 +645,8 @@ class TestSingleModelInference():
         expected_output_metadata_v4 = {
             'res5c_branch2c1': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
             'res5c_branch2c2': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}
-        rest_url = 'http://localhost:5563/v1/models/resnet/versions/4/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/versions/4/metadata'.\
+                   format(ports["rest_port"])
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)

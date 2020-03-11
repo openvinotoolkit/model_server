@@ -19,6 +19,7 @@ import shutil
 
 import pytest
 from utils.model_management import wait_endpoint_setup
+from utils.ports import get_ports_for_fixture
 
 
 @pytest.fixture(scope="session")
@@ -36,14 +37,19 @@ def start_server_multi_model(request, get_image, get_test_dir,
             'AWS_REGION=' + AWS_REGION]
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
+    ports = get_ports_for_fixture()
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving config " \
-              "--config_path /opt/ml/config.json --port 9001 " \
-              "--rest_port 5561 --grpc_workers 2 --rest_workers 2"
+              "--config_path /opt/ml/config.json --port {} " \
+              "--rest_port {} --grpc_workers 2 --rest_workers 2".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi',
-                                      ports={'9001/tcp': 9001,
-                                             '5561/tcp': 5561},
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       environment=envs,
                                       command=command)
@@ -52,4 +58,4 @@ def start_server_multi_model(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports

@@ -18,22 +18,30 @@ import os
 
 import pytest
 from utils.model_management import wait_endpoint_setup
+from utils.ports import get_ports_for_fixture
 
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
+
+    ports = get_ports_for_fixture()
+    grpc_port = ports["grpc_port"]
+
+    # TODO: remove f-string
+    command = f"/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path " \
               "gs://public-artifacts/intelai_public_models/resnet_50_i8/ " \
-              "--port 9000 --target_device CPU --nireq 4 --plugin_config " \
+              "--port {grpc_port} --target_device CPU --nireq 4" \
+              " --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", " \
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port},
                                       remove=True,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -41,7 +49,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -55,14 +63,18 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
     envs = ['AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
+
+    ports = get_ports_for_fixture()
+    grpc_port = ports["grpc_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path s3://inference-test-aipg/resnet_v1_50 " \
-              "--port 9000"
+              "--port {}".format(grpc_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-s3',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port},
                                       remove=True,
                                       environment=envs,
                                       command=command)
@@ -71,4 +83,4 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports

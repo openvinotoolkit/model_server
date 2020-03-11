@@ -46,10 +46,12 @@ class TestSingleModelMappingInference():
 
         """
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
 
@@ -68,9 +70,11 @@ class TestSingleModelMappingInference():
                                 create_grpc_channel,
                                 start_server_with_mapping):
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
-        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'resnet_2_out'
         expected_input_metadata = {'new_key': {'dtype': 1,
@@ -114,10 +118,12 @@ class TestSingleModelMappingInference():
 
         """
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        rest_url = 'http://localhost:5556/v1/models/resnet_2_out:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet_2_out:predict'.format(
+                    ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='new_key', rest_url=rest_url,
@@ -131,6 +137,7 @@ class TestSingleModelMappingInference():
     def test_get_model_metadata_rest(self, resnet_2_out_model_downloader,
                                      start_server_with_mapping):
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", resnet_2_out_model_downloader)
 
         model_name = 'resnet_2_out'
@@ -140,7 +147,8 @@ class TestSingleModelMappingInference():
                                              'shape': [1, 2048, 7, 7]},
                                     'output': {'dtype': 1,
                                                'shape': [1, 2048, 7, 7]}}
-        rest_url = 'http://localhost:5556/v1/models/resnet_2_out/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet_2_out/metadata'.\
+                   format(ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(

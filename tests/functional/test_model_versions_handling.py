@@ -57,10 +57,12 @@ class TestModelVersionHandling():
         output resnet_v1_50/predictions/Reshape_1
         """
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
@@ -89,10 +91,12 @@ class TestModelVersionHandling():
                                 start_server_multi_model,
                                 create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         versions = [None, 1]
 
         expected_outputs_metadata = \
@@ -123,10 +127,12 @@ class TestModelVersionHandling():
                               start_server_multi_model,
                               create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         versions = [None, 1]
         for x in range(len(versions)):
             model_name = 'resnet'
@@ -173,13 +179,15 @@ class TestModelVersionHandling():
         output resnet_v1_50/predictions/Reshape_1
         """
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         imgs_v1_224 = np.array(input_data_downloader_v1_224)
         out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
         out_name_v2 = 'resnet_v2_50/predictions/Reshape_1'
         print("Starting inference using latest version - no version set")
-        rest_url = 'http://localhost:5561/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
@@ -190,7 +198,8 @@ class TestModelVersionHandling():
                 'resnet model with version 1 has invalid output'
 
         # both model versions use the same input data shape
-        rest_url = 'http://localhost:5561/v1/models/resnet/versions/1:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet/versions/1:predict'.\
+                   format(ports["rest_port"])
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='input', rest_url=rest_url,
@@ -203,10 +212,13 @@ class TestModelVersionHandling():
     def test_get_model_metadata_rest(self, download_two_model_versions,
                                      start_server_multi_model):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:5561/v1/models/resnet/metadata',
-                'http://localhost:5561/v1/models/resnet/versions/1/metadata']
+        urls = ['http://localhost:{}/v1/models/resnet/metadata'.
+                format(ports["rest_port"]),
+                'http://localhost:{}/v1/models/resnet/versions/1/metadata'.
+                format(ports["rest_port"])]
 
         expected_outputs_metadata = \
             [{'resnet_v2_50/predictions/Reshape_1':
@@ -233,10 +245,13 @@ class TestModelVersionHandling():
     def test_get_model_status_rest(self, download_two_model_versions,
                                    start_server_multi_model):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:5561/v1/models/resnet',
-                'http://localhost:5561/v1/models/resnet/versions/1']
+        urls = ['http://localhost:{}/v1/models/resnet'.
+                format(ports["rest_port"]),
+                'http://localhost:{}/v1/models/resnet/versions/1'.
+                format(ports["rest_port"])]
 
         for x in range(len(urls)):
             response = get_model_status_response_rest(urls[x])
