@@ -66,7 +66,8 @@ def convert_model(client,
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     input_shape_str = '[{}]'.format(','.join(str(i) for i in input_shape))
-    print("Converting {} to IR with input shape {}...".format(model, input_shape_str))
+    print("Converting {} to IR with input shape {}...".format(model,
+                                                              input_shape_str))
 
     input_dir = os.path.dirname(model)
 

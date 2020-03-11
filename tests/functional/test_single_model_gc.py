@@ -55,21 +55,20 @@ class TestSingleModelInferenceGc():
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         out_name = 'prob'
         output = infer(imgs_v1_224, input_tensor='data', grpc_stub=stub,
-                        model_spec_name='resnet',
-                        model_spec_version=None,
-                        output_tensors=[out_name])
+                       model_spec_name='resnet',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
     def test_get_model_metadata(self, start_server_single_model_from_gc,
                                 create_grpc_channel):
-
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'prob'
         expected_input_metadata = {'data': {'dtype': 1,
-                                   'shape': [1, 3, 224, 224]}}
+                                            'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1000]}}
         request = get_model_metadata(model_name='resnet')
@@ -83,7 +82,6 @@ class TestSingleModelInferenceGc():
 
     def test_get_model_status(self, start_server_single_model_from_gc,
                               create_grpc_channel):
-
         stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)

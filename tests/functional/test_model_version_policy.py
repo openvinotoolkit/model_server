@@ -26,7 +26,8 @@ from utils.grpc import get_model_metadata, model_metadata_response, \
 from utils.rest import get_model_status_response_rest
 
 sys.path.append(".")
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, _ERROR_MESSAGE # noqa
+from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE  # noqa
 
 
 class TestModelVerPolicy():
@@ -172,7 +173,7 @@ class TestModelVerPolicy():
             print(result.text)
             if not throw_error[x]:
                 output_json = result.text
-                metadata_pb = get_model_metadata_pb2.\
+                metadata_pb = get_model_metadata_pb2. \
                     GetModelMetadataResponse()
                 response = Parse(output_json, metadata_pb,
                                  ignore_unknown_fields=False)

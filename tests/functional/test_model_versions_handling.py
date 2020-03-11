@@ -23,7 +23,8 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 sys.path.append(".")
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, ErrorCode  # noqa
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
+    ErrorCode  # noqa
 
 
 class TestModelVersionHandling():
@@ -43,16 +44,17 @@ class TestModelVersionHandling():
         out_name = "detection_out"
         in_name = "data"
         output = infer(face_img, input_tensor=in_name,
-                        grpc_stub=stub, model_spec_name=self.model_name,
-                        model_spec_version=1, # face detection
-                        output_tensors=[out_name])
+                       grpc_stub=stub, model_spec_name=self.model_name,
+                       model_spec_version=1,  # face detection
+                       output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7),\
+        assert output[out_name].shape == (1, 1, 200, 7), \
             '{} with version 1 has invalid output'.format(self.model_name)
 
         output = infer(pvb_img, input_tensor=in_name,
-                       grpc_stub=stub, model_spec_name='pvb_face_multi_version',
-                       model_spec_version=None, # PVB detection
+                       grpc_stub=stub,
+                       model_spec_name='pvb_face_multi_version',
+                       model_spec_version=None,  # PVB detection
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1, 200, 7), \
@@ -69,15 +71,15 @@ class TestModelVersionHandling():
         versions = [None, 1]
 
         expected_inputs_metadata = \
-            [{'data':
-                {'dtype': 1, 'shape': [1, 3, 1024, 1024]}}, # PVB detection
-             {'data':
-                {'dtype': 1, 'shape': [1, 3, 300, 300]}} # face detection
+            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
+             # PVB detection
+             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
+             # face detection
              ]
         # Same output shape for both versions
-        expected_output_metadata = {'detection_out':
-                                        {'dtype': 1,
-                                         'shape': [1, 1, 200, 7]}}
+        expected_output_metadata = {
+            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
+        }
         for i in range(len(versions)):
             print("Getting info about pvb_face_detection model "
                   "version:".format(versions[i]))
@@ -149,7 +151,6 @@ class TestModelVersionHandling():
 
         # both model versions use the same input data shape
 
-
     def test_get_model_metadata_rest(self, download_two_model_versions,
                                      start_server_multi_model):
 
@@ -161,15 +162,15 @@ class TestModelVersionHandling():
                 '/versions/1/metadata'.format(self.model_name)]
 
         expected_inputs_metadata = \
-            [{'data':
-                  {'dtype': 1, 'shape': [1, 3, 1024, 1024]}}, # PVB detection
-             {'data':
-                  {'dtype': 1, 'shape': [1, 3, 300, 300]}} # face detection
+            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
+             # PVB detection
+             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
+             # face detection
              ]
         # Same output shape for both versions
-        expected_output_metadata = {'detection_out':
-                                        {'dtype': 1,
-                                         'shape': [1, 1, 200, 7]}}
+        expected_output_metadata = {
+            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
+        }
         for i in range(len(urls)):
             print("Getting info about resnet model version:".format(
                 urls[i]))

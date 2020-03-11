@@ -41,22 +41,21 @@ def download_file(url, dir, name):
 def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
     tensorflow_model = \
         download_file('https://download.01.org/opencv/public_models/012020/resnet-50-tf/resnet_v1-50.pb', # noqa
-                      get_test_dir + '/tensorflow_format/resnet/',
-                      'resnet_v1-50.pb')
+            get_test_dir + '/tensorflow_format/resnet/', 'resnet_v1-50.pb')
 
     return \
         (convert_model(get_docker_context,
-                      tensorflow_model,
-                      get_test_dir + '/saved_models/resnet_V1_50/1',
-                      'resnet_V1_50',
-                      [1, 224, 224, 3]),
-        convert_model(get_docker_context,
-                      tensorflow_model,
-                      get_test_dir + '/saved_models/resnet_V1_50_batch4/1',
-                      'resnet_V1_50_batch4',
-                      [4, 224, 224, 3]),
-        convert_model(get_docker_context,
-                      tensorflow_model,
-                      get_test_dir + '/saved_models/resnet_V1_50_batch8/1',
-                      'resnet_V1_50_batch8',
-                      [8, 224, 224, 3]))
+                       tensorflow_model,
+                       get_test_dir + '/saved_models/resnet_V1_50/1',
+                       'resnet_V1_50',
+                       [1, 224, 224, 3]),
+         convert_model(get_docker_context,
+                       tensorflow_model,
+                       get_test_dir + '/saved_models/resnet_V1_50_batch4/1',
+                       'resnet_V1_50_batch4',
+                       [4, 224, 224, 3]),
+         convert_model(get_docker_context,
+                       tensorflow_model,
+                       get_test_dir + '/saved_models/resnet_V1_50_batch8/1',
+                       'resnet_V1_50_batch8',
+                       [8, 224, 224, 3]))

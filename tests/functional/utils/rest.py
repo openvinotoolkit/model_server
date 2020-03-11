@@ -78,6 +78,7 @@ def infer_rest(img, input_tensor, rest_url,
     data = process_json_output(output_json, output_tensors)
     return data
 
+
 def get_model_metadata_response_rest(rest_url):
     result = requests.get(rest_url)
     output_json = result.text

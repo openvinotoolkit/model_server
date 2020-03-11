@@ -19,9 +19,10 @@ import os
 import pytest
 import requests
 
-face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004" # noqa
-age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013" # noqa
-pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078" # noqa
+face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004"  # noqa
+age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"  # noqa
+pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078"  # noqa
+
 
 def download_model(model_url_base, model_name, model_version, dir):
     local_model_path = os.path.join(dir, model_name, model_version)
@@ -76,6 +77,7 @@ def download_two_models(get_test_dir):
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]
 """
+
 
 @pytest.fixture(autouse=True, scope="session")
 def download_two_model_versions(get_test_dir):

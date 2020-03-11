@@ -78,6 +78,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
                                              '5556/tcp': 5556},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
+
     def delete_mapping_file():
         path = get_test_dir + '/saved_models/' \
                               'age-gender-recognition-retail-0013/1/' \
