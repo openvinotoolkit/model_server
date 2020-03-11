@@ -22,19 +22,19 @@ pipeline {
 
         stage('functional tests bin') {
             steps {
-                sh './tests/scripts/functional-tests-bin.sh'
+                DOCKER_OVMS_TAG="ie-serving-bin:latest" sh './tests/scripts/functional-tests-bin.sh'
             }
         }
 
         stage('functional tests apt ubuntu') {
             steps {
-                sh './tests/scripts/functional-tests-apt-ubuntu.sh'
+                DOCKER_OVMS_TAG="ie-serving-apt:latest" sh './tests/scripts/functional-tests-apt-ubuntu.sh'
             }
         }
 
         stage('functional tests clearlinux') {
             steps {
-                sh './tests/scripts/functional-tests-clearlinux.sh'
+                DOCKER_OVMS_TAG="ie-serving-clearlinux:latest" sh './tests/scripts/functional-tests-clearlinux.sh'
             }
         }
 
