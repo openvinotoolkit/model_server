@@ -66,14 +66,13 @@ def convert_model(client,
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     input_shape_str = '[{}]'.format(','.join(str(i) for i in input_shape))
-    print("Converting " + model + " to IR with input shape " + input_shape_str + "...")
+    print("Converting {} to IR with input shape {}...".format(model, input_shape_str))
 
     input_dir = os.path.dirname(model)
 
     image = 'openvino/ubuntu18_dev:latest'
     volumes = {input_dir:   {'bind': '/mnt/input_dir',  'mode': 'ro'},
                output_dir:  {'bind': '/mnt/output_dir', 'mode': 'rw'}}
-
 
     command = ' '.join([
         'python3 deployment_tools/model_optimizer/mo.py',
