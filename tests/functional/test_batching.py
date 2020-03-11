@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import pytest
+import numpy as np
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer_batch, get_model_metadata, \
     model_metadata_response
@@ -22,8 +23,7 @@ from utils.rest import infer_batch_rest, get_model_metadata_response_rest
 
 class TestBatchModelInference():
 
-    def test_run_inference(self, resnet_8_batch_model_downloader,
-                           input_data_downloader_v1_224,
+    def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_batch_model,
                            create_grpc_channel):
         """
@@ -33,11 +33,9 @@ class TestBatchModelInference():
         <b>input data</b>
         - directory with the model in IR format
         - docker image with ie-serving-py service
-        - input data in numpy format
 
         <b>fixtures used</b>
         - model downloader
-        - input data downloader
         - service launching
 
         <b>Expected results</b>
@@ -45,81 +43,84 @@ class TestBatchModelInference():
 
         """
 
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
-        batch_input = input_data_downloader_v1_224[:8, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
+        batch_input = np.ones((8, 3, 224, 224))
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
                              grpc_stub=stub, model_spec_name='resnet',
                              model_spec_version=None,
                              output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (8, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (8, 1001), ERROR_SHAPE
 
-    def test_run_inference_bs4(self, resnet_8_batch_model_downloader,
-                               input_data_downloader_v1_224,
+    def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
                                start_server_batch_model_bs4,
                                create_grpc_channel):
 
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9004', PREDICTION_SERVICE)
 
-        batch_input = input_data_downloader_v1_224[:4, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
+        batch_input = np.ones((4, 3, 224, 224))
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
                              grpc_stub=stub, model_spec_name='resnet',
                              model_spec_version=None,
                              output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (4, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
-    def test_run_inference_auto(self, resnet_8_batch_model_downloader,
-                                input_data_downloader_v1_224,
+    def test_run_inference_auto(self, resnet_multiple_batch_sizes,
                                 start_server_batch_model_auto,
                                 create_grpc_channel):
 
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9005', PREDICTION_SERVICE)
 
-        batch_input = input_data_downloader_v1_224[:6, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
+        batch_input = np.ones((6, 3, 224, 224))
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
                              grpc_stub=stub, model_spec_name='resnet',
                              model_spec_version=None,
                              output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (6, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (6, 1001), ERROR_SHAPE
 
-        batch_input = input_data_downloader_v1_224[:1, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer_batch(batch_input=batch_input, input_tensor='input',
+        batch_input = np.ones((1, 3, 224, 224))
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        output = infer_batch(batch_input=batch_input, input_tensor=in_name,
                              grpc_stub=stub, model_spec_name='resnet',
                              model_spec_version=None,
                              output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
-    def test_get_model_metadata(self, resnet_8_batch_model_downloader,
+    def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_batch_model,
                                 create_grpc_channel):
 
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [8, 3, 224, 224]}}
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata = {in_name:   {'dtype': 1,
+                                               'shape': [8, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [8, 1000]}}
+                                               'shape': [8, 1001]}}
         request = get_model_metadata(model_name='resnet')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -132,21 +133,20 @@ class TestBatchModelInference():
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
                               ('column_name'), ('column_noname')])
-    def test_run_inference_rest(self, resnet_2_out_model_downloader,
-                                input_data_downloader_v1_224,
-                                start_server_batch_model, request_format):
+    def test_run_inference_rest(self, age_gender_model_downloader,
+                                start_server_batch_model_2out, request_format):
         """
             <b>Description</b>
-            Submit request to REST API interface serving a single resnet model
+            Submit request to REST API interface serving
+            a single age-gender model with 2 outputs.
+            No batch_size parameter specified.
 
             <b>input data</b>
             - directory with the model in IR format
             - docker image with ie-serving-py service
-            - input data in numpy format
 
             <b>fixtures used</b>
             - model downloader
-            - input data downloader
             - service launching
 
             <b>Expected results</b>
@@ -154,36 +154,37 @@ class TestBatchModelInference():
 
         """
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
-        batch_input = input_data_downloader_v1_224[:8, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5557/v1/models/resnet:predict'
+        batch_input = np.ones((1, 3, 62, 62))
+        in_name = 'data'
+        out_names = ['age_conv3', 'prob']
+        rest_url = 'http://localhost:5560/v1/models/age_gender:predict'
         output = infer_batch_rest(batch_input,
-                                  input_tensor='input', rest_url=rest_url,
-                                  output_tensors=[out_name],
+                                  input_tensor=in_name, rest_url=rest_url,
+                                  output_tensors=out_names,
                                   request_format=request_format)
-        assert output[out_name].shape == (8, 1000), ERROR_SHAPE
+        assert output[out_names[0]].shape == (1, 1, 1, 1), ERROR_SHAPE
+        assert output[out_names[1]].shape == (1, 2, 1, 1), ERROR_SHAPE
 
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
                               ('column_name'), ('column_noname')])
-    def test_run_inference_bs4_rest(self, resnet_2_out_model_downloader,
-                                    input_data_downloader_v1_224,
-                                    start_server_batch_model_bs4,
+    def test_run_inference_bs4_rest(self, age_gender_model_downloader,
+                                    start_server_batch_model_auto_bs4_2out,
                                     request_format):
         """
             <b>Description</b>
-            Submit request to gRPC interface serving a single resnet model
+            Submit request to REST API interface serving
+            a single age-gender model with 2 outputs.
+            Parameter batch_size explicitly set to 4.
 
             <b>input data</b>
             - directory with the model in IR format
             - docker image with ie-serving-py service
-            - input data in numpy format
 
             <b>fixtures used</b>
             - model downloader
-            - input data downloader
             - service launching
 
             <b>Expected results</b>
@@ -191,36 +192,36 @@ class TestBatchModelInference():
 
         """
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
-        batch_input = input_data_downloader_v1_224[:4, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5558/v1/models/resnet:predict'
+        batch_input = np.ones((4, 3, 62, 62))
+        in_name = 'data'
+        out_names = ['age_conv3', 'prob']
+        rest_url = 'http://localhost:5562/v1/models/age_gender:predict'
         output = infer_batch_rest(batch_input,
-                                  input_tensor='input', rest_url=rest_url,
-                                  output_tensors=[out_name],
+                                  input_tensor=in_name, rest_url=rest_url,
+                                  output_tensors=out_names,
                                   request_format=request_format)
-        assert output[out_name].shape == (4, 1000), ERROR_SHAPE
+        assert output[out_names[0]].shape == (4, 1, 1, 1), ERROR_SHAPE
+        assert output[out_names[1]].shape == (4, 2, 1, 1), ERROR_SHAPE
 
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
                               ('column_name'), ('column_noname')])
-    def test_run_inference_rest_auto(self, resnet_2_out_model_downloader,
-                                     input_data_downloader_v1_224,
-                                     start_server_batch_model_auto,
+    def test_run_inference_rest_auto(self, age_gender_model_downloader,
+                                     start_server_batch_model_auto_2out,
                                      request_format):
         """
             <b>Description</b>
-            Submit request to REST API interface serving a single resnet model
+            Submit request to REST API interface serving a single resnet model.
+            Parameter batch_size set to auto.
 
             <b>input data</b>
             - directory with the model in IR format
             - docker image with ie-serving-py service
-            - input data in numpy format
 
             <b>fixtures used</b>
             - model downloader
-            - input data downloader
             - service launching
 
             <b>Expected results</b>
@@ -228,34 +229,38 @@ class TestBatchModelInference():
 
         """
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
-        batch_input = input_data_downloader_v1_224[:6, :, :, :]
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:5559/v1/models/resnet:predict'
+        print("Downloaded model files:", age_gender_model_downloader)
+        batch_input = np.ones((6, 3, 62, 62))
+        in_name = 'data'
+        out_names = ['age_conv3', 'prob']
+        rest_url = 'http://localhost:5561/v1/models/age_gender:predict'
         output = infer_batch_rest(batch_input,
-                                  input_tensor='input', rest_url=rest_url,
-                                  output_tensors=[out_name],
+                                  input_tensor=in_name, rest_url=rest_url,
+                                  output_tensors=out_names,
                                   request_format=request_format)
-        assert output[out_name].shape == (6, 1000), ERROR_SHAPE
+        assert output[out_names[0]].shape == (6, 1, 1, 1), ERROR_SHAPE
+        assert output[out_names[1]].shape == (6, 2, 1, 1), ERROR_SHAPE
 
-        batch_input = input_data_downloader_v1_224[:1, :, :, :]
+        batch_input = np.ones((3, 3, 62, 62))
         output = infer_batch_rest(batch_input,
-                                  input_tensor='input', rest_url=rest_url,
-                                  output_tensors=[out_name],
+                                  input_tensor=in_name, rest_url=rest_url,
+                                  output_tensors=out_names,
                                   request_format=request_format)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        assert output[out_names[0]].shape == (3, 1, 1, 1), ERROR_SHAPE
+        assert output[out_names[1]].shape == (3, 2, 1, 1), ERROR_SHAPE
 
-    def test_get_model_metadata_rest(self, resnet_8_batch_model_downloader,
+    def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_batch_model):
 
-        print("Downloaded model files:", resnet_8_batch_model_downloader)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [8, 3, 224, 224]}}
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata = {in_name:   {'dtype': 1,
+                                               'shape': [8, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [8, 1000]}}
+                                               'shape': [8, 1001]}}
         rest_url = 'http://localhost:5557/v1/models/resnet/metadata'
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(

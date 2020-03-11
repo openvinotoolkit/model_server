@@ -23,6 +23,7 @@ face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/
 age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/" # noqa
 pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/" # noqa
 
+
 def download_model(model_url, model_name, model_version, dir):
     model_url_base = model_url + model_name
     local_model_path = os.path.join(dir, model_name, model_version)
@@ -50,6 +51,7 @@ def face_detection_model_downloader(get_test_dir):
                           '1',
                           get_test_dir + '/saved_models/')
 
+
 @pytest.fixture(autouse=True, scope="session")
 def age_gender_model_downloader(get_test_dir):
     return download_model(age_gender_recognition_model_url,
@@ -76,6 +78,7 @@ def download_two_models(get_test_dir):
                                  get_test_dir + '/saved_models/')
     return [model1_info, model2_info]
 """
+
 
 @pytest.fixture(autouse=True, scope="session")
 def download_two_model_versions(get_test_dir):

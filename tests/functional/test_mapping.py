@@ -23,8 +23,7 @@ from utils.rest import infer_rest, get_model_metadata_response_rest
 
 class TestSingleModelMappingInference():
 
-    def test_run_inference(self, resnet_2_out_model_downloader,
-                           input_data_downloader_v1_224,
+    def test_run_inference(self, age_gender_model_downloader,
                            create_grpc_channel,
                            start_server_with_mapping):
         """
@@ -34,11 +33,9 @@ class TestSingleModelMappingInference():
         <b>input data</b>
         - directory with the model in IR format
         - docker image with ie-serving-py service
-        - input data in numpy format
 
         <b>fixtures used</b>
         - model downloader
-        - input data downloader
         - service launching
 
         <b>Expected results</b>
@@ -46,39 +43,39 @@ class TestSingleModelMappingInference():
 
         """
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        imgs_v1_224 = np.ones((10, 3, 62, 62))
 
         for x in range(0, 10):
             output = infer(imgs_v1_224, slice_number=x,
                            input_tensor='new_key', grpc_stub=stub,
-                           model_spec_name='resnet_2_out',
+                           model_spec_name='age_gender',
                            model_spec_version=None,
-                           output_tensors=['mask', 'output'])
-        print("output shape", output['mask'].shape)
-        print("output shape", output['output'].shape)
-        assert output['mask'].shape == (1, 2048, 7, 7), ERROR_SHAPE
-        assert output['output'].shape == (1, 2048, 7, 7), ERROR_SHAPE
+                           output_tensors=['age', 'gender'])
+        print("output shape", output['age'].shape)
+        print("output shape", output['gender'].shape)
+        assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
+        assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
 
-    def test_get_model_metadata(self, resnet_2_out_model_downloader,
+    def test_get_model_metadata(self, age_gender_model_downloader,
                                 create_grpc_channel,
                                 start_server_with_mapping):
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
         stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
 
-        model_name = 'resnet_2_out'
+        model_name = 'age_gender'
         expected_input_metadata = {'new_key': {'dtype': 1,
-                                               'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {'mask': {'dtype': 1,
-                                             'shape': [1, 2048, 7, 7]},
-                                    'output': {'dtype': 1,
-                                               'shape': [1, 2048, 7, 7]}}
+                                               'shape': [1, 3, 62, 62]}}
+        expected_output_metadata = {'age': {'dtype': 1,
+                                            'shape': [1, 1, 1, 1]},
+                                    'gender': {'dtype': 1,
+                                               'shape': [1, 2, 1, 1]}}
         request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
         print("response", response)
@@ -92,8 +89,7 @@ class TestSingleModelMappingInference():
     @pytest.mark.parametrize("request_format",
                              [('row_name'), ('row_noname'),
                               ('column_name'), ('column_noname')])
-    def test_run_inference_rest(self, resnet_2_out_model_downloader,
-                                input_data_downloader_v1_224,
+    def test_run_inference_rest(self, age_gender_model_downloader,
                                 start_server_with_mapping, request_format):
         """
             <b>Description</b>
@@ -102,11 +98,9 @@ class TestSingleModelMappingInference():
             <b>input data</b>
             - directory with the model in IR format
             - docker image with ie-serving-py service
-            - input data in numpy format
 
             <b>fixtures used</b>
             - model downloader
-            - input data downloader
             - service launching
 
             <b>Expected results</b>
@@ -114,33 +108,34 @@ class TestSingleModelMappingInference():
 
         """
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        rest_url = 'http://localhost:5556/v1/models/resnet_2_out:predict'
+        imgs_v1_224 = np.ones((10, 3, 62, 62))
+        rest_url = 'http://localhost:5556/v1/models/age_gender:predict'
         for x in range(0, 10):
             output = infer_rest(imgs_v1_224, slice_number=x,
                                 input_tensor='new_key', rest_url=rest_url,
-                                output_tensors=['mask', 'output'],
+                                output_tensors=['age', 'gender'],
                                 request_format=request_format)
-            print("output shape", output['mask'].shape)
-            print("output shape", output['output'].shape)
-            assert output['mask'].shape == (1, 2048, 7, 7), ERROR_SHAPE
-            assert output['output'].shape == (1, 2048, 7, 7), ERROR_SHAPE
+            print("output shape", output['age'].shape)
+            print("output shape", output['gender'].shape)
+            print(output)
+            assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
+            assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
 
-    def test_get_model_metadata_rest(self, resnet_2_out_model_downloader,
+    def test_get_model_metadata_rest(self, age_gender_model_downloader,
                                      start_server_with_mapping):
 
-        print("Downloaded model files:", resnet_2_out_model_downloader)
+        print("Downloaded model files:", age_gender_model_downloader)
 
-        model_name = 'resnet_2_out'
+        model_name = 'age_gender'
         expected_input_metadata = {'new_key': {'dtype': 1,
-                                               'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {'mask': {'dtype': 1,
-                                             'shape': [1, 2048, 7, 7]},
-                                    'output': {'dtype': 1,
-                                               'shape': [1, 2048, 7, 7]}}
-        rest_url = 'http://localhost:5556/v1/models/resnet_2_out/metadata'
+                                               'shape': [1, 3, 62, 62]}}
+        expected_output_metadata = {'age': {'dtype': 1,
+                                            'shape': [1, 1, 1, 1]},
+                                    'gender': {'dtype': 1,
+                                               'shape': [1, 2, 1, 1]}}
+        rest_url = 'http://localhost:5556/v1/models/age_gender/metadata'
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(
