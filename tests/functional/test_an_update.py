@@ -141,7 +141,7 @@ class TestSingleModelInference():
         # Available versions: 1, 3, 4
 
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
-        time.sleep(10)
+        time.sleep(30)
 
         request_v1 = get_model_metadata(model_name=model_name, version=1)
         response_v1 = stub.GetModelMetadata(request_v1, 10)
@@ -198,7 +198,7 @@ class TestSingleModelInference():
         shutil.rmtree(resnet_v2_copy_dir)
         shutil.rmtree(resnet_v1_copy_dir)
         shutil.rmtree(resnet_2_out_copy_dir)
-        time.sleep(10)
+        time.sleep(30)
 
     def test_latest_version(self, download_two_model_versions, get_test_dir,
                             start_server_update_flow_latest,
@@ -246,7 +246,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_v1_copy_dir)
         resnet_v2_copy_dir = copy_model(resnet_v2, 2, dir)
-        time.sleep(10)
+        time.sleep(30)
 
         out_name = 'resnet_v2_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
@@ -283,7 +283,7 @@ class TestSingleModelInference():
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
         shutil.rmtree(resnet_v2_copy_dir)
-        time.sleep(10)
+        time.sleep(30)
 
     def test_specific_version_rest(self, download_two_model_versions,
                                    resnet_2_out_model_downloader,
@@ -351,7 +351,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_2_out_copy_dir)
         resnet_v2_copy_dir = copy_model(resnet_v2, 3, dir)
-        time.sleep(10)
+        time.sleep(30)
 
         # Available versions: 1, 3
 
@@ -456,7 +456,7 @@ class TestSingleModelInference():
         shutil.rmtree(resnet_v2_copy_dir)
         shutil.rmtree(resnet_v1_copy_dir)
         shutil.rmtree(resnet_2_out_copy_dir)
-        time.sleep(10)
+        time.sleep(30)
 
     def test_latest_version_rest(self, download_two_model_versions,
                                  get_test_dir,
@@ -501,7 +501,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_v1_copy_dir)
         resnet_v2_copy_dir = copy_model(resnet_v2, 2, dir)
-        time.sleep(10)
+        time.sleep(30)
 
         out_name = 'resnet_v2_50/predictions/Reshape_1'
         expected_input_metadata = {'input': {'dtype': 1,
@@ -536,7 +536,7 @@ class TestSingleModelInference():
         ###
 
         shutil.rmtree(resnet_v2_copy_dir)
-        time.sleep(10)
+        time.sleep(30)
 
     def test_update_rest_grpc(self, download_two_model_versions,
                               resnet_2_out_model_downloader, get_test_dir,
@@ -550,7 +550,7 @@ class TestSingleModelInference():
                                    PREDICTION_SERVICE)
         resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
-        time.sleep(8)
+        time.sleep(30)
 
         # Available versions: 1, 4
 
@@ -590,7 +590,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_2_out_copy_dir)
         resnet_v2_copy_dir = copy_model(resnet_v2, 3, dir)
-        time.sleep(3)
+        time.sleep(30)
 
         # Available versions: 1, 3
 
@@ -614,7 +614,7 @@ class TestSingleModelInference():
         # Available versions: 1, 3, 4
 
         resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
-        time.sleep(3)
+        time.sleep(30)
         rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.\
                    format(ports["rest_port"])
         response_v1 = get_model_metadata_response_rest(rest_url)
