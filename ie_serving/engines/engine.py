@@ -57,26 +57,23 @@ class Engine(ABC):
         while True:
             req = self.zmq_socket.recv()
             self.zmq_socket.send(b'ACK')
-            data, return_socket_name = self.parse_inference_request(req)
-            if data is None or return_socket_name is None:
+            data = {}
+            request = ovms_ipc.EndpointRequest()
+            request.MergeFromString(req)
+            if not request.HasField("predict_request"):
                 continue
+            for inference_input in request.predict_request.inputs:
+                shm = multiprocessing.shared_memory.SharedMemory(
+                    name=inference_input.shm_name)
+                data[inference_input.input_name] = np.ndarray(
+                    tuple(inference_input.numpy_attributes.shape),
+                    dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
+            return_socket_name = request.predict_request.return_socket_name
             self.predict(data, return_socket_name)
 
-    def parse_inference_request(self, req):
-        data = {}
-        request = ovms_ipc.EndpointRequest()
-        request.MergeFromString(req)
-        if not request.HasField("predict_request"):
-            return None, None
-        for inference_input in request.predict_request.inputs:
-            shm = multiprocessing.shared_memory.SharedMemory(
-                name=inference_input.shm_name)
-            data[inference_input.input_name] = np.ndarray(
-                inference_input.numpy_attributes.shape, dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
-        return_socket_name = request.predict_request.return_socket_name
-        return data, return_socket_name
-
     def return_results(self, inference_output, return_socket_name):
+        print(inference_output)
+        print(return_socket_name)
         zmq_return_context = zmq.Context()
         zmq_return_socket = zmq_return_context.socket(zmq.REQ)
         zmq_return_socket.connect(
