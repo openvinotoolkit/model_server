@@ -42,7 +42,7 @@ def pytest_addoption(parser):
         help="docker image name which should be used to run tests"
     )
     parser.addoption(
-        "--test_dir", action="store", default="/tmp/test_models",
+        "--test_dir", action="store", default="/tmp/ovms_models",
         help="location where models and test data should be downloaded"
     )
 

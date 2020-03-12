@@ -29,6 +29,7 @@ HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 OVMS_VERSION := "2020_R1"
 DLDT_PACKAGE_URL := "$(dldt_package_url)"
+TEST_MODELS_DIR = /tmp/ovms_models
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -64,7 +65,7 @@ coverage: venv
 
 test: venv
 	@echo "Executing functional tests..."
-	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/ --test_dir $(TEST_MODELS_DIR)
 
 test_local_only: venv
 	@echo "Executing functional tests with only local models..."
