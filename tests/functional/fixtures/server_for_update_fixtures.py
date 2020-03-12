@@ -25,7 +25,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
                                     get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
-    update_test_dir = path_to_mount + '/update-{}'.format(get_tests_suffix),
+    update_test_dir = path_to_mount + '/update-{}'.format(get_tests_suffix)
     # ensure model dir is empty before starting OVMS
     shutil.rmtree(update_test_dir, ignore_errors=True)
 
@@ -73,7 +73,7 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
     command = '/ie-serving-py/start_server.sh ie_serving model ' \
               '--model_name resnet --model_path ' \
               '/opt/ml/update-' + get_tests_suffix() +  \
-              '--port ' + str(grpc_port) + ' --model_version_policy' \
+              ' --port ' + str(grpc_port) + ' --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
               '--rest_port ' + str(rest_port)
 
