@@ -140,7 +140,7 @@ class TestModelVersionHandling():
         in_name = "data"
         rest_url = 'http://localhost:{}/v1/models/{}' \
                    '/versions/1:predict'.format(ports["rest_port"],
-                   self.model_name)
+                                                self.model_name)
         output = infer_rest(face_img,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],

@@ -149,7 +149,6 @@ class TestSingleModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
-
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_single_model):
         print("Downloaded model files:", resnet_multiple_batch_sizes)

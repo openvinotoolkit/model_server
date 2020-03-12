@@ -178,7 +178,7 @@ class TestModelVerPolicy():
             expected_output_metadata = expected_outputs_metadata[x]
             rest_url = 'http://localhost:{}/v1/models/{}/' \
                        'versions/{}/metadata'.format(ports["rest_port"],
-                       model_name, versions[x])
+                                                     model_name, versions[x])
             result = requests.get(rest_url)
             print(result.text)
             if not throw_error[x]:
@@ -213,7 +213,7 @@ class TestModelVerPolicy():
         for x in range(len(versions)):
             rest_url = 'http://localhost:{}/v1/models/{}/' \
                        'versions/{}'.format(ports["rest_port"], model_name,
-                       versions[x])
+                                            versions[x])
             result = requests.get(rest_url)
             if not throw_error[x]:
                 output_json = result.text

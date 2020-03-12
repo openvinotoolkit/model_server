@@ -91,8 +91,8 @@ def start_server_batch_model_auto(request, get_image, get_container_suffix,
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port {} --batch_size auto --rest_port {}".format(
-              grpc_port, rest_port)
+              "--port {} --batch_size auto --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch-{}'.
@@ -123,8 +123,8 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port {} --batch_size auto --rest_port {}".format(
-              grpc_port, rest_port)
+              "--port {} --batch_size auto --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch-2out',
@@ -186,15 +186,15 @@ def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port {} --batch_size 4 --rest_port {}".format(
-              grpc_port, rest_port)
+              "--port {} --batch_size 4 --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4-2out',
                                       ports={'{}/tcp'.format(grpc_port):
-                                                 grpc_port,
+                                             grpc_port,
                                              '{}/tcp'.format(rest_port):
-                                                 rest_port},
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)

@@ -554,7 +554,8 @@ class TestSingleModelInference():
         dir = get_test_dir + '/saved_models/' + 'update/'
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]), PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         resnet_copy_dir = copy_model(resnet, 1, dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(8)
@@ -623,7 +624,8 @@ class TestSingleModelInference():
 
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(3)
-        rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.\
+                   format(ports["rest_port"])
         response_v1 = get_model_metadata_response_rest(rest_url)
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
@@ -650,8 +652,8 @@ class TestSingleModelInference():
                                                 'shape': [4, 3, 224, 224]}}
         expected_output_metadata_v4 = {out_name: {'dtype': 1,
                                                   'shape': [4, 1001]}}
-        rest_url = 'http://localhost:{}/v1/models/resnet/versions/4/metadata'. \
-            format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/resnet/' \
+                   'versions/4/metadata'.format(ports["rest_port"])
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)

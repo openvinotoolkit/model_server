@@ -85,7 +85,6 @@ class TestBatchModelInference():
                                 start_server_batch_model_auto,
                                 create_grpc_channel):
 
-
         _, ports = start_server_batch_model_auto
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
