@@ -72,7 +72,7 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
 
     command = '/ie-serving-py/start_server.sh ie_serving model ' \
               '--model_name resnet --model_path ' \
-              '/opt/ml/update- ' + get_tests_suffix() +  \
+              '/opt/ml/update-' + get_tests_suffix() +  \
               '--port ' + str(grpc_port) + ' --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
               '--rest_port ' + str(rest_port)
