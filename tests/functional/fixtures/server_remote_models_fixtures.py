@@ -18,12 +18,12 @@ import os
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.ports import get_ports_for_fixture
+from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_gc(request, get_image, get_container_suffix,
-                                      get_test_dir, get_docker_context):
+def start_server_single_model_from_gc(request, get_image, get_test_dir,
+                                      get_docker_context):
     client = get_docker_context
 
     ports = get_ports_for_fixture()
@@ -39,7 +39,7 @@ def start_server_single_model_from_gc(request, get_image, get_container_suffix,
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port},
                                       remove=True,
@@ -53,8 +53,8 @@ def start_server_single_model_from_gc(request, get_image, get_container_suffix,
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_s3(request, get_image, get_container_suffix,
-                                      get_test_dir, get_docker_context):
+def start_server_single_model_from_s3(request, get_image, get_test_dir,
+                                      get_docker_context):
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
@@ -73,7 +73,7 @@ def start_server_single_model_from_s3(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-s3-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port},
                                       remove=True,

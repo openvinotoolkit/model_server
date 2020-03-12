@@ -14,3 +14,7 @@ REST_PORTS = [generate_port(port=str(rest_port), position=1, number=PORT_RANGE)
 
 def get_ports_for_fixture():
     return {"grpc_port": GRPC_PORTS.pop(), "rest_port": REST_PORTS.pop()}
+
+
+def get_tests_suffix():
+    return os.environ.get("TESTS_SUFFIX", "default")

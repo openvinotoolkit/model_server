@@ -16,12 +16,11 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.ports import get_ports_for_fixture
+from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_auto_shape(request, get_image,
-                                                 get_container_suffix,
                                                  get_test_dir,
                                                  get_docker_context):
     client = get_docker_context
@@ -39,7 +38,7 @@ def start_server_face_detection_model_auto_shape(request, get_image,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-auto-shape-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -56,7 +55,6 @@ def start_server_face_detection_model_auto_shape(request, get_image,
 
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_named_shape(request, get_image,
-                                                  get_container_suffix,
                                                   get_test_dir,
                                                   get_docker_context):
     client = get_docker_context
@@ -77,7 +75,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-named-shape-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -94,7 +92,6 @@ def start_server_face_detection_model_named_shape(request, get_image,
 
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_nonamed_shape(request, get_image,
-                                                    get_container_suffix,
                                                     get_test_dir,
                                                     get_docker_context):
     client = get_docker_context
@@ -112,7 +109,7 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-nonamed-'
-                                      'shape-{}'.format(get_container_suffix),
+                                      'shape-{}'.format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):

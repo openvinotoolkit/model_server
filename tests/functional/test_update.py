@@ -23,6 +23,7 @@ from utils.grpc import get_model_metadata, model_metadata_response, \
 from utils.model_management import copy_model
 from utils.rest import get_model_metadata_response_rest, \
     get_model_status_response_rest
+from utils.parametrization import get_tests_suffix
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
@@ -36,7 +37,8 @@ class TestSingleModelInference():
                               create_grpc_channel):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update/'
+        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+                get_tests_suffix())
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
@@ -208,7 +210,8 @@ class TestSingleModelInference():
 
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update/'
+        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+                get_tests_suffix())
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         resnet_v1_copy_dir = copy_model(resnet, 1, dir)
@@ -295,7 +298,8 @@ class TestSingleModelInference():
                                    start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update/'
+        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+                get_tests_suffix())
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, dir)
@@ -468,7 +472,8 @@ class TestSingleModelInference():
                                  start_server_update_flow_latest):
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update/'
+        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+                get_tests_suffix())
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, dir)
@@ -551,7 +556,8 @@ class TestSingleModelInference():
                               create_grpc_channel):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update/'
+        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+                get_tests_suffix())
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),

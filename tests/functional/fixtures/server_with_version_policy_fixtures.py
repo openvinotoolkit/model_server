@@ -20,12 +20,12 @@ from distutils.dir_util import copy_tree
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.ports import get_ports_for_fixture
+from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
-def start_server_model_ver_policy(request, get_image, get_container_suffix,
-                                  get_test_dir, get_docker_context):
+def start_server_model_ver_policy(request, get_image, get_test_dir,
+                                  get_docker_context):
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     get_test_dir +
                     '/saved_models/model_ver_policy_config.json')
@@ -46,7 +46,7 @@ def start_server_model_ver_policy(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-policy-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):

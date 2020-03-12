@@ -16,12 +16,12 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.ports import get_ports_for_fixture
+from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model(request, get_image, get_container_suffix,
-                             get_test_dir, get_docker_context):
+def start_server_batch_model(request, get_image, get_test_dir,
+                             get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -34,7 +34,7 @@ def start_server_batch_model(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -50,8 +50,8 @@ def start_server_batch_model(request, get_image, get_container_suffix,
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_2out(request, get_image, get_container_suffix,
-                                  get_test_dir, get_docker_context):
+def start_server_batch_model_2out(request, get_image, get_test_dir,
+                                  get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -66,7 +66,7 @@ def start_server_batch_model_2out(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch-2out-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -82,8 +82,8 @@ def start_server_batch_model_2out(request, get_image, get_container_suffix,
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto(request, get_image, get_container_suffix,
-                                  get_test_dir, get_docker_context):
+def start_server_batch_model_auto(request, get_image, get_test_dir,
+                                  get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -97,7 +97,7 @@ def start_server_batch_model_auto(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -128,7 +128,8 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
               format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-autobatch-2out',
+                                      name='ie-serving-py-test-autobatch-'
+                                      '2out-{}'.format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -144,8 +145,8 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_bs4(request, get_image, get_container_suffix,
-                                 get_test_dir, get_docker_context):
+def start_server_batch_model_bs4(request, get_image, get_test_dir,
+                                 get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -159,7 +160,7 @@ def start_server_batch_model_bs4(request, get_image, get_container_suffix,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4-{}'.
-                                      format(get_container_suffix),
+                                      format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
@@ -175,8 +176,8 @@ def start_server_batch_model_bs4(request, get_image, get_container_suffix,
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
-                                           get_docker_context):
+def start_server_batch_model_auto_bs4_2out(request, get_image,
+                                           get_test_dir, get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -191,7 +192,8 @@ def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
               format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch4-2out',
+                                      name='ie-serving-py-test-batch4-'
+                                      '2out-{}'.format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
                                              '{}/tcp'.format(rest_port):
