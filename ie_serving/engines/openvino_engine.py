@@ -32,21 +32,17 @@ logger = get_logger(__name__)
 
 class OpenvinoEngine(Engine):  # Engine class inheritance
 
-###################################
-# ENGINE INTERFACE IMPLEMENTATION #
-###################################
+    ###################################
+    # ENGINE INTERFACE IMPLEMENTATION #
+    ###################################
 
     def build_engine(self, engine_properties):
-        self.exec_net = engine_properties["exec_net"]
-        self.shape_info = engine_properties["shape_info"]
-        self.model_keys = self._set_keys(engine_properties["mapping_config"])
-        self.input_key_names = list(self.model_keys['inputs'].keys())
+        print(engine_properties)
 
         self.num_ireq = engine_properties["num_ireq"]
 
         self.target_device = engine_properties["target_device"]
         self.plugin_config = engine_properties["plugin_config"]
-        logger.info("Matched keys for model: {}".format(self.model_keys))
 
         self.core = IECore()
         if GLOBAL_CONFIG['cpu_extension'] is not None \
@@ -57,9 +53,12 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
                 weights=engine_properties["model_bin"])
         self.input_tensor_names = list(self.net.inputs.keys())
         self.output_tensor_names = list(self.net.outputs.keys())
+        self.model_keys = self._set_keys(engine_properties["mapping_config"])
+        logger.info("Matched keys for model: {}".format(self.model_keys))
+        self.input_key_names = list(self.model_keys["inputs"].keys())
         self.batching_info = BatchingInfo(engine_properties["batch_size_param"])
         self.shape_info = ShapeInfo(engine_properties["shape_param"], self.net.inputs)
-        if batching_info.mode == BatchingMode.FIXED:
+        if self.batching_info.mode == BatchingMode.FIXED:
             self.net.batch_size = self.batching_info.batch_size
         else:
             self.batching_info.batch_size = self.net.batch_size
@@ -96,23 +95,23 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
                                      num_requests=self.num_ireq)
 
     def predict(self, data, return_socket_name):
-            # TODO: Error handling
-            self._adjust_network_inputs_if_needed(data)
-            ireq_index = self.free_ireq_index_queue.get()
-            py_data = {
-                'ireq_index': ireq_index,
-                'return_socket_name': return_socket_name,
-            }
-            # due to OV asynchronous mode usage, _inference_callback
-            # MUST return results to the server by calling Engine method
-            # return_results(...)
-            self.exec_net.requests[ireq_index].set_completion_callback(
-                py_callback=self._inference_callback, py_data=py_data)
-            self.exec_net.requests[ireq_index].async_infer(data)
+        # TODO: Error handling
+        self._adjust_network_inputs_if_needed(data)
+        ireq_index = self.free_ireq_index_queue.get()
+        py_data = {
+            'ireq_index': ireq_index,
+            'return_socket_name': return_socket_name,
+        }
+        # due to OV asynchronous mode usage, _inference_callback
+        # MUST return results to the server by calling Engine method
+        # return_results(...)
+        self.exec_net.requests[ireq_index].set_completion_callback(
+            py_callback=self._inference_callback, py_data=py_data)
+        self.exec_net.requests[ireq_index].async_infer(data)
 
-#########################################
-# OV ENGINE BUILDING UNDERLYING METHODS #
-#########################################
+    #########################################
+    # OV ENGINE BUILDING UNDERLYING METHODS #
+    #########################################
 
     def _get_mapping_data_if_exists(self, mapping_config):
         if mapping_config is not None:
@@ -166,9 +165,9 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
         else:
             return self._set_names_in_config_as_keys(mapping_data)
 
-##############################
-# PREDICT UNDERLYING METHODS #
-##############################
+    ##############################
+    # PREDICT UNDERLYING METHODS #
+    ##############################
 
     def _inference_callback(self, status, py_data):
         ireq_index = py_data['ireq_index']
