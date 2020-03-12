@@ -95,7 +95,8 @@ def start_server_with_mapping(request, get_image, get_container_suffix,
         path = get_test_dir + '/saved_models/' \
                               'age-gender-recognition-retail-0013/1/' \
                               'mapping_config.json'
-        os.remove(path)
+        if os.path.exists(path):
+            os.remove(path)
 
     request.addfinalizer(delete_mapping_file)
     request.addfinalizer(container.kill)

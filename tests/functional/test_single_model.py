@@ -160,7 +160,7 @@ class TestSingleModelInference():
         expected_input_metadata = {in_name: {'dtype': 1,
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [1, 1001]}}
         rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
                     ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)

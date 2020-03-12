@@ -148,7 +148,7 @@ class TestMultiModelInference():
 
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    MODEL_SERVICE)
-        request = get_model_status(model_name='resnet_V1_50', version=1)
+        request = get_model_status(model_name='resnet', version=1)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
