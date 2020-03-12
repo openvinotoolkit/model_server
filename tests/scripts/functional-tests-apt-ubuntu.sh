@@ -3,7 +3,6 @@ set -ex
 
 TEST_DIRS=tests
 DOCKER_OVMS_TAG="ie-serving-apt-ubuntu:latest"
-export PORT_RANGE=1
 export TESTS_SUFFIX="apt-ubuntu"
 
 make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_apt_ubuntu

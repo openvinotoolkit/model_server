@@ -1,19 +1,22 @@
 import os
+import socket
 
 
-def generate_port(port, position, number):
-    return port[:position]+number+port[position+1:]
-
-
-PORT_RANGE = os.getenv("PORT_RANGE", "1")
-GRPC_PORTS = [generate_port(port=str(grpc_port), position=1, number=PORT_RANGE)
-              for grpc_port in list(range(9000, 9020))]
-REST_PORTS = [generate_port(port=str(rest_port), position=1, number=PORT_RANGE)
-              for rest_port in list(range(5555, 5575))]
+def next_free_port(min_port=1024, max_port=65535):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while min_port <= max_port:
+        try:
+            sock.bind(('', min_port))
+            sock.close()
+            return min_port
+        except OSError:
+            min_port += 1
+    raise IOError('no free ports')
 
 
 def get_ports_for_fixture():
-    return {"grpc_port": GRPC_PORTS.pop(), "rest_port": REST_PORTS.pop()}
+    return {"grpc_port": next_free_port(min_port=9000, max_port=9050),
+            "rest_port": next_free_port(min_port=5500, max_port=5550)}
 
 
 def get_tests_suffix():
