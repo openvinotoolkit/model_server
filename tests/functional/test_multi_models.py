@@ -17,9 +17,9 @@ import sys
 
 import numpy as np
 from constants import PREDICTION_SERVICE, MODEL_SERVICE, ERROR_SHAPE
-from utils.grpc import infer, infer_batch, get_model_metadata, \
+from utils.grpc import infer, get_model_metadata, \
     model_metadata_response, get_model_status
-from utils.rest import infer_batch_rest, infer_rest, \
+from utils.rest import infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
 sys.path.append(".")
@@ -29,123 +29,92 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 
 class TestMultiModelInference():
 
-    def test_run_inference(self, download_two_models,
-                           input_data_downloader_v1_224,
-                           input_data_downloader_v3_331,
+    def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_multi_model,
                            create_grpc_channel):
-        """
-        <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
-
-        <b>input data</b>
-        - directory with 2 models in IR format
-        - docker image
-        - input data in numpy format
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - response contains proper numpy shape for both models set in config
-        file: model resnet_v1_50, pnasnet_large
-        - both served models handles appropriate input formats
-
-        """
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
 
-        input_data = input_data_downloader_v1_224[:2, :, :, :]
+        img = np.ones((1, 3, 224, 224))
         print("Starting inference using resnet model")
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        for x in range(0, 10):
-            output = infer_batch(input_data, input_tensor='input',
-                                 grpc_stub=stub,
-                                 model_spec_name='resnet_V1_50',
-                                 model_spec_version=None,
-                                 output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (2, 1000), ERROR_SHAPE
+        model_name = "resnet"
+        output = infer(img, input_tensor=in_name,
+                       grpc_stub=stub,
+                       model_spec_name=model_name,
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        model_name = "resnet_bs4"
+        imgs = np.ones((4, 3, 224, 224))
+        print("Starting inference using resnet model")
+        output = infer(imgs, input_tensor=in_name,
+                       grpc_stub=stub,
+                       model_spec_name=model_name,
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (4, 1001), ERROR_SHAPE
+
+        model_name = "resnet_bs8"
+        imgs = np.ones((8, 3, 224, 224))
+        print("Starting inference using resnet model")
+        output = infer(imgs, input_tensor=in_name,
+                       grpc_stub=stub,
+                       model_spec_name=model_name,
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+
+        img = np.ones((1, 3, 224, 224))
+        in_name = 'data'
         out_name = 'prob'
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='data', grpc_stub=stub,
-                           model_spec_name='resnet_gs',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        output = infer(img, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='resnet_gs',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
+        in_name = 'input'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x,
-                           input_tensor='input', grpc_stub=stub,
-                           model_spec_name='resnet_s3',
-                           model_spec_version=None,
-                           output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        output = infer(img, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='resnet_s3',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
-        input_data = input_data_downloader_v3_331[:4, :, :, :]
-        print("Starting inference using pnasnet_large model")
-        out_name = 'final_layer/predictions'
-        for x in range(0, 10):
-            output = infer_batch(input_data, input_tensor='input',
-                                 grpc_stub=stub,
-                                 model_spec_name='pnasnet_large',
-                                 model_spec_version=None,
-                                 output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (4, 1001), ERROR_SHAPE
-
-    def test_get_model_metadata(self, download_two_models,
+    def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model,
                                 create_grpc_channel):
-        """
-        <b>Description</b>
-        Execute inference request using gRPC interface hosting multiple models
-
-        <b>input data</b>
-        - directory with 2 models in IR format
-        - docker image
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - response contains proper response about model metadata for both
-        models set in config file:
-        model resnet_v1_50, pnasnet_large
-        - both served models handles appropriate input formats
-
-        """
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
+        out_name = 'softmax_tensor'
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
 
         print("Getting info about resnet model")
-        model_name = 'resnet_V1_50'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [2, 3, 224, 224]}}
+        model_name = 'resnet'
+
+        expected_input_metadata = {in_name: {'dtype': 1,
+                                             'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [2, 1000]}}
-        request = get_model_metadata(model_name='resnet_V1_50')
+                                               'shape': [1, 1001]}}
+        request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -155,15 +124,14 @@ class TestMultiModelInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-        model_name = 'pnasnet_large'
-        out_name = 'final_layer/predictions'
-        request = get_model_metadata(model_name='pnasnet_large')
+        model_name = 'resnet_bs4'
+        request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [4, 3, 331, 331]}}
+        expected_input_metadata = {in_name: {'dtype': 1,
+                                             'shape': [4, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [4, 1001]}}
         print(output_metadata)
@@ -171,12 +139,12 @@ class TestMultiModelInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    def test_get_model_status(self, download_two_models,
+    def test_get_model_status(self, resnet_multiple_batch_sizes,
                               start_server_multi_model,
                               create_grpc_channel):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    MODEL_SERVICE)
@@ -190,7 +158,7 @@ class TestMultiModelInference():
         assert version_status.status.error_message == _ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-        request = get_model_status(model_name='pnasnet_large')
+        request = get_model_status(model_name='resnet_bs4')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
@@ -200,120 +168,83 @@ class TestMultiModelInference():
         assert version_status.status.error_message == _ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-    def test_run_inference_rest(self, download_two_models,
-                                input_data_downloader_v1_224,
-                                input_data_downloader_v3_331,
+    def test_run_inference_rest(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model):
-        """
-        <b>Description</b>
-        Execute inference request using REST API interface hosting multiple
-        models
-
-        <b>input data</b>
-        - directory with 2 models in IR format
-        - docker image
-        - input data in numpy format
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - response contains proper numpy shape for both models set in config
-        file: model resnet_v1_50, pnasnet_large
-        - both served models handles appropriate input formats
-
-        """
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        input_data = input_data_downloader_v1_224[:2, :, :, :]
+        img = np.ones((1, 3, 224, 224))
         print("Starting inference using resnet model")
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+
+        model_name = 'resnet'
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
+        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='column_name')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+
+        imgs = np.ones((4, 3, 224, 224))
+        model_name = 'resnet_bs4'
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
+        output = infer_rest(imgs, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='row_noname')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (4, 1001), ERROR_SHAPE
+
+        imgs = np.ones((8, 3, 224, 224))
+        model_name = 'resnet_bs8'
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
+        output = infer_rest(imgs, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='row_noname')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+
+        in_name = 'input'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50:predict'.\
-            format(ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_batch_rest(input_data,
-                                      input_tensor='input', rest_url=rest_url,
-                                      output_tensors=[out_name],
-                                      request_format='column_name')
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (2, 1000), ERROR_SHAPE
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:{}/v1/models/resnet_gs:predict'. \
-            format(ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor='input', rest_url=rest_url,
-                                output_tensors=[out_name],
-                                request_format='column_noname')
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        model_name = 'resnet_gs'
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
+        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='column_noname')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        rest_url = 'http://localhost:{}/v1/models/resnet_s3:predict'. \
-            format(ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor='input', rest_url=rest_url,
-                                output_tensors=[out_name],
-                                request_format='row_name')
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        model_name = 'resnet_s3'
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
+        output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='row_name')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
-        input_data = input_data_downloader_v3_331[:4, :, :, :]
-        print("Starting inference using pnasnet_large model")
-        out_name = 'final_layer/predictions'
-        rest_url = 'http://localhost:{}/v1/models/pnasnet_large:predict'. \
-            format(ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_batch_rest(input_data,
-                                      input_tensor='input', rest_url=rest_url,
-                                      output_tensors=[out_name],
-                                      request_format='row_noname')
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == (4, 1001), ERROR_SHAPE
-
-    def test_get_model_metadata_rest(self, download_two_models,
+    def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_multi_model):
-        """
-        <b>Description</b>
-        Execute inference request using REST API interface hosting multiple
-        models
-
-        <b>input data</b>
-        - directory with 2 models in IR format
-        - docker image
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - response contains proper response about model metadata for both
-        models set in config file:
-        model resnet_v1_50, pnasnet_large
-        - both served models handles appropriate input formats
-
-        """
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         print("Getting info about resnet model")
-        model_name = 'resnet_V1_50'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [2, 3, 224, 224]}}
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        model_name = 'resnet'
+        expected_input_metadata = {in_name: {'dtype': 1,
+                                             'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [2, 1000]}}
-        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50/metadata'. \
-            format(ports["rest_port"])
+                                               'shape': [1, 1001]}}
+        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(
+            ports["rest_port"], model_name)
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -323,16 +254,15 @@ class TestMultiModelInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-        model_name = 'pnasnet_large'
-        out_name = 'final_layer/predictions'
-        rest_url = 'http://localhost:{}/v1/models/pnasnet_large/metadata'. \
-            format(ports["rest_port"])
+        model_name = 'resnet_bs4'
+        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(
+            ports["rest_port"], model_name)
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [4, 3, 331, 331]}}
+        expected_input_metadata = {in_name: {'dtype': 1,
+                                             'shape': [4, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [4, 1001]}}
         print(output_metadata)
@@ -340,14 +270,14 @@ class TestMultiModelInference():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    def test_get_model_status_rest(self, download_two_models,
+    def test_get_model_status_rest(self, resnet_multiple_batch_sizes,
                                    start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_models)
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        rest_url = 'http://localhost:{}/v1/models/resnet_V1_50'. \
-            format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/resnet'.format(
+                   ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
@@ -357,8 +287,8 @@ class TestMultiModelInference():
         assert version_status.status.error_message == _ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-        rest_url = 'http://localhost:{}/v1/models/pnasnet_large/versions/1'. \
-            format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/resnet_bs4/versions/1'.\
+                   format(ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

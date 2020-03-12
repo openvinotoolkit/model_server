@@ -17,8 +17,8 @@
 import numpy as np
 import pytest
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
-from utils.grpc import infer_batch
-from utils.rest import infer_batch_rest
+from utils.grpc import infer
+from utils.rest import infer_rest
 
 auto_shapes = [
     {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
@@ -208,37 +208,33 @@ class TestModelReshaping:
     def run_inference_rest(self, imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
         if is_correct:
-            output = infer_batch_rest(batch_input=imgs,
-                                      input_tensor='data',
-                                      rest_url=rest_url,
-                                      output_tensors=[out_name],
-                                      request_format=request_format)
+            output = infer_rest(imgs, input_tensor='data',
+                                rest_url=rest_url,
+                                output_tensors=[out_name],
+                                request_format=request_format)
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == out_shape, \
                 ERROR_SHAPE
         else:
-            output = infer_batch_rest(batch_input=imgs,
-                                      input_tensor='data',
-                                      rest_url=rest_url,
-                                      output_tensors=[out_name],
-                                      request_format=request_format)
+            output = infer_rest(imgs, input_tensor='data',
+                                rest_url=rest_url,
+                                output_tensors=[out_name],
+                                request_format=request_format)
             assert not output
 
     def run_inference_grpc(self, imgs, out_name, out_shape, is_correct,
                            model_name, stub):
         if is_correct:
-            output = infer_batch(batch_input=imgs,
-                                 input_tensor='data', grpc_stub=stub,
-                                 model_spec_name=model_name,
-                                 model_spec_version=None,
-                                 output_tensors=[out_name])
+            output = infer(imgs, input_tensor='data', grpc_stub=stub,
+                           model_spec_name=model_name,
+                           model_spec_version=None,
+                           output_tensors=[out_name])
             print("output shape", output[out_name].shape)
             assert output[out_name].shape == out_shape, \
                 ERROR_SHAPE
         else:
             with pytest.raises(Exception):
-                infer_batch(batch_input=imgs,
-                            input_tensor='data', grpc_stub=stub,
-                            model_spec_name=model_name,
-                            model_spec_version=None,
-                            output_tensors=[out_name])
+                infer(imgs, input_tensor='data', grpc_stub=stub,
+                      model_spec_name=model_name,
+                      model_spec_version=None,
+                      output_tensors=[out_name])

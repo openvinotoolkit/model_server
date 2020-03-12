@@ -10,4 +10,4 @@ make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_bin dldt_package_url=${OPEN
 
 . .venv-jenkins/bin/activate
 
-py.test ${TEST_DIRS}/functional/ -v --test_dir=/var/jenkins_home/test_models --image ${DOCKER_OVMS_TAG}
+py.test ${TEST_DIRS}/functional/ -v --test_dir=/var/jenkins_home/test_models_mzeglars

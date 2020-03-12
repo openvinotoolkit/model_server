@@ -23,39 +23,16 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 sys.path.append(".")
-from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, ErrorCode  # noqa
+from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
+    ErrorCode  # noqa
 
 
 class TestModelVersionHandling():
+    model_name = "pvb_face_multi_version"
 
     def test_run_inference(self, download_two_model_versions,
-                           input_data_downloader_v1_224,
                            start_server_multi_model,
                            create_grpc_channel):
-        """
-        <b>Description</b>
-        Execute inference request using gRPC interface with version specified
-        and without version set on the client.
-        When version is not set server should use the latest version model 2
-        When version 1 is selected the model from folder 1 should be used
-        and model 2 should be ignored
-
-        <b>input data</b>
-        - directory with the model in IR format
-        - docker image with ie-serving-py service
-        - input data in numpy format
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - latest model version serves resnet_v2_50 model - [1,1001]
-        output resnet_v2_50/predictions/Reshape_1
-        - first model version serves resnet_v1_50 model - [1,1000]
-        output resnet_v1_50/predictions/Reshape_1
-        """
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
@@ -64,28 +41,27 @@ class TestModelVersionHandling():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
-        out_name_v2 = 'resnet_v2_50/predictions/Reshape_1'
-        print("Starting inference using latest version - no version set")
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x, input_tensor='input',
-                           grpc_stub=stub, model_spec_name='resnet',
-                           model_spec_version=None,
-                           output_tensors=[out_name_v2])
-            print("output shape", output[out_name_v2].shape)
-            assert output[out_name_v2].shape == (1, 1001),\
-                'resnet model with version 1 has invalid output'
+        face_img = np.ones((1, 3, 300, 300))
+        pvb_img = np.ones((1, 3, 1024, 1024))
 
-        # both model versions use the same input data shape
-        for x in range(0, 10):
-            output = infer(imgs_v1_224, slice_number=x, input_tensor='input',
-                           grpc_stub=stub, model_spec_name='resnet',
-                           model_spec_version=1,
-                           output_tensors=[out_name_v1])
-            print("output shape", output[out_name_v1].shape)
-            assert output[out_name_v1].shape == (1, 1000),\
-                'resnet model with latest version has invalid output'
+        out_name = "detection_out"
+        in_name = "data"
+        output = infer(face_img, input_tensor=in_name,
+                       grpc_stub=stub, model_spec_name=self.model_name,
+                       model_spec_version=1,  # face detection
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), \
+            '{} with version 1 has invalid output'.format(self.model_name)
+
+        output = infer(pvb_img, input_tensor=in_name,
+                       grpc_stub=stub,
+                       model_spec_name='pvb_face_multi_version',
+                       model_spec_version=None,  # PVB detection
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), \
+            '{} with version latest has invalid output'.format(self.model_name)
 
     def test_get_model_metadata(self, download_two_model_versions,
                                 start_server_multi_model,
@@ -99,27 +75,28 @@ class TestModelVersionHandling():
                                    PREDICTION_SERVICE)
         versions = [None, 1]
 
-        expected_outputs_metadata = \
-            [{'resnet_v2_50/predictions/Reshape_1':
-                {'dtype': 1, 'shape': [1, 1001]}},
-             {'resnet_v1_50/predictions/Reshape_1':
-                {'dtype': 1, 'shape': [1, 1000]}}
+        expected_inputs_metadata = \
+            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
+             # PVB detection
+             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
+             # face detection
              ]
-        for x in range(len(versions)):
-            print("Getting info about resnet model version:".format(
-                versions[x]))
-            model_name = 'resnet'
-            expected_input_metadata = {'input': {'dtype': 1,
-                                                 'shape': [1, 3, 224, 224]}}
-            expected_output_metadata = expected_outputs_metadata[x]
-            request = get_model_metadata(model_name='resnet',
-                                         version=versions[x])
+        # Same output shape for both versions
+        expected_output_metadata = {
+            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
+        }
+        for i in range(len(versions)):
+            print("Getting info about pvb_face_detection model "
+                  "version:".format(versions[i]))
+            expected_input_metadata = expected_inputs_metadata[i]
+            request = get_model_metadata(model_name=self.model_name,
+                                         version=versions[i])
             response = stub.GetModelMetadata(request, 10)
             input_metadata, output_metadata = model_metadata_response(
                 response=response)
 
             print(output_metadata)
-            assert model_name == response.model_spec.name
+            assert self.model_name == response.model_spec.name
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
@@ -135,8 +112,7 @@ class TestModelVersionHandling():
                                    MODEL_SERVICE)
         versions = [None, 1]
         for x in range(len(versions)):
-            model_name = 'resnet'
-            request = get_model_status(model_name=model_name,
+            request = get_model_status(model_name=self.model_name,
                                        version=versions[x])
             response = stub.GetModelStatus(request, 10)
 
@@ -152,62 +128,38 @@ class TestModelVersionHandling():
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     def test_run_inference_rest(self, download_two_model_versions,
-                                input_data_downloader_v1_224,
                                 start_server_multi_model):
-        """
-        <b>Description</b>
-        Execute inference request using REST API interface with version
-        specified and without version set on the client.
-        When version is not set server should use the latest version model 2
-        When version 1 is selected the model from folder 1 should be used
-        and model 2 should be ignored
-
-        <b>input data</b>
-        - directory with the model in IR format
-        - docker image with ie-serving-py service
-        - input data in numpy format
-
-        <b>fixtures used</b>
-        - model downloader
-        - input data downloader
-        - service launching
-
-        <b>Expected results</b>
-        - latest model version serves resnet_v2_50 model - [1,1001]
-        output resnet_v2_50/predictions/Reshape_1
-        - first model version serves resnet_v1_50 model - [1,1000]
-        output resnet_v1_50/predictions/Reshape_1
-        """
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
-        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
-        out_name_v2 = 'resnet_v2_50/predictions/Reshape_1'
-        print("Starting inference using latest version - no version set")
-        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
-                    ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor='input', rest_url=rest_url,
-                                output_tensors=[out_name_v2],
-                                request_format='column_name')
-            print("output shape", output[out_name_v2].shape)
-            assert output[out_name_v2].shape == (1, 1001), \
-                'resnet model with version 1 has invalid output'
+        face_img = np.ones((1, 3, 300, 300))
+        pvb_img = np.ones((1, 3, 1024, 1024))
+        out_name = "detection_out"
+
+        in_name = "data"
+        rest_url = 'http://localhost:{}/v1/models/{}' \
+                   '/versions/1:predict'.format(ports["rest_port"],
+                   self.model_name)
+        output = infer_rest(face_img,
+                            input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='column_name')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), \
+            '{} with version 1 has invalid output'.format(self.model_name)
+
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], self.model_name)
+        output = infer_rest(pvb_img,
+                            input_tensor=in_name, rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format='column_name')
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), \
+            '{} with version latest has invalid output'.format(self.model_name)
 
         # both model versions use the same input data shape
-        rest_url = 'http://localhost:{}/v1/models/resnet/versions/1:predict'.\
-                   format(ports["rest_port"])
-        for x in range(0, 10):
-            output = infer_rest(imgs_v1_224, slice_number=x,
-                                input_tensor='input', rest_url=rest_url,
-                                output_tensors=[out_name_v1],
-                                request_format='column_name')
-            print("output shape", output[out_name_v1].shape)
-            assert output[out_name_v1].shape == (1, 1000), \
-                'resnet model with latest version has invalid output'
 
     def test_get_model_metadata_rest(self, download_two_model_versions,
                                      start_server_multi_model):
@@ -215,30 +167,31 @@ class TestModelVersionHandling():
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:{}/v1/models/resnet/metadata'.
-                format(ports["rest_port"]),
-                'http://localhost:{}/v1/models/resnet/versions/1/metadata'.
-                format(ports["rest_port"])]
+        urls = ['http://localhost:{}/v1/models/{}'
+                '/metadata'.format(ports["rest_port"], self.model_name),
+                'http://localhost:{}/v1/models/{}'
+                '/versions/1/metadata'.format(ports["rest_port"], self.model_name)]
 
-        expected_outputs_metadata = \
-            [{'resnet_v2_50/predictions/Reshape_1':
-                {'dtype': 1, 'shape': [1, 1001]}},
-             {'resnet_v1_50/predictions/Reshape_1':
-                {'dtype': 1, 'shape': [1, 1000]}}
+        expected_inputs_metadata = \
+            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
+             # PVB detection
+             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
+             # face detection
              ]
-        for x in range(len(urls)):
+        # Same output shape for both versions
+        expected_output_metadata = {
+            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
+        }
+        for i in range(len(urls)):
             print("Getting info about resnet model version:".format(
-                urls[x]))
-            model_name = 'resnet'
-            expected_input_metadata = {'input': {'dtype': 1,
-                                                 'shape': [1, 3, 224, 224]}}
-            expected_output_metadata = expected_outputs_metadata[x]
-            response = get_model_metadata_response_rest(urls[x])
+                urls[i]))
+            expected_input_metadata = expected_inputs_metadata[i]
+            response = get_model_metadata_response_rest(urls[i])
             input_metadata, output_metadata = model_metadata_response(
                 response=response)
 
             print(output_metadata)
-            assert model_name == response.model_spec.name
+            assert self.model_name == response.model_spec.name
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
@@ -248,10 +201,9 @@ class TestModelVersionHandling():
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:{}/v1/models/resnet'.
-                format(ports["rest_port"]),
-                'http://localhost:{}/v1/models/resnet/versions/1'.
-                format(ports["rest_port"])]
+        urls = ['http://localhost:{}/v1/models/{}'.format(ports["rest_port"], self.model_name),
+                'http://localhost:{}/v1/models/{}'
+                '/versions/1'.format(ports["rest_port"], self.model_name)]
 
         for x in range(len(urls)):
             response = get_model_status_response_rest(urls[x])

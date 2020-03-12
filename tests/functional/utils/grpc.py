@@ -19,32 +19,15 @@ from tensorflow_serving.apis import predict_pb2, get_model_metadata_pb2, \
     get_model_status_pb2
 
 
-def infer(imgs, slice_number, input_tensor, grpc_stub, model_spec_name,
+def infer(img, input_tensor, grpc_stub, model_spec_name,
           model_spec_version, output_tensors):
     request = predict_pb2.PredictRequest()
     request.model_spec.name = model_spec_name
     if model_spec_version is not None:
         request.model_spec.version.value = model_spec_version
-    img = imgs[slice_number, ...]
-    print("input shape", list((1,) + img.shape))
+    print("input shape ", img.shape)
     request.inputs[input_tensor].CopyFrom(
-        make_tensor_proto(img, shape=list((1,) + img.shape)))
-    result = grpc_stub.Predict(request, 10.0)
-    data = {}
-    for output_tensor in output_tensors:
-        data[output_tensor] = make_ndarray(result.outputs[output_tensor])
-    return data
-
-
-def infer_batch(batch_input, input_tensor, grpc_stub, model_spec_name,
-                model_spec_version, output_tensors):
-    request = predict_pb2.PredictRequest()
-    request.model_spec.name = model_spec_name
-    if model_spec_version is not None:
-        request.model_spec.version.value = model_spec_version
-    print("input shape", list(batch_input.shape))
-    request.inputs[input_tensor].CopyFrom(
-        make_tensor_proto(batch_input, shape=list(batch_input.shape)))
+        make_tensor_proto(img, shape=list(img.shape)))
     result = grpc_stub.Predict(request, 10.0)
     data = {}
     for output_tensor in output_tensors:

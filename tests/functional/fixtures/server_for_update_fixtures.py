@@ -15,6 +15,7 @@
 #
 
 import pytest
+import shutil
 from utils.model_management import wait_endpoint_setup
 from utils.ports import get_ports_for_fixture
 
@@ -24,6 +25,10 @@ def start_server_update_flow_latest(request, get_image, get_container_suffix,
                                     get_test_dir, get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
+    update_test_dir = path_to_mount + '/update'
+    # ensure model dir is empty before starting OVMS
+    shutil.rmtree(update_test_dir, ignore_errors=True)
+
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     ports = get_ports_for_fixture()
@@ -57,6 +62,10 @@ def start_server_update_flow_specific(request, get_container_suffix,
                                       get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
+    update_test_dir = path_to_mount + '/update'
+    # ensure model dir is empty before starting OVMS
+    shutil.rmtree(update_test_dir, ignore_errors=True)
+
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
     ports = get_ports_for_fixture()

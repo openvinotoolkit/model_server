@@ -15,7 +15,7 @@
 #
 
 import shutil
-
+import os
 import pytest
 from utils.model_management import wait_endpoint_setup
 from utils.ports import get_ports_for_fixture
@@ -33,7 +33,8 @@ def start_server_single_model(request, get_image, get_container_suffix,
     ports = get_ports_for_fixture()
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/resnet_V1_50 " \
+              "--model_name resnet " \
+              "--model_path /opt/ml/resnet_V1_50 " \
               "--port " + grpc_port + " --rest_port " + rest_port + \
               " --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
@@ -65,7 +66,8 @@ def start_server_single_model(request, get_image, get_container_suffix,
 def start_server_with_mapping(request, get_image, get_container_suffix,
                               get_test_dir, get_docker_context):
     shutil.copyfile('tests/functional/mapping_config.json',
-                    get_test_dir + '/saved_models/resnet_2_out/1/'
+                    get_test_dir + '/saved_models/'
+                                   'age-gender-recognition-retail-0013/1/'
                                    'mapping_config.json')
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
@@ -75,7 +77,8 @@ def start_server_with_mapping(request, get_image, get_container_suffix,
     ports = get_ports_for_fixture()
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet_2_out --model_path /opt/ml/resnet_2_out " \
+              "--model_name age_gender " \
+              "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
@@ -87,6 +90,14 @@ def start_server_with_mapping(request, get_image, get_container_suffix,
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
+
+    def delete_mapping_file():
+        path = get_test_dir + '/saved_models/' \
+                              'age-gender-recognition-retail-0013/1/' \
+                              'mapping_config.json'
+        os.remove(path)
+
+    request.addfinalizer(delete_mapping_file)
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
