@@ -68,7 +68,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
-              "--port " + grpc_port + " --rest_port " + rest_port + \
+              "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
               " --shape \"{\\\"data\\\": \\\"(1, 3, 600, 600)\\\"}\" " \
               "--grpc_workers 4 --rest_workers 2 " \
               "--nireq 2"

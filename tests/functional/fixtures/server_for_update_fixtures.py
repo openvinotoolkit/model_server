@@ -73,9 +73,9 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
     command = '/ie-serving-py/start_server.sh ie_serving model ' \
               '--model_name resnet --model_path ' \
               '/opt/ml/update- ' + get_tests_suffix() +  \
-              '--port ' + grpc_port + ' --model_version_policy' \
+              '--port ' + str(grpc_port) + ' --model_version_policy' \
               ' \'{"specific": { "versions":[1, 3, 4] }}\' ' \
-              '--rest_port ' + rest_port
+              '--rest_port ' + str(rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-'

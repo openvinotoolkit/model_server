@@ -35,7 +35,7 @@ def start_server_single_model(request, get_image, get_test_dir,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path /opt/ml/resnet_V1_50 " \
-              "--port " + grpc_port + " --rest_port " + rest_port + \
+              "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
               " --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
               "\\\"CPU_THROUGHPUT_AUTO\\\"}\""

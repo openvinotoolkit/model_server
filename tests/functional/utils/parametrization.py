@@ -1,5 +1,9 @@
 import os
 import socket
+import random
+from datetime import datetime
+
+RAND_SEED = random.seed(datetime.now())
 
 
 def next_free_port(min_port=1024, max_port=65535):
@@ -15,8 +19,10 @@ def next_free_port(min_port=1024, max_port=65535):
 
 
 def get_ports_for_fixture():
-    return {"grpc_port": next_free_port(min_port=9000, max_port=9050),
-            "rest_port": next_free_port(min_port=5500, max_port=5550)}
+    return {"grpc_port": next_free_port(min_port=9000+random.randint(0, 9),
+                                        max_port=9050+random.randint(0, 9)),
+            "rest_port": next_free_port(min_port=5500+random.randint(0, 9),
+                                        max_port=5550+random.randint(0, 9))}
 
 
 def get_tests_suffix():
