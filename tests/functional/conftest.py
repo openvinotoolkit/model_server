@@ -24,8 +24,8 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 
 pytest_plugins = [
-    'fixtures.input_data_download_fixtures',
     'fixtures.model_download_fixtures',
+    'fixtures.model_conversion_fixtures',
     'fixtures.server_detection_model_fixtures',
     'fixtures.server_for_update_fixtures',
     'fixtures.server_local_models_fixtures',
@@ -42,7 +42,7 @@ def pytest_addoption(parser):
         help="docker image name which should be used to run tests"
     )
     parser.addoption(
-        "--test_dir", action="store", default="/tmp/test_models",
+        "--test_dir", action="store", default="/tmp/ovms_models",
         help="location where models and test data should be downloaded"
     )
 

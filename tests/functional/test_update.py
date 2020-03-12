@@ -31,28 +31,32 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 
 class TestSingleModelInference():
 
-    def test_specific_version(self, download_two_model_versions,
-                              resnet_2_out_model_downloader, get_test_dir,
+    def test_specific_version(self, resnet_multiple_batch_sizes, get_test_dir,
                               start_server_update_flow_specific,
                               create_grpc_channel):
-        resnet_v1, resnet_v2 = download_two_model_versions
-        resnet_2_out = resnet_2_out_model_downloader
+        resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        # ensure model dir is empty at the beginning
+        shutil.rmtree(dir, ignore_errors=True)
         stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
         status_stub = create_grpc_channel('localhost:9008', MODEL_SERVICE)
-        resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+
+        resnet_copy_dir = copy_model(resnet, 1, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+
+        # This could be replaced with status polling
         time.sleep(8)
 
         # Available versions: 1, 4
 
         print("Getting info about resnet model")
         model_name = 'resnet'
-        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata_v1 = {'input': {'dtype': 1,
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata_v1 = {in_name: {'dtype': 1,
                                                 'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name_v1: {'dtype': 1,
-                                                     'shape': [1, 1000]}}
+        expected_output_metadata_v1 = {out_name: {'dtype': 1,
+                                                  'shape': [1, 1001]}}
         request = get_model_metadata(model_name=model_name, version=1)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -93,8 +97,8 @@ class TestSingleModelInference():
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_2_out_copy_dir)
-        resnet_v2_copy_dir = copy_model(resnet_v2, 3, dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
         time.sleep(10)
 
         # Available versions: 1, 3
@@ -137,7 +141,7 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3, 4
 
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(10)
 
         request_v1 = get_model_metadata(model_name=model_name, version=1)
@@ -149,11 +153,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        out_name_v3 = 'resnet_v2_50/predictions/Reshape_1'
-        expected_input_metadata_v3 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name_v3: {'dtype': 1,
-                                                     'shape': [1, 1001]}}
+        expected_input_metadata_v3 = {in_name: {'dtype': 1,
+                                                'shape': [8, 3, 224, 224]}}
+        expected_output_metadata_v3 = {out_name: {'dtype': 1,
+                                                  'shape': [8, 1001]}}
 
         request_v3 = get_model_metadata(model_name=model_name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
@@ -164,11 +167,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v4 = {
-            'res5c_branch2c1': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
-            'res5c_branch2c2': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}
+        expected_input_metadata_v4 = {in_name: {'dtype': 1,
+                                                'shape': [4, 3, 224, 224]}}
+        expected_output_metadata_v4 = {out_name: {'dtype': 1,
+                                                  'shape': [4, 1001]}}
         request_v4 = get_model_metadata(model_name=model_name)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
@@ -192,28 +194,32 @@ class TestSingleModelInference():
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_v2_copy_dir)
-        shutil.rmtree(resnet_v1_copy_dir)
-        shutil.rmtree(resnet_2_out_copy_dir)
+        shutil.rmtree(resnet_copy_dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        shutil.rmtree(resnet_bs8_copy_dir)
         time.sleep(10)
 
-    def test_latest_version(self, download_two_model_versions, get_test_dir,
+    def test_latest_version(self, resnet_multiple_batch_sizes, get_test_dir,
                             start_server_update_flow_latest,
                             create_grpc_channel):
-        resnet_v1, resnet_v2 = download_two_model_versions
+
+        resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
-        resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
+        # ensure model dir is empty at the beginning
+        shutil.rmtree(dir, ignore_errors=True)
+        resnet_v1_copy_dir = copy_model(resnet, 1, dir)
         time.sleep(8)
         stub = create_grpc_channel('localhost:9007', PREDICTION_SERVICE)
         status_stub = create_grpc_channel('localhost:9007', MODEL_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata_v1 = {in_name: {'dtype': 1,
+                                                'shape': [1, 3, 224, 224]}}
+        expected_output_metadata_v1 = {out_name: {'dtype': 1,
+                                                  'shape': [1, 1001]}}
         request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -221,8 +227,8 @@ class TestSingleModelInference():
 
         print(output_metadata)
         assert model_name == response.model_spec.name
-        assert expected_input_metadata == input_metadata
-        assert expected_output_metadata == output_metadata
+        assert expected_input_metadata_v1 == input_metadata
+        assert expected_output_metadata_v1 == output_metadata
 
         # Model status check before update
         model_name = 'resnet'
@@ -238,15 +244,13 @@ class TestSingleModelInference():
             ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_v1_copy_dir)
-        resnet_v2_copy_dir = copy_model(resnet_v2, 2, dir)
+        resnet_v2_copy_dir = copy_model(resnet_bs4, 2, dir)
         time.sleep(10)
 
-        out_name = 'resnet_v2_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
+        expected_input_metadata_v2 = {in_name: {'dtype': 1,
+                                                'shape': [4, 3, 224, 224]}}
+        expected_output_metadata_v2 = {out_name: {'dtype': 1,
+                                                  'shape': [4, 1001]}}
         request = get_model_metadata(model_name=model_name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -254,8 +258,8 @@ class TestSingleModelInference():
 
         print(output_metadata)
         assert model_name == response.model_spec.name
-        assert expected_input_metadata == input_metadata
-        assert expected_output_metadata == output_metadata
+        assert expected_input_metadata_v2 == input_metadata
+        assert expected_output_metadata_v2 == output_metadata
 
         # Model status check after update
         model_name = 'resnet'
@@ -276,29 +280,34 @@ class TestSingleModelInference():
                 assert version_status.status.error_message == _ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
+        shutil.rmtree(resnet_v1_copy_dir)
         shutil.rmtree(resnet_v2_copy_dir)
         time.sleep(10)
 
-    def test_specific_version_rest(self, download_two_model_versions,
-                                   resnet_2_out_model_downloader,
+    def test_specific_version_rest(self, resnet_multiple_batch_sizes,
                                    get_test_dir,
                                    start_server_update_flow_specific):
-        resnet_v1, resnet_v2 = download_two_model_versions
-        resnet_2_out = resnet_2_out_model_downloader
+        resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
-        resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+        # ensure model dir is empty at the beginning
+        shutil.rmtree(dir, ignore_errors=True)
+        resnet_copy_dir = copy_model(resnet, 1, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(8)
+
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
 
         # Available versions: 1, 4
 
         print("Getting info about resnet model")
         model_name = 'resnet'
-        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata_v1 = {'input': {'dtype': 1,
+
+        expected_input_metadata_v1 = {in_name: {'dtype': 1,
                                                 'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name_v1: {'dtype': 1,
-                                                     'shape': [1, 1000]}}
+        expected_output_metadata_v1 = {out_name: {'dtype': 1,
+                                                  'shape': [1, 1001]}}
+
         rest_url_latest = 'http://localhost:5563/v1/models/resnet/' \
                           'versions/1/metadata'
         response = get_model_metadata_response_rest(rest_url_latest)
@@ -317,7 +326,7 @@ class TestSingleModelInference():
             model_metadata_response(response=response_latest)
 
         rest_url_v4 = 'http://localhost:5563/v1/models/resnet/' \
-                      'versions/1/metadata'
+                      'versions/4/metadata'
         response_v4 = get_model_metadata_response_rest(rest_url_v4)
         print("response", response_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
@@ -340,8 +349,8 @@ class TestSingleModelInference():
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_2_out_copy_dir)
-        resnet_v2_copy_dir = copy_model(resnet_v2, 3, dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
         time.sleep(10)
 
         # Available versions: 1, 3
@@ -384,7 +393,7 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3, 4
 
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(10)
 
         rest_url_v1 = 'http://localhost:5563/v1/models/resnet/' \
@@ -397,11 +406,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        out_name_v3 = 'resnet_v2_50/predictions/Reshape_1'
-        expected_input_metadata_v3 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name_v3: {'dtype': 1,
-                                                     'shape': [1, 1001]}}
+        expected_input_metadata_v3 = {in_name: {'dtype': 1,
+                                                'shape': [8, 3, 224, 224]}}
+        expected_output_metadata_v3 = {out_name: {'dtype': 1,
+                                                  'shape': [8, 1001]}}
 
         rest_url_v3 = 'http://localhost:5563/v1/models/resnet/' \
                       'versions/3/metadata'
@@ -413,12 +421,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v4 = {
-            'res5c_branch2c1': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
-            'res5c_branch2c2': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}
-        rest_url = 'http://localhost:5563/v1/models/resnet/metadata'
+        expected_input_metadata_v4 = {in_name: {'dtype': 1,
+                                                'shape': [4, 3, 224, 224]}}
+        expected_output_metadata_v4 = {out_name: {'dtype': 1,
+                                                  'shape': [4, 1001]}}
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
@@ -440,26 +446,30 @@ class TestSingleModelInference():
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_v2_copy_dir)
-        shutil.rmtree(resnet_v1_copy_dir)
-        shutil.rmtree(resnet_2_out_copy_dir)
+        shutil.rmtree(resnet_copy_dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        shutil.rmtree(resnet_bs8_copy_dir)
         time.sleep(10)
 
-    def test_latest_version_rest(self, download_two_model_versions,
+    def test_latest_version_rest(self, resnet_multiple_batch_sizes,
                                  get_test_dir,
                                  start_server_update_flow_latest):
-        resnet_v1, resnet_v2 = download_two_model_versions
+        resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
-        resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
+        # ensure model dir is empty at the beginning
+        shutil.rmtree(dir, ignore_errors=True)
+        resnet_copy_dir = copy_model(resnet, 1, dir)
         time.sleep(8)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata_v1 = {in_name: {'dtype': 1,
+                                                'shape': [1, 3, 224, 224]}}
+        expected_output_metadata_v1 = {out_name: {'dtype': 1,
+                                                  'shape': [1, 1001]}}
+
         rest_url = 'http://localhost:5562/v1/models/resnet/metadata'
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
@@ -467,8 +477,8 @@ class TestSingleModelInference():
 
         print(output_metadata)
         assert model_name == response.model_spec.name
-        assert expected_input_metadata == input_metadata
-        assert expected_output_metadata == output_metadata
+        assert expected_input_metadata_v1 == input_metadata
+        assert expected_output_metadata_v1 == output_metadata
 
         # Model status check before update
         rest_status_url = 'http://localhost:5562/v1/models/resnet'
@@ -483,15 +493,14 @@ class TestSingleModelInference():
             ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_v1_copy_dir)
-        resnet_v2_copy_dir = copy_model(resnet_v2, 2, dir)
+        shutil.rmtree(resnet_copy_dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 2, dir)
         time.sleep(10)
 
-        out_name = 'resnet_v2_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+        expected_input_metadata = {in_name: {'dtype': 1,
+                                             'shape': [4, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
+                                               'shape': [4, 1001]}}
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -519,30 +528,31 @@ class TestSingleModelInference():
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        shutil.rmtree(resnet_v2_copy_dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
         time.sleep(10)
 
-    def test_update_rest_grpc(self, download_two_model_versions,
-                              resnet_2_out_model_downloader, get_test_dir,
+    def test_update_rest_grpc(self, resnet_multiple_batch_sizes, get_test_dir,
                               start_server_update_flow_specific,
                               create_grpc_channel):
-        resnet_v1, resnet_v2 = download_two_model_versions
-        resnet_2_out = resnet_2_out_model_downloader
+        resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         dir = get_test_dir + '/saved_models/' + 'update/'
+        # ensure model dir is empty at the beginning
+        shutil.rmtree(dir, ignore_errors=True)
         stub = create_grpc_channel('localhost:9008', PREDICTION_SERVICE)
-        resnet_v1_copy_dir = copy_model(resnet_v1, 1, dir)
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+        resnet_copy_dir = copy_model(resnet, 1, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(8)
 
         # Available versions: 1, 4
 
         print("Getting info about resnet model")
         model_name = 'resnet'
-        out_name_v1 = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata_v1 = {'input': {'dtype': 1,
+        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
+        out_name = 'softmax_tensor'
+        expected_input_metadata_v1 = {in_name: {'dtype': 1,
                                                 'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name_v1: {'dtype': 1,
-                                                     'shape': [1, 1000]}}
+        expected_output_metadata_v1 = {out_name: {'dtype': 1,
+                                                  'shape': [1, 1001]}}
         request = get_model_metadata(model_name=model_name, version=1)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -569,8 +579,8 @@ class TestSingleModelInference():
         assert input_metadata_v4 == input_metadata_latest
         assert output_metadata_v4 == output_metadata_latest
 
-        shutil.rmtree(resnet_2_out_copy_dir)
-        resnet_v2_copy_dir = copy_model(resnet_v2, 3, dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
         time.sleep(3)
 
         # Available versions: 1, 3
@@ -593,7 +603,7 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3, 4
 
-        resnet_2_out_copy_dir = copy_model(resnet_2_out, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(3)
         rest_url = 'http://localhost:5563/v1/models/resnet/versions/1/metadata'
         response_v1 = get_model_metadata_response_rest(rest_url)
@@ -604,11 +614,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        out_name_v3 = 'resnet_v2_50/predictions/Reshape_1'
-        expected_input_metadata_v3 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name_v3: {'dtype': 1,
-                                                     'shape': [1, 1001]}}
+        expected_input_metadata_v3 = {in_name: {'dtype': 1,
+                                                'shape': [8, 3, 224, 224]}}
+        expected_output_metadata_v3 = {out_name: {'dtype': 1,
+                                                  'shape': [8, 1001]}}
 
         request_v3 = get_model_metadata(model_name=model_name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
@@ -619,11 +628,10 @@ class TestSingleModelInference():
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {'input': {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v4 = {
-            'res5c_branch2c1': {'dtype': 1, 'shape': [1, 2048, 7, 7]},
-            'res5c_branch2c2': {'dtype': 1, 'shape': [1, 2048, 7, 7]}}
+        expected_input_metadata_v4 = {in_name: {'dtype': 1,
+                                                'shape': [4, 3, 224, 224]}}
+        expected_output_metadata_v4 = {out_name: {'dtype': 1,
+                                                  'shape': [4, 1001]}}
         rest_url = 'http://localhost:5563/v1/models/resnet/versions/4/metadata'
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
@@ -633,6 +641,6 @@ class TestSingleModelInference():
         assert expected_input_metadata_v4 == input_metadata_v4
         assert expected_output_metadata_v4 == output_metadata_v4
 
-        shutil.rmtree(resnet_v2_copy_dir)
-        shutil.rmtree(resnet_v1_copy_dir)
-        shutil.rmtree(resnet_2_out_copy_dir)
+        shutil.rmtree(resnet_copy_dir)
+        shutil.rmtree(resnet_bs4_copy_dir)
+        shutil.rmtree(resnet_bs8_copy_dir)

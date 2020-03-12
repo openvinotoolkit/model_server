@@ -15,7 +15,7 @@
 #
 
 PY_VERSION := 3
-VIRTUALENV_EXE := python3 -m virtualenv
+VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
@@ -27,8 +27,9 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
-OVMS_VERSION := "2019_R3"
+OVMS_VERSION := "2020_R1"
 DLDT_PACKAGE_URL := "$(dldt_package_url)"
+TEST_MODELS_DIR = /tmp/ovms_models
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -64,7 +65,7 @@ coverage: venv
 
 test: venv
 	@echo "Executing functional tests..."
-	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/ --test_dir $(TEST_MODELS_DIR)
 
 test_local_only: venv
 	@echo "Executing functional tests with only local models..."
@@ -89,7 +90,7 @@ docker_build_apt_ubuntu:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R3 apt >> version
+	@echo OpenVINO version: 2020_R1 apt >> version
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
@@ -105,7 +106,7 @@ docker_build_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R2 clearlinux >> version
+	@echo OpenVINO version: 2020_R1 clearlinux >> version
 	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
 
