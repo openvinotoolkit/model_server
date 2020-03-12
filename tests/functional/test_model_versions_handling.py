@@ -170,7 +170,8 @@ class TestModelVersionHandling():
         urls = ['http://localhost:{}/v1/models/{}'
                 '/metadata'.format(ports["rest_port"], self.model_name),
                 'http://localhost:{}/v1/models/{}'
-                '/versions/1/metadata'.format(ports["rest_port"], self.model_name)]
+                '/versions/1/metadata'.format(ports["rest_port"],
+                                              self.model_name)]
 
         expected_inputs_metadata = \
             [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
@@ -201,7 +202,8 @@ class TestModelVersionHandling():
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:{}/v1/models/{}'.format(ports["rest_port"], self.model_name),
+        urls = ['http://localhost:{}/v1/models/{}'.format(ports["rest_port"],
+                                                          self.model_name),
                 'http://localhost:{}/v1/models/{}'
                 '/versions/1'.format(ports["rest_port"], self.model_name)]
 

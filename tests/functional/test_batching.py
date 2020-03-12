@@ -169,7 +169,8 @@ class TestBatchModelInference():
         batch_input = np.ones((1, 3, 62, 62))
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
+                   ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
@@ -208,7 +209,8 @@ class TestBatchModelInference():
         batch_input = np.ones((4, 3, 62, 62))
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
+                   ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
@@ -245,7 +247,8 @@ class TestBatchModelInference():
         batch_input = np.ones((6, 3, 62, 62))
         in_name = 'data'
         out_names = ['age_conv3', 'prob']
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
+                   ports["rest_port"])
         output = infer_rest(batch_input,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=out_names,

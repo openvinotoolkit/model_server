@@ -114,7 +114,8 @@ class TestSingleModelMappingInference():
         print("Downloaded model files:", age_gender_model_downloader)
 
         imgs_v1_224 = np.ones((1, 3, 62, 62))
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
+                   ports["rest_port"])
         output = infer_rest(imgs_v1_224, input_tensor='new_key',
                             rest_url=rest_url,
                             output_tensors=['age', 'gender'],
@@ -138,7 +139,8 @@ class TestSingleModelMappingInference():
                                             'shape': [1, 1, 1, 1]},
                                     'gender': {'dtype': 1,
                                                'shape': [1, 2, 1, 1]}}
-        rest_url = 'http://localhost:{}/v1/models/age_gender/metadata'.format(ports["rest_port"])
+        rest_url = 'http://localhost:{}/v1/models/age_gender/metadata'.format(
+                   ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(
