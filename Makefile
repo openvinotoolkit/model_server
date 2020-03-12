@@ -15,7 +15,7 @@
 #
 
 PY_VERSION := 3
-VIRTUALENV_EXE := python3 -m virtualenv
+VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
