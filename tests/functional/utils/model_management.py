@@ -26,7 +26,7 @@ def wait_endpoint_setup(container):
     tick = start_time
     running = False
     logs = ""
-    while tick - start_time < 300:
+    while tick - start_time < 900:
         tick = time.time()
         try:
             logs = str(container.logs())
@@ -36,8 +36,7 @@ def wait_endpoint_setup(container):
         except Exception as e:
             time.sleep(1)
     print("Logs from container: ", logs)
-    # NOTE(kromanow): this sleep was added to check if occasionall fail on
-    #                 tests are caused by server not beeing ready yet.
+    #  extra delay to ensure docker endpoint is ready
     time.sleep(2)
     return running
 
