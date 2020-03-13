@@ -102,6 +102,6 @@ class Engine(ABC):
         ipc_predict_response.responding_version = 1
         ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
         msg = ipc_endpoint_response.SerializeToString()
-        zmq_return_socket.send(b'' + msg)
+        zmq_return_socket.send(msg)
         zmq_return_socket.recv()
 
