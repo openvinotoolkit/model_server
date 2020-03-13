@@ -23,25 +23,18 @@ from utils.model_management import wait_endpoint_setup
 @pytest.fixture(scope="class")
 def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       get_docker_context):
-    GOOGLE_APPLICATION_CREDENTIALS = \
-        os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-
     client = get_docker_context
-    envs = ['GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp.json']
-    volumes_dict = {GOOGLE_APPLICATION_CREDENTIALS: {'bind': '/etc/gcp.json',
-                                                     'mode': 'ro'}}
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
-              "--model_path gs://inference-eu/ml-test " \
+              "--model_path " \
+              "gs://public-artifacts/intelai_public_models/resnet_50_i8/ " \
               "--port 9000 --target_device CPU --nireq 4 --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", " \
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
-
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs',
                                       ports={'9000/tcp': 9000},
-                                      remove=True, volumes=volumes_dict,
-                                      environment=envs,
+                                      remove=True,
                                       command=command)
     request.addfinalizer(container.kill)
 

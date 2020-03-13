@@ -148,7 +148,7 @@ be detected as a valid model version.
 For `model2`, there are correct files, but they are not in a numerical directory. 
 The server will not detect any version in `model2`.
 
-When new model version is detected, the server will loads the model files 
+When new model version is detected, the server loads the model files 
 and starts serving new model version. This operation might fail for the following reasons:
 - there is a problem with accessing model files (i. e. due to network connectivity issues
 to the  remote storage or insufficient permissions)
@@ -160,7 +160,7 @@ to GetModelStatus function.
 
 Detected but not loaded model version will not be served and will report status
 `LOADING` with error message: `Error occurred while loading version`.
-When model files becomes accessible or fixed, server will try to 
+When model files become accessible or fixed, server will try to 
 load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
 attempt.
 
@@ -201,7 +201,7 @@ Model server employs configurable serialization function.
 The default implementation starting from 2020.1 version is
  [_prepare_output_with_make_tensor_proto](ie_serving/server/predict_utils.py).
 It employs TensorFlow function [make_tensor_proto](https://www.tensorflow.org/api_docs/python/tf/make_tensor_proto). 
-For most of the models it returns TensorProto response with inference results serialized to string via a call numpy.toString. 
+For most of the models it returns TensorProto response with inference results serialized to string via a numpy.toString call. 
 This method achieves low latency, especially for models with big size of the output.
 
 Prior 2020.1 version, serialization was using function [_prepare_output_as_AppendArrayToTensorProto](ie_serving/server/predict_utils.py).
@@ -235,8 +235,8 @@ All new features need to be covered by tests.
 ### Building
 Docker image with OpenVINO Model Server can be built with several options: 
 - `make docker_build_bin dldt_package_url=<url>` - using Intel Distribution of OpenVINO binary package (ubuntu base image)
-- `make docker_build_src_ubuntu` - using OpenVINO source code with ubuntu base image
-- `make docker_build_clearlinux` - using clearlinux base image with DLDT package 
+- `make docker_build_apt_ubuntu` - using OpenVINO apt packages with ubuntu base image
+- `make docker_build_clearlinux` - using clearlinux base image with DLDT package
 
 
 ### Testing
@@ -244,13 +244,13 @@ Docker image with OpenVINO Model Server can be built with several options:
 `make style` to run linter tests
 
 `make unit` to execute unit tests (it requires OpenVINO installation followed by `make install`)
+Alternatively unit tests can be executed in a container by running the script `./tests/scripts/unit-tests.sh`
 
-`make test` to execute functional tests (it requires building the docker image in advance). Running 
-the tests require also preconfigured env variables `GOOGLE_APPLICATION_CREDENTIALS`, `AWS_ACCESS_KEY_ID`,
+`make test` to execute full set of functional tests (it requires [building the docker image](README.md#building) in advance). Running 
+the tests require also preconfigured env variables `AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` with permissions to access models used in tests.
-To run tests limited to models to locally downloaded models use command:
 
-`make test_local_only`
+`make test_local_only` to run the tests limited to models downloaded to local storage (without cloud storage scenarios)
 
 
 ## Contact

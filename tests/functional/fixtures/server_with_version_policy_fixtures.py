@@ -57,19 +57,19 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 @pytest.fixture(autouse=True, scope="session")
 def model_version_policy_models(get_test_dir,
                                 download_two_model_versions,
-                                resnet_2_out_model_downloader):
+                                age_gender_model_downloader):
     model_ver_dir = os.path.join(get_test_dir, 'saved_models', 'model_ver')
-    resnets = download_two_model_versions
-    resnet_1 = os.path.dirname(resnets[0][0])
-    resnet_1_dir = os.path.join(model_ver_dir, '1')
-    resnet_2 = os.path.dirname(resnets[1][0])
-    resnet_2_dir = os.path.join(model_ver_dir, '2')
-    resnet_2_out = os.path.dirname(resnet_2_out_model_downloader[0])
-    resnet_2_out_dir = os.path.join(model_ver_dir, '3')
+    face_detection_models = download_two_model_versions
+    face_detection_1 = os.path.dirname(face_detection_models[0][0])
+    face_detection_1_dir = os.path.join(model_ver_dir, '1')
+    face_detection_2 = os.path.dirname(face_detection_models[1][0])
+    face_detection_2_dir = os.path.join(model_ver_dir, '2')
+    age_gender = os.path.dirname(age_gender_model_downloader[0])
+    age_gender_dir = os.path.join(model_ver_dir, '3')
     if not os.path.exists(model_ver_dir):
         os.makedirs(model_ver_dir)
-        copy_tree(resnet_1, resnet_1_dir)
-        copy_tree(resnet_2, resnet_2_dir)
-        copy_tree(resnet_2_out, resnet_2_out_dir)
+        copy_tree(face_detection_1, face_detection_1_dir)
+        copy_tree(face_detection_2, face_detection_2_dir)
+        copy_tree(age_gender, age_gender_dir)
 
-    return resnet_1_dir, resnet_2_dir, resnet_2_out_dir
+    return face_detection_1_dir, face_detection_2_dir, age_gender_dir
