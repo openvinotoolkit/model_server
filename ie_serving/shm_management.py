@@ -22,3 +22,10 @@ def free_outputs_shm(ipc_predict_response):
         shm = shared_memory.SharedMemory(name=ipc_output.shm_name)
         shm.close()
         shm.unlink()
+
+def free_inputs_shm(ipc_predict_request):
+    for ipc_input in ipc_predict_request.predict_request.inputs:
+        shm = shared_memory.SharedMemory(name=ipc_input.shm_name)
+        shm.close()
+        shm.unlink()
+
