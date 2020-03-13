@@ -72,12 +72,10 @@ class Engine(ABC):
             self.predict(data, return_socket_name)
 
     def return_results(self, inference_output, return_socket_name):
-        print(inference_output)
-        print(return_socket_name)
         zmq_return_context = zmq.Context()
         zmq_return_socket = zmq_return_context.socket(zmq.REQ)
         zmq_return_socket.connect(
-            "ipc:///tmp/{}.sock".format(return_socket_name))
+            "ipc://{}".format(return_socket_name))
         ipc_endpoint_response = EndpointResponse()
         ipc_predict_response = PredictResponse()
         ipc_outputs = []
@@ -88,7 +86,7 @@ class Engine(ABC):
                                                                     size=single_output.nbytes)
             shm_array = np.ndarray(single_output.shape, dtype=single_output.dtype,
                                    buffer=output_shm.buf)
-            shm_array[:] = single_output
+            shm_array[:] = single_output[:]
 
             ipc_numpy_attributes = NumpyAttributes()
             ipc_numpy_attributes.shape.extend(list(shm_array.shape))
@@ -104,6 +102,6 @@ class Engine(ABC):
         ipc_predict_response.responding_version = 1
         ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
         msg = ipc_endpoint_response.SerializeToString()
-        zmq_return_socket.send(msg)
+        zmq_return_socket.send(b'' + msg)
         zmq_return_socket.recv()
 
