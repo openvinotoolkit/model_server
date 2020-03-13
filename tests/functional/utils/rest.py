@@ -70,20 +70,9 @@ def process_json_output(result_dict, output_tensors):
     return output
 
 
-def infer_rest(imgs, slice_number, input_tensor, rest_url,
+def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
-    img = imgs[slice_number:slice_number + 1]
-    print("input shape", img.shape)
     data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
-    output_json = json.loads(result.text)
-    data = process_json_output(output_json, output_tensors)
-    return data
-
-
-def infer_batch_rest(batch_input, input_tensor, rest_url,
-                     output_tensors, request_format):
-    data_json = prepare_body_format(batch_input, request_format, input_tensor)
     result = requests.post(rest_url, data=data_json)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)
