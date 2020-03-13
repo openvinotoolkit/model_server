@@ -148,7 +148,7 @@ be detected as a valid model version.
 For `model2`, there are correct files, but they are not in a numerical directory. 
 The server will not detect any version in `model2`.
 
-When new model version is detected, the server will loads the model files 
+When new model version is detected, the server loads the model files 
 and starts serving new model version. This operation might fail for the following reasons:
 - there is a problem with accessing model files (i. e. due to network connectivity issues
 to the  remote storage or insufficient permissions)
@@ -160,7 +160,7 @@ to GetModelStatus function.
 
 Detected but not loaded model version will not be served and will report status
 `LOADING` with error message: `Error occurred while loading version`.
-When model files becomes accessible or fixed, server will try to 
+When model files become accessible or fixed, server will try to 
 load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
 attempt.
 
@@ -201,7 +201,7 @@ Model server employs configurable serialization function.
 The default implementation starting from 2020.1 version is
  [_prepare_output_with_make_tensor_proto](ie_serving/server/predict_utils.py).
 It employs TensorFlow function [make_tensor_proto](https://www.tensorflow.org/api_docs/python/tf/make_tensor_proto). 
-For most of the models it returns TensorProto response with inference results serialized to string via a call numpy.toString. 
+For most of the models it returns TensorProto response with inference results serialized to string via a numpy.toString call. 
 This method achieves low latency, especially for models with big size of the output.
 
 Prior 2020.1 version, serialization was using function [_prepare_output_as_AppendArrayToTensorProto](ie_serving/server/predict_utils.py).
