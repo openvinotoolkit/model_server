@@ -22,6 +22,7 @@ from google.auth import exceptions
 from google.cloud import storage
 
 from ie_serving.config import GLOBAL_CONFIG
+from ie_serving.engines.openvino_engine import OpenvinoEngine
 from ie_serving.logger import get_logger
 from ie_serving.models.ir_engine import IrEngine
 from ie_serving.models.model import Model
@@ -150,7 +151,7 @@ class GSModel(Model):
     @classmethod
     def _start_engine_process_for_version(
             cls, engine_spec, version_attributes):
-        IrEngine.build(**engine_spec)
+        ove = OpenvinoEngine(engine_spec)
         cls.delete_local_mirror([version_attributes['xml_file'],
                                  version_attributes['bin_file'],
                                  version_attributes['mapping_config']])

@@ -67,4 +67,3 @@ class LocalModel(Model):
     def _start_engine_process_for_version(
             cls, engine_spec, version_attributes):
         ove = OpenvinoEngine(engine_spec)
-        #IrEngine.build(**engine_spec)
