@@ -31,5 +31,10 @@ pipeline {
                 sh './tests/scripts/functional-tests-apt-ubuntu.sh'
             }
         }
+        stage('functional tests openvino base') {
+            steps {
+                sh './tests/scripts/functional-tests-ov-base.sh'
+            }
+        }
     }
 }
