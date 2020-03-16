@@ -28,7 +28,7 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 
 class TestSingleModelInferenceS3():
 
-    def test_run_inference(self, start_server_single_model_from_s3,
+    def test_run_inference(self, start_server_single_model_from_minio,
                            create_grpc_channel):
         """
         <b>Description</b>
@@ -61,7 +61,7 @@ class TestSingleModelInferenceS3():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
 
-    def test_get_model_metadata(self, start_server_single_model_from_s3,
+    def test_get_model_metadata(self, start_server_single_model_from_minio,
                                 create_grpc_channel):
 
         stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
@@ -81,7 +81,7 @@ class TestSingleModelInferenceS3():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    def test_get_model_status(self, start_server_single_model_from_s3,
+    def test_get_model_status(self, start_server_single_model_from_minio,
                               create_grpc_channel):
 
         stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
