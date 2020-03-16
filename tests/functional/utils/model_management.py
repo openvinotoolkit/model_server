@@ -40,6 +40,23 @@ def wait_endpoint_setup(container):
     time.sleep(2)
     return running
 
+def wait_minio_endpoint_setup(container):
+    start_time = time.time()
+    tick = start_time
+    running = False
+
+    while tick - start_time < 30:
+        tick = time.time()
+        try:
+            time.sleep(1)
+            if "created"  in container.status:
+                running = True
+                break
+        except Exception as e:
+            time.sleep(1)
+            print("Container status:", container.status)
+            print("Logs from container: ", str(container.logs()))
+    return running
 
 def copy_model(model, version, destination_path):
     dir_to_cpy = destination_path + str(version)
