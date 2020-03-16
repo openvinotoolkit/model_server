@@ -50,28 +50,28 @@ class TestSingleModelInferenceS3():
         """
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9099', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        output = infer(imgs_v1_224, input_tensor='input', grpc_stub=stub,
+        out_name = 'softmax_tensor'
+        output = infer(imgs_v1_224, input_tensor='map/TensorArrayStack/TensorArrayGatherV3', grpc_stub=stub,
                        model_spec_name='resnet',
                        model_spec_version=None,
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
     def test_get_model_metadata(self, start_server_single_model_from_minio,
                                 create_grpc_channel):
 
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9099', PREDICTION_SERVICE)
 
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
+        out_name = 'softmax_tensor'
+        expected_input_metadata = {'map/TensorArrayStack/TensorArrayGatherV3': {'dtype': 1,
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [1, 1001]}}
         request = get_model_metadata(model_name='resnet')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -84,7 +84,7 @@ class TestSingleModelInferenceS3():
     def test_get_model_status(self, start_server_single_model_from_minio,
                               create_grpc_channel):
 
-        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:9099', MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

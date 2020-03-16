@@ -152,21 +152,13 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
     AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
 
-    envs = ['AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+    envs = ['MINIO_ACCESS_KEY' + AWS_ACCESS_KEY_ID,
+            'MINIO_SECRET_KEY' + AWS_SECRET_ACCESS_KEY,
+            'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION,
-            'S3_ENDPOINT=' + '172.17.0.2:9000']
+            'S3_ENDPOINT=' + 'http://10.237.114.147:9000']
 
-    """s3 = boto3.resource('s3',
-                        endpoint_url='http://172.17.0.2:9099',
-                        aws_access_key_id=os.getenv('MINIO_ACCESS_KEY'),
-                        aws_secret_access_key=os.getenv('MINIO_SECRET_KEY'),
-                        config=Config(signature_version='s3v4'),
-                        region_name='us-east-1')
-
-    s3.Bucket('resnet').upload_file(os.path.join(path_to_mount,'resnet_V1_50.bin'),'resnet_V1_50.bin')
-    s3.Bucket('resnet').upload_file(os.path.join(path_to_mount,'resnet_V1_50.xml'),'resnet_V1_50.xml')
-    """
 
     container = start_minio_server
     s3Client = start_minio_server_s3
@@ -186,7 +178,7 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
     client = get_docker_context
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
-              "--model_path 172.17.0.2:9000/inference/resnet_v1_50" \
+              "--model_path s3://inference/resnet_v1_50 " \
               "--port 9099"
 
     container = client.containers.run(image=get_image, detach=True,
