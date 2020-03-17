@@ -23,7 +23,6 @@ from botocore.client import Config
 
 from minio import Minio
 from minio.error import ResponseError
-import time
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_gc(request, get_image, get_test_dir,
@@ -160,7 +159,6 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
             'AWS_REGION=' + AWS_REGION,
             'S3_ENDPOINT=' + 'http://10.237.114.147:9000']
 
-
     container = start_minio_server
     s3Client = start_minio_server_s3
 
@@ -176,7 +174,6 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
         print(err)
         raise
 
-    #time.sleep(30000)
     client = get_docker_context
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
