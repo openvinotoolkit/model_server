@@ -78,13 +78,34 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
     return container
 
 @pytest.fixture(scope="module")
-def start_minio_server(request, get_image, get_test_dir,
-                                      get_docker_context):
+def get_docker_network(request, get_docker_context):
+
+    client = get_docker_context
+    existing = None
+
+    try:
+        existing = client.networks.get("minio-network")
+    except Exception as e:
+        pass
+
+    if existing is not None:
+        existing.remove()
+
+    network = client.networks.create("minio-network")
+
+    request.addfinalizer(network.remove)
+
+    return network
+
+@pytest.fixture(scope="module")
+def start_minio_server(request, get_image, get_test_dir, get_docker_network, get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
     envs = []
     command = "server /data"
+
+    network = get_docker_network
 
     MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
@@ -103,10 +124,9 @@ def start_minio_server(request, get_image, get_test_dir,
                                       ports={'9000/tcp': 9000},
                                       remove=True,
                                       environment=envs,
-                                      command=command)
+                                      command=command,
+                                      network=network.name)
 
-    print("Container:" + str(container))
-    print("LOGS:" + str(container.logs()))
     request.addfinalizer(container.kill)
 
     running = wait_minio_endpoint_setup(container)
@@ -115,13 +135,8 @@ def start_minio_server(request, get_image, get_test_dir,
     return container
 
 @pytest.fixture(scope="module")
-def start_minio_server_s3(request, get_image, get_test_dir,
+def get_minio_server_s3(request, get_image, get_test_dir,
                                       get_docker_context):
-
-    """sudo docker run -d -p 9099:9000 minio/minio server /data"""
-    client = get_docker_context
-    envs = []
-    command = "server /data"
 
     MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
@@ -135,7 +150,7 @@ def start_minio_server_s3(request, get_image, get_test_dir,
         os.environ["MINIO_SECRET_KEY"] = MINIO_SECRET_KEY
         os.environ["AWS_REGION"] = AWS_REGION
 
-    s3Client = Minio('172.17.0.2:9000',
+    s3Client = Minio('localhost:9000',
                       access_key=MINIO_ACCESS_KEY,
                       secret_key=MINIO_SECRET_KEY,
                       region=AWS_REGION,
@@ -144,9 +159,11 @@ def start_minio_server_s3(request, get_image, get_test_dir,
     return s3Client
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_minio(request, start_minio_server, start_minio_server_s3, get_image, get_test_dir,get_docker_context):
+def start_server_single_model_from_minio(request, get_docker_network, start_minio_server, get_minio_server_s3, get_image, get_test_dir,get_docker_context):
 
     path_to_mount = get_test_dir + '/saved_models/resnet_V1_50/1'
+ 
+    network = get_docker_network
 
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
     AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
@@ -157,11 +174,10 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION,
-            'S3_ENDPOINT=' + 'http://10.237.114.147:9000']
-
+            'S3_ENDPOINT=' + 'http://s3.amazonaws.com:9000']
 
     container = start_minio_server
-    s3Client = start_minio_server_s3
+    s3Client = get_minio_server_s3
 
     try:
         s3Client.make_bucket("inference", location=AWS_REGION)
@@ -186,7 +202,8 @@ def start_server_single_model_from_minio(request, start_minio_server, start_mini
                                       ports={'9099/tcp': 9099},
                                       remove=True,
                                       environment=envs,
-                                      command=command)
+                                      command=command,
+                                      network=network.name)
 
     request.addfinalizer(container.kill)
        
