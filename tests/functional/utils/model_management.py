@@ -26,7 +26,7 @@ def wait_endpoint_setup(container):
     tick = start_time
     running = False
     logs = ""
-    while tick - start_time < 15:
+    while tick - start_time < 300:
         tick = time.time()
         try:
             logs = str(container.logs())
