@@ -22,20 +22,28 @@ from utils.model_management import wait_endpoint_setup
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_image, get_test_dir,
-                             get_docker_context):
+def start_server_multi_model(request, get_docker_network, start_minio_server, get_minio_server_s3, get_image, get_test_dir, get_docker_context):
+
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
-    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+    AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY') 
     AWS_REGION = os.getenv('AWS_REGION')
 
     client = get_docker_context
-    envs = ['AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
+    network = get_docker_network
+
+    envs = ['MINIO_ACCESS_KEY' + AWS_ACCESS_KEY_ID,
+            'MINIO_SECRET_KEY' + AWS_SECRET_ACCESS_KEY,
+            'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
-            'AWS_REGION=' + AWS_REGION]
+            'AWS_REGION=' + AWS_REGION,
+            'S3_ENDPOINT=' + 'http://minio.locals3.com:9000']
+
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
+
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port 9001 " \
               "--rest_port 5561 --grpc_workers 2 --rest_workers 2"
@@ -46,7 +54,9 @@ def start_server_multi_model(request, get_image, get_test_dir,
                                              '5561/tcp': 5561},
                                       remove=True, volumes=volumes_dict,
                                       environment=envs,
-                                      command=command)
+                                      command=command,
+                                      network=network.name)
+
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)

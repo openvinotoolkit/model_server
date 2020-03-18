@@ -77,7 +77,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
 
     return container
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def get_docker_network(request, get_docker_context):
 
     client = get_docker_context
@@ -97,7 +97,7 @@ def get_docker_network(request, get_docker_context):
 
     return network
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def start_minio_server(request, get_image, get_test_dir, get_docker_network, get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
@@ -134,9 +134,12 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network, get
 
     return container
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def get_minio_server_s3(request, get_image, get_test_dir,
                                       get_docker_context):
+
+
+    path_to_mount = get_test_dir + '/saved_models/resnet_V1_50/1'
 
     MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
@@ -156,12 +159,23 @@ def get_minio_server_s3(request, get_image, get_test_dir,
                       region=AWS_REGION,
                       secure=False)
 
+    try:
+        s3Client.make_bucket("inference", location=AWS_REGION)
+    except ResponseError as err:
+        raise
+
+    try:
+        s3Client.fput_object('inference', 'resnet_v1_50/1/resnet_V1_50.bin', os.path.join(path_to_mount,'resnet_V1_50.bin'))
+        s3Client.fput_object('inference', 'resnet_v1_50/1/resnet_V1_50.xml', os.path.join(path_to_mount,'resnet_V1_50.xml'))
+    except ResponseError as err:
+        print(err)
+        raise
+
     return s3Client
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_minio(request, get_docker_network, start_minio_server, get_minio_server_s3, get_image, get_test_dir,get_docker_context):
 
-    path_to_mount = get_test_dir + '/saved_models/resnet_V1_50/1'
  
     network = get_docker_network
 
@@ -176,20 +190,9 @@ def start_server_single_model_from_minio(request, get_docker_network, start_mini
             'AWS_REGION=' + AWS_REGION,
             'S3_ENDPOINT=' + 'http://minio.locals3.com:9000']
 
-    container = start_minio_server
-    s3Client = get_minio_server_s3
+    """minio_server = start_minio_server
+    s3Client = get_minio_server_s3"""
 
-    try:
-        s3Client.make_bucket("inference", location=AWS_REGION)
-    except ResponseError as err:
-        raise
-
-    try:
-        s3Client.fput_object('inference', 'resnet_v1_50/1/resnet_V1_50.bin', os.path.join(path_to_mount,'resnet_V1_50.bin'))
-        s3Client.fput_object('inference', 'resnet_v1_50/1/resnet_V1_50.xml', os.path.join(path_to_mount,'resnet_V1_50.xml'))
-    except ResponseError as err:
-        print(err)
-        raise
 
     client = get_docker_context
     command = "/ie-serving-py/start_server.sh ie_serving model " \
