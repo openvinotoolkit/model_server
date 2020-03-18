@@ -16,6 +16,7 @@
 import datetime
 import json
 import queue
+import zmq
 
 from openvino.inference_engine import IENetwork, IECore
 
@@ -26,6 +27,9 @@ from ie_serving.models import InferenceStatus
 from ie_serving.models.shape_management.batching_info import BatchingInfo
 from ie_serving.models.shape_management.shape_info import ShapeInfo
 from ie_serving.models.shape_management.utils import BatchingMode, ShapeMode
+from ie_serving.messaging.apis.endpoint_responses_pb2 \
+    import EndpointResponse, ErrorResponse
+from ie_serving.server.constants import INVALID_INPUT_KEY
 
 logger = get_logger(__name__)
 
@@ -37,14 +41,12 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
     ###################################
 
     def build_engine(self, engine_properties):
-        print(engine_properties)
-
         self.num_ireq = engine_properties["num_ireq"]
-
         self.target_device = engine_properties["target_device"]
         self.plugin_config = engine_properties["plugin_config"]
 
         self.core = IECore()
+
         if GLOBAL_CONFIG['cpu_extension'] is not None \
                 and 'CPU' in self.target_device:
             self.core.add_extension(extension_path=GLOBAL_CONFIG['cpu_extension'],
@@ -95,6 +97,27 @@ class OpenvinoEngine(Engine):  # Engine class inheritance
                                      num_requests=self.num_ireq)
 
     def predict(self, data, return_socket_name):
+        inputs_in_input_request = list(dict(data).keys())
+
+        for requested_input in inputs_in_input_request:
+            if requested_input not in self.input_key_names:
+                message = INVALID_INPUT_KEY % (inputs_in_input_request,
+                                               self.input_key_names)
+                logger.debug("PREDICT error: {}".format(message))
+                zmq_return_context = zmq.Context()
+                zmq_return_socket = zmq_return_context.socket(zmq.REQ)
+                zmq_return_socket.connect(
+                    "ipc://{}".format(return_socket_name))
+                ipc_endpoint_response = EndpointResponse()
+                error_resp = ErrorResponse()
+                msg = "predict error - invalid key"
+                error_resp.error_code = 5
+                error_resp.error_message = msg
+                ipc_endpoint_response.error_response.CopyFrom(error_resp)
+                mesg = ipc_endpoint_response.SerializeToString()
+                zmq_return_socket.send(mesg)
+                zmq_return_socket.recv()
+                return
         # TODO: Error handling
         self._adjust_network_inputs_if_needed(data)
         ireq_index = self.free_ireq_index_queue.get()

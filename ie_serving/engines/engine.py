@@ -15,6 +15,7 @@
 #
 from abc import ABC, abstractmethod
 import ie_serving.messaging.apis.endpoint_requests_pb2 as ovms_ipc
+from ie_serving.logger import get_logger
 from ie_serving.messaging.apis.endpoint_responses_pb2 \
     import EndpointResponse, PredictResponse
 from ie_serving.messaging.apis.data_attributes_pb2 import NumpyAttributes
@@ -24,6 +25,7 @@ import zmq
 import multiprocessing.shared_memory
 
 from threading import Thread
+logger = get_logger(__name__)
 
 
 class Engine(ABC):
@@ -34,7 +36,6 @@ class Engine(ABC):
         # engine properties should be a dict that will
         # be used by build_engine method
         self.build_engine(engine_properties)
-
         self.socket_name = self.model_name + '-' + str(self.model_version)
         self.dispatcher = Thread(
             target=self.prediction_listener, args=(self.socket_name,))
@@ -50,18 +51,22 @@ class Engine(ABC):
         pass
 
     def prediction_listener(self, socket_name):
+        full_socket_name = "ipc:///tmp/{}.sock".format(socket_name)
         self.zmq_context = zmq.Context()
         self.zmq_socket = self.zmq_context.socket(zmq.REP)
-        self.zmq_socket.bind(
-            "ipc:///tmp/{}.sock".format(socket_name))
+        self.zmq_socket.bind(full_socket_name)
+        logger.debug("Engine listening on socket: {}".format(full_socket_name))
         while True:
             req = self.zmq_socket.recv()
             self.zmq_socket.send(b'ACK')
+            logger.debug("Got endpoint request")
             data = {}
             request = ovms_ipc.EndpointRequest()
             request.MergeFromString(req)
             if not request.HasField("predict_request"):
+                logger.debug("Not a predict request")
                 continue
+            logger.debug("Unpacking request data")
             for inference_input in request.predict_request.inputs:
                 shm = multiprocessing.shared_memory.SharedMemory(
                     name=inference_input.shm_name)
@@ -69,17 +74,20 @@ class Engine(ABC):
                     tuple(inference_input.numpy_attributes.shape),
                     dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
             return_socket_name = request.predict_request.return_socket_name
+            logger.debug("Sending data to prediction backend")
             self.predict(data, return_socket_name)
 
     def return_results(self, inference_output, return_socket_name):
+        full_return_socket_name = "ipc://{}".format(return_socket_name)
         zmq_return_context = zmq.Context()
         zmq_return_socket = zmq_return_context.socket(zmq.REQ)
-        zmq_return_socket.connect(
-            "ipc://{}".format(return_socket_name))
+        zmq_return_socket.connect(full_return_socket_name)
+        logger.debug("Connected to return socket: {}".format(full_return_socket_name))
         ipc_endpoint_response = EndpointResponse()
         ipc_predict_response = PredictResponse()
         ipc_outputs = []
 
+        logger.debug("Start preparing inference output")
         for output_name in list(inference_output.keys()):
             single_output = inference_output[output_name]
             output_shm = multiprocessing.shared_memory.SharedMemory(create=True,
@@ -98,10 +106,12 @@ class Engine(ABC):
             ipc_output_data.shm_name = output_shm.name
             ipc_outputs.append(ipc_output_data)
 
+        logger.debug("Inference outputs prepared")
         ipc_predict_response.outputs.extend(ipc_outputs)
         ipc_predict_response.responding_version = 1
         ipc_endpoint_response.predict_response.CopyFrom(ipc_predict_response)
         msg = ipc_endpoint_response.SerializeToString()
+        logger.debug("Sending return message")
         zmq_return_socket.send(msg)
         zmq_return_socket.recv()
-
+        logger.debug("Return message sent")
