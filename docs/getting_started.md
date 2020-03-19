@@ -4,7 +4,7 @@
 * docker version >= 19.03
 * git version >= 1.8.3
 * python 3.6
-* pip3 version >= 20.0.2
+* pip3 version >= 20.0.2 with setuptools >= 46.0.0
 * wget version >= 1.14
 
 ### OpenVino Model Server
