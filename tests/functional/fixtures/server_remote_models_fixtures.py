@@ -106,6 +106,8 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     envs = []
     command = "server /data"
 
+    image = client.images.pull('minio/minio:latest')
+
     network = get_docker_network
 
     MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
@@ -120,7 +122,7 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     envs = ['MINIO_ACCESS_KEY=' + MINIO_ACCESS_KEY,
             'MINIO_SECRET_KEY=' + MINIO_SECRET_KEY]
 
-    container = client.containers.run(image='minio/minio', detach=True,
+    container = client.containers.run(image='minio/minio:latest', detach=True,
                                       name='minio.locals3.com',
                                       ports={'9000/tcp': 9000},
                                       remove=True,
