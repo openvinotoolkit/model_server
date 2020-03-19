@@ -106,7 +106,7 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     envs = []
     command = "server /data"
 
-    image = client.images.pull('minio/minio:latest')
+    client.images.pull('minio/minio:latest')
 
     network = get_docker_network
 
