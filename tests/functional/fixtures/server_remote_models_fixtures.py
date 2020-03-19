@@ -35,7 +35,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'9001/tcp': 9001},
                                       remove=True,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -64,7 +64,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-s3',
-                                      ports={'9000/tcp': 9000},
+                                      ports={'9002/tcp': 9002},
                                       remove=True,
                                       environment=envs,
                                       command=command)
