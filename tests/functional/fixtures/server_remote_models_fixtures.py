@@ -18,8 +18,7 @@ import os
 
 import boto3
 import pytest
-from utils.model_management import wait_endpoint_setup
-from utils.model_management import wait_minio_endpoint_setup
+from utils.model_management import (wait_endpoint_setup, minio_condition)
 from botocore.client import Config
 
 
@@ -131,7 +130,7 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
 
     request.addfinalizer(container.kill)
 
-    running = wait_minio_endpoint_setup(container)
+    running = wait_endpoint_setup(container, minio_condition, 30)
     assert running is True, "minio container was not started successfully"
 
     return container
