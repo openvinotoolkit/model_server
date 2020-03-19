@@ -22,13 +22,15 @@ from utils.model_management import wait_endpoint_setup
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_docker_network, start_minio_server, get_minio_server_s3, get_image, get_test_dir, get_docker_context):
+def start_server_multi_model(request, get_docker_network, start_minio_server,
+                             get_minio_server_s3, get_image, get_test_dir,
+                             get_docker_context):
 
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
 
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
-    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY') 
+    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
 
     client = get_docker_context

@@ -51,10 +51,11 @@ class TestSingleModelInferenceS3():
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:9099', PREDICTION_SERVICE)
+        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         out_name = 'softmax_tensor'
-        output = infer(imgs_v1_224, input_tensor='map/TensorArrayStack/TensorArrayGatherV3', grpc_stub=stub,
+        output = infer(imgs_v1_224, input_tensor=in_tensor, grpc_stub=stub,
                        model_spec_name='resnet',
                        model_spec_version=None,
                        output_tensors=[out_name])
@@ -68,8 +69,10 @@ class TestSingleModelInferenceS3():
 
         model_name = 'resnet'
         out_name = 'softmax_tensor'
-        expected_input_metadata = {'map/TensorArrayStack/TensorArrayGatherV3': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
+
+        expected_input_metadata = {in_tensor: {'dtype': 1,
+                                               'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1001]}}
         request = get_model_metadata(model_name='resnet')
