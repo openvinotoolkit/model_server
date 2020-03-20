@@ -15,8 +15,8 @@ RUN . .venv/bin/activate && pip3 install .
 ENV PYTHONPATH=/opt/intel/openvino/python/python3.6:/opt/intel/openvino/python/python3
 ARG OV_PATH=/opt/intel/openvino/deployment_tools
 ENV LD_LIBRARY_PATH=""
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:OV_PATH/ngraph/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:OV_PATH/inference_engine/external/gna/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:OV_PATH/inference_engine/external/mkltiny_lnx/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:OV_PATH/inference_engine/external/tbb/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:OV_PATH/inference_engine/lib/intel64
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/ngraph/lib:
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/gna/lib:
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/mkltiny_lnx/lib:
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/tbb/lib:
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/lib/intel64
