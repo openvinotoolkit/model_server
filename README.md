@@ -237,8 +237,10 @@ Docker image with OpenVINO Model Server can be built with several options:
 - `make docker_build_bin dldt_package_url=<url>` - using Intel Distribution of OpenVINO binary package (ubuntu base image)
 - `make docker_build_apt_ubuntu` - using OpenVINO apt packages with ubuntu base image
 - `make docker_build_ov_base` - using public image of OpenVINO runtime base image
-- `make docker_build_clearlinux` - using clearlinux base image with DLDT package
+- `make docker_build_clearlinux` - using clearlinux base image with DLDT package 
 
+*Note:* Images based on ubuntu include OpenVINO 2020.1. <br>
+In clearlinux based image, it is 2019.3 - to be upgraded later soon.
 
 ### Testing
 
