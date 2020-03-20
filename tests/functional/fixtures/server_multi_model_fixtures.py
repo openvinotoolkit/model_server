@@ -41,7 +41,9 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION,
-            'S3_ENDPOINT=' + 'http://minio.locals3.com:9000']
+            'S3_ENDPOINT=' + 'http://minio.locals3.com:9000',
+            'https_proxy=' + os.getenv('https_proxy',""),
+            'no_proxy=minio.locals3.com']
 
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
