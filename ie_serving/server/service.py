@@ -30,7 +30,7 @@ from ie_serving.server.predict_utils import prepare_output, StatusCode
 from ie_serving.messaging.predict_msg_processing import \
     prepare_ipc_predict_request
 from ie_serving.messaging.msg_processing import extract_ipc_response
-from ie_serving.shm_management import free_outputs_shm
+from ie_serving.shm_management import free_outputs_shm, free_inputs_shm
 
 import numpy as np
 from multiprocessing import shared_memory
@@ -150,6 +150,7 @@ class PredictionServiceServicer(prediction_service_pb2_grpc.
             responding_version
         response.model_spec.signature_name = SIGNATURE_NAME
         free_outputs_shm(ipc_predict_response)
+        free_inputs_shm(ipc_predict_request)
         return response
 
     # GetModelMetadata and GetModelStatus endpoints will be

@@ -28,22 +28,21 @@ from threading import Thread
 
 class Engine(ABC):
 
-    def __init__(self, model_name, model_version, engine_properties):
-        self.model_name = model_name
-        self.model_version = model_version
+    def __init__(self, engine_properties):
+        self.model_name = engine_properties["model_name"]
+        self.model_version = engine_properties["model_version"]
         # engine properties should be a dict that will
         # be used by build_engine method
-        self.engine_properties = engine_properties
-        self.build_engine()
+        self.build_engine(engine_properties)
 
-        self.socket_name = model_name + model_version
+        self.socket_name = self.model_name + '-' + str(self.model_version)
         self.dispatcher = Thread(
             target=self.prediction_listener, args=(self.socket_name,))
         self.dispatcher.start()
         self.dispatcher.join()
 
     @abstractmethod
-    def build_engine(self):
+    def build_engine(self, engine_properties):
         pass
 
     @abstractmethod
@@ -58,30 +57,25 @@ class Engine(ABC):
         while True:
             req = self.zmq_socket.recv()
             self.zmq_socket.send(b'ACK')
-            data, return_socket_name = self.parse_inference_request(req)
-            if data is None or return_socket_name is None:
+            data = {}
+            request = ovms_ipc.EndpointRequest()
+            request.MergeFromString(req)
+            if not request.HasField("predict_request"):
                 continue
+            for inference_input in request.predict_request.inputs:
+                shm = multiprocessing.shared_memory.SharedMemory(
+                    name=inference_input.shm_name)
+                data[inference_input.input_name] = np.ndarray(
+                    tuple(inference_input.numpy_attributes.shape),
+                    dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
+            return_socket_name = request.predict_request.return_socket_name
             self.predict(data, return_socket_name)
-
-    def parse_inference_request(self, req):
-        data = {}
-        request = ovms_ipc.EndpointRequest()
-        request.MergeFromString(req)
-        if not request.HasField("predict_request"):
-            return None, None
-        for inference_input in request.predict_request.inputs:
-            shm = multiprocessing.shared_memory.SharedMemory(
-                name=inference_input.shm_name)
-            data[inference_input.input_name] = np.ndarray(
-                inference_input.numpy_attributes.shape, dtype=inference_input.numpy_attributes.data_type, buffer=shm.buf)
-        return_socket_name = request.predict_request.return_socket_name
-        return data, return_socket_name
 
     def return_results(self, inference_output, return_socket_name):
         zmq_return_context = zmq.Context()
         zmq_return_socket = zmq_return_context.socket(zmq.REQ)
         zmq_return_socket.connect(
-            "ipc:///tmp/{}.sock".format(return_socket_name))
+            "ipc://{}".format(return_socket_name))
         ipc_endpoint_response = EndpointResponse()
         ipc_predict_response = PredictResponse()
         ipc_outputs = []
@@ -92,7 +86,7 @@ class Engine(ABC):
                                                                     size=single_output.nbytes)
             shm_array = np.ndarray(single_output.shape, dtype=single_output.dtype,
                                    buffer=output_shm.buf)
-            shm_array[:] = single_output
+            shm_array[:] = single_output[:]
 
             ipc_numpy_attributes = NumpyAttributes()
             ipc_numpy_attributes.shape.extend(list(shm_array.shape))
@@ -110,3 +104,4 @@ class Engine(ABC):
         msg = ipc_endpoint_response.SerializeToString()
         zmq_return_socket.send(msg)
         zmq_return_socket.recv()
+
