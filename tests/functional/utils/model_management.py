@@ -22,16 +22,12 @@ from pathlib import Path
 
 
 def minio_condition(container):
-    if "created" in container.status:
-        return True
-    return False
+    return "created" in container.status
 
 
 def serving_condition(container):
     logs = str(container.logs())
-    if "server listens on port" in logs:
-        return True
-    return False
+    return "server listens on port" in logs
 
 
 def wait_endpoint_setup(container, condition=serving_condition, timeout=900):
