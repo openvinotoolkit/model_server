@@ -50,7 +50,7 @@ class TestSingleModelInferenceGc():
         """
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         out_name = 'prob'
@@ -63,7 +63,7 @@ class TestSingleModelInferenceGc():
 
     def test_get_model_metadata(self, start_server_single_model_from_gc,
                                 create_grpc_channel):
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
 
         model_name = 'resnet'
         out_name = 'prob'
@@ -82,7 +82,7 @@ class TestSingleModelInferenceGc():
 
     def test_get_model_status(self, start_server_single_model_from_gc,
                               create_grpc_channel):
-        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:9006', MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

@@ -30,12 +30,12 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
               "--model_name resnet " \
               "--model_path " \
               "gs://public-artifacts/intelai_public_models/resnet_50_i8/ " \
-              "--port 9001 --target_device CPU --nireq 4 --plugin_config " \
+              "--port 9006 --target_device CPU --nireq 4 --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", " \
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs',
-                                      ports={'9001/tcp': 9001},
+                                      ports={'9006/tcp': 9006},
                                       remove=True,
                                       command=command)
     request.addfinalizer(container.kill)
