@@ -53,7 +53,7 @@ class TestSingleModelInference():
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
@@ -70,7 +70,7 @@ class TestSingleModelInference():
                                 create_grpc_channel):
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:9000', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
 
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
@@ -93,7 +93,7 @@ class TestSingleModelInference():
                               create_grpc_channel):
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:9000', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:9003', MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
