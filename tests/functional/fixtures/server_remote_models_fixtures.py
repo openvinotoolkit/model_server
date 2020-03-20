@@ -33,7 +33,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
               "--port 9006 --target_device CPU --nireq 4 --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", " \
               "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
-    envs = ['https_proxy=' + os.getenv('https_proxy',"")]
+    envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-single-gs',
                                       ports={'9006/tcp': 9006},
