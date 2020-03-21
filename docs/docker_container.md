@@ -338,7 +338,7 @@ rules:
 To start server with NCS you can use command similar to:
 
 ```
-docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
+docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
