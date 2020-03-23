@@ -45,7 +45,7 @@ parser.add_argument('--model_name', default='resnet', help='Define model name in
                     dest='model_name')
 parser.add_argument('--report_every', default=0,
                     help="Report performance every X iterations")
-parser.add_argument('--id', default=None,
+parser.add_argument('--id', default="--",
                     help="Helps identifying client")
 args = vars(parser.parse_args())
 
