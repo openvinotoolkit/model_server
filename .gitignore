@@ -5,6 +5,8 @@
 *.pyc
 *.pyo
 *.log
+*.swp
+.pytest_cache
 *__pycache__/
 *.cache
 .cache

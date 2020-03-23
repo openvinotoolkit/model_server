@@ -249,11 +249,7 @@ In clearlinux based image, it is 2019.3 - to be upgraded later soon.
 `make unit` to execute unit tests (it requires OpenVINO installation followed by `make install`)
 Alternatively unit tests can be executed in a container by running the script `./tests/scripts/unit-tests.sh`
 
-`make test` to execute full set of functional tests (it requires [building the docker image](README.md#building) in advance). Running 
-the tests require also preconfigured env variables `AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY` and `AWS_REGION` with permissions to access models used in tests.
-
-`make test_local_only` to run the tests limited to models downloaded to local storage (without cloud storage scenarios)
+`make test` to execute full set of functional tests (it requires [building the docker image](README.md#building) in advance). 
 
 
 ## Contact

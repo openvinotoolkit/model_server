@@ -21,21 +21,28 @@ import time
 from pathlib import Path
 
 
-def wait_endpoint_setup(container):
+def minio_condition(container):
+    return "created" in container.status
+
+
+def serving_condition(container):
+    logs = str(container.logs())
+    return "server listens on port" in logs
+
+
+def wait_endpoint_setup(container, condition=serving_condition, timeout=900):
     start_time = time.time()
     tick = start_time
     running = False
-    logs = ""
-    while tick - start_time < 900:
+    while tick - start_time < timeout:
         tick = time.time()
         try:
-            logs = str(container.logs())
-            if "server listens on port" in logs:
+            if condition(container):
                 running = True
                 break
         except Exception as e:
             time.sleep(1)
-    print("Logs from container: ", logs)
+    print("Logs from container: ", str(container.logs()))
     #  extra delay to ensure docker endpoint is ready
     time.sleep(2)
     return running

@@ -30,7 +30,7 @@ def start_server_single_model(request, get_image, get_test_dir,
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path /opt/ml/resnet_V1_50 " \
-              "--port 9000 --rest_port 5555 --plugin_config " \
+              "--port 9003 --rest_port 5555 --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
               "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
 
@@ -39,7 +39,7 @@ def start_server_single_model(request, get_image, get_test_dir,
             image=get_image,
             detach=True,
             name='ie-serving-py-test-single',
-            ports={'9000/tcp': 9000,
+            ports={'9003/tcp': 9003,
                    '5555/tcp': 5555},
             remove=True,
             volumes=volumes_dict,
