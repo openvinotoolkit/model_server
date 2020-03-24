@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import sys
 import grpc
 import classes
 import datetime
@@ -78,7 +79,14 @@ imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
 while args.batchsize >= imgs.shape[0]:
     imgs = np.append(imgs, imgs, axis=0)
 
-iterations = int((imgs.shape[0]//args.batchsize) if not (args.iterations or args.iterations != 0) else args.iterations)
+if args.iterations < 0:
+    print("Argument '--iterations' can't be lower than 0")
+    print("Exitting")
+    sys.exit(1)
+elif args.iterations == 0:
+    iterations = int(imgs.shape[0] // args.batchsize)
+else:
+    iterations = args.iterations
 
 iteration = 0
 
