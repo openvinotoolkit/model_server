@@ -1,2 +1,2 @@
 #!/bin/bash
-python grpc_latency.py $*
+./grpc_latency.py $*
