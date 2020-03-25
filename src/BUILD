@@ -1,0 +1,30 @@
+
+package(
+    default_visibility = ["//tensorflow_serving:internal"],
+    features = ["no_layering_check"],
+)
+
+licenses(["notice"])  # Apache 2.0
+
+filegroup(
+    name = "all_files",
+    srcs = glob(
+        ["**/*"],
+        exclude = [
+            "**/METADATA",
+            "**/OWNERS",
+        ],
+    ),
+)
+
+cc_binary(
+    name = "server_cc",
+    srcs = [
+        "server.cc",
+    ],
+    deps = [
+        "//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_protobuf//:protobuf_lite",
+    ],
+)
