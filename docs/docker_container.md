@@ -11,15 +11,19 @@ The last option requires URL to OpenVINO Toolkit package that you can get after 
 Use this URL as an argument in the `make` command as shown in example below:
 
 ```bash
-make docker_build_bin http_proxy=$http_proxy https_proxy=$https_proxy dldt_package_url=<url-to-openvino-package-after-registration>/l_openvino_toolkit_p_2019.3.376.tgz
+make docker_build_bin dldt_package_url=<url-to-openvino-package-after-registration>/l_openvino_toolkit_p_2020.1.023_online.tgz
 ```
 or
 ```bash
-make docker_build_apt_ubuntu http_proxy=$http_proxy https_proxy=$https_proxy
+make docker_build_apt_ubuntu
 ```
 or
 ```bash
-make docker_build_clearlinux http_proxy=$http_proxy https_proxy=$https_proxy
+make docker_build_ov_base
+```
+or
+```bash
+make docker_build_clearlinux
 ```
 
 **Note:** You can use also publicly available docker image from [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/)
@@ -334,7 +338,7 @@ rules:
 To start server with NCS you can use command similar to:
 
 ```
-docker run --rm -it --net=host --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
+docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 

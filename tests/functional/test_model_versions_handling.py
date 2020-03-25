@@ -24,7 +24,7 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode  # noqa
+    ErrorCode
 
 
 class TestModelVersionHandling():

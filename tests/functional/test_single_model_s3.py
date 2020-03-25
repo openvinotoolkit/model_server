@@ -28,7 +28,7 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 
 class TestSingleModelInferenceS3():
 
-    def test_run_inference(self, start_server_single_model_from_s3,
+    def test_run_inference(self, start_server_single_model_from_minio,
                            create_grpc_channel):
         """
         <b>Description</b>
@@ -50,32 +50,35 @@ class TestSingleModelInferenceS3():
         """
 
         # Connect to grpc service
-        _, ports = start_server_single_model_from_s3
+        _, ports = start_server_single_model_from_minio
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
+        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
+        out_name = 'softmax_tensor'
         output = infer(imgs_v1_224, input_tensor='input', grpc_stub=stub,
                        model_spec_name='resnet',
                        model_spec_version=None,
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
-    def test_get_model_metadata(self, start_server_single_model_from_s3,
+    def test_get_model_metadata(self, start_server_single_model_from_minio,
                                 create_grpc_channel):
 
-        _, ports = start_server_single_model_from_s3
+        _, ports = start_server_single_model_from_minio
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
         model_name = 'resnet'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-        expected_input_metadata = {'input': {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
+        out_name = 'softmax_tensor'
+        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
+
+        expected_input_metadata = {in_tensor: {'dtype': 1,
+                                               'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1000]}}
+                                               'shape': [1, 1001]}}
         request = get_model_metadata(model_name='resnet')
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -85,10 +88,10 @@ class TestSingleModelInferenceS3():
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    def test_get_model_status(self, start_server_single_model_from_s3,
+    def test_get_model_status(self, start_server_single_model_from_minio,
                               create_grpc_channel):
 
-        _, ports = start_server_single_model_from_s3
+        _, ports = start_server_single_model_from_minio
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    MODEL_SERVICE)
         request = get_model_status(model_name='resnet')

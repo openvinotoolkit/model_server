@@ -27,7 +27,7 @@ from utils.rest import get_model_status_response_rest
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
+    _ERROR_MESSAGE
 
 
 class TestModelVerPolicy():
@@ -44,11 +44,11 @@ class TestModelVerPolicy():
 
         _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
+
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        print("Getting info about resnet model")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
             {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},

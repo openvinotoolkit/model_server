@@ -73,6 +73,9 @@ test_local_only: venv
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_batching.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_mapping.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_single_model.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_model_version_policy.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_model_versions_handling.py
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_model_versions_handling.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_update.py
 
 style: venv
@@ -95,6 +98,14 @@ docker_build_apt_ubuntu:
 	@echo docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 	@docker build -f Dockerfile --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 
+docker_build_ov_base:
+	@echo "Building docker image"
+	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
+	@echo Git commit: `git rev-parse HEAD` >> version
+	@echo OpenVINO version: 2020_R1 apt >> version
+	@echo docker build -f Dockerfile_openvino_base --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+	@docker build -f Dockerfile_openvino_base --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t ie-serving-py:latest .
+
 docker_build_bin:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
@@ -107,7 +118,7 @@ docker_build_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
+	@echo OpenVINO version: 2019_R3 clearlinux >> version
 	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 

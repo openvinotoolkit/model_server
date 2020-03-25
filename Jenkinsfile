@@ -32,13 +32,11 @@ pipeline {
                         sh './tests/scripts/functional-tests-apt-ubuntu.sh'
                     }
                 }
-                /*
-                stage('functional tests clearlinux') {
+                stage('functional tests openvino base') {
                     steps {
-                        sh './tests/scripts/functional-tests-clearlinux.sh'
+                        sh './tests/scripts/functional-tests-ov-base.sh'
                     }
                 }
-                */
             }
         }
     }
