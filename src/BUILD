@@ -24,7 +24,11 @@ cc_binary(
     ],
     deps = [
         "//tensorflow_serving/apis:prediction_service_cc_proto",
+        #"@org_tensorflow//third_party/eigen3",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_protobuf//:protobuf_lite",
+        #"//tensorflow_serving/apis:predict_cc_proto",
+        #"@org_tensorflow//tensorflow/core:protos_all_cc",
+        "@org_tensorflow//tensorflow/core:framework",
+        #"@org_tensorflow//tensorflow/core:lib",
     ],
 )

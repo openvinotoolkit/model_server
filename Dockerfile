@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zip \
         zlib1g-dev \
         python3-distutils \
+        gnupg2 \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -73,3 +74,10 @@ RUN git clone --branch=${TF_SERVING_VERSION_GIT_BRANCH} https://github.com/tenso
 COPY src/ tensorflow_serving/ovms/
 
 RUN bazel build //tensorflow_serving/ovms:server_cc
+
+# OpenVINO
+RUN curl -o GPG-PUB-KEY-INTEL-OPENVINO-2020 https://apt.repos.intel.com/openvino/2020/GPG-PUB-KEY-INTEL-OPENVINO-2020
+RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2020
+RUN echo "deb https://apt.repos.intel.com/openvino/2020/ all main" > /etc/apt/sources.list.d/intel-openvino-2020.list
+
+RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2020.1.023
