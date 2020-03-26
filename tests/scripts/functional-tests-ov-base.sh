@@ -2,8 +2,8 @@
 set -ex
 
 TEST_DIRS=tests
-DOCKER_OVMS_TAG="ie-serving-clearlinux:latest"
-export TESTS_SUFFIX="clearlinux"
+DOCKER_OVMS_TAG="ie-serving-ov-base:latest"
+export TESTS_SUFFIX="ov-base"
 
 make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_ov_base
 
