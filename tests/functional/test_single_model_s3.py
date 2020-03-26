@@ -57,7 +57,7 @@ class TestSingleModelInferenceS3():
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         out_name = 'softmax_tensor'
-        output = infer(imgs_v1_224, input_tensor='input', grpc_stub=stub,
+        output = infer(imgs_v1_224, input_tensor=in_tensor, grpc_stub=stub,
                        model_spec_name='resnet',
                        model_spec_version=None,
                        output_tensors=[out_name])

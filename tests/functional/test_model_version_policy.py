@@ -27,7 +27,7 @@ from utils.rest import get_model_status_response_rest
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE
+    _ERROR_MESSAGE # noqa
 
 
 class TestModelVerPolicy():

@@ -50,7 +50,7 @@ class TestSingleModelMappingInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.array(input_data_downloader_v1_224)
+        imgs_v1_224 = np.ones((1, 3, 62, 62))
 
         output = infer(imgs_v1_224, input_tensor='new_key', grpc_stub=stub,
                        model_spec_name='age_gender',

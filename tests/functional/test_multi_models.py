@@ -32,10 +32,13 @@ class TestMultiModelInference():
     def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_multi_model,
                            create_grpc_channel):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
 
@@ -95,10 +98,12 @@ class TestMultiModelInference():
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model,
                                 create_grpc_channel):
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         out_name = 'softmax_tensor'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         print("Getting info about resnet model")
@@ -136,9 +141,12 @@ class TestMultiModelInference():
     def test_get_model_status(self, resnet_multiple_batch_sizes,
                               start_server_multi_model,
                               create_grpc_channel):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         request = get_model_status(model_name='resnet', version=1)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
@@ -161,6 +169,8 @@ class TestMultiModelInference():
 
     def test_run_inference_rest(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         img = np.ones((1, 3, 224, 224))
@@ -169,8 +179,8 @@ class TestMultiModelInference():
         out_name = 'softmax_tensor'
 
         model_name = 'resnet'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
         output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='column_name')
@@ -179,8 +189,8 @@ class TestMultiModelInference():
 
         imgs = np.ones((4, 3, 224, 224))
         model_name = 'resnet_bs4'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
         output = infer_rest(imgs, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='row_noname')
@@ -189,8 +199,8 @@ class TestMultiModelInference():
 
         imgs = np.ones((8, 3, 224, 224))
         model_name = 'resnet_bs8'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
         output = infer_rest(imgs, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='row_noname')
@@ -198,8 +208,8 @@ class TestMultiModelInference():
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
 
         model_name = 'resnet_s3'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["grpc_port"], model_name)
         output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='row_name')
@@ -210,8 +220,8 @@ class TestMultiModelInference():
         out_name = 'resnet_v1_50/predictions/Reshape_1'
 
         model_name = 'resnet_gs'
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], model_name)
         output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='column_noname')
@@ -220,6 +230,8 @@ class TestMultiModelInference():
 
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_multi_model):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         print("Getting info about resnet model")
@@ -230,8 +242,8 @@ class TestMultiModelInference():
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1001]}}
-        rest_url = 'http://localhost:5561/v1/models/{}/metadata'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(
+            ports["rest_port"], model_name)
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -242,8 +254,8 @@ class TestMultiModelInference():
         assert expected_output_metadata == output_metadata
 
         model_name = 'resnet_bs4'
-        rest_url = 'http://localhost:5561/v1/models/{}/metadata'.format(
-            model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(
+            ports["rest_port"], model_name)
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -259,9 +271,12 @@ class TestMultiModelInference():
 
     def test_get_model_status_rest(self, resnet_multiple_batch_sizes,
                                    start_server_multi_model):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        rest_url = 'http://localhost:5561/v1/models/resnet'
+        rest_url = 'http://localhost:{}/v1/models/' \
+                   'resnet'.format(ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
@@ -271,7 +286,8 @@ class TestMultiModelInference():
         assert version_status.status.error_message == _ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-        rest_url = 'http://localhost:5561/v1/models/resnet_bs4/versions/1'
+        rest_url = 'http://localhost:{}/v1/models/' \
+                   'resnet_bs4/versions/1'.format(ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
