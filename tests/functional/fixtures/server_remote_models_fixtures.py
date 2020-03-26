@@ -143,7 +143,7 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     container = client.containers.run(image='minio/minio:latest', detach=True,
                                       name='minio.locals3.com',
                                       ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port},
+                                             9000},
                                       remove=True,
                                       environment=envs,
                                       command=command,
@@ -178,11 +178,10 @@ def get_minio_server_s3(request, get_image, get_test_dir, start_minio_server):
         os.environ["MINIO_ACCESS_KEY"] = MINIO_ACCESS_KEY
         os.environ["MINIO_SECRET_KEY"] = MINIO_SECRET_KEY
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
-
+    _, ports = start_minio_server
     s3 = boto3.resource('s3',
-                        endpoint_url='http://localhost:{}'.format(grpc_port),
+                        endpoint_url='http://localhost:{}'.format(
+                            ports["grpc_port"]),
                         aws_access_key_id=os.getenv('MINIO_ACCESS_KEY'),
                         aws_secret_access_key=os.getenv('MINIO_SECRET_KEY'),
                         config=Config(signature_version='s3v4'),
@@ -198,7 +197,7 @@ def get_minio_server_s3(request, get_image, get_test_dir, start_minio_server):
     s3.Bucket('inference').upload_file(input_xml,
                                        'resnet_v1_50/1/resnet_V1_50.xml')
 
-    return s3
+    return s3, ports
 
 
 @pytest.fixture(scope="class")

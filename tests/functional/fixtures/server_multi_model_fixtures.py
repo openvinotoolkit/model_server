@@ -36,12 +36,15 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
     client = get_docker_context
     network = get_docker_network
 
+    _, ports = start_minio_server
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     envs = ['MINIO_ACCESS_KEY' + AWS_ACCESS_KEY_ID,
             'MINIO_SECRET_KEY' + AWS_SECRET_ACCESS_KEY,
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION,
-            'S3_ENDPOINT=' + 'http://minio.locals3.com:9000',
+            'S3_ENDPOINT=' + 'http://minio.locals3.com:{}'.format(grpc_port),
             'https_proxy=' + os.getenv('https_proxy', ""),
             'no_proxy=minio.locals3.com']
 
