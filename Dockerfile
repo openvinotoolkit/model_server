@@ -81,3 +81,6 @@ RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2020
 RUN echo "deb https://apt.repos.intel.com/openvino/2020/ all main" > /etc/apt/sources.list.d/intel-openvino-2020.list
 
 RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2020.1.023
+
+ENTRYPOINT ./bazel-bin/tensorflow_serving/ovms/server_cc
+
