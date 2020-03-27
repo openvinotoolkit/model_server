@@ -38,7 +38,7 @@ parser.add_argument('--grpc_address',
                     help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',
                     required=False,
-                    default=9000,
+                    default=9178,
                     help='Specify port to grpc service. default: 9000')
 parser.add_argument('--input_name',
                     required=False,
