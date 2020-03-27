@@ -99,14 +99,16 @@ def get_docker_network(request, get_docker_context):
     existing = None
 
     try:
-        existing = client.networks.get("minio-network")
+        existing = client.networks.get("minio-network-{}".format(
+            get_tests_suffix()))
     except Exception as e:
         pass
 
     if existing is not None:
         existing.remove()
 
-    network = client.networks.create("minio-network")
+    network = client.networks.create("minio-network-{}".format(
+        get_tests_suffix()))
 
     request.addfinalizer(network.remove)
 
@@ -141,9 +143,10 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     ports = get_ports_for_fixture()
     grpc_port = ports["grpc_port"]
     container = client.containers.run(image='minio/minio:latest', detach=True,
-                                      name='minio.locals3.com',
+                                      name='minio.locals3-{}.com'.format(
+                                          get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
-                                             9000},
+                                             grpc_port},
                                       remove=True,
                                       environment=envs,
                                       command=command,
