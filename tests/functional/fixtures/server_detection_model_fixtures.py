@@ -16,7 +16,7 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
@@ -28,7 +28,10 @@ def start_server_face_detection_model_auto_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "00"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
@@ -62,7 +65,10 @@ def start_server_face_detection_model_named_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "01"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
@@ -98,8 +104,12 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "02"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \

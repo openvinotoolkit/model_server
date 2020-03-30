@@ -20,7 +20,7 @@ from distutils.dir_util import copy_tree
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
@@ -38,8 +38,12 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
 
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "18"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)

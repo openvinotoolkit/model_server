@@ -20,7 +20,7 @@ import boto3
 import pytest
 from utils.model_management import (wait_endpoint_setup, minio_condition)
 from botocore.client import Config
-from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
@@ -28,8 +28,11 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
+    ports_prefixes = get_ports_prefixes()
+    suffix = "08"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -69,8 +72,12 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
+    ports_prefixes = get_ports_prefixes()
+    suffix = "09"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path s3://inference-test-aipg/resnet_v1_50 " \
@@ -122,8 +129,12 @@ def start_minio_server(request, get_test_dir, get_docker_network,
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
+    ports_prefixes = get_ports_prefixes()
+    suffix = "10"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = 'server --address ":{}" /data'.format(grpc_port)
 
     client.images.pull('minio/minio:latest')
@@ -228,8 +239,12 @@ def start_server_single_model_from_minio(request, get_docker_network,
 
     client = get_docker_context
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
+    ports_prefixes = get_ports_prefixes()
+    suffix = "11"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path s3://inference/resnet_v1_50 " \

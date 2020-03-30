@@ -17,7 +17,7 @@
 import pytest
 import shutil
 from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="function")
@@ -31,8 +31,12 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
 
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "03"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/update-{} " \
               "--port {} --rest_port {} --grpc_workers 1 --nireq 1".\
@@ -67,7 +71,10 @@ def start_server_update_flow_specific(request, get_image, get_test_dir,
 
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    ports = get_ports_for_fixture()
+    ports_prefixes = get_ports_prefixes()
+    suffix = "04"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
 
     command = '/ie-serving-py/start_server.sh ie_serving model ' \

@@ -19,7 +19,7 @@ import shutil
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="session")
@@ -52,8 +52,13 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
 
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
-    ports = get_ports_for_fixture()
+
+    ports_prefixes = get_ports_prefixes()
+    suffix = "07"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port {} " \
               "--rest_port {} --grpc_workers 2 --rest_workers 2".\
