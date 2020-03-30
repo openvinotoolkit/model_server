@@ -116,13 +116,14 @@ def get_docker_network(request, get_docker_context):
 
 
 @pytest.fixture(scope="session")
-def start_minio_server(request, get_image, get_test_dir, get_docker_network,
+def start_minio_server(request, get_test_dir, get_docker_network,
                        get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
-    envs = []
-    command = "server /data"
+    ports = get_ports_for_fixture()
+    grpc_port = ports["grpc_port"]
+    command = 'server --address ":{}" /data'.format(grpc_port)
 
     client.images.pull('minio/minio:latest')
 
@@ -140,8 +141,6 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
     envs = ['MINIO_ACCESS_KEY=' + MINIO_ACCESS_KEY,
             'MINIO_SECRET_KEY=' + MINIO_SECRET_KEY]
 
-    ports = get_ports_for_fixture()
-    grpc_port = ports["grpc_port"]
     container = client.containers.run(image='minio/minio:latest', detach=True,
                                       name='minio.locals3-{}.com'.format(
                                           get_tests_suffix()),

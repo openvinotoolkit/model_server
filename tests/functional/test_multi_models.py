@@ -209,7 +209,7 @@ class TestMultiModelInference():
 
         model_name = 'resnet_s3'
         rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
-            ports["grpc_port"], model_name)
+            ports["rest_port"], model_name)
         output = infer_rest(img, input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
                             request_format='row_name')

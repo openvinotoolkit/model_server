@@ -321,11 +321,7 @@ class TestSingleModelInference():
 
         rest_url_latest = 'http://localhost:{}/v1/models/resnet/' \
                           'versions/1/metadata'.format(ports["rest_port"])
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
 
-        rest_url_latest = 'http://localhost:5563/v1/models/resnet/' \
-                          'versions/1/metadata'
         response = get_model_metadata_response_rest(rest_url_latest)
         input_metadata, output_metadata = model_metadata_response(
             response=response)

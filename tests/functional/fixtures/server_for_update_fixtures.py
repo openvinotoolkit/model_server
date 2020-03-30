@@ -24,8 +24,8 @@ from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 def start_server_update_flow_latest(request, get_image, get_test_dir,
                                     get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    update_test_dir = path_to_mount + '/update-{}'.format(get_tests_suffix)
+    path_to_mount = get_test_dir + '/saved_models'
+    update_test_dir = path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
     shutil.rmtree(update_test_dir, ignore_errors=True)
 
@@ -60,8 +60,8 @@ def start_server_update_flow_latest(request, get_image, get_test_dir,
 def start_server_update_flow_specific(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    update_test_dir = path_to_mount + '/update-{}'.format(get_tests_suffix())
+    path_to_mount = get_test_dir + '/saved_models'
+    update_test_dir = path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
     shutil.rmtree(update_test_dir, ignore_errors=True)
 
