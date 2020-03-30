@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server_context.h>
+#include <grpcpp/security/server_credentials.h>
 
 #include <algorithm>
 #include <chrono>
@@ -23,11 +27,6 @@
 #include <vector>
 #include <ctime>
 #include <iomanip>
-
-#include <grpcpp/server.h>
-#include <grpcpp/server_builder.h>
-#include <grpcpp/server_context.h>
-#include <grpcpp/security/server_credentials.h>
 
 #include <inference_engine.hpp>
 
@@ -43,7 +42,9 @@ using grpc::ServerContext;
 using grpc::Status;
 using grpc::ResourceQuota;
 
-using namespace tensorflow::serving;
+using tensorflow::serving::PredictRequest;
+using tensorflow::serving::PredictResponse;
+using tensorflow::serving::PredictionService;
 
 using namespace InferenceEngine;
 
@@ -52,7 +53,7 @@ using std::endl;
 
 std::vector<int> get_shape(tensorflow::TensorShape shape) {
     std::vector<int> dims;
-    for(const auto& dim : shape) {
+    for (const auto& dim : shape) {
         dims.push_back(dim.size);
     }
     return dims;
@@ -60,7 +61,7 @@ std::vector<int> get_shape(tensorflow::TensorShape shape) {
 
 void printShape(const tensorflow::TensorShape& shape) {
     cout << "Tensor_shape: (" << endl;
-    for(auto& i : get_shape(shape)) {
+    for (auto& i : get_shape(shape)) {
             cout << i << ", ";
     }
     cout << ")" << endl;
@@ -68,7 +69,7 @@ void printShape(const tensorflow::TensorShape& shape) {
 
 int getNumOfElements(const tensorflow::TensorProto& tensorProto) {
     tensorflow::TensorShape shape(tensorProto.tensor_shape());
-    //printShape(shape);
+    // printShape(shape);
     return shape.num_elements();
 }
 
@@ -76,8 +77,8 @@ template<typename T>
 void printTensor(std::vector<T> t) {
     unsigned int i = 0;
     cout << "Vector: ";
-    for(auto it=t.begin(); it!=t.end(); ++it, ++i) {
-        if(i>6 && i < t.size() - 10)
+    for (auto it=t.begin(); it != t.end(); ++it, ++i) {
+        if (i > 6 && i < t.size() - 10)
              continue;
         cout << *it << " ";
     }
@@ -88,8 +89,8 @@ template<typename T>
 void printTensor(T ptr, unsigned int N) {
     unsigned int i = 0;
     cout << "Vector: ";
-    for(;i<N;++i) {
-        if(i>6 && i < N - 4)
+    for (; i < N; ++i) {
+        if (i > 6 && i < N - 4)
              continue;
         cout << *(ptr+i) << " ";
     }
@@ -98,16 +99,18 @@ void printTensor(T ptr, unsigned int N) {
 
 #define CASE(TYPE) \
     case tensorflow::DataTypeToEnum<TYPE>::value: {\
-        const TYPE* proto_tensor_content = reinterpret_cast<const TYPE*>(tensor.tensor_content().data()); \
-        std::vector<TYPE> t(proto_tensor_content, proto_tensor_content + num_of_elements); \
+        const TYPE* proto_tensor_content = reinterpret_cast<const TYPE*>( \
+            tensor.tensor_content().data()); \
+        std::vector<TYPE> t(proto_tensor_content, \
+            proto_tensor_content + num_of_elements); \
         printTensor(t); \
     }
 
 void deserializePredict(const PredictRequest * const request) {
-    for(auto& inputs : request->inputs()) {
+    for (auto& inputs : request->inputs()) {
         auto& tensor = inputs.second;
         auto num_of_elements = getNumOfElements(tensor);
-        switch(tensor.dtype()) {
+        switch (tensor.dtype()) {
             CASE(int)
             CASE(float)
             CASE(double)
@@ -117,50 +120,57 @@ void deserializePredict(const PredictRequest * const request) {
     }
 }
 
-//alternative deserialize
+// alternative deserialize
 class TensorBuffer {
-public:
-    TensorBuffer(const int& dataType, const int& numberOfElements, const void* content) : dataType_(dataType), numberOfElements_(numberOfElements), content_(content) {}
+ public:
+    TensorBuffer(const int& dataType,
+                 const int& numberOfElements,
+                 const void* content) :
+        dataType_(dataType),
+        numberOfElements_(numberOfElements),
+        content_(content) {}
     const void * const getContent() { return content_;}
     int getNumberOfElements() { return numberOfElements_;}
 
-private:
+ private:
     const int dataType_;
     const int numberOfElements_;
     const void* content_;
 };
 
 auto deserializePredict2(const PredictRequest * const request) {
-    for(auto& inputs : request->inputs()) {
+    for (auto& inputs : request->inputs()) {
         auto& tensor = inputs.second;
         auto dataType = tensor.dtype();
         auto numOfElements = getNumOfElements(tensor);
         auto proto_tensor_content = tensor.tensor_content().data();
-        auto tensorBuffer = TensorBuffer(tensor.dtype(), numOfElements, proto_tensor_content);
-        printTensor(reinterpret_cast<const float*>(tensorBuffer.getContent()), tensorBuffer.getNumberOfElements());
+        auto tensorBuffer = TensorBuffer(dataType,
+                numOfElements,
+                proto_tensor_content);
+        printTensor(
+                reinterpret_cast<const float*>(tensorBuffer.getContent()),
+                tensorBuffer.getNumberOfElements());
         return tensorBuffer;
     }
 }
 
-std::string timeStamp()
-{
+std::string timeStamp() {
     using std::chrono::system_clock;
     auto currentTime = std::chrono::system_clock::now();
     char buffer[80];
-
     auto transformed = currentTime.time_since_epoch().count() / 1000000;
-
     auto millis = transformed % 1000;
-
     std::time_t tt;
-    tt = system_clock::to_time_t ( currentTime );
-    auto timeinfo = localtime (&tt);
-    strftime (buffer,80,"%F %H:%M:%S",timeinfo);
-    sprintf(buffer, "%s:%03d",buffer,(int)millis);
+
+    tt = system_clock::to_time_t(currentTime);
+    auto timeinfo = localtime(&tt);
+    strftime(buffer, 80, "%F %H:%M:%S", timeinfo);
+    sprintf(buffer, "%s:%03d", buffer, static_cast<int>(millis));
 
     return std::string(buffer);
 }
 
+<<<<<<< HEAD
 class OV
 {
 public:
@@ -195,6 +205,15 @@ class PredictionServiceImpl final : public PredictionService::Service
     {
         std::cout << timeStamp() << " Received Predict() request\n";
         std::vector<float> tensor = deserializePredict(request);
+=======
+class PredictionServiceImpl final : public PredictionService::Service {
+    Status Predict(
+                ServerContext*      context,
+        const   PredictRequest*     request,
+                PredictResponse*    response) {
+        std::cout << timeStamp() << " Received Predict() request" << std::endl;
+        deserializePredict(request);
+>>>>>>> Fix most of the cpplint errors.
         deserializePredict2(request);
 
         InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
@@ -217,9 +236,15 @@ class PredictionServiceImpl final : public PredictionService::Service
     }
 };
 
+<<<<<<< HEAD
 int main()
 {
     std::cout << "Initializing gRPC\n";
+=======
+
+int main() {
+    std::cout << "Initializing\n";
+>>>>>>> Fix most of the cpplint errors.
 
     PredictionServiceImpl service;
     ServerBuilder builder;
@@ -228,8 +253,7 @@ int main()
 
     const int SERVER_COUNT = 24;
     std::vector<std::unique_ptr<Server>> servers;
-    for (int i = 0; i < SERVER_COUNT; i++)
-    {
+    for (int i = 0; i < SERVER_COUNT; i++) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
 
