@@ -38,7 +38,8 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
 
     _, ports = start_minio_server
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
-    minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(get_tests_suffix(), grpc_port)
+    minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(
+        get_tests_suffix(), grpc_port)
 
     envs = ['MINIO_ACCESS_KEY' + AWS_ACCESS_KEY_ID,
             'MINIO_SECRET_KEY' + AWS_SECRET_ACCESS_KEY,
