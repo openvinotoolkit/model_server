@@ -30,4 +30,3 @@ def get_ports_for_fixture():
 
 def get_tests_suffix():
     return os.environ.get("TESTS_SUFFIX", "default")
-
