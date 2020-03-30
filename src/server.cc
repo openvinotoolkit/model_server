@@ -35,6 +35,7 @@
 
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_shape.h"
+#include "tensorflow/core/framework/types.pb.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -58,11 +59,11 @@ std::vector<int> get_shape(tensorflow::TensorShape shape) {
 }
 
 void printShape(const tensorflow::TensorShape& shape) {
-    auto a=get_shape(shape);
-    cout << "Tensor_shape" << endl;
-    for(auto& i : a) {
-            cout << i << endl;
+    cout << "Tensor_shape: (" << endl;
+    for(auto& i : get_shape(shape)) {
+            cout << i << ", ";
     }
+    cout << ")" << endl;
 }
 
 int getNumOfElements(const tensorflow::TensorProto& tensorProto) {
@@ -71,7 +72,8 @@ int getNumOfElements(const tensorflow::TensorProto& tensorProto) {
     return shape.num_elements();
 }
 
-void printTensor(std::vector<float> t) {
+template<typename T>
+void printTensor(std::vector<T> t) {
     unsigned int i = 0;
     cout << "Vector: ";
     for(auto it=t.begin(); it!=t.end(); ++it, ++i) {
@@ -82,17 +84,61 @@ void printTensor(std::vector<float> t) {
     cout << endl;
 }
 
-auto deserializePredict(const PredictRequest * const request) {
+template<typename T>
+void printTensor(T ptr, unsigned int N) {
+    unsigned int i = 0;
+    cout << "Vector: ";
+    for(;i<N;++i) {
+        if(i>6 && i < N - 4)
+             continue;
+        cout << *(ptr+i) << " ";
+    }
+    cout << endl;
+}
+
+#define CASE(TYPE) \
+    case tensorflow::DataTypeToEnum<TYPE>::value: {\
+        const TYPE* proto_tensor_content = reinterpret_cast<const TYPE*>(tensor.tensor_content().data()); \
+        std::vector<TYPE> t(proto_tensor_content, proto_tensor_content + num_of_elements); \
+        printTensor(t); \
+    }
+
+void deserializePredict(const PredictRequest * const request) {
     for(auto& inputs : request->inputs()) {
         auto& tensor = inputs.second;
-        //auto data_type = tensor.dtype();
-        //cout << data_type << endl;
         auto num_of_elements = getNumOfElements(tensor);
-        const float* proto_tensor_content = reinterpret_cast<const float*>(tensor.tensor_content().data());
-        std::vector<float> t(proto_tensor_content, proto_tensor_content + num_of_elements);
-        //printTensor(t);
-        //cout << "Ended processing" << endl;
-        return t;
+        switch(tensor.dtype()) {
+            CASE(int)
+            CASE(float)
+            CASE(double)
+            default:
+                return;
+        }
+    }
+}
+
+//alternative deserialize
+class TensorBuffer {
+public:
+    TensorBuffer(const int& dataType, const int& numberOfElements, const void* content) : dataType_(dataType), numberOfElements_(numberOfElements), content_(content) {}
+    const void * const getContent() { return content_;}
+    int getNumberOfElements() { return numberOfElements_;}
+
+private:
+    const int dataType_;
+    const int numberOfElements_;
+    const void* content_;
+};
+
+auto deserializePredict2(const PredictRequest * const request) {
+    for(auto& inputs : request->inputs()) {
+        auto& tensor = inputs.second;
+        auto dataType = tensor.dtype();
+        auto numOfElements = getNumOfElements(tensor);
+        auto proto_tensor_content = tensor.tensor_content().data();
+        auto tensorBuffer = TensorBuffer(tensor.dtype(), numOfElements, proto_tensor_content);
+        printTensor(reinterpret_cast<const float*>(tensorBuffer.getContent()), tensorBuffer.getNumberOfElements());
+        return tensorBuffer;
     }
 }
 
@@ -147,7 +193,9 @@ class PredictionServiceImpl final : public PredictionService::Service
         const   PredictRequest*     request,
                 PredictResponse*    response)
     {
+        std::cout << timeStamp() << " Received Predict() request\n";
         std::vector<float> tensor = deserializePredict(request);
+        deserializePredict2(request);
 
         InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
 
@@ -165,8 +213,6 @@ class PredictionServiceImpl final : public PredictionService::Service
         //     std::cout << (double) buffer[i] << " ";
         // std::cout << std::endl;
 
-        std::cout << timeStamp() << " Received Predict() request\n";
-
         return Status::OK;
     }
 };
@@ -176,13 +222,11 @@ int main()
     std::cout << "Initializing gRPC\n";
 
     PredictionServiceImpl service;
-
     ServerBuilder builder;
-    builder.AddListeningPort("0.0.0.0:9178", grpc::InsecureServerCredentials());
+    builder.AddListeningPort("0.0.0.0:9000", grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
     const int SERVER_COUNT = 24;
-
     std::vector<std::unique_ptr<Server>> servers;
     for (int i = 0; i < SERVER_COUNT; i++)
     {
