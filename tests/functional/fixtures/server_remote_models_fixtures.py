@@ -106,7 +106,6 @@ def start_minio_server(request, get_image, get_test_dir, get_docker_network,
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
-    envs = []
     command = "server /data"
 
     client.images.pull('minio/minio:latest')

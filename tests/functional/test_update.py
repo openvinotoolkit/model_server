@@ -603,6 +603,7 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3, 4
 
+        time.sleep(3)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
         time.sleep(3)
         rest_url = 'http://localhost:5563/v1/models/resnet/versions/1/metadata'
