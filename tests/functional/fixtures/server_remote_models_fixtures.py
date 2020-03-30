@@ -214,17 +214,22 @@ def start_server_single_model_from_minio(request, get_docker_network,
     AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
 
-    ports = get_ports_for_fixture()
+    _, ports = get_minio_server_s3
     grpc_port = ports["grpc_port"]
+    minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(
+        get_tests_suffix(), grpc_port)
 
     envs = ['MINIO_ACCESS_KEY' + AWS_ACCESS_KEY_ID,
             'MINIO_SECRET_KEY' + AWS_SECRET_ACCESS_KEY,
             'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION,
-            'S3_ENDPOINT=' + 'http://minio.locals3.com:{}'.format(grpc_port)]
+            'S3_ENDPOINT=' + minio_endpoint]
 
     client = get_docker_context
+
+    ports = get_ports_for_fixture()
+    grpc_port = ports["grpc_port"]
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
               "--model_path s3://inference/resnet_v1_50 " \
