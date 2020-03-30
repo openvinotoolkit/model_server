@@ -121,6 +121,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
+    
     ports = get_ports_for_fixture()
     grpc_port = ports["grpc_port"]
     command = 'server --address ":{}" /data'.format(grpc_port)
