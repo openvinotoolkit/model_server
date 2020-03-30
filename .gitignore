@@ -1,6 +1,7 @@
 /logs/*
 .idea
 .venv
+.vs
 *~
 *.pyc
 *.pyo
