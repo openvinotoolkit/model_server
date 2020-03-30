@@ -32,7 +32,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
     suffix = "08"
     ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
              "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port = ports["grpc_port"]
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -76,7 +76,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
     suffix = "09"
     ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
              "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port = ports["grpc_port"]
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -133,7 +133,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
     suffix = "10"
     ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
              "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port = ports["grpc_port"]
 
     command = 'server --address ":{}" /data'.format(grpc_port)
 
@@ -243,7 +243,7 @@ def start_server_single_model_from_minio(request, get_docker_network,
     suffix = "11"
     ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
              "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port = ports["grpc_port"]
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
