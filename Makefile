@@ -53,7 +53,7 @@ test_perf: venv
 	@docker rm --force server-test || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test -v /tmp/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest ; sleep 5
+	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest ; sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --iteration 1000 --batchsize 1 --report_every 100
 	@echo "Removing test container"

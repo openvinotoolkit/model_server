@@ -22,11 +22,14 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <iomanip>
 
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 #include <grpcpp/security/server_credentials.h>
+
+#include <inference_engine.hpp>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
@@ -40,6 +43,8 @@ using grpc::Status;
 using grpc::ResourceQuota;
 
 using namespace tensorflow::serving;
+
+using namespace InferenceEngine;
 
 using std::cout;
 using std::endl;
@@ -85,7 +90,7 @@ auto deserializePredict(const PredictRequest * const request) {
         auto num_of_elements = getNumOfElements(tensor);
         const float* proto_tensor_content = reinterpret_cast<const float*>(tensor.tensor_content().data());
         std::vector<float> t(proto_tensor_content, proto_tensor_content + num_of_elements);
-        printTensor(t);
+        //printTensor(t);
         //cout << "Ended processing" << endl;
         return t;
     }
@@ -110,6 +115,31 @@ std::string timeStamp()
     return std::string(buffer);
 }
 
+class OV
+{
+public:
+    Core m_core;
+    CNNNetwork m_network;
+    ExecutableNetwork m_exec_network;
+
+    std::string m_input_name;
+    std::string m_output_name;
+
+    OV(std::string path) : 
+        m_core(), 
+        m_network(m_core.ReadNetwork(path)),
+        m_exec_network(m_core.LoadNetwork(m_network, "CPU"))
+    {
+        m_network.setBatchSize(1);
+        m_network.getInputsInfo().begin()->second->setPrecision(Precision::FP32);
+        m_network.getOutputsInfo().begin()->second->setPrecision(Precision::FP32);
+        m_input_name = m_network.getInputsInfo().begin()->first;
+        m_output_name = m_network.getOutputsInfo().begin()->first;
+    }
+};
+
+OV ov("/models/resnet50/1/resnet_50_i8.xml");
+
 class PredictionServiceImpl final : public PredictionService::Service
 {
     Status Predict(
@@ -117,16 +147,33 @@ class PredictionServiceImpl final : public PredictionService::Service
         const   PredictRequest*     request,
                 PredictResponse*    response)
     {
-        std::cout << timeStamp() << " Received Predict() request" << std::endl;
-        auto tensor = deserializePredict(request);
+        std::vector<float> tensor = deserializePredict(request);
+
+        InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
+
+        TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NHWC);
+        Blob::Ptr blob = make_shared_blob<float>(tensorDesc, tensor.data());
+
+        infer_request.SetBlob(ov.m_input_name, blob);
+        infer_request.Infer();
+
+        Blob::Ptr output = infer_request.GetBlob(ov.m_output_name);
+        const float* buffer = (const float*)output->buffer();
+
+        // std::cout << "Infer output:\n" << std::setprecision(2) << std::fixed;;
+        // for (int i = 0; i < 1000; i++)
+        //     std::cout << (double) buffer[i] << " ";
+        // std::cout << std::endl;
+
+        std::cout << timeStamp() << " Received Predict() request\n";
+
         return Status::OK;
     }
 };
 
-
 int main()
 {
-    std::cout << "Initializing\n";
+    std::cout << "Initializing gRPC\n";
 
     PredictionServiceImpl service;
 
