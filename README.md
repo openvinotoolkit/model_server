@@ -1,4 +1,3 @@
-
 # Minimal gRPC serving with TFS API
 How to run:
 

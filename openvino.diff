@@ -1,0 +1,23 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e48cee5..c1256fe 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -12,6 +12,8 @@ endif()
+ 
+ project(OpenVINO)
+ 
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
++
+ set(OpenVINO_MAIN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+ set(CMAKE_MODULE_PATH "${OpenVINO_MAIN_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+ 
+diff --git a/inference-engine/samples/CMakeLists.txt b/inference-engine/samples/CMakeLists.txt
+index f355e7b..ea4aba5 100644
+--- a/inference-engine/samples/CMakeLists.txt
++++ b/inference-engine/samples/CMakeLists.txt
+@@ -211,4 +211,4 @@ file(GLOB samples_dirs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
+ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
+     list(REMOVE_ITEM samples_dirs common thirdparty)
+ endif()
+-add_samples_to_build(${samples_dirs})
++# add_samples_to_build(${samples_dirs})
