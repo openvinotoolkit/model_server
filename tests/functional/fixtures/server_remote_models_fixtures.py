@@ -251,7 +251,8 @@ def start_server_single_model_from_minio(request, get_docker_network,
               "--port {}".format(grpc_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single-minio',
+                                      name='test-single-minio-{}'.format(
+                                          get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port},
                                       remove=True,
