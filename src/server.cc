@@ -248,7 +248,7 @@ int main() {
 
     PredictionServiceImpl service;
     ServerBuilder builder;
-    builder.AddListeningPort("0.0.0.0:9000", grpc::InsecureServerCredentials());
+    builder.AddListeningPort("0.0.0.0:9178", grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
     const int SERVER_COUNT = 24;
