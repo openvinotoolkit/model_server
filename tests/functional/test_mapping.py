@@ -43,10 +43,12 @@ class TestSingleModelMappingInference():
 
         """
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones((1, 3, 62, 62))
 
@@ -63,9 +65,11 @@ class TestSingleModelMappingInference():
                                 create_grpc_channel,
                                 start_server_with_mapping):
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
-        stub = create_grpc_channel('localhost:9002', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'age_gender'
         expected_input_metadata = {'new_key': {'dtype': 1,
@@ -106,10 +110,12 @@ class TestSingleModelMappingInference():
 
         """
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
         imgs_v1_224 = np.ones((1, 3, 62, 62))
-        rest_url = 'http://localhost:5556/v1/models/age_gender:predict'
+        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
+                   ports["rest_port"])
         output = infer_rest(imgs_v1_224, input_tensor='new_key',
                             rest_url=rest_url,
                             output_tensors=['age', 'gender'],
@@ -123,6 +129,7 @@ class TestSingleModelMappingInference():
     def test_get_model_metadata_rest(self, age_gender_model_downloader,
                                      start_server_with_mapping):
 
+        _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
         model_name = 'age_gender'
@@ -132,7 +139,8 @@ class TestSingleModelMappingInference():
                                             'shape': [1, 1, 1, 1]},
                                     'gender': {'dtype': 1,
                                                'shape': [1, 2, 1, 1]}}
-        rest_url = 'http://localhost:5556/v1/models/age_gender/metadata'
+        rest_url = 'http://localhost:{}/v1/models/age_gender/metadata'.format(
+                   ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(

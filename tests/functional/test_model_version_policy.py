@@ -27,7 +27,7 @@ from utils.rest import get_model_status_response_rest
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
+    _ERROR_MESSAGE # noqa
 
 
 class TestModelVerPolicy():
@@ -41,9 +41,14 @@ class TestModelVerPolicy():
                                 start_server_model_ver_policy,
                                 create_grpc_channel,
                                 model_name, throw_error):
+
+        _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
+
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9006', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
+
         versions = [1, 2, 3]
         expected_outputs_metadata = [
             {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
@@ -85,10 +90,12 @@ class TestModelVerPolicy():
                               create_grpc_channel,
                               model_name, throw_error):
 
+        _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9006', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
@@ -149,6 +156,8 @@ class TestModelVerPolicy():
         - both served models handles appropriate input formats
 
         """
+
+        _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
 
         print("Getting info about model")
@@ -167,8 +176,9 @@ class TestModelVerPolicy():
                 versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
-            rest_url = 'http://localhost:5560/v1/models/{}/' \
-                       'versions/{}/metadata'.format(model_name, versions[x])
+            rest_url = 'http://localhost:{}/v1/models/{}/' \
+                       'versions/{}/metadata'.format(ports["rest_port"],
+                                                     model_name, versions[x])
             result = requests.get(rest_url)
             print(result.text)
             if not throw_error[x]:
@@ -196,12 +206,14 @@ class TestModelVerPolicy():
                                    start_server_model_ver_policy,
                                    model_name, throw_error):
 
+        _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
-            rest_url = 'http://localhost:5560/v1/models/{}/' \
-                       'versions/{}'.format(model_name, versions[x])
+            rest_url = 'http://localhost:{}/v1/models/{}/' \
+                       'versions/{}'.format(ports["rest_port"], model_name,
+                                            versions[x])
             result = requests.get(rest_url)
             if not throw_error[x]:
                 output_json = result.text
@@ -220,7 +232,8 @@ class TestModelVerPolicy():
 
                 #   aggregated results check
         if model_name == 'all':
-            rest_url = 'http://localhost:5560/v1/models/all'
+            rest_url = 'http://localhost:{}/v1/models/all'.format(
+                        ports["rest_port"])
             response = get_model_status_response_rest(rest_url)
             versions_statuses = response.model_version_status
             assert len(versions_statuses) == 3

@@ -20,6 +20,7 @@ from distutils.dir_util import copy_tree
 
 import pytest
 from utils.model_management import wait_endpoint_setup
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
@@ -36,14 +37,24 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     client = get_docker_context
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
+
+    ports_prefixes = get_ports_prefixes()
+    suffix = "18"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \
-              "--port 9006 --rest_port 5560"
+              "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-policy',
-                                      ports={'9006/tcp': 9006,
-                                             '5560/tcp': 5560},
+                                      name='ie-serving-py-test-policy-{}'.
+                                      format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -51,7 +62,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(autouse=True, scope="session")

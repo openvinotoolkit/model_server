@@ -50,10 +50,12 @@ class TestSingleModelInference():
 
         """
 
+        _, ports = start_server_single_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
@@ -68,9 +70,11 @@ class TestSingleModelInference():
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_single_model,
                                 create_grpc_channel):
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:9003', PREDICTION_SERVICE)
+        _, ports = start_server_single_model
+        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
@@ -91,9 +95,12 @@ class TestSingleModelInference():
     def test_get_model_status(self, resnet_multiple_batch_sizes,
                               start_server_single_model,
                               create_grpc_channel):
+
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:9003', MODEL_SERVICE)
+        _, ports = start_server_single_model
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         request = get_model_status(model_name='resnet')
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
@@ -129,10 +136,12 @@ class TestSingleModelInference():
 
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
+        _, ports = start_server_single_model
         imgs_v1_224 = np.ones((1, 3, 224, 224))
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
-        rest_url = 'http://localhost:5555/v1/models/resnet:predict'
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
+                    ports["rest_port"])
         output = infer_rest(imgs_v1_224, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=[out_name],
@@ -144,6 +153,7 @@ class TestSingleModelInference():
                                      start_server_single_model):
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
+        _, ports = start_server_single_model
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -151,7 +161,8 @@ class TestSingleModelInference():
                                              'shape': [1, 3, 224, 224]}}
         expected_output_metadata = {out_name: {'dtype': 1,
                                                'shape': [1, 1001]}}
-        rest_url = 'http://localhost:5555/v1/models/resnet/metadata'
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
+                    ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -164,7 +175,9 @@ class TestSingleModelInference():
                                    start_server_single_model):
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        rest_url = 'http://localhost:5555/v1/models/resnet'
+        _, ports = start_server_single_model
+        rest_url = 'http://localhost:{}/v1/models/resnet'.format(
+                    ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

@@ -24,7 +24,7 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
 
 sys.path.append(".")
 from ie_serving.models.models_utils import ModelVersionState, _ERROR_MESSAGE, \
-    ErrorCode  # noqa
+    ErrorCode # noqa
 
 
 class TestModelVersionHandling():
@@ -33,10 +33,13 @@ class TestModelVersionHandling():
     def test_run_inference(self, download_two_model_versions,
                            start_server_multi_model,
                            create_grpc_channel):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
 
         face_img = np.ones((1, 3, 300, 300))
         pvb_img = np.ones((1, 3, 1024, 1024))
@@ -64,10 +67,12 @@ class TestModelVersionHandling():
                                 start_server_multi_model,
                                 create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
         versions = [None, 1]
 
         expected_inputs_metadata = \
@@ -99,10 +104,12 @@ class TestModelVersionHandling():
                               start_server_multi_model,
                               create_grpc_channel):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:9001', MODEL_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   MODEL_SERVICE)
         versions = [None, 1]
         for x in range(len(versions)):
             request = get_model_status(model_name=self.model_name,
@@ -122,6 +129,8 @@ class TestModelVersionHandling():
 
     def test_run_inference_rest(self, download_two_model_versions,
                                 start_server_multi_model):
+
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         face_img = np.ones((1, 3, 300, 300))
@@ -129,8 +138,9 @@ class TestModelVersionHandling():
         out_name = "detection_out"
 
         in_name = "data"
-        rest_url = 'http://localhost:5561/v1/models/{}' \
-                   '/versions/1:predict'.format(self.model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}' \
+                   '/versions/1:predict'.format(ports["rest_port"],
+                                                self.model_name)
         output = infer_rest(face_img,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
@@ -139,8 +149,8 @@ class TestModelVersionHandling():
         assert output[out_name].shape == (1, 1, 200, 7), \
             '{} with version 1 has invalid output'.format(self.model_name)
 
-        rest_url = 'http://localhost:5561/v1/models/{}:predict'.format(
-            self.model_name)
+        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
+            ports["rest_port"], self.model_name)
         output = infer_rest(pvb_img,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=[out_name],
@@ -154,12 +164,14 @@ class TestModelVersionHandling():
     def test_get_model_metadata_rest(self, download_two_model_versions,
                                      start_server_multi_model):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:5561/v1/models/{}'
-                '/metadata'.format(self.model_name),
-                'http://localhost:5561/v1/models/{}'
-                '/versions/1/metadata'.format(self.model_name)]
+        urls = ['http://localhost:{}/v1/models/{}'
+                '/metadata'.format(ports["rest_port"], self.model_name),
+                'http://localhost:{}/v1/models/{}'
+                '/versions/1/metadata'.format(ports["rest_port"],
+                                              self.model_name)]
 
         expected_inputs_metadata = \
             [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
@@ -187,11 +199,13 @@ class TestModelVersionHandling():
     def test_get_model_status_rest(self, download_two_model_versions,
                                    start_server_multi_model):
 
+        _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:5561/v1/models/{}'.format(self.model_name),
-                'http://localhost:5561/v1/models/{}'
-                '/versions/1'.format(self.model_name)]
+        urls = ['http://localhost:{}/v1/models/{}'.format(ports["rest_port"],
+                                                          self.model_name),
+                'http://localhost:{}/v1/models/{}'
+                '/versions/1'.format(ports["rest_port"], self.model_name)]
 
         for x in range(len(urls)):
             response = get_model_status_response_rest(urls[x])

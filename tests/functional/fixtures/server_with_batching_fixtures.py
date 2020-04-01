@@ -16,6 +16,7 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
+from utils.parametrization import get_ports_prefixes, get_tests_suffix
 
 
 @pytest.fixture(scope="class")
@@ -25,14 +26,24 @@ def start_server_batch_model(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+
+    ports_prefixes = get_ports_prefixes()
+    suffix = "12"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9003 --rest_port 5557"
+              "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch',
-                                      ports={'9003/tcp': 9003,
-                                             '5557/tcp': 5557},
+                                      name='ie-serving-py-test-batch-{}'.
+                                      format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -40,7 +51,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -50,15 +61,24 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+    ports_prefixes = get_ports_prefixes()
+    suffix = "13"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port 9006 --rest_port 5560"
+              "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch-2out',
-                                      ports={'9006/tcp': 9006,
-                                             '5560/tcp': 5560},
+                                      name='ie-serving-py-test-batch-2out-{}'.
+                                      format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -66,7 +86,7 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -76,14 +96,24 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+    ports_prefixes = get_ports_prefixes()
+    suffix = "14"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9005 --batch_size auto --rest_port 5559"
+              "--port {} --batch_size auto --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-autobatch',
-                                      ports={'9005/tcp': 9005,
-                                             '5559/tcp': 5559},
+                                      name='ie-serving-py-test-autobatch-{}'.
+                                      format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -91,7 +121,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -101,15 +131,25 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+    ports_prefixes = get_ports_prefixes()
+    suffix = "15"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port 9007 --batch_size auto --rest_port 5561"
+              "--port {} --batch_size auto --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-autobatch-2out',
-                                      ports={'9007/tcp': 9007,
-                                             '5561/tcp': 5561},
+                                      name='ie-serving-py-test-autobatch-'
+                                      '2out-{}'.format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -117,7 +157,7 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -127,14 +167,24 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+    ports_prefixes = get_ports_prefixes()
+    suffix = "16"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port 9004 --batch_size 4 --rest_port 5558"
+              "--model_name resnet " \
+              "--model_path /opt/ml/resnet_V1_50_batch8 --port {} " \
+              "--batch_size 4 --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch4',
-                                      ports={'9004/tcp': 9004,
-                                             '5558/tcp': 5558},
+                                      name='ie-serving-py-test-batch4-{}'.
+                                      format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -142,25 +192,36 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
-                                           get_docker_context):
+def start_server_batch_model_auto_bs4_2out(request, get_image,
+                                           get_test_dir, get_docker_context):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
+
+    ports_prefixes = get_ports_prefixes()
+    suffix = "17"
+    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
+             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
+    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port 9008 --batch_size 4 --rest_port 5562"
+              "--port {} --batch_size 4 --rest_port {}".\
+              format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch4-2out',
-                                      ports={'9008/tcp': 9008,
-                                             '5562/tcp': 5562},
+                                      name='ie-serving-py-test-batch4-'
+                                      '2out-{}'.format(get_tests_suffix()),
+                                      ports={'{}/tcp'.format(grpc_port):
+                                             grpc_port,
+                                             '{}/tcp'.format(rest_port):
+                                             rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
     request.addfinalizer(container.kill)
@@ -168,4 +229,4 @@ def start_server_batch_model_auto_bs4_2out(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container
+    return container, ports
