@@ -19,7 +19,7 @@
 #include <grpcpp/security/server_credentials.h>
 
 #include <algorithm>
-#include <chrono>
+#include <chrono> // NOLINT(build/c++11)
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -123,19 +123,20 @@ void deserializePredict(const PredictRequest * const request) {
 // alternative deserialize
 class TensorBuffer {
  public:
-    TensorBuffer(const int& dataType,
+    TensorBuffer(tensorflow::DataType& dataType,
                  const int& numberOfElements,
                  const void* content) :
         dataType_(dataType),
         numberOfElements_(numberOfElements),
-        content_(content) {}
-    const void * const getContent() { return content_;}
+        data_(content) {}
+    const void * const data() { return data_;}
     int getNumberOfElements() { return numberOfElements_;}
+    tensorflow::DataType getDataType() { return dataType_;}
 
  private:
-    const int dataType_;
+    const tensorflow::DataType dataType_;
     const int numberOfElements_;
-    const void* content_;
+    const void* data_;
 };
 
 auto deserializePredict2(const PredictRequest * const request) {
@@ -147,9 +148,9 @@ auto deserializePredict2(const PredictRequest * const request) {
         auto tensorBuffer = TensorBuffer(dataType,
                 numOfElements,
                 proto_tensor_content);
-        printTensor(
-                reinterpret_cast<const float*>(tensorBuffer.getContent()),
-                tensorBuffer.getNumberOfElements());
+        /*printTensor(
+                reinterpret_cast<const float*>(tensorBuffer.data()),
+                tensorBuffer.getNumberOfElements());*/
         return tensorBuffer;
     }
 }
@@ -170,10 +171,8 @@ std::string timeStamp() {
     return std::string(buffer);
 }
 
-<<<<<<< HEAD
-class OV
-{
-public:
+class OV {
+ public:
     Core m_core;
     CNNNetwork m_network;
     ExecutableNetwork m_exec_network;
@@ -181,8 +180,8 @@ public:
     std::string m_input_name;
     std::string m_output_name;
 
-    OV(std::string path) : 
-        m_core(), 
+    explicit OV(std::string path) :
+        m_core(),
         m_network(m_core.ReadNetwork(path)),
         m_exec_network(m_core.LoadNetwork(m_network, "CPU"))
     {
@@ -196,55 +195,54 @@ public:
 
 OV ov("/models/resnet50/1/resnet_50_i8.xml");
 
-class PredictionServiceImpl final : public PredictionService::Service
-{
-    Status Predict(
-                ServerContext*      context,
-        const   PredictRequest*     request,
-                PredictResponse*    response)
-    {
-        std::cout << timeStamp() << " Received Predict() request\n";
-        std::vector<float> tensor = deserializePredict(request);
-=======
 class PredictionServiceImpl final : public PredictionService::Service {
     Status Predict(
                 ServerContext*      context,
         const   PredictRequest*     request,
                 PredictResponse*    response) {
-        std::cout << timeStamp() << " Received Predict() request" << std::endl;
-        deserializePredict(request);
->>>>>>> Fix most of the cpplint errors.
-        deserializePredict2(request);
+        // std::cout << timeStamp() << " Received Predict() request\n";
+        // std::vector<float> tensor = deserializePredict(request)
+        auto tensor_b = deserializePredict2(request);
 
         InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
 
         TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NHWC);
-        Blob::Ptr blob = make_shared_blob<float>(tensorDesc, tensor.data());
+        Blob::Ptr blob = make_shared_blob<float>(tensorDesc, (float*)tensor_b.data());
 
         infer_request.SetBlob(ov.m_input_name, blob);
         infer_request.Infer();
-
-        Blob::Ptr output = infer_request.GetBlob(ov.m_output_name);
-        const float* buffer = (const float*)output->buffer();
-
-        // std::cout << "Infer output:\n" << std::setprecision(2) << std::fixed;;
-        // for (int i = 0; i < 1000; i++)
-        //     std::cout << (double) buffer[i] << " ";
-        // std::cout << std::endl;
-
+        /*for (auto output : ov.m_exec_network.GetOutputsInfo()) {
+            cout << "<<Output name:" << output.first << endl;
+        }*/
+        auto outputsInfo = ov.m_exec_network.GetOutputsInfo();
+        const int OUTPUT_TENSOR_SIZE = 1000;
+        // TODO(atobisze) use tensorflow::DataType & EnumToDataType to pick type
+        std::for_each(outputsInfo.begin(), outputsInfo.end(),
+            [response, &infer_request](
+                    std::pair<const std::string,
+                    std::shared_ptr<const InferenceEngine::Data> > output) {
+                auto& tensor_proto = (*response->mutable_outputs())[output.first];
+                tensor_proto.Clear();
+                tensor_proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+                auto tensor_proto_shape = tensor_proto.mutable_tensor_shape();
+                tensor_proto_shape->Clear();
+                Blob::Ptr blob_output = infer_request.GetBlob(ov.m_output_name);
+                tensor_proto_shape->add_dim()->set_size(blob_output->size());
+                auto tensor_proto_content = tensor_proto.mutable_tensor_content();
+                tensor_proto_content->assign((char*)blob_output->buffer(), blob_output->byteSize());
+                //tensor_proto_content->assign((char*)buffer, OUTPUT_TENSOR_SIZE*sizeof(float));
+                /*cout.precision(17);
+                for (int i = 0; i < OUTPUT_TENSOR_SIZE; i++)
+                    if (buffer[i] > 0.01 || i < 5)
+                        std::cout << "Index:" << i << " Value: " << std::fixed << (double) buffer[i] << endl;
+                std::cout << std::endl;*/
+                });
         return Status::OK;
     }
 };
 
-<<<<<<< HEAD
-int main()
-{
-    std::cout << "Initializing gRPC\n";
-=======
-
 int main() {
-    std::cout << "Initializing\n";
->>>>>>> Fix most of the cpplint errors.
+    std::cout << "Initializing gRPC\n";
 
     PredictionServiceImpl service;
     ServerBuilder builder;
