@@ -215,7 +215,7 @@ class PredictionServiceImpl final : public PredictionService::Service {
 };
 
 int main() {
-    std::cout << "Initializing gRPC\n";
+    std::cout << "Initializing gRPC OVMS C++\n";
 
     PredictionServiceImpl service;
     ServerBuilder builder;
