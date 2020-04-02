@@ -20,7 +20,7 @@ import docker
 import grpc
 import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from utils.cleanup import clean_hanging_containers
+from utils.cleanup import clean_hanging_docker_resources
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 
@@ -79,8 +79,8 @@ def create_grpc_channel():
 
 
 def pytest_configure():
-    clean_hanging_containers()
+    clean_hanging_docker_resources()
 
 
 def pytest_unconfigure():
-    clean_hanging_containers()
+    clean_hanging_docker_resources()

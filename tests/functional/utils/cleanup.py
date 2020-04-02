@@ -23,14 +23,26 @@ def get_docker_client():
     return docker.from_env()
 
 
-def clean_hanging_containers():
+def clean_hanging_docker_resources():
     client = get_docker_client()
     containers = client.containers.list(all=True)
+    networks = client.networks.list()
     tests_suffix = get_tests_suffix()
+    clean_hanging_containers(containers, tests_suffix)
+    clean_hanging_networks(networks, tests_suffix)
+
+
+def clean_hanging_containers(containers, tests_suffix):
     for container in containers:
         if tests_suffix in container.name:
             kill_container(container)
-            remove_container(container)
+            remove_resource(container)
+
+
+def clean_hanging_networks(networks, tests_suffix):
+    for network in networks:
+        if tests_suffix in network.name:
+            remove_resource(network)
 
 
 def kill_container(container):
@@ -44,11 +56,11 @@ def kill_container(container):
             raise
 
 
-def remove_container(container):
+def remove_resource(resource):
     try:
-        container.remove()
+        resource.remove()
     except APIError as e:
-        # Conflict: Container is being removed
+        # Conflict: Resource is being removed
         if e.status_code == 409:
             pass
         else:
