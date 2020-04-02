@@ -40,6 +40,8 @@ def kill_container(container):
         # Conflict: Container is not running
         if e.status_code == 409:
             pass
+        else:
+            raise
 
 
 def remove_container(container):
@@ -49,3 +51,5 @@ def remove_container(container):
         # Conflict: Container is being removed
         if e.status_code == 409:
             pass
+        else:
+            raise
