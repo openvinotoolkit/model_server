@@ -27,6 +27,7 @@
 #include <vector>
 #include <ctime>
 #include <iomanip>
+#include <tuple>
 
 #include <inference_engine.hpp>
 
@@ -42,6 +43,11 @@ using grpc::ServerContext;
 using grpc::Status;
 using grpc::ResourceQuota;
 
+using tensorflow::DataType;
+using tensorflow::DataTypeToEnum;
+using tensorflow::TensorProto;
+using tensorflow::TensorShape;
+
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 using tensorflow::serving::PredictionService;
@@ -51,33 +57,30 @@ using namespace InferenceEngine;
 using std::cout;
 using std::endl;
 
-std::vector<int> get_shape(tensorflow::TensorShape shape) {
-    std::vector<int> dims;
-    for (const auto& dim : shape) {
-        dims.push_back(dim.size);
-    }
+const std::vector<int> getShape(const TensorShape& shape) {
+    std::vector<int> dims(shape.dims());
+    std::transform(shape.begin(), shape.end(), dims.begin(), [](const auto& dim) { return dim.size;});
     return dims;
 }
 
-void printShape(const tensorflow::TensorShape& shape) {
-    cout << "Tensor_shape: (" << endl;
-    for (auto& i : get_shape(shape)) {
+void printShape(const TensorShape& shape) {
+    cout << "Tensor_shape: (";
+    for (auto& i : getShape(shape)) {
             cout << i << ", ";
     }
     cout << ")" << endl;
 }
 
-int getNumOfElements(const tensorflow::TensorProto& tensorProto) {
-    tensorflow::TensorShape shape(tensorProto.tensor_shape());
+int getNumOfElements(const TensorProto& tensorProto) {
+    TensorShape shape(tensorProto.tensor_shape());
     // printShape(shape);
     return shape.num_elements();
 }
 
 template<typename T>
 void printTensor(T ptr, unsigned int N) {
-    unsigned int i = 0;
     cout << "Vector: ";
-    for (; i < N; ++i) {
+    for (unsigned int i = 0; i < N; ++i) {
         if (i > 6 && i < N - 4)
              continue;
         cout << *(ptr+i) << " ";
@@ -87,35 +90,30 @@ void printTensor(T ptr, unsigned int N) {
 
 class TensorBuffer {
  public:
-    TensorBuffer(tensorflow::DataType& dataType,
+    TensorBuffer(const DataType& dataType,
                  const int& numberOfElements,
                  const void* content) :
         dataType_(dataType),
         numberOfElements_(numberOfElements),
         data_(content) {}
-    const void * const data() { return data_;}
-    int getNumberOfElements() { return numberOfElements_;}
-    tensorflow::DataType getDataType() { return dataType_;}
+    const void * const data() const { return data_;}
+    int getNumberOfElements() const { return numberOfElements_;}
+    DataType getDataType() const { return dataType_;}
 
  private:
-    const tensorflow::DataType dataType_;
+    const DataType dataType_;
     const int numberOfElements_;
     const void* data_;
 };
 
-auto deserializePredict(const PredictRequest * const request) {
+// TODO(atobisze) Return multiple inputs
+std::unique_ptr<TensorBuffer> deserializePredict(const PredictRequest * const request) {
     for (auto& inputs : request->inputs()) {
         auto& tensor = inputs.second;
         auto dataType = tensor.dtype();
         auto numOfElements = getNumOfElements(tensor);
         auto proto_tensor_content = tensor.tensor_content().data();
-        auto tensorBuffer = TensorBuffer(dataType,
-                numOfElements,
-                proto_tensor_content);
-        /*printTensor(
-                reinterpret_cast<const float*>(tensorBuffer.data()),
-                tensorBuffer.getNumberOfElements());*/
-        return tensorBuffer;
+        return std::make_unique<TensorBuffer>(dataType, numOfElements, proto_tensor_content);
     }
 }
 
@@ -161,12 +159,12 @@ OV ov("/models/resnet50/1/resnet_50_i8.xml");
 
 
 #define CASE(TYPE) \
-    case tensorflow::DataTypeToEnum<TYPE>::value: {\
-        return make_shared_blob<TYPE>(tensorDesc, const_cast<TYPE*>(reinterpret_cast<const TYPE*>(tensorBuffer->data()))); \
+    case DataTypeToEnum<TYPE>::value: {\
+        return make_shared_blob<TYPE>(tensorDesc, const_cast<TYPE*>(reinterpret_cast<const TYPE*>(tensorBuffer.data()))); \
     }
 
-Blob::Ptr create_input_blob(TensorDesc tensorDesc, TensorBuffer* tensorBuffer, tensorflow::DataType DataType=tensorflow::DataType::DT_INVALID) {
-    switch(tensorBuffer->getDataType()) {
+Blob::Ptr create_input_blob(TensorDesc tensorDesc, const TensorBuffer& tensorBuffer) {
+    switch(tensorBuffer.getDataType()) {
     CASE(float)
     CASE(double)
     CASE(int)
@@ -179,12 +177,12 @@ class PredictionServiceImpl final : public PredictionService::Service {
         const   PredictRequest*     request,
                 PredictResponse*    response) {
         // std::cout << timeStamp() << " Received Predict() request\n";
-        auto tensor_b = deserializePredict(request);
+        std::unique_ptr<TensorBuffer> tensor_buffer = deserializePredict(request);
+        //printTensor(reinterpret_cast<const float*>(tensorBuffer->data()), tensorBuffer->getNumberOfElements());
 
         InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
-
         TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NHWC);
-        Blob::Ptr blob = create_input_blob(tensorDesc, &tensor_b,  tensorflow::DataType::DT_INVALID);
+        Blob::Ptr blob = create_input_blob(tensorDesc, *tensor_buffer);
 
         infer_request.SetBlob(ov.m_input_name, blob);
         infer_request.Infer();
@@ -192,21 +190,20 @@ class PredictionServiceImpl final : public PredictionService::Service {
             cout << "<<Output name:" << output.first << endl;
         }*/
         auto outputsInfo = ov.m_exec_network.GetOutputsInfo();
-        // TODO(atobisze) use tensorflow::DataType & EnumToDataType to pick type
+        // TODO(atobisze) use DataType & EnumToDataType to pick type
         std::for_each(outputsInfo.begin(), outputsInfo.end(),
             [response, &infer_request](
                     std::pair<const std::string,
                     std::shared_ptr<const InferenceEngine::Data> > output) {
                 auto& tensor_proto = (*response->mutable_outputs())[output.first];
                 tensor_proto.Clear();
-                tensor_proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+                tensor_proto.set_dtype(DataType::DT_FLOAT);
                 auto tensor_proto_shape = tensor_proto.mutable_tensor_shape();
                 tensor_proto_shape->Clear();
                 Blob::Ptr blob_output = infer_request.GetBlob(ov.m_output_name);
                 tensor_proto_shape->add_dim()->set_size(blob_output->size());
                 auto tensor_proto_content = tensor_proto.mutable_tensor_content();
                 tensor_proto_content->assign((char*)blob_output->buffer(), blob_output->byteSize());
-                //tensor_proto_content->assign((char*)buffer, OUTPUT_TENSOR_SIZE*sizeof(float));
                 /*cout.precision(17);
                 for (int i = 0; i < OUTPUT_TENSOR_SIZE; i++)
                     if (buffer[i] > 0.01 || i < 5)
