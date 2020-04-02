@@ -36,12 +36,16 @@ def clean_hanging_containers():
 def kill_container(container):
     try:
         container.kill()
-    except APIError:
-        pass
+    except APIError as e:
+        # Conflict: Container is not running
+        if e.status_code == 409:
+            pass
 
 
 def remove_container(container):
     try:
         container.remove()
-    except APIError:
-        pass
+    except APIError as e:
+        # Conflict: Container is being removed
+        if e.status_code == 409:
+            pass
