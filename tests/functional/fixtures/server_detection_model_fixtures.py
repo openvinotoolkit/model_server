@@ -16,7 +16,7 @@
 
 import pytest
 from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_ports_prefixes, get_tests_suffix
+from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 
 @pytest.fixture(scope="class")
@@ -28,11 +28,8 @@ def start_server_face_detection_model_auto_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "00"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="00")
+
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face-detection-retail-0004 " \
@@ -53,7 +50,7 @@ def start_server_face_detection_model_auto_shape(request, get_image,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="class")
@@ -65,11 +62,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "01"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="01")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
@@ -93,7 +86,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="class")
@@ -104,11 +97,8 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
-    ports_prefixes = get_ports_prefixes()
-    suffix = "02"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
+
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="02")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
@@ -131,4 +121,4 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}

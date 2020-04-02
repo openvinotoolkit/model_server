@@ -20,8 +20,10 @@ import docker
 import grpc
 import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from utils.cleanup import clean_hanging_docker_resources
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
+
 
 pytest_plugins = [
     'fixtures.model_download_fixtures',
@@ -74,3 +76,11 @@ def create_grpc_channel():
         return None
 
     return _create_channel
+
+
+def pytest_configure():
+    clean_hanging_docker_resources()
+
+
+def pytest_unconfigure():
+    clean_hanging_docker_resources()

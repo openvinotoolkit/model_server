@@ -20,7 +20,7 @@ import boto3
 import pytest
 from utils.model_management import (wait_endpoint_setup, minio_condition)
 from botocore.client import Config
-from utils.parametrization import get_ports_prefixes, get_tests_suffix
+from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 
 @pytest.fixture(scope="class")
@@ -28,11 +28,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "08"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port = ports["grpc_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="08")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -57,7 +53,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="class")
@@ -72,11 +68,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "09"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port = ports["grpc_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="09")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -96,7 +88,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="session")
@@ -129,11 +121,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "10"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port = ports["grpc_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="10")
 
     command = 'server --address ":{}" /data'.format(grpc_port)
 
@@ -168,7 +156,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
     running = wait_endpoint_setup(container, minio_condition, 30)
     assert running is True, "minio container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="session")
@@ -239,11 +227,7 @@ def start_server_single_model_from_minio(request, get_docker_network,
 
     client = get_docker_context
 
-    ports_prefixes = get_ports_prefixes()
-    suffix = "11"
-    ports = {"grpc_port": int(ports_prefixes["grpc_port_prefix"]+suffix),
-             "rest_port": int(ports_prefixes["rest_port_prefix"]+suffix)}
-    grpc_port = ports["grpc_port"]
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="11")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -251,8 +235,9 @@ def start_server_single_model_from_minio(request, get_docker_network,
               "--port {}".format(grpc_port)
 
     container = client.containers.run(image=get_image, detach=True,
-                                      name='test-single-minio-{}'.format(
-                                          get_tests_suffix()),
+                                      name='ie-serving-test-'
+                                           'single-minio-{}'.format(
+                                            get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port},
                                       remove=True,
@@ -266,4 +251,4 @@ def start_server_single_model_from_minio(request, get_docker_network,
 
     assert running is True, "docker container was not started successfully"
 
-    return container, ports
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
