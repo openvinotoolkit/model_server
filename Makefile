@@ -17,7 +17,7 @@
 PY_VERSION := 3
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
-ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
+ACTIVATE := $(VIRTUALENV_DIR)/bin/activate
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
 STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
 STYLE_CHECK_DIRS := tests ie_serving setup.py
@@ -50,25 +50,25 @@ $(ACTIVATE): requirements.txt requirements-dev.txt
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
 	@touch $(ACTIVATE)
 
-install: venv
+install: $(ACTIVATE)
 	@. $(ACTIVATE); pip$(PY_VERSION) install .
 
-run: venv install
+run: $(ACTIVATE) install
 	@. $(ACTIVATE); python ie_serving/main.py --config "$CONFIG"
 
-unit: venv
+unit: $(ACTIVATE)
 	@echo "Running unit tests..."
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/unit/
 
-coverage: venv
+coverage: $(ACTIVATE)
 	@echo "Computing unit test coverage..."
 	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
 
-test: venv
+test: $(ACTIVATE)
 	@echo "Executing functional tests..."
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/ --test_dir $(TEST_MODELS_DIR)
 
-test_local_only: venv
+test_local_only: $(ACTIVATE)
 	@echo "Executing functional tests with only local models..."
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_batching.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_mapping.py
@@ -78,7 +78,7 @@ test_local_only: venv
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_model_versions_handling.py
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/test_update.py
 
-style: venv
+style: $(ACTIVATE)
 	@echo "Style-checking codebase..."
 	@. $(ACTIVATE); flake8 $(STYLE_CHECK_OPTS) $(STYLE_CHECK_DIRS)
 
