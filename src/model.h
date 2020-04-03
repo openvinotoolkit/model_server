@@ -76,6 +76,19 @@ namespace ovms {
             }
 
             /**
+             * @brief Finds ModelVersion instance with specific version
+             *
+             * @param version of the model to search for
+             *
+             * @return specific model version
+             */
+            std::vector<std::shared_ptr<ModelVersion>>::iterator findModelVersionByVersion(const int64_t version) {
+                return std::find_if(modelVersions.begin(), modelVersions.end(), [version](const std::shared_ptr<ModelVersion>& modelVersion) {
+                    return modelVersion->getVersion() == version;
+                });
+            }
+
+            /**
              * @brief Adds a new version of ModelVersion to the list of versions
              * 
              * @param name model name

@@ -96,10 +96,11 @@ WORKDIR /openvino/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DNGRAPH_USE_CXX_ABI=0 ..
 RUN make --jobs=$(nproc --all)
 
-## Compile server
+# Compile server
 WORKDIR /tensorflow-serving
 COPY src/ tensorflow_serving/ovms/
 COPY WORKSPACE .
+COPY config.json /models/
 RUN bazel build //tensorflow_serving/ovms:server_cc
 
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/tf_serving/bazel-out/k8-opt/bin/_solib_k8/*/

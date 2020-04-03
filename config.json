@@ -1,23 +1,8 @@
 {
     "models": [{
-        "name": "Resnet",
-        "path": "/models/resnet.xml",
-        "version": 1,
-        "backend": "CPU",
-        "batchSize": 1,
-        "shape": [1, 3, 224, 224]
-    },{
-        "name": "Resnet",
-        "path": "/models/resnet.xml",
-        "version": 2,
-        "backend": "CPU",
-        "batchSize": 1,
-        "shape": [1, 3, 224, 224]
-    },
-    {
-        "name": "OthernetModel",
-        "path": "/models/resnet.xml",
-        "version": 1,
+        "name": "resnet",
+        "path": "/models/resnet50/1/resnet_50_i8.xml",
+        "version": 0,
         "backend": "CPU",
         "batchSize": 1,
         "shape": [1, 3, 224, 224]

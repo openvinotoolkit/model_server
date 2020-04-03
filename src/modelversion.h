@@ -69,16 +69,16 @@ namespace ovms {
              * @brief Model input
              */
             std::vector<size_t> shape;
+
+            /**
+             * @brief Model output name read from network
+             */
+            std::string outputName;
         private:
             /**
              * @brief Model input name read from network
              */
             std::string inputName;
-
-             /**
-             * @brief Model output name read from network
-             */
-            std::string outputName;
 
             /**
              * @brief Inference request object created during network load
@@ -163,6 +163,15 @@ namespace ovms {
             }
 
             /**
+             * @brief Gets model output name
+             *
+             * @return output name
+             */
+            const std::string& getOutputName() const {
+                return outputName;
+            }
+
+            /**
              * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
              * 
              * @param name of the model
@@ -192,5 +201,14 @@ namespace ovms {
              * @return InferRequest
              */
             const InferenceEngine::InferRequest& inferAsync(const InferenceEngine::Blob::Ptr data, std::function<void()> callback);
+
+            /**
+             * @brief Get output blob from inference
+             *
+             * @return Blob
+             */
+            const InferenceEngine::Blob::Ptr getOutputBlob() {
+                return request.GetBlob(outputName);
+            }
     };
 }  // namespace ovms
