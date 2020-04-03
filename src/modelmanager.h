@@ -79,6 +79,22 @@ namespace ovms {
             }
 
             /**
+             * @brief Finds model with specific name
+             *
+             * @param name of the model to search for
+             *
+             * @return pointer to Model or nullptr if not found
+             */
+            Model* findModelByName(const std::string& name) {
+                auto it = models.find(name);
+                if (it != models.end()) {
+                    return &it->second;
+                }
+
+                return nullptr;
+            }
+
+            /**
              * @brief Starts model manager using provided config
              * 
              * @param filename

@@ -27,7 +27,8 @@ cc_binary(
         "modelmanager.h",
         "modelversion.cpp",
         "modelversion.h",
-         "status.h",
+        "status.h",
+        "timer.h",
     ],
     deps = [
         "//tensorflow_serving/apis:prediction_service_cc_proto",

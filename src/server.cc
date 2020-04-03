@@ -27,6 +27,8 @@
 #include <vector>
 #include <ctime>
 #include <iomanip>
+#include <condition_variable>
+#include <mutex>
 #include <tuple>
 
 #include <inference_engine.hpp>
@@ -36,6 +38,12 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/framework/types.pb.h"
+
+#include "modelmanager.h"
+
+#define DEBUG
+
+#include "timer.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -133,31 +141,6 @@ std::string timeStamp() {
     return std::string(buffer);
 }
 
-class OV {
- public:
-    Core m_core;
-    CNNNetwork m_network;
-    ExecutableNetwork m_exec_network;
-
-    std::string m_input_name;
-    std::string m_output_name;
-
-    explicit OV(std::string path) :
-        m_core(),
-        m_network(m_core.ReadNetwork(path)),
-        m_exec_network(m_core.LoadNetwork(m_network, "CPU"))
-    {
-        m_network.setBatchSize(1);
-        m_network.getInputsInfo().begin()->second->setPrecision(Precision::FP32);
-        m_network.getOutputsInfo().begin()->second->setPrecision(Precision::FP32);
-        m_input_name = m_network.getInputsInfo().begin()->first;
-        m_output_name = m_network.getOutputsInfo().begin()->first;
-    }
-};
-
-OV ov("/models/resnet50/1/resnet_50_i8.xml");
-
-
 #define CASE(TYPE) \
     case DataTypeToEnum<TYPE>::value: {\
         return make_shared_blob<TYPE>(tensorDesc, const_cast<TYPE*>(reinterpret_cast<const TYPE*>(tensorBuffer.data()))); \
@@ -171,64 +154,109 @@ Blob::Ptr create_input_blob(TensorDesc tensorDesc, const TensorBuffer& tensorBuf
     }
 }
 
+const Blob::Ptr performAsyncInfer(const std::shared_ptr<ovms::ModelVersion>& modelVersion, const Blob::Ptr input) {
+    std::condition_variable cv;
+    std::mutex mx;
+    std::unique_lock<std::mutex> lock(mx);
+
+    modelVersion->inferAsync(input, [&]() {
+        cv.notify_one();
+    });
+
+    cv.wait(lock);
+    return modelVersion->getOutputBlob();
+}
+
 class PredictionServiceImpl final : public PredictionService::Service {
     Status Predict(
                 ServerContext*      context,
         const   PredictRequest*     request,
                 PredictResponse*    response) {
-        // std::cout << timeStamp() << " Received Predict() request\n";
+
+        Timer timer;
+        timer.start("total");
+        ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+        // Deserialization
+        timer.start("deserialization");
         std::unique_ptr<TensorBuffer> tensor_buffer = deserializePredict(request);
-        //printTensor(reinterpret_cast<const float*>(tensorBuffer->data()), tensorBuffer->getNumberOfElements());
 
-        InferRequest infer_request = ov.m_exec_network.CreateInferRequest();
-        TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NHWC);
-        Blob::Ptr blob = create_input_blob(tensorDesc, *tensor_buffer);
+        const std::string& model_name = request->model_spec().name();
+        google::protobuf::int64 version = request->model_spec().version().value();
 
-        infer_request.SetBlob(ov.m_input_name, blob);
-        infer_request.Infer();
-        /*for (auto output : ov.m_exec_network.GetOutputsInfo()) {
-            cout << "<<Output name:" << output.first << endl;
-        }*/
-        auto outputsInfo = ov.m_exec_network.GetOutputsInfo();
-        // TODO(atobisze) use DataType & EnumToDataType to pick type
-        std::for_each(outputsInfo.begin(), outputsInfo.end(),
-            [response, &infer_request](
-                    std::pair<const std::string,
-                    std::shared_ptr<const InferenceEngine::Data> > output) {
-                auto& tensor_proto = (*response->mutable_outputs())[output.first];
-                tensor_proto.Clear();
-                tensor_proto.set_dtype(DataType::DT_FLOAT);
-                auto tensor_proto_shape = tensor_proto.mutable_tensor_shape();
-                tensor_proto_shape->Clear();
-                Blob::Ptr blob_output = infer_request.GetBlob(ov.m_output_name);
-                tensor_proto_shape->add_dim()->set_size(blob_output->size());
-                auto tensor_proto_content = tensor_proto.mutable_tensor_content();
-                tensor_proto_content->assign((char*)blob_output->buffer(), blob_output->byteSize());
-                /*cout.precision(17);
-                for (int i = 0; i < OUTPUT_TENSOR_SIZE; i++)
-                    if (buffer[i] > 0.01 || i < 5)
-                        std::cout << "Index:" << i << " Value: " << std::fixed << (double) buffer[i] << endl;
-                std::cout << std::endl;*/
-                });
+        TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NCHW);
+        Blob::Ptr input = create_input_blob(tensorDesc, *tensor_buffer);
+        timer.stop("deserialization");
+
+        // std::cout
+        //     << timeStamp()
+        //     << " Received Predict() request for model: "
+        //     << model_name
+        //     << "; version: "
+        //     << version
+        //     << std::endl;
+
+        timer.start("model find");
+        auto modelVersion = *manager.findModelByName(model_name)->findModelVersionByVersion(version);
+        timer.stop("model find");
+
+        timer.start("async infer");
+        const auto output = performAsyncInfer(modelVersion, input);
+        timer.stop("async infer");
+
+        // timer.save("sync infer");
+        // const auto output = modelVersion->infer(input);
+        // timer.print("sync infer");
+
+        // Serialization
+        timer.start("serialization");
+        auto& tensorProto = (*response->mutable_outputs())[modelVersion->getOutputName()];
+        tensorProto.Clear();
+        tensorProto.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+        auto tensorProtoShape = tensorProto.mutable_tensor_shape();
+        tensorProtoShape->Clear();
+        tensorProtoShape->add_dim()->set_size(1);
+        tensorProtoShape->add_dim()->set_size(output->size());
+
+        auto tensorProtoContent = tensorProto.mutable_tensor_content();
+        tensorProtoContent->assign((char*) output->buffer(), output->byteSize());
+        timer.stop("serialization");
+        timer.stop("total");
+
+        // Statistics
+        timer.print();
+
         return Status::OK;
     }
 };
 
-int main() {
-    std::cout << "Initializing gRPC OVMS C++\n";
+int main()
+{
+    const int PORT              = 9178;
+    const int SERVER_COUNT      = 24;
+    const std::string ADDR_URI  = std::string("0.0.0.0:") + std::to_string(PORT);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    ovms::Status status = manager.start("/models/config.json");
+
+    if (status != ovms::Status::OK) {
+        std::cout << "ovms::ModelManager::Start() Error: " << int(status) << std::endl;
+        return 1;
+    }
 
     PredictionServiceImpl service;
     ServerBuilder builder;
-    builder.AddListeningPort("0.0.0.0:9178", grpc::InsecureServerCredentials());
+    builder.AddListeningPort(ADDR_URI, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
-    const int SERVER_COUNT = 24;
     std::vector<std::unique_ptr<Server>> servers;
     for (int i = 0; i < SERVER_COUNT; i++) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
 
-    std::cout << "Servers started on port 9178" << std::endl;
+    std::cout << "Server started on port " << PORT << std::endl;
     servers[0]->Wait();
     return 0;
 }
