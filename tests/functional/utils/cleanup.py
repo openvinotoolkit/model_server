@@ -49,21 +49,21 @@ def kill_container(container):
     try:
         container.kill()
     except APIError as e:
-        raise_or_pass(e)
+        handle_cleanup_exception(e)
 
 
 def remove_resource(resource):
     try:
         resource.remove()
     except APIError as e:
-        raise_or_pass(e)
+        handle_cleanup_exception(e)
 
 
-def raise_or_pass(docker_error):
-    # Such error can occur if container
-    # is being killed or removed by other entity
-    # Container is not running or No such container
-    if docker_error.status_code == 409 or docker_error.status_code == 404:
+def handle_cleanup_exception(docker_error):
+    # It is okay to have these errors as
+    # it means resource not exist or being removed or killed already
+    allowed_errors = [404, 409]
+    if docker_error.status_code in allowed_errors:
         pass
     else:
         raise
