@@ -20,7 +20,7 @@ import json
 import requests
 
 
-parser = argparse.ArgumentParser(description='Get served model's status for RESTful API interface')
+parser = argparse.ArgumentParser(description="Get served model's status for RESTful API interface")
 parser.add_argument('--rest_url', required=False, default='http://localhost',  help='Specify url to REST API service. default: http://localhost')
 parser.add_argument('--rest_port', required=False, default=5555, help='Specify port to REST API service. default: 5555')
 parser.add_argument('--model_name', default='resnet', help='Model name to query, must be the same as in the service. default: resnet',
