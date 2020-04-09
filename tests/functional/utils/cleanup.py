@@ -49,19 +49,21 @@ def kill_container(container):
     try:
         container.kill()
     except APIError as e:
-        # Conflict: Container is not running
-        if e.status_code == 409:
-            pass
-        else:
-            raise
+        raise_or_pass(e)
 
 
 def remove_resource(resource):
     try:
         resource.remove()
     except APIError as e:
-        # Conflict: Resource is being removed
-        if e.status_code == 409:
-            pass
-        else:
-            raise
+        raise_or_pass(e)
+
+
+def raise_or_pass(docker_error):
+    # Such error can occur if container
+    # is being killed or removed by other entity
+    # Container is not running or No such container
+    if docker_error.status_code == 409 or docker_error.status_code == 404:
+        pass
+    else:
+        raise

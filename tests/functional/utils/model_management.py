@@ -20,6 +20,8 @@ import time
 
 from pathlib import Path
 
+from utils.parametrization import get_tests_suffix
+
 
 def minio_condition(container):
     return "created" in container.status
@@ -91,6 +93,7 @@ def convert_model(client,
     ])
 
     client.containers.run(image=image,
+                          name='convert-model-{}'.format(get_tests_suffix()),
                           volumes=volumes,
                           user=user_id,
                           command=command)
