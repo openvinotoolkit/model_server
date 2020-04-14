@@ -21,14 +21,20 @@
 
 #include <inference_engine.hpp>
 
+#include "tensorinfo.h"
 #include "status.h"
 
 namespace ovms {
 
+    using tensorMap = std::map<std::string, std::shared_ptr<TensorInfo>>;
+    using model_version_t = int64_t;
+    using shapesMap = std::map<std::string, std::vector<size_t>>;
+    using layoutsMap = std::map<std::string, std::string>;
+
     /**
      * @brief This class contains all the information about inference engine model
      */
-    class ModelVersion {
+    class ModelInstance {
         protected:
             /**
              * @brief Inference Engine core object
@@ -53,7 +59,7 @@ namespace ovms {
             /**
              * @brief A model version
              */
-            int64_t version;
+            model_version_t version;
 
             /**
              * @brief A backend to run model
@@ -65,30 +71,40 @@ namespace ovms {
              */
             size_t batchSize;
 
-            /**
-             * @brief Model input
-             */
-            std::vector<size_t> shape;
-
-            /**
-             * @brief Model output name read from network
-             */
-            std::string outputName;
         private:
             /**
-             * @brief Model input name read from network
+             * @brief Holds the information about inputs and it's parameters
              */
-            std::string inputName;
+            tensorMap inputsInfo;
+
+            /**
+             * @brief Holds the information about outputs and it's parameters
+             */
+            tensorMap outputsInfo;
 
             /**
              * @brief Inference request object created during network load
              */
             InferenceEngine::InferRequest request;
+
+            /**
+             * @brief Internal method for loading inputs/outputs
+             * 
+             * @param map 
+             * @param tensors 
+             * @param shapes 
+             * @param layouts 
+             */
+            template<typename T>
+            void loadTensors(tensorMap& map,
+                            const T& tensors,
+                            const shapesMap& shapes,
+                            const layoutsMap& layouts);
         public:
             /**
              * @brief A default constructor
              */
-            ModelVersion() = default;
+            ModelInstance() = default;
 
             /**
              * @brief Gets Inference Engine reference
@@ -131,7 +147,7 @@ namespace ovms {
              * 
              * @return version
              */
-            const int64_t getVersion() {
+            const model_version_t& getVersion() {
                 return version;
             }
 
@@ -154,61 +170,62 @@ namespace ovms {
             }
 
             /**
-             * @brief Gets model shape
-             *
-             * @return model shape
+             * @brief Get the Inputs Info object
+             * 
+             * @return const tensorMap& 
              */
-            const std::vector<size_t>& getShape() {
-                return shape;
+            const tensorMap& getInputsInfo() {
+                return inputsInfo;
             }
 
             /**
-             * @brief Gets model output name
-             *
-             * @return output name
+             * @brief Get the Outputs Info object
+             * 
+             * @return const tensorMap& 
              */
-            const std::string& getOutputName() const {
-                return outputName;
+            const tensorMap& getOutputsInfo() {
+                return outputsInfo;
             }
 
             /**
              * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
              * 
-             * @param name of the model
-             * @param path to model *.xml and *.bin files
-             * @param version model
+             * shapes and layouts are optional, in case we want to override those read from network
+             * 
+             * @param path 
+             * @param backend 
+             * @param version 
+             * @param batchSize 
+             * @param shapes 
+             * @param layouts
              * @return Status 
              */
             Status loadModel(const std::string& path,
                              const std::string& backend,
-                             const int64_t version,
+                             const model_version_t& version,
                              const size_t batchSize,
-                             const std::vector<size_t>& shape);
+                             const shapesMap& shapes = {},
+                             const layoutsMap& layouts = {});
 
             /**
-             * @brief Execute inference on provided data
+             * @brief Execute inference on provided data and input name
              * 
-             * @param data input Blob pointer
-             * @return output Blob pointer
+             * @param inputName 
+             * @param data 
+             * @return InferenceEngine::InferRequest& 
              */
-            const InferenceEngine::Blob::Ptr infer(const InferenceEngine::Blob::Ptr data);
+            InferenceEngine::InferRequest& infer(const std::string& inputName, const InferenceEngine::Blob::Ptr data);
 
             /**
-             * @brief Execute inference async on provided data
+             * @brief Execute inference async on provided data and inputName
              * 
-             * @param data input Blob pointer
-             * @param callback function on inference completion
-             * @return InferRequest
+             * @param inputName 
+             * @param data 
+             * @param callback 
+             * @return InferenceEngine::InferRequest& 
              */
-            const InferenceEngine::InferRequest& inferAsync(const InferenceEngine::Blob::Ptr data, std::function<void()> callback);
-
-            /**
-             * @brief Get output blob from inference
-             *
-             * @return Blob
-             */
-            const InferenceEngine::Blob::Ptr getOutputBlob() {
-                return request.GetBlob(outputName);
-            }
+            InferenceEngine::InferRequest& inferAsync(const std::string& inputName,
+                                                      const InferenceEngine::Blob::Ptr data,
+                                                      const std::function<void()>& callback);
     };
 }  // namespace ovms

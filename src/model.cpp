@@ -20,21 +20,30 @@ namespace ovms {
 Status Model::addVersion(   const std::string& name,
                             const std::string& path,
                             const std::string& backend,
-                            const int64_t version,
+                            const model_version_t& version,
                             const size_t batchSize,
-                            const std::vector<size_t>& shape) {
-    std::shared_ptr<ModelVersion> modelVersion = std::make_shared<ModelVersion>();
-    auto status = modelVersion->loadModel(path, backend, version, batchSize, shape);
+                            const shapesMap& shapes,
+                            const layoutsMap& layouts) {
+    std::shared_ptr<ModelInstance> modelInstance = std::make_shared<ModelInstance>();
+    auto status = modelInstance->loadModel(path, backend, version, batchSize, shapes, layouts);
     if (status != Status::OK) {
         return status;
     }
     this->name = name;
-    modelVersions.push_back(std::move(modelVersion));
+    if (this->defaultVersion < version)
+        this->defaultVersion = version;
+    modelVersions[version] = std::move(modelInstance);
     
     return Status::OK;
 }
 
-Status Model::dropVersion(const ModelVersion& modelVersion) {
+Status Model::dropVersion(const model_version_t& version) {
+    std::map<model_version_t, std::shared_ptr<ModelInstance>>::iterator it = modelVersions.find(version);
+    if (it != modelVersions.end()) {
+        return Status::MODELINSTANCE_NOT_FOUND;
+    }
+    modelVersions.erase(version);
+
     return Status::OK;
 }
 

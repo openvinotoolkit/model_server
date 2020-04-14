@@ -18,10 +18,9 @@
 #include <string>
 #include <vector>
 
-#include "modelversion.h"
+#include "modelinstance.h"
 
 namespace ovms {
-
     /**
      * @brief This class represent inference models
      */
@@ -35,12 +34,12 @@ namespace ovms {
             /**
              * @brief Default version of the model
              */
-            unsigned int defaultVersion;
+            model_version_t defaultVersion;
 
             /**
-             * @brief Model input
+             * @brief Holds different versions of model
              */
-            std::vector<std::shared_ptr<ModelVersion>> modelVersions;
+            std::map<model_version_t, std::shared_ptr<ModelInstance>> modelVersions;
 
         public:
             /**
@@ -62,8 +61,17 @@ namespace ovms {
              * 
              * @return default model version
              */
-            unsigned int getDefaultVersion() {
+            const model_version_t& getDefaultVersion() {
                 return defaultVersion;
+            }
+
+            /**
+             * @brief Gets the default ModelInstance
+             * 
+             * @return ModelInstance
+             */
+            const std::shared_ptr<ModelInstance>& getDefaultModelInstance() const {
+                return modelVersions.at(defaultVersion);
             }
 
             /**
@@ -71,25 +79,24 @@ namespace ovms {
              *
              * @return model versions
              */
-            const std::vector<std::shared_ptr<ModelVersion>>& getModelVersions() const {
+            const std::map<model_version_t, std::shared_ptr<ModelInstance>>& getModelVersions() const {
                 return modelVersions;
             }
 
             /**
-             * @brief Finds ModelVersion instance with specific version
+             * @brief Finds ModelInstance with specific version
              *
              * @param version of the model to search for
              *
              * @return specific model version
              */
-            std::vector<std::shared_ptr<ModelVersion>>::iterator findModelVersionByVersion(const int64_t version) {
-                return std::find_if(modelVersions.begin(), modelVersions.end(), [version](const std::shared_ptr<ModelVersion>& modelVersion) {
-                    return modelVersion->getVersion() == version;
-                });
+            const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const {
+                auto it = modelVersions.find(version);
+                return it != modelVersions.end() ? it->second : nullptr;
             }
 
             /**
-             * @brief Adds a new version of ModelVersion to the list of versions
+             * @brief Adds a new version of ModelInstance to the list of versions
              * 
              * @param name model name
              * @param path to the model
@@ -97,23 +104,25 @@ namespace ovms {
              * @param version 
              * @param batchSize
              * @param shape
+             * @param layout
              *  
              * @return status
              */
             Status addVersion(  const std::string& name,
                                 const std::string& path,
                                 const std::string& backend,
-                                const int64_t version,
+                                const model_version_t& version,
                                 const size_t batchSize,
-                                const std::vector<size_t>& shape);
+                                const shapesMap& shapes = {},
+                                const layoutsMap& layouts = {});
 
             /**
              * @brief Removes model version from the list
              * 
-             * @param modelVersion object
+             * @param model version
              * 
              * @return status
              */
-            Status dropVersion(const ModelVersion& modelVersion);
+            Status dropVersion(const model_version_t& version);
     };
 } // namespace ovms

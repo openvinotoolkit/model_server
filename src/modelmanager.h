@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <future>
 #include <string>
 #include <thread>
 
@@ -35,6 +36,24 @@ namespace ovms {
              * @brief Private copying constructor
              */
             ModelManager(const ModelManager&);
+    
+            /**
+             * @brief Reads models from configuration file
+             * 
+             * @param jsonFilename configuration file
+             * @return Status 
+             */
+            Status loadConfig(const std::string& jsonFilename);
+
+            /**
+             * @brief Watcher thread for monitor changes in config
+             */
+            void watcher(std::future<void> exit);
+
+            /**
+             * @brief Watcher interval for checking changes in config
+             */
+            static const uint watcherIntervalSec;
 
             /**
              * @brief A JSON configuration filename
@@ -44,12 +63,17 @@ namespace ovms {
             /**
              * @brief A collection of models
              */
-            std::map<std::string, Model> models;
+            std::map<std::string, std::shared_ptr<Model>> models;
 
             /**
              * @brief A thread object used for monitoring changes in config
              */
             std::thread monitor;
+
+            /**
+             * @brief An exit signal to notify watcher thread to exit
+             */
+            std::promise<void> exit;
         public:
             /**
              * @brief Gets the instance of ModelManager
@@ -74,7 +98,7 @@ namespace ovms {
              * 
              * @return models collection
              */
-            const std::map<std::string, Model>& getModels() {
+            const std::map<std::string, std::shared_ptr<Model>>& getModels() {
                 return models;
             }
 
@@ -83,15 +107,11 @@ namespace ovms {
              *
              * @param name of the model to search for
              *
-             * @return pointer to Model or nullptr if not found
+             * @return pointer to Model or nullptr if not found 
              */
-            Model* findModelByName(const std::string& name) {
+            const std::shared_ptr<Model> findModelByName(const std::string& name) const {
                 auto it = models.find(name);
-                if (it != models.end()) {
-                    return &it->second;
-                }
-
-                return nullptr;
+                return it != models.end() ? it->second : nullptr;
             }
 
             /**
@@ -104,9 +124,7 @@ namespace ovms {
 
             /**
              * @brief Gracefully finish the thread
-             * 
-             * @return status
              */
-            Status join();
+            void join();
     };
 }  // namespace ovms

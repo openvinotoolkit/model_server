@@ -14,18 +14,35 @@
 // limitations under the License.
 //*****************************************************************************
 #include <fstream>
-
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#include <sys/stat.h>
+
+#include <iostream>
 
 #include "modelmanager.h"
 
 namespace ovms {
 
+const uint ModelManager::watcherIntervalSec = 1;
+
 Status ModelManager::start(const std::string& jsonFilename) {
+    Status s = loadConfig(jsonFilename);
+    if (s != Status::OK) {
+        return s;
+    }
+
+    std::future<void> exitSignal = exit.get_future();
+    std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+    monitor = std::move(t);
+    monitor.detach();
+    
+    return Status::OK;
+}
+
+Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::Document doc;
     std::ifstream ifs(jsonFilename.c_str());
-
     // Perform some basic checks on the config file
     if (!ifs.good()) {
         // Logger(Log::Error, "File is invalid ", jsonFilename);
@@ -45,38 +62,75 @@ Status ModelManager::start(const std::string& jsonFilename) {
         return Status::JSON_INVALID;
     }
     
+    models.clear();
+    configFilename = jsonFilename;
     for (auto& v : itr->value.GetArray()) {
-        Model model;
+        std::shared_ptr<Model> model = std::make_shared<Model>();
         std::string name = v["name"].GetString();
         if (models.find(name) == models.end()) {
-            models[name] = model;
+            models[name] = std::move(model);
         }
 
-        std::vector<size_t> shape;
-        for (auto& s : v["shape"].GetArray()) {
-            shape.push_back(s.GetUint64());
+        // Check for optional parameters
+        uint64_t batchSize = v.HasMember("batchSize") ? v["batchSize"].GetUint64() : 0;
+
+        shapesMap shapes;
+        if (v.HasMember("shape")) {
+            for (auto& s : v["shape"].GetObject()) {
+                std::vector<size_t> shape;
+                for (auto& sh : s.value.GetArray()) {
+                    shape.push_back(sh.GetUint64());
+                }
+                shapes[s.name.GetString()] = shape;
+            }
         }
 
-        auto status = models[name].addVersion(v["name"].GetString(),
-                                              v["path"].GetString(),
-                                              v["backend"].GetString(),
-                                              v["version"].GetInt64(),
-                                              v["batchSize"].GetUint64(),
-                                              shape);
+        layoutsMap layouts;
+        if (v.HasMember("layout")) {
+            for (auto& s : v["layout"].GetObject()) {
+                layouts[s.name.GetString()] = s.value.GetString();
+            }
+        }
+
+        auto status = models[name]->addVersion(v["name"].GetString(),
+                                               v["path"].GetString(),
+                                               v["backend"].GetString(),
+                                               v["version"].GetInt64(),
+                                               batchSize,
+                                               shapes,
+                                               layouts);
         if (status != Status::OK) {
             // Logger(Log::Warning, "There was an error loading a model ", v["name"].GetString());
+            return status;
         }
     }
 
     return Status::OK;
 }
 
-Status ModelManager::join() {
-    if (monitor.joinable()) {
-        monitor.join();
-    }
+void ModelManager::watcher(std::future<void> exit) {
+    // Logger(Log::Info, "Started config watcher thread");
+    int64_t lastTime;
+    struct stat statTime;
 
-    return Status::OK;
+    stat(configFilename.c_str(), &statTime);
+    lastTime = statTime.st_ctime;
+	while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout)
+	{
+        std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
+        stat(configFilename.c_str(), &statTime);
+        if (lastTime != statTime.st_ctime) {
+            lastTime = statTime.st_ctime;
+            loadConfig(configFilename);
+            // Logger(Log::Info, "Configuration changed");
+        }
+	}
+    // Logger(Log::Info, "Exited config watcher thread");
+}
+
+void ModelManager::join() {
+    exit.set_value();
+    monitor.join();
 }
   
 } // namespace ovms

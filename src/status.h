@@ -27,6 +27,7 @@ enum class Status {
     FILE_INVALID,           /*!< File not found or cannot open */
     NETWORK_NOT_LOADED,     
     JSON_INVALID,           /*!< The file is not valid json */
+    MODELINSTANCE_NOT_FOUND
 };
 
 } // namespace ovms

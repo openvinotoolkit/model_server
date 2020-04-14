@@ -154,17 +154,17 @@ Blob::Ptr create_input_blob(TensorDesc tensorDesc, const TensorBuffer& tensorBuf
     }
 }
 
-const Blob::Ptr performAsyncInfer(const std::shared_ptr<ovms::ModelVersion>& modelVersion, const Blob::Ptr input) {
+ InferRequest& performAsyncInfer(const std::shared_ptr<ovms::ModelInstance>& modelInstance, const std::string& inputName, const Blob::Ptr input) {
     std::condition_variable cv;
     std::mutex mx;
     std::unique_lock<std::mutex> lock(mx);
 
-    modelVersion->inferAsync(input, [&]() {
+    auto& request = modelInstance->inferAsync(inputName, input, [&]() {
         cv.notify_one();
     });
 
     cv.wait(lock);
-    return modelVersion->getOutputBlob();
+    return request;
 }
 
 class PredictionServiceImpl final : public PredictionService::Service {
@@ -177,16 +177,9 @@ class PredictionServiceImpl final : public PredictionService::Service {
         timer.start("total");
         ovms::ModelManager& manager = ovms::ModelManager::getInstance();
 
-        // Deserialization
-        timer.start("deserialization");
-        std::unique_ptr<TensorBuffer> tensor_buffer = deserializePredict(request);
-
         const std::string& model_name = request->model_spec().name();
+        const std::string& inputName = request->inputs().begin()->first;
         google::protobuf::int64 version = request->model_spec().version().value();
-
-        TensorDesc tensorDesc(Precision::FP32, {1, 3, 224, 224}, Layout::NCHW);
-        Blob::Ptr input = create_input_blob(tensorDesc, *tensor_buffer);
-        timer.stop("deserialization");
 
         // std::cout
         //     << timeStamp()
@@ -197,22 +190,31 @@ class PredictionServiceImpl final : public PredictionService::Service {
         //     << std::endl;
 
         timer.start("model find");
-        auto modelVersion = *manager.findModelByName(model_name)->findModelVersionByVersion(version);
+        auto modelInstance = manager.findModelByName(model_name)->getModelInstanceByVersion(version);
         timer.stop("model find");
 
+        // Deserialization
+        timer.start("deserialization");
+        std::unique_ptr<TensorBuffer> tensor_buffer = deserializePredict(request);
+        const TensorDesc& tensorDesc = modelInstance->getInputsInfo().begin()->second->getTensorDesc();
+        Blob::Ptr input = create_input_blob(tensorDesc, *tensor_buffer);
+        timer.stop("deserialization");
+
         timer.start("async infer");
-        const auto output = performAsyncInfer(modelVersion, input);
+        auto& req = performAsyncInfer(modelInstance, inputName, input);
         timer.stop("async infer");
 
-        // timer.save("sync infer");
-        // const auto output = modelVersion->infer(input);
-        // timer.print("sync infer");
+         timer.start("sync infer");
+         //auto& req = modelInstance->infer(inputName, input);
+         timer.stop("sync infer");
 
         // Serialization
         timer.start("serialization");
-        auto& tensorProto = (*response->mutable_outputs())[modelVersion->getOutputName()];
+        std::string outputName = modelInstance->getOutputsInfo().begin()->first;
+        auto output = req.GetBlob(outputName);
+        auto& tensorProto = (*response->mutable_outputs())[outputName];
         tensorProto.Clear();
-        tensorProto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        tensorProto.set_dtype(modelInstance->getOutputsInfo().begin()->second->getPrecisionAsDataType());
 
         auto tensorProtoShape = tensorProto.mutable_tensor_shape();
         tensorProtoShape->Clear();
@@ -249,6 +251,7 @@ int main()
     PredictionServiceImpl service;
     ServerBuilder builder;
     builder.AddListeningPort(ADDR_URI, grpc::InsecureServerCredentials());
+    builder.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
     builder.RegisterService(&service);
 
     std::vector<std::unique_ptr<Server>> servers;
