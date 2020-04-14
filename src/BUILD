@@ -25,9 +25,10 @@ cc_binary(
         "model.h",
         "modelmanager.cpp",
         "modelmanager.h",
-        "modelversion.cpp",
-        "modelversion.h",
+        "modelinstance.cpp",
+        "modelinstance.h",
         "status.h",
+        "tensorinfo.h",
         "timer.h",
     ],
     deps = [

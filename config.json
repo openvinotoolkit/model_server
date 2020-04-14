@@ -4,7 +4,8 @@
         "path": "/models/resnet50/1/resnet_50_i8.xml",
         "version": 0,
         "backend": "CPU",
-        "batchSize": 1,
-        "shape": [1, 3, 224, 224]
-    }]
+        "layout": {
+            "data": "NHWC"
+        }
+   }]
 }
