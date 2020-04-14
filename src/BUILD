@@ -39,3 +39,28 @@ cc_binary(
         "@openvino//:library",
     ],
 )
+
+cc_test(
+    name = "server_cc_test",
+    srcs = [
+        "test/unit_tests.cpp",
+        "test/modelmanager_test.cpp",
+        "model.cpp",
+        "model.h",
+        "modelmanager.cpp",
+        "modelmanager.h",
+        "modelversion.cpp",
+        "modelversion.h",
+        "status.h",
+        "timer.h",
+    ],
+    deps = [
+        "//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@org_tensorflow//tensorflow/core:framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@openvino//:headers",
+        "@openvino//:library",
+        "@com_google_googletest//:gtest",
+    ],
+)

@@ -102,6 +102,7 @@ COPY src/ tensorflow_serving/ovms/
 COPY WORKSPACE .
 COPY config.json /models/
 RUN bazel build //tensorflow_serving/ovms:server_cc
+RUN bazel test --test_summary=detailed --test_output=all //tensorflow_serving/ovms:server_cc_test
 
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/tf_serving/bazel-out/k8-opt/bin/_solib_k8/*/
 
