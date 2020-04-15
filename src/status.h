@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <utility>
+
 namespace ovms {
 
 /**
@@ -28,6 +30,42 @@ enum class Status {
     NETWORK_NOT_LOADED,     
     JSON_INVALID,           /*!< The file is not valid json */
     MODELINSTANCE_NOT_FOUND
+};
+
+/**
+ * @enum ValidationStatusCode
+ * @brief This enum contains status codes for ovms request validation
+ */
+enum class ValidationStatusCode {
+    OK,                     /*!< Success */
+    MODEL_NAME_MISSING,     /*!< Model with requested name is not found */
+    MODEL_VERSION_MISSING,  /*!< Model with requested version is not found */
+    INVALID_INPUT_ALIAS,    /*!< Invalid number of inputs or name mismatch */
+    INVALID_SHAPE,          /*!< Invalid shape dimension number or dimension value */
+    INVALID_PRECISION,      /*!< Invalid precision */
+    INVALID_CONTENT_SIZE,   /*!< Invalid content size */
+    DESERIALIZATION_ERROR,  /*!< Error occured during deserialization */
+    INFERENCE_ERROR,        /*!< Error occured during inference */
+};
+
+
+class ValidationStatus {
+public:
+    static const std::string& getError(const ValidationStatusCode code) {
+        static const std::map<ValidationStatusCode, std::string> errors = {
+            { ValidationStatusCode::OK,                     ""                                          },
+            { ValidationStatusCode::MODEL_NAME_MISSING,     "Model with requested name is not found"    },
+            { ValidationStatusCode::MODEL_VERSION_MISSING,  "Model with requested version is not found" },
+            { ValidationStatusCode::INVALID_INPUT_ALIAS,    "Unexpected input tensor alias"             },
+            { ValidationStatusCode::INVALID_SHAPE,          "Invalid input shape"                       },
+            { ValidationStatusCode::INVALID_PRECISION,      "Invalid input precision"                   },
+            { ValidationStatusCode::INVALID_CONTENT_SIZE,   "Invalid content size"                      },
+            { ValidationStatusCode::DESERIALIZATION_ERROR,  "Error occured during deserialization"      },
+            { ValidationStatusCode::INFERENCE_ERROR,        "Error occured during inference"            },
+        };
+
+        return errors.find(code)->second;
+    }
 };
 
 } // namespace ovms

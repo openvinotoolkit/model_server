@@ -26,105 +26,105 @@ namespace ovms {
      * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
      */
     class ModelManager {
-        private:
-            /**
-             * @brief A default constructor is private
-             */
-            ModelManager() = default;
+    private:
+        /**
+         * @brief A default constructor is private
+         */
+        ModelManager() = default;
 
-            /**
-             * @brief Private copying constructor
-             */
-            ModelManager(const ModelManager&);
+        /**
+         * @brief Private copying constructor
+         */
+        ModelManager(const ModelManager&);
     
-            /**
-             * @brief Reads models from configuration file
-             * 
-             * @param jsonFilename configuration file
-             * @return Status 
-             */
-            Status loadConfig(const std::string& jsonFilename);
+        /**
+         * @brief Reads models from configuration file
+         * 
+         * @param jsonFilename configuration file
+         * @return Status 
+         */
+        Status loadConfig(const std::string& jsonFilename);
 
-            /**
-             * @brief Watcher thread for monitor changes in config
-             */
-            void watcher(std::future<void> exit);
+        /**
+         * @brief Watcher thread for monitor changes in config
+         */
+        void watcher(std::future<void> exit);
 
-            /**
-             * @brief Watcher interval for checking changes in config
-             */
-            static const uint watcherIntervalSec;
+        /**
+         * @brief Watcher interval for checking changes in config
+         */
+        static const uint watcherIntervalSec;
 
-            /**
-             * @brief A JSON configuration filename
-             */
-            std::string configFilename;
+        /**
+         * @brief A JSON configuration filename
+         */
+        std::string configFilename;
 
-            /**
-             * @brief A collection of models
-             */
-            std::map<std::string, std::shared_ptr<Model>> models;
+        /**
+         * @brief A collection of models
+         */
+        std::map<std::string, std::shared_ptr<Model>> models;
 
-            /**
-             * @brief A thread object used for monitoring changes in config
-             */
-            std::thread monitor;
+        /**
+         * @brief A thread object used for monitoring changes in config
+         */
+        std::thread monitor;
 
-            /**
-             * @brief An exit signal to notify watcher thread to exit
-             */
-            std::promise<void> exit;
-        public:
-            /**
-             * @brief Gets the instance of ModelManager
-             */
-            static ModelManager& getInstance() {
-                static ModelManager instance;
+        /**
+         * @brief An exit signal to notify watcher thread to exit
+         */
+        std::promise<void> exit;
+    public:
+        /**
+         * @brief Gets the instance of ModelManager
+         */
+        static ModelManager& getInstance() {
+            static ModelManager instance;
 
-                return instance;
-            }
+        return instance;
+        }
 
-            /**
-             * @brief Gets config filename
-             * 
-             * @return config filename
-             */
-            const std::string& getConfigFilename() {
-                return configFilename;
-            }
+        /**
+         * @brief Gets config filename
+         * 
+         * @return config filename
+         */
+        const std::string& getConfigFilename() {
+            return configFilename;
+        }
 
-            /**
-             * @brief Gets models collection
-             * 
-             * @return models collection
-             */
-            const std::map<std::string, std::shared_ptr<Model>>& getModels() {
-                return models;
-            }
+        /**
+         * @brief Gets models collection
+         * 
+         * @return models collection
+         */
+        const std::map<std::string, std::shared_ptr<Model>>& getModels() {
+            return models;
+        }
 
-            /**
-             * @brief Finds model with specific name
-             *
-             * @param name of the model to search for
-             *
-             * @return pointer to Model or nullptr if not found 
-             */
-            const std::shared_ptr<Model> findModelByName(const std::string& name) const {
-                auto it = models.find(name);
-                return it != models.end() ? it->second : nullptr;
-            }
+        /**
+         * @brief Finds model with specific name
+         *
+         * @param name of the model to search for
+         *
+         * @return pointer to Model or nullptr if not found 
+         */
+        const std::shared_ptr<Model> findModelByName(const std::string& name) const {
+            auto it = models.find(name);
+            return it != models.end() ? it->second : nullptr;
+        }
 
-            /**
-             * @brief Starts model manager using provided config
-             * 
-             * @param filename
-             * @return status
-             */
-            Status start(const std::string& jsonFilename);
+        /**
+         * @brief Starts model manager using provided config
+         * 
+         * @param filename
+         * @return status
+         */
+        Status start(const std::string& jsonFilename);
 
-            /**
-             * @brief Gracefully finish the thread
-             */
-            void join();
+        /**
+         * @brief Gracefully finish the thread
+         */
+        void join();
     };
 }  // namespace ovms

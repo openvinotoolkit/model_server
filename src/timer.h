@@ -25,6 +25,7 @@ public:
 
     void print() {
 #ifdef DEBUG
+        std::cout << "-----\n";
         for (const auto& pair : stopTimestamps) {
             const auto& name = pair.first;
             auto elapsed = std::to_string(std::chrono::duration<double, std::milli>(stopTimestamps[name] - startTimestamps[name]).count()); 

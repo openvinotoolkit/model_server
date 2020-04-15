@@ -5,7 +5,7 @@
         "version": 0,
         "backend": "CPU",
         "layout": {
-            "data": "NHWC"
+            "data": "NCHW"
         }
    }]
 }

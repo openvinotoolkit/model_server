@@ -48,7 +48,7 @@ void ModelInstance::loadTensors(tensorMap& map,
             shape,
             ieLayout,
             tensorDesc);
-        }
+    }
 }
 
 Status ModelInstance::loadModel( const std::string& path,
@@ -60,23 +60,23 @@ Status ModelInstance::loadModel( const std::string& path,
     this->path = path;
     this->version = version;
     this->backend = backend;
-    
+
     // load network
     try {
         network = engine.ReadNetwork(path);
-        execNetwork = engine.LoadNetwork(network, backend);
         this->batchSize = batchSize > 0 ? batchSize : network.getBatchSize();
 
-        loadTensors(inputsInfo, network.getInputsInfo(), shapes, layouts);
+        loadTensors(inputsInfo,  network.getInputsInfo(),  shapes, layouts);
         loadTensors(outputsInfo, network.getOutputsInfo(), shapes, layouts);
-        
+
+        execNetwork = engine.LoadNetwork(network, backend);
         request = execNetwork.CreateInferRequest();
     }
-    catch (const InferenceEngine::details::InferenceEngineException e) {
+    catch (const InferenceEngine::details::InferenceEngineException& e) {
         // Logger(Log::Error, e.what());
         return Status::NETWORK_NOT_LOADED;
     }
-    
+
     return Status::OK;
 }
 
@@ -95,6 +95,60 @@ InferenceEngine::InferRequest& ModelInstance::inferAsync(const std::string& inpu
     request.StartAsync();
 
     return request;
+}
+
+const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+
+    // Network and request must have the same amount of inputs
+    if (request->inputs_size() >= 0 && inputsInfo.size() != (size_t) request->inputs_size()) {
+        return ValidationStatusCode::INVALID_INPUT_ALIAS;
+    }
+
+    for (const auto& pair : inputsInfo) {
+        const auto& name = pair.first;
+        auto networkInput = pair.second;
+        auto it = request->inputs().find(name);
+
+        // Network and request must have the same names of inputs
+        if (it == request->inputs().end()) {
+            return ValidationStatusCode::INVALID_INPUT_ALIAS;
+        }
+
+        auto& requestInput = it->second;
+        auto& shape = networkInput->getShape();
+
+        // Network and request must have the same number of shape dimensions
+        if (requestInput.tensor_shape().dim_size() >= 0 && shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
+            return ValidationStatusCode::INVALID_SHAPE;
+        }
+
+        // Network and request must have the same shape
+        for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+            if (requestInput.tensor_shape().dim(i).size() >= 0 && shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
+                return ValidationStatusCode::INVALID_SHAPE;
+            }
+        }
+
+        // Network expects tensor content size
+        size_t expectedContentSize = std::accumulate(
+            networkInput->getShape().begin(),
+            networkInput->getShape().end(),
+            1,
+            std::multiplies<size_t>());
+
+        expectedContentSize *= networkInput->getPrecision().size();
+
+        if (expectedContentSize != requestInput.tensor_content().size()) {
+            return ValidationStatusCode::INVALID_CONTENT_SIZE;
+        }
+
+        // Network and request must have the same precision
+        if (requestInput.dtype() != networkInput->getPrecisionAsDataType()) {
+            return ValidationStatusCode::INVALID_PRECISION;
+        }
+    }
+
+    return ValidationStatusCode::OK;
 }
 
 } // namespace ovms
