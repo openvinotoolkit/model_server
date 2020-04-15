@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2018-2020 Intel Corporation
+// Copyright 2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,27 +21,23 @@
 #include <iostream>
 #include <vector>
 
+#include "config.h"
 #include "modelmanager.h"
 #include "prediction_service.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
 
-using ovms::Status;
-using ovms::ModelManager;
-using ovms::PredictionServiceImpl;
+using namespace ovms;
 
-
-int main()
+int main(int argc, char** argv)
 {
-    const int PORT              = 9178;
-    const int SERVER_COUNT      = 24;
-    const int GIGABYTE          = 1024 * 1024 * 1024;
-    const std::string ADDR_URI  = std::string("0.0.0.0:") + std::to_string(PORT);
+    const int GIGABYTE = 1024 * 1024 * 1024;
 
+    auto& config = ovms::Config::instance().parse(argc, argv);
     auto& manager = ModelManager::getInstance();
 
-    Status status = manager.start("/models/config.json");
+    Status status = manager.start();
 
     if (status != Status::OK) {
         std::cout << "ovms::ModelManager::Start() Error: " << int(status) << std::endl;
@@ -52,16 +48,16 @@ int main()
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
-    builder.AddListeningPort(ADDR_URI, grpc::InsecureServerCredentials());
-    builder.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
+    builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
     std::vector<std::unique_ptr<Server>> servers;
-    for (int i = 0; i < SERVER_COUNT; i++) {
+    for (int i = 0; i < config.grpcWorkers(); i++) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
 
-    std::cout << "Server started on port " << PORT << std::endl;
+    std::cout << "Server started on port " << config.port() << std::endl;
     servers[0]->Wait();
+
     return 0;
 }

@@ -106,4 +106,4 @@ RUN bazel test --test_summary=detailed --test_output=all //tensorflow_serving/ov
 
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/tf_serving/bazel-out/k8-opt/bin/_solib_k8/*/
 
-ENTRYPOINT ./bazel-bin/tensorflow_serving/ovms/server_cc
+ENTRYPOINT ./bazel-bin/tensorflow_serving/ovms/server_cc --config_path /models/config.json --port 9178
