@@ -115,12 +115,19 @@ namespace ovms {
         }
 
         /**
-         * @brief Starts model manager using provided config
+         * @brief Starts model manager using provided config file
          * 
          * @param filename
          * @return status
          */
         Status start(const std::string& jsonFilename);
+
+        /**
+         * @brief Starts model manager using ovms::Config
+         * 
+         * @return status
+         */
+        Status start();
 
         /**
          * @brief Gracefully finish the thread

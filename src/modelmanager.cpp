@@ -20,11 +20,43 @@
 
 #include <iostream>
 
+#include "config.h"
 #include "modelmanager.h"
 
 namespace ovms {
 
 const uint ModelManager::watcherIntervalSec = 1;
+
+Status ModelManager::start() {
+    auto& config = ovms::Config::instance();
+
+    // start manager using config file
+    if (config.configPath() != "")
+        return start(config.configPath());
+
+    // start manager using commandline parameters
+    std::shared_ptr<Model> model = std::make_shared<Model>();
+    std::string name = config.modelName();
+    models[name] = std::move(model);
+    shapesMap shapes;
+    layoutsMap layouts;
+    if (config.shape().size()) {
+        shapes["input"] = config.shape();
+    }
+    auto status = models[name]->addVersion(config.modelName(),
+                                           config.modelPath(),
+                                           config.targetDevice(),
+                                           1,   // TODO versionPolicy implementation
+                                           config.batchSize(),
+                                           shapes,
+                                           layouts);
+    if (status != Status::OK) {
+        // Logger(Log::Warning, "There was an error loading a model ", config.modelName());
+        return status;
+    }
+
+    return Status::OK;
+}
 
 Status ModelManager::start(const std::string& jsonFilename) {
     Status s = loadConfig(jsonFilename);

@@ -103,3 +103,27 @@ cc_library(
 """,
     path = "/openvino",
 )
+
+http_archive(
+    name="cxxopts",
+    url="https://github.com/jarro2783/cxxopts/archive/v2.2.0.zip",
+    sha256="f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
+    strip_prefix = "cxxopts-2.2.0",
+    build_file_content= """
+cc_library(
+    name = "cxxopts",
+    srcs = [],
+    hdrs = [
+        "include/cxxopts.hpp",
+    ],
+    copts = [
+        "-Iexternal/cxxopts/",
+        "--std=c++14"
+    ],
+    includes = [
+        "include/",
+    ],
+    visibility = ["//visibility:public"],
+)    """
+)
+
