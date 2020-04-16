@@ -14,8 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#pragma once
-#include <vector>
 #include "ovstreams.h"
 
 namespace ovms {
@@ -24,7 +22,8 @@ void OVStreamsQueue::signalCompletedInference(int streamID) {
     activeStreams[streamID].notify_one();
 }
 
-void OVStreamsQueue::waitForAsync(int streamID, std::mutex &mx) {
+void OVStreamsQueue::waitForAsync(int streamID) {
+    std::mutex mx;
     std::unique_lock <std::mutex> lock(mx);
     activeStreams[streamID].wait(lock);
 }

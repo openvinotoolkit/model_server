@@ -42,40 +42,6 @@ using ovms::ValidationStatusCode;
 
 namespace ovms {
 
-template<typename T>
-Blob::Ptr makeBlob(const TensorProto& requestInput, const std::shared_ptr<TensorInfo>& networkInput) {
-    return make_shared_blob<T>(
-        networkInput->getTensorDesc(),
-        const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
-}
-
-Blob::Ptr deserialize(const TensorProto& requestInput, const std::shared_ptr<TensorInfo>& networkInput) {
-    switch (networkInput->getPrecision()) {
-        case Precision::FP32:   return makeBlob<float>  (requestInput, networkInput);
-        case Precision::I32:    return makeBlob<int32_t>(requestInput, networkInput);
-        case Precision::U8:     return makeBlob<uint8_t>(requestInput, networkInput);
-        default:                return nullptr;
-    }
-}
-
-void serialize(TensorProto& responseOutput, const std::shared_ptr<TensorInfo>& networkOutput, Blob::Ptr blob) {
-    responseOutput.Clear();
-
-    switch (networkOutput->getPrecision()) {
-        case Precision::FP32: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
-        //case Precision::DOUBLE?: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); // unsupported by OV?
-        case Precision::I32:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value); break;
-    }
-
-    responseOutput.mutable_tensor_shape()->Clear();
-    for (auto dim : networkOutput->getShape()) {
-        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
-    }
-
-    responseOutput.mutable_tensor_content()->assign((char*) blob->buffer(), blob->byteSize());
-
-}
-
 void infer(InferRequest& inferRequest) {
     std::condition_variable cv;
     std::mutex mx;
@@ -89,11 +55,7 @@ void infer(InferRequest& inferRequest) {
     cv.wait(lock);
 }
 
-grpc::Status ovms::PredictionServiceImpl::Predict(
-            ServerContext*      context,
-    const   PredictRequest*     request,
-            PredictResponse*    response) {
-
+grpc::Status getModelInstance(const PredictRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance) {
     ModelManager& manager = ModelManager::getInstance();
 
     auto& modelName = request->model_spec().name();
@@ -114,24 +76,45 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
             ValidationStatus::getError(
                 ValidationStatusCode::MODEL_VERSION_MISSING));
     }
+    modelInstance = modelVersion;
+    
+    return grpc::Status::OK;
+}
 
-    auto& inferRequest  = modelVersion->getInferRequest();
-
-    auto result = modelVersion->validate(request);
+grpc::Status validateRequest(const PredictRequest* request, ovms::ModelInstance& modelInstance) {
+    auto result = modelInstance.validate(request);
     if (result != ValidationStatusCode::OK) {
         return grpc::Status(
             grpc::StatusCode::INVALID_ARGUMENT,
             ValidationStatus::getError(result));
     }
+    return grpc::Status::OK;
+}
 
-    // Deserialization
+template<typename T>
+Blob::Ptr makeBlob(const TensorProto& requestInput, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    return make_shared_blob<T>(
+        tensorInfo->getTensorDesc(),
+        const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+}
+
+Blob::Ptr deserialize(const TensorProto& requestInput, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    switch (tensorInfo->getPrecision()) {
+        case Precision::FP32:   return makeBlob<float>  (requestInput, tensorInfo);
+        case Precision::I32:    return makeBlob<int32_t>(requestInput, tensorInfo);
+        case Precision::U8:     return makeBlob<uint8_t>(requestInput, tensorInfo);
+        default:                return nullptr;
+    }
+}
+
+grpc::Status deserialize(const PredictRequest* request, const tensorMap& inputMap, InferenceEngine::InferRequest& inferRequest) {
     try {
-        for (const auto& pair : modelVersion->getInputsInfo()) {
+        for (const auto& pair : inputMap) {
             const auto& name = pair.first;
-            auto networkInput = pair.second;
+            auto tensorInfo = pair.second;
             auto& requestInput = request->inputs().find(name)->second;
 
-            auto blob = deserialize(requestInput, networkInput);
+            auto blob = deserialize(requestInput, tensorInfo);
             if (blob == nullptr) {
                 throw;
             }
@@ -144,20 +127,29 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
             ValidationStatus::getError(
                 ValidationStatusCode::DESERIALIZATION_ERROR));
     }
+    return grpc::Status::OK;
+}
 
-    // Infer
-    try {
-        infer(inferRequest);
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        std::cout << e.what() << std::endl;
-        return grpc::Status(
-            grpc::StatusCode::INVALID_ARGUMENT,
-            ValidationStatus::getError(
-                ValidationStatusCode::INFERENCE_ERROR));
+void serialize(TensorProto& responseOutput, const std::shared_ptr<TensorInfo>& networkOutput, Blob::Ptr blob) {
+    responseOutput.Clear();
+
+    switch (networkOutput->getPrecision()) {
+        case Precision::FP32: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
+        //case Precision::DOUBLE?: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); // unsupported by OV?
+        case Precision::I32:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value); break;
     }
 
-    // Serialization
-    for (const auto& pair : modelVersion->getOutputsInfo()) {
+    responseOutput.mutable_tensor_shape()->Clear();
+    for (auto dim : networkOutput->getShape()) {
+        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
+    }
+
+    responseOutput.mutable_tensor_content()->assign((char*) blob->buffer(), blob->byteSize());
+}
+
+void serialize(InferenceEngine::InferRequest& inferRequest, const tensorMap& outputMap, PredictResponse* response)
+{
+    for (const auto& pair : outputMap) {
         const auto& name = pair.first;
         auto networkOutput = pair.second;
         auto blob = inferRequest.GetBlob(name);
@@ -165,7 +157,68 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         auto& tensorProto = (*response->mutable_outputs())[name];
         serialize(tensorProto, networkOutput, blob);
     }
+}
 
+struct ExecutingStreamIdGuard {
+    ExecutingStreamIdGuard(ovms::OVStreamsQueue& ovstreams) :
+        ovstreams_(ovstreams),
+        id_(ovstreams_.getIdleStream()) {}
+    ~ExecutingStreamIdGuard(){
+        ovstreams_.returnStream(id_);
+    }
+    int getId() { return id_; }
+private:
+    ovms::OVStreamsQueue& ovstreams_;
+    const int id_;
+};
+
+grpc::Status performInference(ovms::OVStreamsQueue& ovstreams, const int executingStreamId, InferenceEngine::InferRequest inferRequest) {
+    try {
+        inferRequest.SetCompletionCallback([&ovstreams, executingStreamId]() {
+            ovstreams.signalCompletedInference(executingStreamId);
+        });
+        inferRequest.StartAsync();
+        ovstreams.waitForAsync(executingStreamId);
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        std::cout << e.what() << std::endl;
+        return grpc::Status(
+        grpc::StatusCode::INVALID_ARGUMENT,
+        ValidationStatus::getError(
+            ValidationStatusCode::INFERENCE_ERROR));
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status ovms::PredictionServiceImpl::Predict(
+            ServerContext*      context,
+    const   PredictRequest*     request,
+            PredictResponse*    response) {
+
+    std::shared_ptr<ovms::ModelInstance> modelVersion;
+    grpc::Status status = getModelInstance(request, modelVersion);
+    if(!status.ok())
+        return status;
+
+    status = validateRequest(request, *modelVersion);
+    if(!status.ok())
+        return status;
+
+    ovms::OVStreamsQueue& ovstreams = modelVersion->getOVStreams();
+    ExecutingStreamIdGuard executingStreamIdGuard(ovstreams);
+    int executingStreamId = executingStreamIdGuard.getId();
+    InferenceEngine::InferRequest& inferRequest = ovstreams.getInferRequest(executingStreamId);
+
+    // TODO check if separate inferRequest & stream execution allocation does speed up executing
+    // we don't need stream allocated during serialization/deserialization
+    status = deserialize(request, modelVersion->getInputsInfo(), inferRequest);
+    if(!status.ok())
+        return status;
+
+    status = performInference(ovstreams, executingStreamId, inferRequest);
+    if(!status.ok())
+        return status;
+
+    serialize(inferRequest, modelVersion->getOutputsInfo(), response);
     return grpc::Status::OK;
 }
 

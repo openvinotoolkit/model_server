@@ -39,7 +39,7 @@ Config& Config::parse(int argc, char** argv) {
                  "REST_PORT")
             ("grpc_workers",
                 "number of workers in gRPC server",
-                cxxopts::value<uint>()->default_value("24"),
+                cxxopts::value<uint>()->default_value("16"),
                 "GRPC_WORKERS")
             ("rest_workers",
                 "number of workers in REST server - has no effect if rest_port is not set",

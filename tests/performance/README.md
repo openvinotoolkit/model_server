@@ -45,7 +45,7 @@ optional arguments:
 
 ### Example usage:
 ```bash
-$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 1000 --batchsize 2 --report_every 100
+$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 1000 --batchsize 1 --report_every 100 --input_name "data"
 ```
 ```bash
 [--] Starting iterations
@@ -66,7 +66,7 @@ Script `grpc_throughput.sh` spawns 28 gRPC clients.
 
 ### Example usage:
 ```bash
-$ ./grpc_throughput.sh --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 4000 --batchsize 2
+$ ./grpc_throughput.sh --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 5000 --batchsize 1 --input_name "data"
 ```
 
 This will create `28 * 4000` requests, `2` frames each, = `224000` frames total.  
