@@ -448,8 +448,8 @@ from openvino.inference_engine import IEPlugin, IENetwork
 # replace MULTI:MYRIAD,CPU if you are using different multi device configuration
 plugin = IEPlugin(device='MULTI:MYRIAD,CPU')
 # change paths to location of your model
-model_xml = '/opt/ml/resnet/1/resnet_50_i8.xml'
-model_bin = '/opt/ml/resnet/1/resnet_50_i8.bin'
+model_xml = "<model's xml file path>"
+model_bin = "<model's bin file path>"
 net = IENetwork(model=model_xml, weights=model_bin)
 exec_net = plugin.load(network=net)
 print(exec_net.get_metric('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))
