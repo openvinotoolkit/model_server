@@ -20,7 +20,7 @@ import grpc
 import datetime
 import argparse
 import numpy as np
-from tensorflow import make_tensor_proto
+from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
@@ -32,6 +32,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--images_numpy_path',
                     required=True,
                     help='image in numpy format')
+parser.add_argument('--labels_numpy_path',
+                    required=False,
+                    help='labels in numpy format')
 parser.add_argument('--grpc_address',
                     required=False,
                     default='localhost',
@@ -44,6 +47,10 @@ parser.add_argument('--input_name',
                     required=False,
                     default='input',
                     help='Specify input tensor name. default: input')
+parser.add_argument('--output_name',
+                    required=False,
+                    default='prob',
+                    help='Specify output tensor name. default: prob')
 parser.add_argument('--iterations',
                     default=0,
                     help='Number of requests iterations, '
@@ -66,6 +73,8 @@ parser.add_argument('--id',
                     help='Helps identifying client')
 args = parser.parse_args()
 
+accurracy_measuring_mode = args.labels_numpy_path is not None
+
 channel = grpc.insecure_channel("{}:{}".format(
     args.grpc_address,
     args.grpc_port))
@@ -78,11 +87,18 @@ imgs = np.load(args.images_numpy_path, mmap_mode='r', allow_pickle=False)
 imgs = imgs - np.min(imgs)  # Normalization 0-255
 imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
 
+if accurracy_measuring_mode:
+    labels = np.load(args.labels_numpy_path, mmap_mode='r', allow_pickle=False)
+    matches_count = 0
+    total_count = 0
+
 # If input numpy file has too few frames according to the
 # value of iterations and the batch size,
 # it will be duplicated to match requested number of frames.
 while args.batchsize >= imgs.shape[0]:
     imgs = np.append(imgs, imgs, axis=0)
+    if accurracy_measuring_mode:
+        labels = np.append(labels, labels, axis=0)
 
 if args.iterations < 0:
     print("Argument '--iterations' can't be lower than 0")
@@ -105,6 +121,8 @@ while iteration <= iterations:
 
         # Preparing image data
         img = imgs[x:(x + args.batchsize)]
+        if accurracy_measuring_mode:
+            expected_label = labels[x:(x + args.batchsize)][0]
 
         # Creating request object
         request = predict_pb2.PredictRequest()
@@ -122,12 +140,32 @@ while iteration <= iterations:
         # Aggregating processing time statistics
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times, np.array([duration]))
+        
+        # If we want to check accurracy
+        if accurracy_measuring_mode:
+            output = np.array(make_ndarray(result.outputs[args.output_name]))
+            actual_label = np.argmax(output[0])
+            if expected_label == actual_label:
+                matches_count += 1
+            total_count += 1
 
         if args.report_every > 0 and iteration < iterations and iteration % args.report_every == 0:
             print(f'[{args.id:2}] Iteration {iteration:5}/{iterations:5}; '
                   f'Current latency: {round(duration, 2):.2f}ms; '
                   f'Average latency: {round(np.average(processing_times), 2):.2f}ms')
 
-print(f"[{args.id:2}] "
+# Latency and accurracy
+if accurracy_measuring_mode:
+    accuracy = 100 * matches_count / total_count
+    print(f"[{args.id:2}] "
       f"Iterations: {iterations:5}; "
-      f"Final average latency: {round(np.average(processing_times), 2):.2f}ms")
+      f"Final average latency: {round(np.average(processing_times), 2):.2f}ms; "
+      f"Classification accuracy: {accuracy}%")
+    if accuracy < 100.0:
+        print('Build failed - accurracy is lower than 100')
+        exit(1)
+# Latency only
+else:
+    print(f"[{args.id:2}] "
+        f"Iterations: {iterations:5}; "
+        f"Final average latency: {round(np.average(processing_times), 2):.2f}ms")  
