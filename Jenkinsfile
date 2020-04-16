@@ -7,8 +7,6 @@ pipeline {
                 sh './tests/scripts/prepare-virtualenv.sh'
             }
         }
-
-        }
     }
     post {
         always {
