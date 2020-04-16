@@ -25,6 +25,7 @@
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "ovstreams.h"
 #include "status.h"
 
 namespace ovms {
@@ -33,6 +34,8 @@ namespace ovms {
     using model_version_t = int64_t;
     using shapesMap = std::map<std::string, std::vector<size_t>>;
     using layoutsMap = std::map<std::string, std::string>;
+
+    const int OV_STREAMS_COUNT = 12;
 
     /**
      * @brief This class contains all the information about inference engine model
@@ -89,6 +92,10 @@ namespace ovms {
          * @brief Inference request object created during network load
          */
         InferenceEngine::InferRequest request;
+        /**
+         * @brief OpenVINO inference execution stream pool
+         */
+        std::unique_ptr<OVStreamsQueue> ovstreams;
 
         /**
          * @brief Internal method for loading inputs/outputs
@@ -192,6 +199,15 @@ namespace ovms {
          */
         const tensorMap& getOutputsInfo() {
             return outputsInfo;
+        }
+
+        /**
+         * @brief Get OV streams pool
+         * 
+         * @return OVStreamsQueue
+         * */
+        OVStreamsQueue& getOVStreams() {
+            return *ovstreams;
         }
 
         /**

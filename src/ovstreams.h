@@ -14,11 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
 #include <thread>
-#include <atomic>
+
+#include <inference_engine.hpp>
 
 namespace ovms {
 /**
@@ -44,21 +46,29 @@ class OVStreamsQueue {
     /**
     * @brief Wait for async callback notification
     */
-    void waitForAsync(int streamID, std::mutex &mx);
+    void waitForAsync(int streamID);
 
     /**
     * @brief Constructor with initialization
     */
-    OVStreamsQueue(int streamsLength) :
+    OVStreamsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
+        streams(streamsLength),
         front_idx{0},
         back_idx{0},
-        streams(streamsLength),
         activeStreams(streamsLength)
     {
-        for (int i = 0; i <= streamsLength - 1; i++) {
-            streams.push_back(i);
+        for (int i = 0; i < streamsLength; ++i) {
+            streams[i] = i;
+            inferRequests.push_back(network.CreateInferRequest());
         }
-    };
+    }
+
+    /**
+     * @brief Give InferRequest
+     */
+    InferenceEngine::InferRequest& getInferRequest(int streamID) {
+        return inferRequests[streamID];
+    }
 
  protected:
     /**
@@ -82,4 +92,9 @@ class OVStreamsQueue {
     std::vector<std::condition_variable> activeStreams;
     std::mutex front_mut;
     std::condition_variable not_full_cond;
+    /**
+     * 
+     */
+    std::vector<InferenceEngine::InferRequest> inferRequests;
+};
 }

@@ -69,8 +69,9 @@ Status ModelInstance::loadModel( const std::string& path,
         loadTensors(inputsInfo,  network.getInputsInfo(),  shapes, layouts);
         loadTensors(outputsInfo, network.getOutputsInfo(), shapes, layouts);
 
-        execNetwork = engine.LoadNetwork(network, backend);
+        execNetwork = engine.LoadNetwork(network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(OV_STREAMS_COUNT)}});
         request = execNetwork.CreateInferRequest();
+        ovstreams = std::make_unique<OVStreamsQueue>(execNetwork, OV_STREAMS_COUNT);
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         // Logger(Log::Error, e.what());
