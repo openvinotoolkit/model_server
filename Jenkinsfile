@@ -13,6 +13,11 @@ pipeline {
                 sh 'make test_perf'
             }
         }
+        stage('functional tests') {
+            steps {
+                sh 'make test_functional'
+            }
+        }
 
         stage('throughput test') {
             steps {

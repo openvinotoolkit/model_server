@@ -22,18 +22,15 @@
 #include <inference_engine.hpp>
 
 #include "tensorinfo.h"
-
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "ovstreams.h"
 #include "status.h"
+#include "modelconfig.h"
 
 namespace ovms {
 
     using tensorMap = std::map<std::string, std::shared_ptr<TensorInfo>>;
-    using model_version_t = int64_t;
-    using shapesMap = std::map<std::string, std::vector<size_t>>;
-    using layoutsMap = std::map<std::string, std::string>;
 
     const int OV_STREAMS_COUNT = 12;
 
@@ -213,22 +210,11 @@ namespace ovms {
         /**
          * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
          *
-         * shapes and layouts are optional, in case we want to override those read from network
+         * @param config model configuration
          *
-         * @param path
-         * @param backend
-         * @param version
-         * @param batchSize
-         * @param shapes 
-         * @param layouts
          * @return Status
          */
-        Status loadModel(const std::string& path,
-                         const std::string& backend,
-                         const model_version_t& version,
-                         const size_t batchSize,
-                         const shapesMap& shapes = {},
-                         const layoutsMap& layouts = {});
+        Status loadModel(const ModelConfig& config);
 
         /**
          * @brief Execute inference on provided data and input name

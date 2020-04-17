@@ -36,7 +36,7 @@ std::string create_config_file_with_content(const std::string& content) {
 
 TEST(ModelManager,config_parse_no_models)
 {
-   std::string config_file = create_config_file_with_content("{ \"models\": [ ] }\n");
+   std::string config_file = create_config_file_with_content("{ \"model_config_list\": [ ] }\n");
    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
    ovms::Status status = manager.start(config_file);
    EXPECT_EQ(status,ovms::Status::OK);

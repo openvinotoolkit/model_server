@@ -81,17 +81,17 @@ Config& Config::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        if (result->count("help"))
+        if (result->count("help") || result->arguments().size() == 0)
         {
-            std::cout << options->help({"", "config", "model"}) << std::endl;       
-            exit(1);
+            std::cout << options->help({"", "config", "model"}) << std::endl;
+            exit(0);
         }
 
         validate();
     }
     catch (const cxxopts::OptionException& e)
     {
-        std::cerr << "error parsing options: " << e.what() << std::endl;
+        std::cout << "error parsing options: " << e.what() << std::endl;
         exit(1);
     }
 
@@ -101,13 +101,13 @@ Config& Config::parse(int argc, char** argv) {
 bool Config::validate() {
     // cannot set both config path & model_name/model_path
     if (result->count("config_path") && (result->count("model_name") || result->count("model_path"))) {
-        std::cerr << "Use either config_path or model_path with model_name" << std::endl;
+        std::cout << "Use either config_path or model_path with model_name" << std::endl;
         exit(2);
     }
 
     // port and rest_port cannot be the same
     if (port() == restPort()) {
-        std::cerr << "port and rest_port cannot have the same values" << std::endl;
+        std::cout << "port and rest_port cannot have the same values" << std::endl;
         exit(3);
     }
 

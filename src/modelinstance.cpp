@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <dirent.h>
+#include <iostream>
 #include <string>
+#include <sys/types.h>
 
 #include "modelinstance.h"
 
@@ -51,23 +54,48 @@ void ModelInstance::loadTensors(tensorMap& map,
     }
 }
 
-Status ModelInstance::loadModel( const std::string& path,
-                                 const std::string& backend,
-                                 const model_version_t& version,
-                                 const size_t batchSize,
-                                 const shapesMap& shapes,
-                                 const layoutsMap& layouts) {
-    this->path = path;
-    this->version = version;
-    this->backend = backend;
+// Temporary methods. To be replaces with proper storage class.
+bool endsWith(std::string token, std::string match)
+{
+	auto it = match.begin();
+	return token.size() >= match.size() &&
+		std::all_of(std::next(token.begin(),token.size() - match.size()), token.end(), [&it](const char & c){
+			return ::tolower(c) == ::tolower(*(it++))  ;
+	    });
+}
+
+std::string getModelFile(const std::string path) {
+    struct dirent *entry;
+    DIR *dir = opendir(path.c_str());
+
+    while ((entry = readdir(dir)) != NULL) {
+        auto name = std::string(entry->d_name);
+        if (endsWith(name, ".xml")) {
+            closedir(dir);
+            if (endsWith(name, "/")) {
+                return path + name;
+            } else {
+                return path + "/" + name;
+            }
+        }
+    }
+    closedir(dir);
+
+    return path;
+}
+
+Status ModelInstance::loadModel(const ModelConfig& config) {
+    this->path = config.basePath;
+    this->version = config.version;
+    this->backend = config.backend;
 
     // load network
     try {
-        network = engine.ReadNetwork(path);
-        this->batchSize = batchSize > 0 ? batchSize : network.getBatchSize();
+        network = engine.ReadNetwork(getModelFile(path));
+        this->batchSize = config.batchSize > 0 ? config.batchSize : network.getBatchSize();
 
-        loadTensors(inputsInfo,  network.getInputsInfo(),  shapes, layouts);
-        loadTensors(outputsInfo, network.getOutputsInfo(), shapes, layouts);
+        loadTensors(inputsInfo,  network.getInputsInfo(), config.shapes, config.layouts);
+        loadTensors(outputsInfo, network.getOutputsInfo(), config.shapes, config.layouts);
 
         execNetwork = engine.LoadNetwork(network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(OV_STREAMS_COUNT)}});
         request = execNetwork.CreateInferRequest();
