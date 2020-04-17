@@ -17,22 +17,16 @@
 
 namespace ovms {
 
-Status Model::addVersion(   const std::string& name,
-                            const std::string& path,
-                            const std::string& backend,
-                            const model_version_t& version,
-                            const size_t batchSize,
-                            const shapesMap& shapes,
-                            const layoutsMap& layouts) {
+Status Model::addVersion(const ModelConfig& config) {
     std::shared_ptr<ModelInstance> modelInstance = std::make_shared<ModelInstance>();
-    auto status = modelInstance->loadModel(path, backend, version, batchSize, shapes, layouts);
+    auto status = modelInstance->loadModel(config);
     if (status != Status::OK) {
         return status;
     }
-    this->name = name;
-    if (this->defaultVersion < version)
-        this->defaultVersion = version;
-    modelVersions[version] = std::move(modelInstance);
+    this->name = config.name;
+    if (this->defaultVersion < config.version)
+        this->defaultVersion = config.version;
+    modelVersions[config.version] = std::move(modelInstance);
     
     return Status::OK;
 }

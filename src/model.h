@@ -98,23 +98,11 @@ namespace ovms {
         /**
          * @brief Adds a new version of ModelInstance to the list of versions
          *
-         * @param name model name
-         * @param path to the model
-         * @param backend
-         * @param version
-         * @param batchSize
-         * @param shape
-         * @param layout
+         * @param config model configuration
          *
          * @return status
          */
-        Status addVersion(  const std::string& name,
-                            const std::string& path,
-                            const std::string& backend,
-                            const model_version_t& version,
-                            const size_t batchSize,
-                            const shapesMap& shapes = {},
-                            const layoutsMap& layouts = {});
+        Status addVersion(const ModelConfig& config);
 
         /**
          * @brief Removes model version from the list

@@ -36,20 +36,15 @@ Status ModelManager::start() {
 
     // start manager using commandline parameters
     std::shared_ptr<Model> model = std::make_shared<Model>();
-    std::string name = config.modelName();
-    models[name] = std::move(model);
-    shapesMap shapes;
-    layoutsMap layouts;
-    if (config.shape().size()) {
-        shapes["input"] = config.shape();
-    }
-    auto status = models[name]->addVersion(config.modelName(),
-                                           config.modelPath(),
-                                           config.targetDevice(),
-                                           1,   // TODO versionPolicy implementation
-                                           config.batchSize(),
-                                           shapes,
-                                           layouts);
+    ModelConfig modelConfig;
+    modelConfig.name = config.modelName();
+    models[modelConfig.name] = std::move(model);
+    modelConfig.shape = config.shape();
+    modelConfig.basePath = config.modelPath();
+    modelConfig.backend = config.targetDevice();
+    modelConfig.batchSize = config.batchSize();
+
+    auto status = models[modelConfig.name]->addVersion(modelConfig);
     if (status != Status::OK) {
         // Logger(Log::Warning, "There was an error loading a model ", config.modelName());
         return status;
@@ -88,7 +83,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     // TODO validate json against schema
-    const auto itr = doc.FindMember("models");
+    const auto itr = doc.FindMember("model_config_list");
     if (itr == doc.MemberEnd() || !itr->value.IsArray()) {
         // Logger(Log::Error, "Configuration file doesn't have models property.");
         return Status::JSON_INVALID;
@@ -96,41 +91,49 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     
     models.clear();
     configFilename = jsonFilename;
-    for (auto& v : itr->value.GetArray()) {
+    for (const auto& configs : itr->value.GetArray()) {
+        const auto& v = configs["config"].GetObject();
         std::shared_ptr<Model> model = std::make_shared<Model>();
-        std::string name = v["name"].GetString();
-        if (models.find(name) == models.end()) {
-            models[name] = std::move(model);
+        ModelConfig modelConfig;
+        modelConfig.name = v["name"].GetString();
+        modelConfig.basePath = v["base_path"].GetString();
+        if (models.find(modelConfig.name) == models.end()) {
+            models[modelConfig.name] = std::move(model);
         }
 
         // Check for optional parameters
-        uint64_t batchSize = v.HasMember("batchSize") ? v["batchSize"].GetUint64() : 0;
+        if (v.HasMember("batch_size"))
+            modelConfig.batchSize = v["batch_size"].GetUint64();
+        if (v.HasMember("target_device"))
+            modelConfig.backend = v["target_device"].GetString();
+        if (v.HasMember("version"))
+            modelConfig.version = v["version"].GetInt64();
 
-        shapesMap shapes;
         if (v.HasMember("shape")) {
-            for (auto& s : v["shape"].GetObject()) {
-                std::vector<size_t> shape;
-                for (auto& sh : s.value.GetArray()) {
-                    shape.push_back(sh.GetUint64());
+            if (v["shape"].IsString()) {
+                modelConfig.addShapes(v["shape"].GetString());
+            } else {
+                for (auto& s : v["shape"].GetObject()) {
+                    std::vector<size_t> shape;
+                    for (auto& sh : s.value.GetArray()) {
+                        shape.push_back(sh.GetUint64());
+                    }
+                    modelConfig.shapes[s.name.GetString()] = shape;
                 }
-                shapes[s.name.GetString()] = shape;
             }
         }
 
-        layoutsMap layouts;
         if (v.HasMember("layout")) {
-            for (auto& s : v["layout"].GetObject()) {
-                layouts[s.name.GetString()] = s.value.GetString();
+            if (v["layout"].IsString()) {
+                modelConfig.addLayouts(v["layout"].GetString());
+            } else {
+                for (auto& s : v["layout"].GetObject()) {
+                    modelConfig.layouts[s.name.GetString()] = s.value.GetString();
+                }
             }
         }
 
-        auto status = models[name]->addVersion(v["name"].GetString(),
-                                               v["path"].GetString(),
-                                               v["backend"].GetString(),
-                                               v["version"].GetInt64(),
-                                               batchSize,
-                                               shapes,
-                                               layouts);
+        auto status = models[modelConfig.name]->addVersion(modelConfig);
         if (status != Status::OK) {
             // Logger(Log::Warning, "There was an error loading a model ", v["name"].GetString());
             return status;

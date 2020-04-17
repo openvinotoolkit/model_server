@@ -36,7 +36,7 @@ $(ACTIVATE):
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/performance/requirements.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
 style:
@@ -53,7 +53,7 @@ test_perf: venv
 	@docker rm --force server-test || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest ; sleep 5
+	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest --model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy --iteration 1000 --batchsize 1 --report_every 100 --input_name data
 	@echo "Removing test container"
@@ -64,8 +64,11 @@ test_throughput: venv
 	@docker rm --force server-test || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest ; sleep 5
+	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest --model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh --images_numpy_path imgs.npy --labels_numpy_path labels.npy --iteration 500 --batchsize 1 --input_name data
 	@echo "Removing test container"
 	@docker rm --force server-test
+
+test_functional: venv
+	@. $(ACTIVATE); pytest -s --image=cpp-experiments:latest tests/functional/

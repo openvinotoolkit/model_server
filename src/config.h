@@ -86,7 +86,9 @@ namespace ovms {
          * @return std::string 
          */
         const std::string& configPath() {
-            return result->operator[]("config_path").as<std::string>();
+            if (result->count("config_path"))
+                return result->operator[]("config_path").as<std::string>();
+            return empty;
         }
 
         /**

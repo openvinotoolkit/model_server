@@ -1,11 +1,15 @@
 {
-    "models": [{
+  "model_config_list": [
+    {
+      "config": {
         "name": "resnet",
-        "path": "/models/resnet50/1/resnet_50_i8.xml",
+        "base_path": "/models/resnet50/1",
         "version": 0,
-        "backend": "CPU",
+        "target_device": "CPU",
         "layout": {
             "data": "NCHW"
         }
-   }]
+      }
+   }
+  ]
 }
