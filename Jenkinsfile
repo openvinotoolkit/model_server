@@ -14,5 +14,11 @@ pipeline {
             }
         }
 
+        stage('throughput test') {
+            steps {
+                sh 'make test_throughput'
+            }
+        }
+
     }
 }
