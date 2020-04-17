@@ -75,11 +75,6 @@ and [RESTful API](example_client/#rest-api-client-to-predict-function) with nump
 - [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
 - [Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
-
-## Benchmarking Results
-
-[ResNet Benchmarks](docs/benchmark.md)
-
 ## References
 
 [OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
