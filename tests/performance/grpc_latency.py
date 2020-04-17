@@ -162,7 +162,7 @@ if accurracy_measuring_mode:
       f"Final average latency: {round(np.average(processing_times), 2):.2f}ms; "
       f"Classification accuracy: {accuracy}%")
     if accuracy < 100.0:
-        print('Build failed - accurracy is lower than 100')
+        print('Accurracy is lower than 100')
         exit(1)
 # Latency only
 else:

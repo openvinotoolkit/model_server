@@ -59,3 +59,13 @@ test_perf: venv
 	@echo "Removing test container"
 	@docker rm --force server-test
 
+test_throughput: venv
+	@echo "Dropping test container if exist"
+	@docker rm --force server-test || true
+	@echo "Starting docker image"
+	@./tests/performance/download_model.sh
+	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest ; sleep 5
+	@echo "Running throughput test"
+	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh --images_numpy_path imgs.npy --labels_numpy_path labels.npy --iteration 500 --batchsize 1 --input_name data
+	@echo "Removing test container"
+	@docker rm --force server-test
