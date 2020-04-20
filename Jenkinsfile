@@ -40,4 +40,19 @@ pipeline {
             }
         }
     }
+
+    post {
+        always {
+            emailext body: "" +
+                    "${currentBuild.currentResult}: Job ${env.JOB_NAME}, build ${env.BUILD_NUMBER}\n" +
+                    "From Jenkins ${env.JENKINS_URL}\n\n" +
+                    "===GIT info===\n" +
+                    "Branch: ${env.GIT_BRANCH}\n" +
+                    "Build commit hash: ${env.GIT_COMMIT}\n" +
+                    "==============\n\n" +
+                    "More info at: ${env.BUILD_URL}",
+                    recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']],
+                    subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+    }
 }
