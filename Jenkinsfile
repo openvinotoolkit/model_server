@@ -50,11 +50,10 @@ pipeline {
                     "Branch: ${env.GIT_BRANCH}\n" +
                     "Build commit hash: ${env.GIT_COMMIT}\n" +
                     "Last successful build commit hash: ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}\n" +
-                    "Author name: ${env.CHANGE_AUTHOR}\n" +
                     "==============\n\n" +
                     "More info at: ${env.BUILD_URL}",
                     recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']],
                     subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
         }
-    }
+    }g
 }
