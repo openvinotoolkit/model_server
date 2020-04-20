@@ -30,7 +30,7 @@ using grpc::ServerBuilder;
 
 using namespace ovms;
 
-int main(int argc, char** argv)
+int server_main(int argc, char** argv)
 {
     const int GIGABYTE = 1024 * 1024 * 1024;
 
@@ -61,3 +61,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
