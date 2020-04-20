@@ -41,8 +41,13 @@ pipeline {
         }
     }
     post {
-        always {
-            emailext body: "${currentBuild.currentResult}: Job ${env.JOB_NAME}, build ${env.BUILD_NUMBER}\n More info at: ${env.BUILD_URL}",
+        failure {
+            emailext body: "" +
+                    "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}\n" +
+                    "From Jenkins ${env.JENKINS_URL}\n" +
+                    "GIT info:\n" +
+                    "Commit: ${env.GIT_COMMIT}, branch: ${GIT_BRACH}, author: ${GIT_AUTHOR_NAME}\n" +
+                    "More info at: ${env.BUILD_URL}",
                     recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']],
                     subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
         }
