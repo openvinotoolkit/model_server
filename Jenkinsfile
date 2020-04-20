@@ -49,7 +49,6 @@ pipeline {
                     "===GIT info===\n" +
                     "Branch: ${env.GIT_BRANCH}\n" +
                     "Build commit hash: ${env.GIT_COMMIT}\n" +
-                    "Last successful build commit hash: ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}\n" +
                     "==============\n\n" +
                     "More info at: ${env.BUILD_URL}",
                     recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']],
