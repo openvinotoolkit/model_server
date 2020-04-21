@@ -87,9 +87,9 @@ class Model(ABC):
         for version in available_versions:
             versions_statuses[version] = ModelVersionStatus(model_name,
                                                             version)
-        
+
         update_locks = {}
-        
+
         engines = cls.get_engines_for_model(model_name,
                                             versions_attributes,
                                             versions_statuses,
@@ -105,7 +105,7 @@ class Model(ABC):
                     shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses,
-                    update_locks = update_locks,
+                    update_locks=update_locks,
                     num_ireq=num_ireq, target_device=target_device,
                     plugin_config=plugin_config)
         return model
@@ -160,8 +160,10 @@ class Model(ABC):
                     "for {} model is {}".format(self.model_name,
                                                 self.default_version))
         for version in to_delete:
-            process_thread = threading.Thread(target=self._delete_engine,
-                                              args=[version, self.update_locks])
+            process_thread = threading.Thread(
+                    target=self._delete_engine,
+                    args=[version, self.update_locks])
+
             process_thread.start()
 
     def _mark_differences(self, new_versions):
@@ -183,13 +185,15 @@ class Model(ABC):
 
     def _delete_engine(self, version, update_locks):
         update_locks[version].acquire()
-        self.engines[version].suppress_inference()
-        self.engines[version].stop_inference_service()
-        del self.engines[version]
-        logger.debug("Version {} of the {} model has been removed".format(
-            version, self.model_name))
-        self.versions_statuses[version].set_end()
-        update_locks[version].release()
+        try:
+            self.engines[version].suppress_inference()
+            self.engines[version].stop_inference_service()
+            del self.engines[version]
+            logger.debug("Version {} of the {} model has been removed".format(
+                version, self.model_name))
+            self.versions_statuses[version].set_end()
+        finally:
+            update_locks[version].release()
 
     @classmethod
     def get_version_metadata(cls, model_directory, batch_size_param,
@@ -269,7 +273,7 @@ class Model(ABC):
         for version_attributes in versions_attributes:
             version_number = version_attributes['version_number']
             try:
-                if not version_number in update_locks:
+                if version_number not in update_locks:
                     update_locks[version_number] = threading.Lock()
                 update_locks[version_number].acquire()
                 logger.info("Creating inference engine object "
