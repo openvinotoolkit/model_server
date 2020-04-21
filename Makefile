@@ -111,8 +111,8 @@ docker_build_bin:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
-	@echo docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_binary_openvino --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_binary_openvino --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
+	@docker build -f Dockerfile_binary_openvino --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
 
 docker_build_clearlinux:
 	@echo "Building docker image"

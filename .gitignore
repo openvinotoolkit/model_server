@@ -2,6 +2,7 @@
 .idea
 .venv
 .vs
+.vscode
 *~
 *.pyc
 *.pyo
