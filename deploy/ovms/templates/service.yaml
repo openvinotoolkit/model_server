@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: openvino-model-server
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+      name: grpc
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+      name: rest
+  selector:
+    app: ovms
+  type: LoadBalancer

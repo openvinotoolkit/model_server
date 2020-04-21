@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ovms
+  labels:
+    app: ovms
+spec:
+  selector:
+    matchLabels:
+       app: ovms
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        app: ovms
+    spec:
+      containers:
+      - name: ovms-resnet
+        image: intelaipg/openvino-model-server:latest
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        env:
+        - name: "GOOGLE_APPLICATION_CREDENTIALS"
+          value: /secret/gcp-creds.json
+        command: ["/ie-serving-py/start_server.sh"]
+        args: ["ie_serving", "model",
+               "--model_path", "gs://models-repository",
+               "--model_name", "icnet-camvid-ava-0001",
+               "--port", "8080",
+               "--rest_port", "8081",
+               "--batch_size", "auto"]
+        volumeMounts:
+        - name: gcpcreds
+          mountPath: "/secret"
+          readOnly: true
+      volumes:
+      - name: gcpcreds
+        secret:
+          secretName: gcpcreds
