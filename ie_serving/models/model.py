@@ -33,8 +33,8 @@ class Model(ABC):
     def __init__(self, model_name: str, model_directory: str,
                  batch_size_param, shape_param, available_versions: list,
                  engines: dict, version_policy_filter,
-                 versions_statuses: dict, num_ireq: int,
-                 target_device: str, plugin_config):
+                 versions_statuses: dict, update_locks: dict,
+                 num_ireq: int, target_device: str, plugin_config):
         self.model_name = model_name
         self.model_directory = model_directory
         self.versions = available_versions
@@ -51,6 +51,8 @@ class Model(ABC):
 
         [self.versions_statuses[version].set_available() for version in
          self.versions if version in self.engines.keys()]
+
+        self.update_locks = update_locks
 
         logger.info("List of available versions "
                     "for {} model: {}".format(self.model_name, self.versions))
@@ -85,13 +87,17 @@ class Model(ABC):
         for version in available_versions:
             versions_statuses[version] = ModelVersionStatus(model_name,
                                                             version)
-
+        
+        update_locks = {}
+        
         engines = cls.get_engines_for_model(model_name,
                                             versions_attributes,
-                                            versions_statuses)
+                                            versions_statuses,
+                                            update_locks)
 
         available_versions = [version_attributes['version_number'] for
                               version_attributes in versions_attributes]
+        available_versions.sort()
 
         model = cls(model_name=model_name, model_directory=model_directory,
                     available_versions=available_versions, engines=engines,
@@ -99,6 +105,7 @@ class Model(ABC):
                     shape_param=shape_param,
                     version_policy_filter=version_policy_filter,
                     versions_statuses=versions_statuses,
+                    update_locks = update_locks,
                     num_ireq=num_ireq, target_device=target_device,
                     plugin_config=plugin_config)
         return model
@@ -119,7 +126,7 @@ class Model(ABC):
                                                 str(error)))
             return
 
-        if available_versions == self.versions:
+        if set(available_versions) == set(self.versions):
             return
 
         logger.info("Server will start updating model: {}".format(
@@ -134,12 +141,14 @@ class Model(ABC):
 
         created_engines = self.get_engines_for_model(self.model_name,
                                                      new_versions_attributes,
-                                                     self.versions_statuses)
+                                                     self.versions_statuses,
+                                                     self.update_locks)
         created_versions = [attributes_to_create['version_number'] for
                             attributes_to_create in new_versions_attributes]
         self.engines.update(created_engines)
         self.versions.extend(created_versions)
         self.versions = [x for x in self.versions if x not in to_delete]
+        self.versions.sort()
         self.default_version = max(self.versions, default=-1)
 
         [self.versions_statuses[version].set_available() for version in
@@ -152,7 +161,7 @@ class Model(ABC):
                                                 self.default_version))
         for version in to_delete:
             process_thread = threading.Thread(target=self._delete_engine,
-                                              args=[version])
+                                              args=[version, self.update_locks])
             process_thread.start()
 
     def _mark_differences(self, new_versions):
@@ -172,13 +181,15 @@ class Model(ABC):
 
         return to_create, to_delete
 
-    def _delete_engine(self, version):
+    def _delete_engine(self, version, update_locks):
+        update_locks[version].acquire()
         self.engines[version].suppress_inference()
         self.engines[version].stop_inference_service()
         del self.engines[version]
         logger.debug("Version {} of the {} model has been removed".format(
             version, self.model_name))
         self.versions_statuses[version].set_end()
+        update_locks[version].release()
 
     @classmethod
     def get_version_metadata(cls, model_directory, batch_size_param,
@@ -252,12 +263,15 @@ class Model(ABC):
 
     @classmethod
     def get_engines_for_model(cls, model_name, versions_attributes,
-                              versions_statuses):
+                              versions_statuses, update_locks):
         inference_engines = {}
         failures = []
         for version_attributes in versions_attributes:
             version_number = version_attributes['version_number']
             try:
+                if not version_number in update_locks:
+                    update_locks[version_number] = threading.Lock()
+                update_locks[version_number].acquire()
                 logger.info("Creating inference engine object "
                             "for version: {}".format(version_number))
 
@@ -274,6 +288,8 @@ class Model(ABC):
                     ErrorCode.UNKNOWN)
 
                 failures.append(version_attributes)
+            finally:
+                update_locks[version_number].release()
 
         for failure in failures:
             versions_attributes.remove(failure)
