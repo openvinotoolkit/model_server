@@ -42,6 +42,7 @@ def test_model_init(engines):
                            shape_param=None,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses,
+                           update_locks={},
                            num_ireq=1, target_device='CPU',
                            plugin_config=None)
 
@@ -118,7 +119,8 @@ def test_get_engines_for_model(mocker, is_error):
     output = LocalModel.get_engines_for_model(
         model_name='test',
         versions_attributes=available_versions,
-        versions_statuses=versions_statuses)
+        versions_statuses=versions_statuses,
+        update_locks={})
 
     for version_status in versions_statuses.values():
         assert version_status.state == ModelVersionState.LOADING
@@ -165,7 +167,8 @@ def test_get_engines_for_model_with_ir_raises(mocker):
     output = LocalModel.get_engines_for_model(
         model_name='test',
         versions_attributes=available_versions,
-        versions_statuses=versions_statuses)
+        versions_statuses=versions_statuses,
+        update_locks={})
     assert 2 == len(output)
     assert 'modelv2' == output[2]
     assert 'modelv4' == output[3]

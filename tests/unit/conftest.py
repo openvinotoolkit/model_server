@@ -107,6 +107,7 @@ def get_fake_model():
                            shape_param=shape_param,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses,
+                           update_locks={},
                            plugin_config=None, target_device="CPU",
                            num_ireq=1)
     return new_model
