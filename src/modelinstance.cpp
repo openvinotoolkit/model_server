@@ -24,33 +24,53 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
-template<typename T>
-void ModelInstance::loadTensors(tensorMap& map,
-                                const T& tensors,
-                                const shapesMap& shapes,
-                                const layoutsMap& layouts) {
-    for (const auto& t : tensors) {
-        auto precision = t.second->getPrecision();
-        auto ieLayout = layouts.count(t.first) ? TensorInfo::getLayoutFromString(layouts.at(t.first)) :
-                                                 t.second->getLayout();
-        InferenceEngine::TensorDesc tensorDesc = t.second->getTensorDesc();
-        std::vector<size_t> shape;
-        if (shapes.count(t.first)) {
-            shape.assign(shapes.at(t.first).begin(), shapes.at(t.first).end());
-        } else {
-            shape.assign(tensorDesc.getDims().begin(), tensorDesc.getDims().end());
+void ModelInstance::loadInputTensors(const ModelConfig& config) {
+    auto networkShapes = network.getInputShapes();
+
+    for (const auto& pair : network.getInputsInfo()) {
+        const auto& name = pair.first;
+        auto input = pair.second;
+
+        // Data from network
+        auto precision = input->getPrecision();
+        auto layout = input->getLayout();
+        auto shape = input->getTensorDesc().getDims();
+        auto desc = input->getTensorDesc();
+
+        // Data from config
+        if (config.layouts.count(name)) {
+            layout = TensorInfo::getLayoutFromString(config.layouts.at(name));
+            input->setLayout(layout);
+        }
+        if (config.shapes.count(name)) {
+            shape = config.shapes.at(name);
+        }
+        if (config.batchSize > 0) {
+            shape[0] = config.batchSize;
         }
 
-        // If shape or layout provided, create custom TensorDesc
-        if (shapes.count(t.first) || layouts.count(t.first)) {
-            tensorDesc = InferenceEngine::TensorDesc(precision, shape, ieLayout);
-        }
-        map[t.first] = std::make_shared<TensorInfo>(
-            t.first,
-            precision,
-            shape,
-            ieLayout,
-            tensorDesc);
+        networkShapes[name] = shape;
+        this->inputsInfo[name] = std::make_shared<TensorInfo>(
+            name, precision, shape, layout, desc);
+    }
+
+    // Update OV model shapes
+    network.reshape(networkShapes);
+}
+
+void ModelInstance::loadOutputTensors(const ModelConfig& config) {
+    for (const auto& pair : network.getOutputsInfo()) {
+        const auto& name = pair.first;
+        auto output = pair.second;
+
+        // Data from network
+        auto precision = output->getPrecision();
+        auto layout = output->getLayout();
+        auto shape = output->getDims();
+        auto desc = output->getTensorDesc();
+
+        this->outputsInfo[name] = std::make_shared<TensorInfo>(
+            name, precision, shape, layout, desc);
     }
 }
 
@@ -88,17 +108,22 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     this->path = config.basePath;
     this->version = config.version;
     this->backend = config.backend;
-
+    
     // load network
     try {
         network = engine.ReadNetwork(getModelFile(path));
         this->batchSize = config.batchSize > 0 ? config.batchSize : network.getBatchSize();
 
-        loadTensors(inputsInfo,  network.getInputsInfo(), config.shapes, config.layouts);
-        loadTensors(outputsInfo, network.getOutputsInfo(), config.shapes, config.layouts);
+        network.setBatchSize(this->batchSize);
 
-        execNetwork = engine.LoadNetwork(network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(OV_STREAMS_COUNT)}});
+        loadInputTensors(config);
+        loadOutputTensors(config);
+
+        execNetwork = engine.LoadNetwork(
+            network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(OV_STREAMS_COUNT)}});
+
         request = execNetwork.CreateInferRequest();
+
         ovstreams = std::make_unique<OVStreamsQueue>(execNetwork, OV_STREAMS_COUNT);
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
@@ -151,8 +176,13 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
             return ValidationStatusCode::INVALID_SHAPE;
         }
 
+        // First shape must be equal to batch size
+        if (requestInput.tensor_shape().dim_size() > 0 && requestInput.tensor_shape().dim(0).size() != batchSize) {
+            return ValidationStatusCode::INCORRECT_BATCH_SIZE;
+        }
+
         // Network and request must have the same shape
-        for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        for (int i = 1; i < requestInput.tensor_shape().dim_size(); i++) {
             if (requestInput.tensor_shape().dim(i).size() >= 0 && shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
                 return ValidationStatusCode::INVALID_SHAPE;
             }

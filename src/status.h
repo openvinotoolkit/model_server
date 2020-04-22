@@ -40,6 +40,7 @@ enum class ValidationStatusCode {
     OK,                     /*!< Success */
     MODEL_NAME_MISSING,     /*!< Model with requested name is not found */
     MODEL_VERSION_MISSING,  /*!< Model with requested version is not found */
+    INCORRECT_BATCH_SIZE,   /*!< Input batch size other than required */
     INVALID_INPUT_ALIAS,    /*!< Invalid number of inputs or name mismatch */
     INVALID_SHAPE,          /*!< Invalid shape dimension number or dimension value */
     INVALID_PRECISION,      /*!< Invalid precision */
@@ -56,6 +57,7 @@ public:
             { ValidationStatusCode::OK,                     ""                                          },
             { ValidationStatusCode::MODEL_NAME_MISSING,     "Model with requested name is not found"    },
             { ValidationStatusCode::MODEL_VERSION_MISSING,  "Model with requested version is not found" },
+            { ValidationStatusCode::INCORRECT_BATCH_SIZE,   "Incorrect batch size"                      },
             { ValidationStatusCode::INVALID_INPUT_ALIAS,    "Unexpected input tensor alias"             },
             { ValidationStatusCode::INVALID_SHAPE,          "Invalid input shape"                       },
             { ValidationStatusCode::INVALID_PRECISION,      "Invalid input precision"                   },
