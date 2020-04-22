@@ -64,9 +64,10 @@ def test_mark_differences(get_fake_model, new_versions, expected_to_delete,
 def test_delete_engine(get_fake_model):
     model = get_fake_model
     version = 2
+    update_locks = {version: threading.Lock()}
     assert version in model.engines
     process_thread = threading.Thread(target=model._delete_engine,
-                                      args=[version])
+                                      args=[version, update_locks])
     process_thread.start()
     time.sleep(7)
     assert version not in model.engines
