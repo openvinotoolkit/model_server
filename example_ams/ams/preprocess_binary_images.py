@@ -45,11 +45,11 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
 
 if __name__ == "__main__":
-    # wget https://is4-ssl.mzstatic.com/image/thumb/Purple3/v4/a6/24/fa/a624fa65-6468-c192-1a82-d7ff02e02378/source/60x60bb.jpg
-    with open('example_ams/test_images/2207159142_8206ab6984.jpg', mode='rb') as img_file:
+    img_path = '<path to the image>'
+    with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
 
-    preprocessed_image = preprocess_binary_image(binary_image, standardization=True)
+    preprocessed_image = preprocess_binary_image(binary_image)
     print(preprocessed_image)
     plt.imshow(preprocessed_image)
     plt.show()
