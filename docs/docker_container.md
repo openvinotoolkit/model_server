@@ -454,7 +454,7 @@ net = IENetwork(model=model_xml, weights=model_bin)
 exec_net = plugin.load(network=net)
 print(exec_net.get_metric('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))
 ```
-* Set `grpc_workers` (or `rest_workers` if you use REST endpoints for inference) parameter to be at least equal to the number of inference requests
+* Set `grpc_workers` (or `rest_workers` if you are using REST endpoints for inference) parameter to be at least equal to the number of inference requests
 
 ### Multi-Device Plugin configuration example
 
@@ -475,12 +475,17 @@ Content of `config.json`:
 
 Starting OpenVINO&trade; Model Server with `config.json` (placed in `./models/config.json` path) defined as above, and with `grpc_workers` parameter set to match `nireq` field in `config.json`:
 ```bash
-docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001 --grpc_workers 6
+docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro \
+-v /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh \
+ie_serving config --config_path /opt/ml/config.json --port 9001 --grpc_workers 6
 ```
 
 Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (`config.json` is not needed in this case):
 ```
-docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/ml/resnet --model_name resnet --port 9001 --grpc_workers 6 --nireq 6 --target_device 'MULTI:MYRIAD,CPU'
+docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
+ /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving \
+ model --model_path /opt/ml/resnet --model_name resnet --port 9001 --grpc_workers 6 \
+ --nireq 6 --target_device 'MULTI:MYRIAD,CPU'
 ```
 
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU, and total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
