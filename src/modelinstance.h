@@ -95,18 +95,18 @@ namespace ovms {
         std::unique_ptr<OVStreamsQueue> ovstreams;
 
         /**
-         * @brief Internal method for loading inputs/outputs
+         * @brief Internal method for loading inputs
          *
-         * @param map
-         * @param tensors
-         * @param shapes
-         * @param layouts
+         * @param config
          */
-        template<typename T>
-        void loadTensors(tensorMap& map,
-                        const T& tensors,
-                        const shapesMap& shapes,
-                        const layoutsMap& layouts);
+        void loadInputTensors(const ModelConfig& config);
+
+        /**
+         * @brief Internal method for loading outputs
+         *
+         * @param config
+         */
+        void loadOutputTensors(const ModelConfig& config);
     public:
         /**
          * @brief A default constructor

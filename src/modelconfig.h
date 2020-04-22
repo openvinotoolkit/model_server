@@ -92,6 +92,7 @@ using model_version_t = int64_t;
             backend = "CPU";
             nireq = 1;
             version = 0;
+            batchSize = 0;
         }
 
         /**

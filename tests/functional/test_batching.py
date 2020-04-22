@@ -60,7 +60,6 @@ class TestBatchModelInference():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet - changing bs missing")
     def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
                                start_server_batch_model_bs4,
                                create_grpc_channel):
