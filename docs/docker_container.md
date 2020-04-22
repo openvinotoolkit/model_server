@@ -441,7 +441,7 @@ If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you 
 
 In order to use this feature in OpenVino&trade; Model Server, following steps are required:
 * Set `target_device` for the model in configuration json file to `MULTI:<DEVICE_1>,<DEVICE_2>` (e.g. `MULTI:MYRIAD,CPU`, order of the devices defines their priority, so `MYRIAD` devices will be used first in this example)
-* Set `nireq` (number of inference requests) for the model in configuration json file to be at least equal to the number of the devices that will be used - optimal number of inference requests may vary depending on the model and type of used devices. Following script will help you to get optimal number of requests suggested by OpenVino:
+* Set `nireq` (number of inference requests) for the model in configuration json file to be at least equal to the number of the devices that will be used - optimal number of inference requests may vary depending on the model and type of used devices. Following script will help you to get optimal number of requests suggested by OpenVino&trade;:
 ```python
 from openvino.inference_engine import IEPlugin, IENetwork
 
