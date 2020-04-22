@@ -22,10 +22,14 @@ import matplotlib.pyplot as plt
 
 def preprocess_binary_image(image: bytes, channels: int = None,
                             dtype=tf.dtypes.uint8, scale: float = None,
+                            standardization=False,
                             reverse_input_channels=False) -> np.ndarray:
     try:
         decoded_image = tf.io.decode_image(image, channels=channels,
                                            dtype=dtype)
+        if standardization:
+            decoded_image = tf.image.per_image_standardization(decoded_image)
+
         image_array = decoded_image.numpy()
         if reverse_input_channels:
             # Convert image from RGB to BGR
@@ -42,10 +46,10 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
 if __name__ == "__main__":
     # wget https://is4-ssl.mzstatic.com/image/thumb/Purple3/v4/a6/24/fa/a624fa65-6468-c192-1a82-d7ff02e02378/source/60x60bb.jpg
-    with open('2207159142_8206ab6984.jpg', mode='rb') as img_file:
+    with open('example_ams/test_images/2207159142_8206ab6984.jpg', mode='rb') as img_file:
         binary_image = img_file.read()
 
-    preprocessed_image = preprocess_binary_image(binary_image, reverse_input_channels=True)
-
+    preprocessed_image = preprocess_binary_image(binary_image, standardization=True)
+    print(preprocessed_image)
     plt.imshow(preprocessed_image)
     plt.show()

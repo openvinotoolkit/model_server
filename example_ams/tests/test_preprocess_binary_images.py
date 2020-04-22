@@ -39,23 +39,25 @@ def bmp_image():
         binary_image = img_file.read()
     return binary_image
 
-
-@pytest.mark.parametrize("reverse_input_channels,scale",
-                        [(True,None), (False,None), (False,1/255), (False,1/0.017)])
-def test_preprocess_jpg(jpg_image, reverse_input_channels, scale):
-    assert preprocess_binary_image(jpg_image,
-     reverse_input_channels=reverse_input_channels, scale=scale) is not None
-
-
-@pytest.mark.parametrize("reverse_input_channels,scale",
-                        [(True,None), (False,None), (False,1/255), (False,1/0.017)])
-def test_preprocess_png(png_image, reverse_input_channels, scale):
-    assert preprocess_binary_image(png_image,
-     reverse_input_channels=reverse_input_channels, scale=scale) is not None
+@pytest.mark.parametrize("reverse_input_channels", [True, False])
+@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
+@pytest.mark.parametrize("standardization", [True, False])
+def test_preprocess_jpg(jpg_image, reverse_input_channels, scale, standardization):
+    assert preprocess_binary_image(jpg_image, reverse_input_channels=reverse_input_channels,
+     scale=scale, standardization=standardization) is not None
 
 
-@pytest.mark.parametrize("reverse_input_channels,scale",
-                        [(True,None), (False,None), (False,1/255), (False,1/0.017)])
-def test_preprocess_bmp(bmp_image, reverse_input_channels, scale):
-    assert preprocess_binary_image(bmp_image,
-     reverse_input_channels=reverse_input_channels, scale=scale) is not None
+@pytest.mark.parametrize("reverse_input_channels", [True, False])
+@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
+@pytest.mark.parametrize("standardization", [True, False])
+def test_preprocess_png(png_image, reverse_input_channels, scale, standardization):
+    assert preprocess_binary_image(png_image, reverse_input_channels=reverse_input_channels,
+     scale=scale, standardization=standardization) is not None
+
+
+@pytest.mark.parametrize("reverse_input_channels", [True, False])
+@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
+@pytest.mark.parametrize("standardization", [True, False])
+def test_preprocess_bmp(bmp_image, reverse_input_channels, scale, standardization):
+    assert preprocess_binary_image(bmp_image, reverse_input_channels=reverse_input_channels,
+     scale=scale, standardization=standardization) is not None
