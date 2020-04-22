@@ -1,49 +1,148 @@
-# Minimal gRPC serving with TFS API
-How to run:
+# OpenVINO&trade; Model Server
 
-1. Build image with TF Serving:
-```bash
-~/inference-experiments/tfs_c_frontend$ docker build . --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy -t cpp-experiments
-```
+OpenVINO&trade; Model Server is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. 
+The server provides an inference service via gRPC endpoint or REST API -- making it easy to deploy new algorithms and AI experiments using the same 
+architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported 
+by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit). 
 
-2. Run container and mount server sources:
-```bash
-~/inference-experiments/tfs_c_frontend$ docker run -it -v $(pwd)/src:/tensorflow-serving/tensorflow_serving/ovms/:rw -p 9178:9178 -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" cpp-experiments bash
-```
-
-3. Compile server source inside container:
-```bash
-root@7148320dfffd:/tensorflow-serving$ bazel build //tensorflow_serving/ovms:server_cc
-```
-
-4. Run the server:
-```bash
-root@7148320dfffd:/tensorflow-serving$ ./bazel-bin/tensorflow_serving/ovms/server_cc
-Initializing
-Server started on port 9178
-```
-
-5. Test the server (run client from host in second terminal)
-```
-$ git clone https://github.com/IntelAI/OpenVINO-model-server
-$ cd OpenVINO-model-server
-$ make install
-$ . .venv/bin/activate
-(.venv) $ cd example_client
-(.venv) $ python3 grpc_serving_client.py --grpc_port 9178 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy lbs.npy
-```
-
-You should see:  
+The server implements gRPC interface and REST API framework with data serialization and deserialization using TensorFlow Serving API,
+ and OpenVINO&trade; as the inference execution provider. Model repositories may reside on a locally accessible file system (e.g. NFS),
+  Google Cloud Storage (GCS), Amazon S3 or MinIO.
   
-```
-(.venv3) wihajster@dev-115-178:~/OpenVINO-model-server/example_client$ python grpc_serving_client.py --grpc_port 9178 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy lbs.npy
-Image data range: 0.0 : 255.0
-Start processing:
-        Model name: resnet
-        Iterations: 10
-        Images numpy path: imgs.npy       
-        Images in shape: (10, 3, 224, 224)
+OVMS is now implemented in C++ and provides much higher scalability compared to its predecessor in Python version.
+You can take advantage of all the power of Xeon CPU capabilities or AI accelerators and expose it over the network interface.
 
-Invalid output name prob
-Available outputs:
+
+## Building
+
+Build the docker image using command:
+ 
+```bash
+~/ovms-c$ make docker_build
+```
+It will generate the image, tagged as `cpp-experiments:latest`.
+
+
+## Running the serving component as a docker container:
+Docker container is using the serving application as the entrypoint, so you just need to pass its parameters in the docker command:
+```bash
+docker run -d -v /models/model_folder:/opt/ml:ro -p 9178:9178 cpp-experiments --model_name <model_name> --model_path /opt/ml --port 9178
+```
+All parameters are documented below:
+```bash
+OpenVINO Model Server
+Usage:
+  ./bazel-bin/tensorflow_serving/ovms/server_cc [OPTION...]
+
+  -h, --help  show this help message and exit
+
+ config options:
+      --config_path CONFIG_PATH
+                                absolute path to json configuration file
+      --port PORT               gRPC server port (default: 9178)
+      --rest_port REST_PORT     REST server port, the REST server will not be
+                                started if rest_port is blank or set to 0
+                                (default: 0)
+      --grpc_workers GRPC_WORKERS
+                                number of workers in gRPC server (default:
+                                24)
+      --rest_workers REST_WORKERS
+                                number of workers in REST server - has no
+                                effect if rest_port is not set (default: 24)
+
+ model options:
+      --model_name MODEL_NAME   name of the model
+      --model_path MODEL_PATH   absolute path to model, as in tf serving
+      --batch_size BATCH_SIZE   sets models batchsize, int value or auto.
+                                This parameter will be ignored if shape is set
+                                (default: 0)
+      --shape SHAPE             sets models shape (model must support
+                                reshaping). If set, batch_size parameter is ignored
+      --model_version_policy MODEL_VERSION_POLICY
+                                model version policy
+      --nireq NIREQ             Number of parallel inference request
+                                executions for model. Default: 1 (default: 1)
+      --target_device TARGET_DEVICE
+                                name of the model (default: CPU)
+      --plugin_config PLUGIN_CONFIG
+                                a dictionary of plugin configuration keys and
+                                their values
+```
+
+### Testing inference with an arbitrary model
+
+You can download an exemplary model using script `tests/performance/download_model.sh`. It is ResNet50 quantized to INT8 precision.
+The script stores the model in the user home folder. You can use any other model from OpenVINO model zoo.
+
+When the docker container is started like in the example above, use and adjust the following grpc client:
+
+```bash
+make venv
+source .venv/bin/activate
+python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
+ --iteration 1000 --batchsize 1 --report_every 100 --input_name data
+```
+
+`images_numpy_path` parameter should include numpy array with a batch of input data.
+
+`labels_numpy_path` includes a numpy array with image classification results for the test dataset to measure accuracy.
+
+### Running functional tests
+
+```bash
+make test_functional
+``` 
+
+### Running basic performance tests
+
+Automated tests are configure to use ResNet50 model quantized to INT8 precision.    
+
+```bash
+make test_perf
+Running latency test
+[--] Starting iterations
+[--] Iteration   100/ 1000; Current latency: 10.52ms; Average latency: 11.35ms
+[--] Iteration   200/ 1000; Current latency: 10.99ms; Average latency: 11.03ms
+[--] Iteration   300/ 1000; Current latency: 9.60ms; Average latency: 11.02ms
+[--] Iteration   400/ 1000; Current latency: 10.20ms; Average latency: 10.93ms
+[--] Iteration   500/ 1000; Current latency: 10.45ms; Average latency: 10.84ms
+[--] Iteration   600/ 1000; Current latency: 10.70ms; Average latency: 10.82ms
+[--] Iteration   700/ 1000; Current latency: 9.47ms; Average latency: 10.88ms
+[--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
+[--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
+[--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
+``` 
+
+```bash
+make test_throughput
+Running throughput test
+[25] Starting iterations
+[23] Starting iterations
+.....
+[11] Starting iterations
+[24] Iterations:   500; Final average latency: 20.50ms; Classification accuracy: 100.0%
+[25] Iterations:   500; Final average latency: 20.81ms; Classification accuracy: 100.0%
+[6 ] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
+[26] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
+...
+[11] Iterations:   500; Final average latency: 20.84ms; Classification accuracy: 100.0%
+
+real	0m13.397s
+user	1m22.277s
+sys	0m39.333s
+1076 FPS
+``` 
+
+
+## Developer guide
+
+Mount the source code inside the docker container
+```bash
+docker run -it -v ${PWD}:/tensorflow-serving/tensorflow_serving/ovms --entrypoint bash -p 9178:9178 cpp-experiments:latest 
+```
+
+Compile code using command:
+
+```bash
+bazel build //tensorflow_serving/ovms:server_cc
 ```
