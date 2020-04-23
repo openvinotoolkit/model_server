@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ie_serving',
-    version="2020.1",
+    version="2020.2",
     description="DLDT inference server",
     long_description="""DLDT inference server""",
     keywords='',
