@@ -119,33 +119,5 @@ and convert your model to desired format.
 
 ## Using Multi-Device Plugin
 
-[Multi-Device Plugin overview](docker_container.md#using-multi-device-plugin)
-
-### Multi-Device Plugin configuration example
-
-Example of setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
-
-Content of `config.json`:
-```json
-{"model_config_list": [
-   {"config": {
-      "name": "resnet",
-      "base_path": "/opt/ml/resnet",
-      "batch_size": "1",
-      "nireq": 6,
-      "target_device": "MULTI:MYRIAD,CPU"}
-   }]
-}
-```
-
-Starting OpenVINO&trade; Model Server with `config.json` (placed in `./models/config.json` path) defined as above, and with `grpc_workers` parameter set to match `nireq` field in `config.json`:
-```bash
-ie_serving config --config_path /opt/ml/config.json --grpc_workers 6
-```
-
-Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (`config.json` is not needed in this case):
-```
-ie_serving model --model_path /opt/ml/resnet --model_name resnet --grpc_workers 6 --nireq 6 --target_device 'MULTI:MYRIAD,CPU'
-```
-
-After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU, and total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
+See [Multi-Device Plugin overview](docker_container.md#using-multi-device-plugin)
+In order to use Multi-Device Plugin on bare host, simply apply instructions linked above without Docker specific steps.
