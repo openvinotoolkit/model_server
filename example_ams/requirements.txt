@@ -1,0 +1,3 @@
+numpy==1.18.*
+pytest==3.7.*
+tensorflow==2.0.*

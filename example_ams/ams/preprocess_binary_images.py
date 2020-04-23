@@ -17,7 +17,6 @@
 
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def preprocess_binary_image(image: bytes, channels: int = None,
@@ -58,6 +57,8 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
     img_path = '<path to the image>'
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
