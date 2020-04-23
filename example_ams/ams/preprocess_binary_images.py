@@ -37,7 +37,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if scale:
             image_array = image_array * scale
     except Exception as e:
-        print('Failed to decode provided binary image:')
+        print('Failed to decode provided binary image.')
         raise ValueError from e
 
     return image_array
