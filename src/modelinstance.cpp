@@ -18,11 +18,17 @@
 #include <string>
 #include <sys/types.h>
 
+#include <cstdlib>
+
+#include "config.h"
 #include "modelinstance.h"
 
 using namespace InferenceEngine;
 
 namespace ovms {
+
+const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
+const int DEFAULT_OV_BACKEND_STREAMS = DEFAULT_OV_STREAMS;
 
 void ModelInstance::loadInputTensors(const ModelConfig& config) {
     auto networkShapes = network.getInputShapes();
@@ -104,6 +110,28 @@ std::string getModelFile(const std::string path) {
     return path;
 }
 
+uint getOVCPUThroughputStreams() {
+    const char* environmentVariableBuffer = std::getenv("CPU_THROUGHPUT_STREAMS");
+    if (environmentVariableBuffer) {
+        return std::atoi(environmentVariableBuffer);
+    }
+
+    auto& config = ovms::Config::instance();
+    uint configGRPCServersCount = config.cpuThroughputStreams();
+    return configGRPCServersCount;
+}
+
+uint getNumberOfParallelInferRequests() {
+    const char* environmentVariableBuffer = std::getenv("NIREQ");
+    if (environmentVariableBuffer) {
+        return std::atoi(environmentVariableBuffer);
+    }
+
+    auto& config = ovms::Config::instance();
+    uint configGRPCServersCount = config.nireq();
+    return configGRPCServersCount;
+}
+
 Status ModelInstance::loadModel(const ModelConfig& config) {
     this->path = config.basePath;
     this->version = config.version;
@@ -119,36 +147,21 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         loadInputTensors(config);
         loadOutputTensors(config);
 
-        execNetwork = engine.LoadNetwork(
-            network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(OV_STREAMS_COUNT)}});
+        int ovBackendStreamsCount = getOVCPUThroughputStreams();
+        execNetwork = engine.LoadNetwork(network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(ovBackendStreamsCount)}});
+        std::cout << "Starting OpenVINO CPU streams:" << ovBackendStreamsCount << std::endl;
 
-        request = execNetwork.CreateInferRequest();
-
-        ovstreams = std::make_unique<OVStreamsQueue>(execNetwork, OV_STREAMS_COUNT);
+        int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
+        std::cout << "Starting OpenVINO InferRequestsQueue:" << numberOfParallelInferRequests << std::endl;
+        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(execNetwork, numberOfParallelInferRequests);
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         // Logger(Log::Error, e.what());
+        std::cout << e.what() << std::endl;
         return Status::NETWORK_NOT_LOADED;
     }
 
     return Status::OK;
-}
-
-InferenceEngine::InferRequest& ModelInstance::infer(const std::string& inputName, const InferenceEngine::Blob::Ptr data) {
-    request.SetBlob(inputName, data);
-    request.Infer();
-
-    return request;
-}
-
-InferenceEngine::InferRequest& ModelInstance::inferAsync(const std::string& inputName,
-                                                         const InferenceEngine::Blob::Ptr data,
-                                                         const std::function<void()>& callback) {
-    request.SetBlob(inputName, data);
-    request.SetCompletionCallback(callback);
-    request.StartAsync();
-
-    return request;
 }
 
 const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
@@ -172,7 +185,8 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         auto& shape = networkInput->getShape();
 
         // Network and request must have the same number of shape dimensions
-        if (requestInput.tensor_shape().dim_size() >= 0 && shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
+        if (requestInput.tensor_shape().dim_size() >= 0 &&
+            shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
             return ValidationStatusCode::INVALID_SHAPE;
         }
 

@@ -18,6 +18,7 @@
 
 #include "tensorflow/core/framework/tensor.h"
 
+#include "ovinferrequestsqueue.hpp"
 #include "modelmanager.h"
 #include "prediction_service.hpp"
 
@@ -160,25 +161,25 @@ void serialize(InferenceEngine::InferRequest& inferRequest, const tensorMap& out
 }
 
 struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVStreamsQueue& ovstreams) :
-        ovstreams_(ovstreams),
-        id_(ovstreams_.getIdleStream()) {}
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
+        inferRequestsQueue_(inferRequestsQueue),
+        id_(inferRequestsQueue_.getIdleStream()) {}
     ~ExecutingStreamIdGuard(){
-        ovstreams_.returnStream(id_);
+        inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
 private:
-    ovms::OVStreamsQueue& ovstreams_;
+    ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
 };
 
-grpc::Status performInference(ovms::OVStreamsQueue& ovstreams, const int executingStreamId, InferenceEngine::InferRequest inferRequest) {
+grpc::Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
     try {
-        inferRequest.SetCompletionCallback([&ovstreams, executingStreamId]() {
-            ovstreams.signalCompletedInference(executingStreamId);
+        inferRequest.SetCompletionCallback([&inferRequestsQueue, executingInferId]() {
+            inferRequestsQueue.signalCompletedInference(executingInferId);
         });
         inferRequest.StartAsync();
-        ovstreams.waitForAsync(executingStreamId);
+        inferRequestsQueue.waitForAsync(executingInferId);
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         std::cout << e.what() << std::endl;
         return grpc::Status(
@@ -203,18 +204,16 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if(!status.ok())
         return status;
 
-    ovms::OVStreamsQueue& ovstreams = modelVersion->getOVStreams();
-    ExecutingStreamIdGuard executingStreamIdGuard(ovstreams);
-    int executingStreamId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = ovstreams.getInferRequest(executingStreamId);
+    ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion->getInferRequestsQueue();
+    ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
+    int executingInferId = executingStreamIdGuard.getId();
+    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
 
-    // TODO check if separate inferRequest & stream execution allocation does speed up executing
-    // we don't need stream allocated during serialization/deserialization
     status = deserialize(request, modelVersion->getInputsInfo(), inferRequest);
     if(!status.ok())
         return status;
 
-    status = performInference(ovstreams, executingStreamId, inferRequest);
+    status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     if(!status.ok())
         return status;
 

@@ -182,11 +182,20 @@ namespace ovms {
 
         /**
          * @brief Get the nireq
-         * 
+         *
          * @return uint 
          */
         uint nireq() {
             return result->operator[]("nireq").as<uint>();
+        }
+
+        /**
+         * @brief Get the ov_streams queue size
+         *
+         * @return uint
+         */
+        uint cpuThroughputStreams() {
+            return result->operator[]("cpu_throughput_streams").as<uint>();
         }
 
         /**

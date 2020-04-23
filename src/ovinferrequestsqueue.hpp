@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#pragma once
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -26,7 +26,7 @@ namespace ovms {
 /**
 * @brief Class representing circular buffer for managing IE streams
 */
-class OVStreamsQueue {
+class OVInferRequestsQueue {
  public:
     /**
     * @brief Allocating idle stream for execution
@@ -51,7 +51,7 @@ class OVStreamsQueue {
     /**
     * @brief Constructor with initialization
     */
-    OVStreamsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
+    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
         streams(streamsLength),
         front_idx{0},
         back_idx{0},
@@ -72,7 +72,7 @@ class OVStreamsQueue {
 
  protected:
     /**
-    * @brief Vector representing circular buffer for streams queue
+    * @brief Vector representing circular buffer for infer queue
     */
     std::vector<int> streams;
 

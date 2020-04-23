@@ -13,9 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
+#include <thread>
+
 #include "config.h"
 
 namespace ovms {
+
+const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
+const std::string DEFAULT_CPU_THROUGHPUT_STREAMS = std::to_string(std::max(AVAILABLE_CORES / 8, 1u));
+const std::string DEFAULT_NIREQ = std::to_string(AVAILABLE_CORES / 8 + 2);
+const std::string DEFAULT_GRPC_SERVERS = std::to_string(AVAILABLE_CORES / 8 + 4);
 
 Config& Config::parse(int argc, char** argv) {
     try
@@ -38,8 +46,8 @@ Config& Config::parse(int argc, char** argv) {
                  cxxopts::value<uint16_t>()->default_value("0"),
                  "REST_PORT")
             ("grpc_workers",
-                "number of workers in gRPC server",
-                cxxopts::value<uint>()->default_value("16"),
+                "number of gRPC servers. Recommended to be >= NIREQ",
+                cxxopts::value<uint>()->default_value(DEFAULT_GRPC_SERVERS.c_str()),
                 "GRPC_WORKERS")
             ("rest_workers",
                 "number of workers in REST server - has no effect if rest_port is not set",
@@ -67,9 +75,13 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_VERSION_POLICY")
             ("nireq",
-                "Number of parallel inference request executions for model. Default: 1",
-                cxxopts::value<uint>()->default_value("1"),
+                "Number of parallel inference request executions for model. Recommended to be >= CPU_THROUGHPUT_STREAMS",
+                cxxopts::value<uint>()->default_value(DEFAULT_NIREQ.c_str()),
                 "NIREQ")
+            ("cpu_throughput_streams",
+                "Number of parallel inference executions on cpu ",
+                cxxopts::value<uint>()->default_value(DEFAULT_CPU_THROUGHPUT_STREAMS.c_str()),
+                "CPU_THROUGHPUT_STREAMS")
             ("target_device",
                 "name of the model",
                 cxxopts::value<std::string>()->default_value("CPU"),
@@ -110,7 +122,6 @@ bool Config::validate() {
         std::cout << "port and rest_port cannot have the same values" << std::endl;
         exit(3);
     }
-
     return true;
 }
 
