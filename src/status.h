@@ -29,7 +29,25 @@ enum class Status {
     FILE_INVALID,           /*!< File not found or cannot open */
     NETWORK_NOT_LOADED,     
     JSON_INVALID,           /*!< The file is not valid json */
+    SHAPE_WRONG_FORMAT,     /*!< The provided shape is in wrong format */
     MODELINSTANCE_NOT_FOUND
+};
+
+class StatusDescription {
+public:
+    static const std::string& getError(const Status code) {
+        static const std::map<Status, std::string> errors = {
+            { Status::OK,                      "OK"                                                  },
+            { Status::PATH_INVALID,            "The provided base path is invalid or doesn't exists" },
+            { Status::FILE_INVALID,            "File not found or cannot open"                       },
+            { Status::NETWORK_NOT_LOADED,      "Error while loading a network"                       },
+            { Status::JSON_INVALID,            "The file is not valid json"                          },
+            { Status::SHAPE_WRONG_FORMAT,      "The provided shape is in wrong format"               },
+            { Status::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"                             }
+        };
+
+        return errors.find(code)->second;
+    }
 };
 
 /**

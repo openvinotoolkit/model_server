@@ -51,7 +51,7 @@ int server_main(int argc, char** argv)
     Status status = manager.start();
 
     if (status != Status::OK) {
-        std::cout << "ovms::ModelManager::Start() Error: " << int(status) << std::endl;
+        std::cout << "ovms::ModelManager::Start() Error: " << StatusDescription::getError(status) << std::endl;
         return 1;
     }
 

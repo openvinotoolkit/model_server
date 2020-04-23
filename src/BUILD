@@ -38,6 +38,7 @@ cc_library(
         "prediction_service.cpp",
         "prediction_service.hpp",
         "status.h",
+        "stringutils.h",
         "tensorinfo.h",
         "timer.h",
     ],
@@ -54,7 +55,7 @@ cc_library(
 
 cc_binary(
   name = "server_cc",
-  srcs = [ 
+  srcs = [
        "main.cpp",
   ],
   deps = [
@@ -67,6 +68,8 @@ cc_test(
     srcs = [
         "test/unit_tests.cpp",
         "test/modelmanager_test.cpp",
+        "test/modelconfig_test.cpp",
+        "test/stringutils_test.cpp"
     ],
     deps = [
         "@com_google_googletest//:gtest",

@@ -64,6 +64,10 @@ parser.add_argument('--batchsize',
 parser.add_argument('--model_name',
                     default='resnet',
                     help='Define model name in payload. default: resnet')
+parser.add_argument('--model_version',
+                    default=1,
+                    help='Model version number. default: 1',
+                    type=int)
 parser.add_argument('--report_every',
                     default=0,
                     help='Report performance every X iterations',
@@ -127,6 +131,7 @@ while iteration <= iterations:
         # Creating request object
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.model_name
+        request.model_spec.version.value = args.model_version
 
         # Populating request with data
         request.inputs[args.input_name].CopyFrom(

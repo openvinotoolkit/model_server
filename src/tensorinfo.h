@@ -17,6 +17,7 @@
 
 #include <inference_engine.hpp>
 #include "tensorflow/core/framework/tensor.h"
+#include "modelconfig.h"
 
 namespace ovms {
 
@@ -38,7 +39,7 @@ namespace ovms {
         /**
          * @brief Model input
          */
-        std::vector<size_t> shape;
+        shape_t shape;
 
         /**
          * @brief Tensor layout
@@ -67,7 +68,7 @@ namespace ovms {
          */
         TensorInfo( const std::string& name,
                     const InferenceEngine::Precision& precision,
-                    const std::vector<size_t>& shape,
+                    const shape_t& shape,
                     const InferenceEngine::Layout& layout,
                     const InferenceEngine::TensorDesc& tensorDesc) :
             name(name),
@@ -157,7 +158,7 @@ namespace ovms {
          *
          * @return shape
          */
-        const std::vector<size_t>& getShape() {
+        const shape_t& getShape() {
             return shape;
         }
 
