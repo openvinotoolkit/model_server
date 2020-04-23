@@ -45,10 +45,10 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     :returns: Preprocessed image as numpy array
     """
     try:
-        decoded_image = tf.io.decode_image(image, channels=channels,
-                                           dtype=dtype)
+        decoded_image = tf.io.decode_image(image, channels=channels, dtype=dtype)
         if target_size:
-            decoded_image = tf.image.resize(decoded_image, target_size)
+            height, width = target_size
+            decoded_image = tf.image.resize_with_crop_or_pad(decoded_image, height, width)
         if standardization:
             decoded_image = tf.image.per_image_standardization(decoded_image)
 
