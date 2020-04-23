@@ -13,7 +13,7 @@ RUN curl -o GPG-PUB-KEY-INTEL-OPENVINO-2020 https://apt.repos.intel.com/openvino
 RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2020
 RUN echo "deb https://apt.repos.intel.com/openvino/2020/ all main" > /etc/apt/sources.list.d/intel-openvino-2020.list
 
-RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2020.1.023
+RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2020.2.130
 
 ENV DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ENV PYTHONPATH="/opt/intel/openvino/python/python3.6"
