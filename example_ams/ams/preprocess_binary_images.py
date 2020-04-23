@@ -24,6 +24,20 @@ def preprocess_binary_image(image: bytes, channels: int = None,
                             dtype=tf.dtypes.uint8, scale: float = None,
                             standardization=False,
                             reverse_input_channels=False) -> np.ndarray:
+    """
+    Preprocess binary image in PNG, JPG or BMP format, producing numpy array as a result.
+
+    :param image: Image bytes
+    :param channels: Number of image's channels
+    :param dtype: Data type that will be used for decoding
+    :param scale: If passed, decoded image array will be multiplied by this value
+    :param standardization: If set to true, image array values will be standarized
+    to have mean 0 and standard deviation of 1
+    :param reverse_input_channels: If set to True, image channels will be reversed
+    from RGB to BGR format
+    :raises ValueError: in case of any failure during preprocessing
+    :returns: Preprocessed image as numpy array
+    """
     try:
         decoded_image = tf.io.decode_image(image, channels=channels,
                                            dtype=dtype)
@@ -32,7 +46,6 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
         image_array = decoded_image.numpy()
         if reverse_input_channels:
-            # Convert image from RGB to BGR
             image_array = image_array[..., ::-1]
         if scale:
             image_array = image_array * scale
