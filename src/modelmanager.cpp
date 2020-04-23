@@ -35,16 +35,19 @@ Status ModelManager::start() {
         return start(config.configPath());
 
     // start manager using commandline parameters
+    ModelConfig modelConfig {
+        config.modelName(),
+        config.modelPath(),
+        config.targetDevice(),
+        config.batchSize(),
+        config.nireq()
+    };
+    // Until we have filesystem, we need to provide version somehow
+    modelConfig.setVersion(1);
+    //
     std::shared_ptr<Model> model = std::make_shared<Model>();
-    ModelConfig modelConfig;
-    modelConfig.name = config.modelName();
-    models[modelConfig.name] = std::move(model);
-    modelConfig.shape = config.shape();
-    modelConfig.basePath = config.modelPath();
-    modelConfig.backend = config.targetDevice();
-    modelConfig.batchSize = config.batchSize();
-
-    auto status = models[modelConfig.name]->addVersion(modelConfig);
+    models[modelConfig.getName()] = std::move(model);
+    auto status = models[modelConfig.getName()]->addVersion(modelConfig);
     if (status != Status::OK) {
         // Logger(Log::Warning, "There was an error loading a model ", config.modelName());
         return status;
@@ -69,6 +72,7 @@ Status ModelManager::start(const std::string& jsonFilename) {
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::Document doc;
+
     std::ifstream ifs(jsonFilename.c_str());
     // Perform some basic checks on the config file
     if (!ifs.good()) {
@@ -95,48 +99,81 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         const auto& v = configs["config"].GetObject();
         std::shared_ptr<Model> model = std::make_shared<Model>();
         ModelConfig modelConfig;
-        modelConfig.name = v["name"].GetString();
-        modelConfig.basePath = v["base_path"].GetString();
-        if (models.find(modelConfig.name) == models.end()) {
-            models[modelConfig.name] = std::move(model);
+        modelConfig.setName(v["name"].GetString());
+        std::string base_path = v["base_path"].GetString();
+        // Until we have filesystem, we need to provide version somehow
+        modelConfig.setVersion(1);
+        base_path.append("/1");
+        modelConfig.setBasePath(base_path);
+        if (models.find(modelConfig.getName()) == models.end()) {
+            models[modelConfig.getName()] = std::move(model);
         }
 
         // Check for optional parameters
-        if (v.HasMember("batch_size"))
-            modelConfig.batchSize = v["batch_size"].GetUint64();
+        if (v.HasMember("batch_size")) {
+            if (v["batch_size"].IsString()) {
+                // Although batch size is in, in legacy python version it was string
+                modelConfig.setBatchSize(std::atoi(v["batch_size"].GetString()));
+            } else {
+                modelConfig.setBatchSize(v["batch_size"].GetUint64());
+            }
+        }
         if (v.HasMember("target_device"))
-            modelConfig.backend = v["target_device"].GetString();
+            modelConfig.setBackend(v["target_device"].GetString());
         if (v.HasMember("version"))
-            modelConfig.version = v["version"].GetInt64();
+            modelConfig.setVersion(v["version"].GetInt64());
+        if (v.HasMember("nireq"))
+            modelConfig.setNireq(v["nireq"].GetUint64());
 
         if (v.HasMember("shape")) {
+            // Legacy format as string
             if (v["shape"].IsString()) {
-                modelConfig.addShapes(v["shape"].GetString());
+                if (modelConfig.setShape(v["shape"].GetString()) != Status::OK) {
+                    std::cout << "There was an error parsing shape: " << v["shape"].GetString() << std::endl;
+                }
             } else {
-                for (auto& s : v["shape"].GetObject()) {
-                    std::vector<size_t> shape;
-                    for (auto& sh : s.value.GetArray()) {
+                if (v["shape"].IsArray()) {
+                    // Shape for all inputs
+                    shape_t shape;
+                    for (auto& sh : v["shape"].GetArray()) {
                         shape.push_back(sh.GetUint64());
                     }
-                    modelConfig.shapes[s.name.GetString()] = shape;
+                    modelConfig.setShape(shape);
+                } else {
+                    // Map of shapes
+                    for (auto& s : v["shape"].GetObject()) {
+                        shape_t shape;
+                        // check if legacy format is used
+                        if (s.value.IsString()) {
+                            if (ModelConfig::parseShape(shape, s.value.GetString()) != Status::OK) {
+                                std::cout << "There was an error parsing shape: " << v["shape"].GetString() << std::endl;
+                            }
+                        } else {
+                            for (auto& sh : s.value.GetArray()) {
+                                shape.push_back(sh.GetUint64());
+                            }
+                        }
+                        modelConfig.addShape(s.name.GetString(), shape);
+                    }
                 }
             }
         }
 
         if (v.HasMember("layout")) {
             if (v["layout"].IsString()) {
-                modelConfig.addLayouts(v["layout"].GetString());
+                modelConfig.setLayout(v["layout"].GetString());
             } else {
                 for (auto& s : v["layout"].GetObject()) {
-                    modelConfig.layouts[s.name.GetString()] = s.value.GetString();
+                    modelConfig.addLayout(s.name.GetString(), s.value.GetString());
                 }
             }
         }
 
-        auto status = models[modelConfig.name]->addVersion(modelConfig);
+        auto status = models[modelConfig.getName()]->addVersion(modelConfig);
         if (status != Status::OK) {
-            // Logger(Log::Warning, "There was an error loading a model ", v["name"].GetString());
-            return status;
+            // to be replaced with proper logger
+            std::cout << "There was an error loading a model: " << v["name"].GetString() << std::endl;
+            std::cout << "Reason: " << StatusDescription::getError(status) << std::endl;
         }
     }
 

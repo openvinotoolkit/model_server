@@ -23,10 +23,10 @@ Status Model::addVersion(const ModelConfig& config) {
     if (status != Status::OK) {
         return status;
     }
-    this->name = config.name;
-    if (this->defaultVersion < config.version)
-        this->defaultVersion = config.version;
-    modelVersions[config.version] = std::move(modelInstance);
+    this->name = config.getName();
+    if (this->defaultVersion < config.getVersion())
+        this->defaultVersion = config.getVersion();
+    modelVersions[config.getVersion()] = std::move(modelInstance);
     
     return Status::OK;
 }

@@ -37,10 +37,6 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 using tensorflow::serving::PredictionService;
 
-using ovms::ModelManager;
-using ovms::ValidationStatus;
-using ovms::ValidationStatusCode;
-
 namespace ovms {
 
 void infer(InferRequest& inferRequest) {
@@ -70,14 +66,18 @@ grpc::Status getModelInstance(const PredictRequest* request, std::shared_ptr<ovm
                 ValidationStatusCode::MODEL_NAME_MISSING));
     }
 
-    auto modelVersion = model->getModelInstanceByVersion(modelVersionId);
-    if (modelVersion == nullptr) {
-        return grpc::Status(
-            grpc::StatusCode::NOT_FOUND,
-            ValidationStatus::getError(
-                ValidationStatusCode::MODEL_VERSION_MISSING));
+
+    if (modelVersionId != 0) {
+        modelInstance = model->getModelInstanceByVersion(modelVersionId);
+        if (modelInstance == nullptr) {
+            return grpc::Status(
+                grpc::StatusCode::NOT_FOUND,
+                ValidationStatus::getError(
+                    ValidationStatusCode::MODEL_VERSION_MISSING));
+        }
+    } else {
+        modelInstance = model->getDefaultModelInstance();
     }
-    modelInstance = modelVersion;
     
     return grpc::Status::OK;
 }

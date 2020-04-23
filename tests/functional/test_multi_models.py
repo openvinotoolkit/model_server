@@ -29,7 +29,6 @@ from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
 
 class TestMultiModelInference():
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_multi_model,
                            create_grpc_channel):
@@ -43,7 +42,7 @@ class TestMultiModelInference():
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
 
-        img = np.ones((1, 3, 224, 224))
+        img = np.ones((1, 3, 224, 224), np.float32)
         print("Starting inference using resnet model")
         model_name = "resnet"
         output = infer(img, input_tensor=in_name,
@@ -55,7 +54,7 @@ class TestMultiModelInference():
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
         model_name = "resnet_bs4"
-        imgs = np.ones((4, 3, 224, 224))
+        imgs = np.ones((4, 3, 224, 224), np.float32)
         print("Starting inference using resnet model")
         output = infer(imgs, input_tensor=in_name,
                        grpc_stub=stub,
@@ -66,7 +65,7 @@ class TestMultiModelInference():
         assert output[out_name].shape == (4, 1001), ERROR_SHAPE
 
         model_name = "resnet_bs8"
-        imgs = np.ones((8, 3, 224, 224))
+        imgs = np.ones((8, 3, 224, 224), np.float32)
         print("Starting inference using resnet model")
         output = infer(imgs, input_tensor=in_name,
                        grpc_stub=stub,
@@ -75,6 +74,8 @@ class TestMultiModelInference():
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+    """
+    No s3,gs support yet
 
         output = infer(img, input_tensor=in_name, grpc_stub=stub,
                        model_spec_name='resnet_s3',
@@ -95,6 +96,7 @@ class TestMultiModelInference():
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
+    """
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,

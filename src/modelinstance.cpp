@@ -44,15 +44,27 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
         auto desc = input->getTensorDesc();
 
         // Data from config
-        if (config.layouts.count(name)) {
-            layout = TensorInfo::getLayoutFromString(config.layouts.at(name));
-            input->setLayout(layout);
+        if (config.getLayout().size()) {
+            // Single layout for all inputs
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        } 
+        else if (config.getLayouts().count(name)) {
+            // Layout defined for specific input
+            layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
         }
-        if (config.shapes.count(name)) {
-            shape = config.shapes.at(name);
+        input->setLayout(layout);
+
+        // One shape for all inputs
+        if (config.getShape().size()) {
+            shape = config.getShape();
         }
-        if (config.batchSize > 0) {
-            shape[0] = config.batchSize;
+        // Shape for specific input
+        else if (config.getShapes().count(name)) {
+            shape = config.getShapes().at(name);
+        }
+
+        if (config.getBatchSize() > 0) {
+            shape[0] = config.getBatchSize();
         }
 
         networkShapes[name] = shape;
@@ -81,20 +93,21 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
 }
 
 // Temporary methods. To be replaces with proper storage class.
-bool endsWith(std::string token, std::string match)
-{
-	auto it = match.begin();
-	return token.size() >= match.size() &&
-		std::all_of(std::next(token.begin(),token.size() - match.size()), token.end(), [&it](const char & c){
-			return ::tolower(c) == ::tolower(*(it++))  ;
-	    });
+bool dirExists(const std::string& path) {
+    DIR *dir = opendir(path.c_str());
+    if (dir) {
+        closedir(dir);
+        return true;
+    }
+
+    return false;
 }
 
 std::string getModelFile(const std::string path) {
     struct dirent *entry;
     DIR *dir = opendir(path.c_str());
 
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != nullptr) {
         auto name = std::string(entry->d_name);
         if (endsWith(name, ".xml")) {
             closedir(dir);
@@ -133,14 +146,17 @@ uint getNumberOfParallelInferRequests() {
 }
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
-    this->path = config.basePath;
-    this->version = config.version;
-    this->backend = config.backend;
-    
+    this->path = config.getBasePath();
+    this->version = config.getVersion();
+    this->backend = config.getBackend();
+
     // load network
     try {
+        if (!dirExists(path)) {
+            return Status::PATH_INVALID;
+        }
         network = engine.ReadNetwork(getModelFile(path));
-        this->batchSize = config.batchSize > 0 ? config.batchSize : network.getBatchSize();
+        this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network.getBatchSize();
 
         network.setBatchSize(this->batchSize);
 
