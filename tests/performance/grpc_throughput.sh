@@ -22,5 +22,10 @@ fi
 
 time printf %s\\n $(seq 1 $CLIENT_COUNT) | xargs -n 1 -P $CLIENT_COUNT ./grpc_start_one_stream.sh $* --id
 
+if [ $? = 1 ]; then
+    echo "grpc_start_one_stream.sh has failed"
+    exit 1
+fi
+
 FPS=$((CLIENT_COUNT*ITERATION/SECONDS))
 echo "$FPS FPS"

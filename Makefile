@@ -66,7 +66,7 @@ test_throughput: venv
 	@./tests/performance/download_model.sh
 	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest --model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
 	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh --images_numpy_path imgs.npy --labels_numpy_path labels.npy --iteration 500 --batchsize 1 --input_name data
+	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 --images_numpy_path imgs.npy --labels_numpy_path labels.npy --iteration 500 --batchsize 1 --input_name data
 	@echo "Removing test container"
 	@docker rm --force server-test
 
