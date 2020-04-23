@@ -24,15 +24,13 @@
 #include "tensorinfo.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "ovstreams.h"
+#include "ovinferrequestsqueue.hpp"
 #include "status.h"
 #include "modelconfig.h"
 
 namespace ovms {
 
     using tensorMap = std::map<std::string, std::shared_ptr<TensorInfo>>;
-
-    const int OV_STREAMS_COUNT = 12;
 
     /**
      * @brief This class contains all the information about inference engine model
@@ -86,13 +84,9 @@ namespace ovms {
         tensorMap outputsInfo;
 
         /**
-         * @brief Inference request object created during network load
-         */
-        InferenceEngine::InferRequest request;
-        /**
          * @brief OpenVINO inference execution stream pool
          */
-        std::unique_ptr<OVStreamsQueue> ovstreams;
+        std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
         /**
          * @brief Internal method for loading inputs
@@ -138,10 +132,6 @@ namespace ovms {
          */
         const InferenceEngine::ExecutableNetwork& getExecutableNetwork() {
             return execNetwork;
-        }
-
-        InferenceEngine::InferRequest& getInferRequest() {
-            return request;
         }
 
         /**
@@ -203,8 +193,8 @@ namespace ovms {
          * 
          * @return OVStreamsQueue
          * */
-        OVStreamsQueue& getOVStreams() {
-            return *ovstreams;
+        OVInferRequestsQueue& getInferRequestsQueue() {
+            return *inferRequestsQueue;
         }
 
         /**
@@ -215,27 +205,6 @@ namespace ovms {
          * @return Status
          */
         Status loadModel(const ModelConfig& config);
-
-        /**
-         * @brief Execute inference on provided data and input name
-         *
-         * @param inputName
-         * @param data
-         * @return InferenceEngine::InferRequest&
-         */
-        InferenceEngine::InferRequest& infer(const std::string& inputName, const InferenceEngine::Blob::Ptr data);
-
-        /**
-         * @brief Execute inference async on provided data and inputName
-         *
-         * @param inputName
-         * @param data
-         * @param callback
-         * @return InferenceEngine::InferRequest&
-         */
-        InferenceEngine::InferRequest& inferAsync(const std::string& inputName,
-                                                  const InferenceEngine::Blob::Ptr data,
-                                                  const std::function<void()>& callback);
 
         const ValidationStatusCode validate(const tensorflow::serving::PredictRequest* request);
         // const grpc::Status validate(const kf::serving::PredictRequest* request);

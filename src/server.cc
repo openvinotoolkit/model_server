@@ -30,6 +30,17 @@ using grpc::ServerBuilder;
 
 using namespace ovms;
 
+uint getGRPCServersCount() {
+    const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
+    if (environmentVariableBuffer) {
+        return std::atoi(environmentVariableBuffer);
+    }
+
+    auto& config = ovms::Config::instance();
+    uint configGRPCServersCount = config.grpcWorkers();
+    return configGRPCServersCount;
+}
+
 int server_main(int argc, char** argv)
 {
     const int GIGABYTE = 1024 * 1024 * 1024;
@@ -52,7 +63,10 @@ int server_main(int argc, char** argv)
     builder.RegisterService(&service);
 
     std::vector<std::unique_ptr<Server>> servers;
-    for (int i = 0; i < config.grpcWorkers(); i++) {
+    uint grpcServersCount = getGRPCServersCount();
+    std::cout << "Starting grpcservers:" << grpcServersCount << std::endl;
+
+    for (uint i = 0; i < grpcServersCount; ++i) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
 

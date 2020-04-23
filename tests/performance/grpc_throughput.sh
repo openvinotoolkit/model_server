@@ -1,6 +1,6 @@
 #!/bin/bash
-
-CLIENT_COUNT=28
+CLIENT_COUNT=${1}
+shift 1
 SECONDS=0
 
 ITERATION=-1

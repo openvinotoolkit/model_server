@@ -14,21 +14,21 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "ovstreams.h"
+#include "ovinferrequestsqueue.hpp"
 
 namespace ovms {
 
-void OVStreamsQueue::signalCompletedInference(int streamID) {
+void OVInferRequestsQueue::signalCompletedInference(int streamID) {
     activeStreams[streamID].notify_one();
 }
 
-void OVStreamsQueue::waitForAsync(int streamID) {
+void OVInferRequestsQueue::waitForAsync(int streamID) {
     std::mutex mx;
     std::unique_lock <std::mutex> lock(mx);
     activeStreams[streamID].wait(lock);
 }
 
-int OVStreamsQueue::getIdleStream() {
+int OVInferRequestsQueue::getIdleStream() {
     int value;
     std::unique_lock <std::mutex> lk(front_mut);
     if (streams[front_idx] < 0) {
@@ -40,7 +40,7 @@ int OVStreamsQueue::getIdleStream() {
     return value;
 }
 
-void OVStreamsQueue::returnStream(int streamID) {
+void OVInferRequestsQueue::returnStream(int streamID) {
     std::uint32_t old_back = back_idx.load();
     while (!back_idx.compare_exchange_weak(
             old_back,
