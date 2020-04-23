@@ -39,25 +39,27 @@ def bmp_image():
         binary_image = img_file.read()
     return binary_image
 
+
+@pytest.mark.parametrize("image", [png_image(), jpg_image(), bmp_image()])
 @pytest.mark.parametrize("reverse_input_channels", [True, False])
-@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
+@pytest.mark.parametrize("target_size", [None, (10, 10), (256, 256)])
+@pytest.mark.parametrize("channels_first", [True, False])
+@pytest.mark.parametrize("scale", [None, 1, 1/0.017])
 @pytest.mark.parametrize("standardization", [True, False])
-def test_preprocess_jpg(jpg_image, reverse_input_channels, scale, standardization):
-    assert preprocess_binary_image(jpg_image, reverse_input_channels=reverse_input_channels,
-     scale=scale, standardization=standardization) is not None
+def test_preprocess_image(image, reverse_input_channels, target_size,
+                          channels_first, scale, standardization):
+    decoded_image = preprocess_binary_image(image,
+                                            reverse_input_channels=reverse_input_channels,
+                                            target_size=target_size,
+                                            channels_first=channels_first,
+                                            scale=scale,
+                                            standardization=standardization)
 
-
-@pytest.mark.parametrize("reverse_input_channels", [True, False])
-@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
-@pytest.mark.parametrize("standardization", [True, False])
-def test_preprocess_png(png_image, reverse_input_channels, scale, standardization):
-    assert preprocess_binary_image(png_image, reverse_input_channels=reverse_input_channels,
-     scale=scale, standardization=standardization) is not None
-
-
-@pytest.mark.parametrize("reverse_input_channels", [True, False])
-@pytest.mark.parametrize("scale", [None, 1, 1/255, 1/0.017])
-@pytest.mark.parametrize("standardization", [True, False])
-def test_preprocess_bmp(bmp_image, reverse_input_channels, scale, standardization):
-    assert preprocess_binary_image(bmp_image, reverse_input_channels=reverse_input_channels,
-     scale=scale, standardization=standardization) is not None
+    assert decoded_image is not None
+    if target_size:
+        if channels_first:
+            assert decoded_image.shape[1] == target_size[0]
+            assert decoded_image.shape[2] == target_size[1]
+        else:
+            assert decoded_image.shape[0] == target_size[0]
+            assert decoded_image.shape[1] == target_size[1]

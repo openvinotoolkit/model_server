@@ -15,11 +15,15 @@
 #
 
 
+from typing import Tuple
+
 import tensorflow as tf
 import numpy as np
 
 
 def preprocess_binary_image(image: bytes, channels: int = None,
+                            target_size: Tuple[int, int] = None,
+                            channels_first=True,
                             dtype=tf.dtypes.uint8, scale: float = None,
                             standardization=False,
                             reverse_input_channels=False) -> np.ndarray:
@@ -28,6 +32,9 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
     :param image: Image bytes
     :param channels: Number of image's channels
+    :param target_size: A tuple of desired height and width
+    :param channels_first: If set to True, image array will be in NCHW format,
+     NHWC format will be used otherwise
     :param dtype: Data type that will be used for decoding
     :param scale: If passed, decoded image array will be multiplied by this value
     :param standardization: If set to true, image array values will be standarized
@@ -40,12 +47,16 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     try:
         decoded_image = tf.io.decode_image(image, channels=channels,
                                            dtype=dtype)
+        if target_size:
+            decoded_image = tf.image.resize(decoded_image, target_size)
         if standardization:
             decoded_image = tf.image.per_image_standardization(decoded_image)
 
         image_array = decoded_image.numpy()
         if reverse_input_channels:
             image_array = image_array[..., ::-1]
+        if channels_first:
+            image_array = np.transpose(image_array, [2, 0, 1])
         if scale:
             image_array = image_array * scale
     except Exception as e:
@@ -63,7 +74,9 @@ if __name__ == "__main__":
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
 
-    preprocessed_image = preprocess_binary_image(binary_image)
-    print(preprocessed_image)
+    preprocessed_image = preprocess_binary_image(binary_image, channels_first=False)
+    print(preprocessed_image.shape)
+
+    # Keep in mind that matplotlib will not be able to display image in NCHW format
     plt.imshow(preprocessed_image)
     plt.show()
