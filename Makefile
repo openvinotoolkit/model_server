@@ -71,4 +71,4 @@ test_throughput: venv
 	@docker rm --force server-test
 
 test_functional: venv
-	@. $(ACTIVATE); pytest -s --image=cpp-experiments:latest tests/functional/
+	@. $(ACTIVATE); pytest --json=report.json -s --image=cpp-experiments:latest tests/functional/
