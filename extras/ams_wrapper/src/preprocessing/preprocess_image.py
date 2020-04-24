@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,8 +60,8 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if scale:
             image_array = image_array * scale
     except Exception as e:
-        print('Failed to decode provided binary image.')
-        raise ValueError from e
+        print('Failed to preprocess provided binary image.')
+        raise ValueError('Failed to preprocess provided binary image.') from e
 
     return image_array
 

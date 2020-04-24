@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,28 +14,33 @@
 # limitations under the License.
 #
 
+import os
 
 import pytest
 
-from ams.preprocess_binary_images import preprocess_binary_image
+from src.preprocessing import preprocess_binary_image
+
+
+IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')
 
 @pytest.fixture()
 def jpg_image():
-    with open('test_images/2207159142_8206ab6984.jpg', mode='rb') as img_file:
+    with open(os.path.join(IMAGES_DIR, '2207159142_8206ab6984.jpg'), mode='rb') as img_file:
         binary_image = img_file.read()
     return binary_image
 
 
 @pytest.fixture()
 def png_image():
-    with open('test_images/Khao_Manee_cat_in_Tamra_cat_Rattanakosin.png', mode='rb') as img_file:
+    with open(os.path.join(IMAGES_DIR, 'Khao_Manee_cat_in_Tamra_cat_Rattanakosin.png'),
+              mode='rb') as img_file:
         binary_image = img_file.read()
     return binary_image
 
 
 @pytest.fixture()
 def bmp_image():
-    with open('test_images/sails.bmp', mode='rb') as img_file:
+    with open(os.path.join( IMAGES_DIR, 'sails.bmp'), mode='rb') as img_file:
         binary_image = img_file.read()
     return binary_image
 
