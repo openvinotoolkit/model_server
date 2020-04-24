@@ -1,2 +1,1 @@
-matplotlib==3.2.*
 pytest==3.7.*

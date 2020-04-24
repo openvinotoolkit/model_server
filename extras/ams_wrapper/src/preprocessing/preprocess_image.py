@@ -68,8 +68,6 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
     img_path = '<path to the image>'
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
@@ -78,5 +76,9 @@ if __name__ == "__main__":
     print(preprocessed_image.shape)
 
     # Keep in mind that matplotlib will not be able to display image in NCHW format
-    plt.imshow(preprocessed_image)
-    plt.show()
+    try:
+        import matplotlib.pyplot as plt
+        plt.imshow(preprocessed_image)
+        plt.show()
+    except ImportError:
+        print('Please install matplotlib if you want to inspect preprocessed image.')
