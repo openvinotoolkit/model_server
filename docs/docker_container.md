@@ -435,3 +435,57 @@ By default model server is detecting new and deleted versions in 1 second interv
 The frequency can be changed by setting environment variable `FILE_SYSTEM_POLL_WAIT_SECONDS`.
 If set to negative or zero, updates will be disabled.
 
+## Using Multi-Device Plugin
+
+If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. For more detailed information about OpenVino's Multi-Device plugin, see: https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MULTI.html
+
+In order to use this feature in OpenVino&trade; Model Server, following steps are required:
+* Set `target_device` for the model in configuration json file to `MULTI:<DEVICE_1>,<DEVICE_2>` (e.g. `MULTI:MYRIAD,CPU`, order of the devices defines their priority, so `MYRIAD` devices will be used first in this example)
+* Set `nireq` (number of inference requests) for the model in configuration json file to be at least equal to the number of the devices that will be used - optimal number of inference requests may vary depending on the model and type of used devices. Following script will help you to get optimal number of requests suggested by OpenVino&trade;:
+```python
+from openvino.inference_engine import IEPlugin, IENetwork
+
+# replace MULTI:MYRIAD,CPU if you are using different multi device configuration
+plugin = IEPlugin(device='MULTI:MYRIAD,CPU')
+# change paths to location of your model
+model_xml = "<model's xml file path>"
+model_bin = "<model's bin file path>"
+net = IENetwork(model=model_xml, weights=model_bin)
+exec_net = plugin.load(network=net)
+print(exec_net.get_metric('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))
+```
+* Set `grpc_workers` (or `rest_workers` if you are using REST endpoints for inference) parameter to be at least equal to the number of inference requests
+
+### Multi-Device Plugin configuration example
+
+Example of setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+
+Content of `config.json`:
+```json
+{"model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/ml/resnet",
+      "batch_size": "1",
+      "nireq": 6,
+      "target_device": "MULTI:MYRIAD,CPU"}
+   }]
+}
+```
+
+Starting OpenVINO&trade; Model Server with `config.json` (placed in `./models/config.json` path) defined as above, and with `grpc_workers` parameter set to match `nireq` field in `config.json`:
+```bash
+docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro \
+-v /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh \
+ie_serving config --config_path /opt/ml/config.json --port 9001 --grpc_workers 6
+```
+
+Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (`config.json` is not needed in this case):
+```
+docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
+ /dev:/dev -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving \
+ model --model_path /opt/ml/resnet --model_name resnet --port 9001 --grpc_workers 6 \
+ --nireq 6 --target_device 'MULTI:MYRIAD,CPU'
+```
+
+After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU, and total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.

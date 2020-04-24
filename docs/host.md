@@ -115,3 +115,9 @@ You can also [run it in Docker container](docker_container.md#starting-docker-co
 **Note**: Check out [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
 Look at VPU Plugins to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
 and convert your model to desired format.
+
+
+## Using Multi-Device Plugin
+
+See [Multi-Device Plugin overview](docker_container.md#using-multi-device-plugin)
+In order to use Multi-Device Plugin on bare host, simply apply instructions linked above without Docker specific steps.
