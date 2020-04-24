@@ -183,11 +183,11 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
 const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
 
     // Network and request must have the same amount of inputs
-    if (request->inputs_size() >= 0 && inputsInfo.size() != (size_t) request->inputs_size()) {
+    if (request->inputs_size() >= 0 && getInputsInfo().size() != (size_t) request->inputs_size()) {
         return ValidationStatusCode::INVALID_INPUT_ALIAS;
     }
 
-    for (const auto& pair : inputsInfo) {
+    for (const auto& pair : getInputsInfo()) {
         const auto& name = pair.first;
         auto networkInput = pair.second;
         auto it = request->inputs().find(name);
@@ -207,7 +207,7 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         }
 
         // First shape must be equal to batch size
-        if (requestInput.tensor_shape().dim_size() > 0 && requestInput.tensor_shape().dim(0).size() != batchSize) {
+        if (requestInput.tensor_shape().dim_size() > 0 && requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
             return ValidationStatusCode::INCORRECT_BATCH_SIZE;
         }
 

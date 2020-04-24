@@ -166,7 +166,7 @@ namespace ovms {
          *
          * @return batch size
          */
-        size_t getBatchSize() {
+        virtual size_t getBatchSize() {
             return batchSize;
         }
 
@@ -175,7 +175,7 @@ namespace ovms {
          *
          * @return const tensorMap& 
          */
-        const tensorMap& getInputsInfo() {
+        virtual const tensorMap& getInputsInfo() {
             return inputsInfo;
         }
 
