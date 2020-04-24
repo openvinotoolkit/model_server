@@ -69,7 +69,8 @@ cc_test(
         "test/unit_tests.cpp",
         "test/modelmanager_test.cpp",
         "test/modelconfig_test.cpp",
-        "test/stringutils_test.cpp"
+        "test/stringutils_test.cpp",
+        "test/validation_test.cpp",
     ],
     deps = [
         "@com_google_googletest//:gtest",
