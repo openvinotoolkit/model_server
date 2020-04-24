@@ -29,32 +29,20 @@ class Model(ABC):
     def __init__(self, ovms_connector):
         self.ovms_connector = ovms_connector
 
-    def preprocess_binary_image(self, binary_image: bytes, channels: int = None,
-                                dtype=tf.dtypes.uint8, scale: float = None,
-                                standardization=False,
-                                reverse_input_channels=False) -> np.ndarray:
+    def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
+        # By default the only performed preprocessing is converting image 
+        # from binary format to numpy ndarray. If a model requires more specific 
+        # preprocessing this method should be implemented in its class.
         try: 
-            # Validate image size, if needed, resize to dimensions required by target model
-            binary_image = self.resize_image(binary_image)
-            # Decode image to get it as numpy array
-            decoded_image = self.decode_image(binary_image, channels, dtype, scale, 
-                                                standardization, reverse_input_channels)
+            """
+            # Perform default preprocessing
+            preprocessed_image = default_preprocessing(binary_image)
+            """
+            preprocessed_image = None
         except Exception as e:
             # TODO: Error handling
             return
-        return decoded_image
-
-    def resize_image(binary_image: bytes) -> bytes:
-        input_shape = self.ovms_connector.input_shape
-        # TODO: resizing logic
-        return binary_image
-
-    def decode_image(self, binary_image: bytes, channels: int = None,
-                    dtype=tf.dtypes.uint8, scale: float = None,
-                    standardization=False,
-                    reverse_input_channels=False) -> np.ndarray:
-        # TODO: decoding logic
-        return image
+        return preprocessed_image
 
     @abstractmethod
     def postprocess_inference_output(self, inference_output: dict) -> str:
