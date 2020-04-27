@@ -53,4 +53,4 @@ COPY extras/models /opt/models
 
 WORKDIR /ams_wrapper
 COPY extras/ams_wrapper /ams_wrapper
-RUN . /ie-serving-py/.venv/bin/activate && pip3 install -r requirements.txt && chmod +x start_ams.sh
+RUN chmod +x start_ams.sh

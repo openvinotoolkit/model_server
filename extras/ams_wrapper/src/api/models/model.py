@@ -18,7 +18,6 @@ import datetime
 import falcon
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from logger import get_logger
 
