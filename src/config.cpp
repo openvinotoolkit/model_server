@@ -21,7 +21,6 @@
 namespace ovms {
 
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
-const std::string DEFAULT_CPU_THROUGHPUT_STREAMS = std::to_string(std::max(AVAILABLE_CORES / 8, 1u));
 const std::string DEFAULT_NIREQ = std::to_string(AVAILABLE_CORES / 8 + 2);
 const std::string DEFAULT_GRPC_SERVERS = std::to_string(AVAILABLE_CORES / 8 + 4);
 
@@ -46,7 +45,7 @@ Config& Config::parse(int argc, char** argv) {
                  cxxopts::value<uint16_t>()->default_value("0"),
                  "REST_PORT")
             ("grpc_workers",
-                "number of gRPC servers. Recommended to be >= NIREQ",
+                "number of gRPC servers. Recommended to be >= NIREQ. Default value calculated at runtime: NIREQ + 2",
                 cxxopts::value<uint>()->default_value(DEFAULT_GRPC_SERVERS.c_str()),
                 "GRPC_WORKERS")
             ("rest_workers",
@@ -75,15 +74,11 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_VERSION_POLICY")
             ("nireq",
-                "Number of parallel inference request executions for model. Recommended to be >= CPU_THROUGHPUT_STREAMS",
+                "Number of parallel inference request executions for model. Recommended to be >= CPU_THROUGHPUT_STREAMS. Default value calculated at runtime: CPU cores / 8",
                 cxxopts::value<uint>()->default_value(DEFAULT_NIREQ.c_str()),
                 "NIREQ")
-            ("cpu_throughput_streams",
-                "Number of parallel inference executions on cpu ",
-                cxxopts::value<uint>()->default_value(DEFAULT_CPU_THROUGHPUT_STREAMS.c_str()),
-                "CPU_THROUGHPUT_STREAMS")
             ("target_device",
-                "name of the model",
+                "Target device to run the inference",
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("plugin_config",

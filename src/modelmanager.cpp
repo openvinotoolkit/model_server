@@ -14,8 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <fstream>
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
 #include <sys/stat.h>
 
 #include <iostream>
@@ -44,10 +42,20 @@ Status ModelManager::start() {
     };
     // Until we have filesystem, we need to provide version somehow
     modelConfig.setVersion(1);
-    //
+
+    Status status;
+    if (config.pluginConfig() != "") {
+        plugin_config_t pluginConfig;
+        status = ModelManager::parsePluginConfig(config.pluginConfig(), pluginConfig);
+        if (status != Status::OK) {
+            return status;
+        }
+        modelConfig.setPluginConfig(pluginConfig);
+    }
+
     std::shared_ptr<Model> model = std::make_shared<Model>();
     models[modelConfig.getName()] = std::move(model);
-    auto status = models[modelConfig.getName()]->addVersion(modelConfig);
+    status = models[modelConfig.getName()]->addVersion(modelConfig);
     if (status != Status::OK) {
         // Logger(Log::Warning, "There was an error loading a model ", config.modelName());
         return status;
@@ -169,6 +177,16 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             }
         }
 
+        if (v.HasMember("plugin_config")) {
+            plugin_config_t pluginConfig;
+            auto status = ModelManager::parsePluginConfig(v["plugin_config"], pluginConfig);
+            if (status != Status::OK) {
+                std::cout << StatusDescription::getError(status) << std::endl;
+                return status;
+            }
+            modelConfig.setPluginConfig(pluginConfig);
+        }
+
         auto status = models[modelConfig.getName()]->addVersion(modelConfig);
         if (status != Status::OK) {
             // to be replaced with proper logger
@@ -203,6 +221,29 @@ void ModelManager::watcher(std::future<void> exit) {
 void ModelManager::join() {
     exit.set_value();
     monitor.join();
+}
+
+Status ModelManager::parsePluginConfig(const rapidjson::Value& node, plugin_config_t& config) {
+    if (!node.IsObject()) {
+        return Status::PLUGIN_CONFIG_ERROR;
+    }
+
+    for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+        if (!it->value.IsString()) {
+            return Status::PLUGIN_CONFIG_ERROR;
+        }
+        config[it->name.GetString()] = it->value.GetString();
+    }
+
+    return Status::OK;
+}
+
+Status ModelManager::parsePluginConfig(std::string command, plugin_config_t& config) {
+    rapidjson::Document node;
+    if (node.Parse(command.c_str()).HasParseError()) {
+        return Status::PLUGIN_CONFIG_ERROR;
+    }
+    return ModelManager::parsePluginConfig(node, config);
 }
   
 } // namespace ovms

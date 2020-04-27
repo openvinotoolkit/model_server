@@ -27,6 +27,7 @@ using shape_t = std::vector<size_t>;
 using shapes_map_t = std::unordered_map<std::string, shape_t>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
 using model_version_t = int64_t;
+using plugin_config_t = std::map<std::string, std::string>;
 
     /**
      * @brief This class represents model configuration
@@ -66,7 +67,7 @@ using model_version_t = int64_t;
         /**
          * @brief Plugin config
          */
-        std::string pluginConfig;
+        plugin_config_t pluginConfig;
 
         /**
          * @brief Shape for single input
@@ -119,7 +120,7 @@ using model_version_t = int64_t;
             batchSize(0),
             modelVersionPolicy(""),
             nireq(1),
-            pluginConfig(""),
+            pluginConfig({}),
             shape({}),
             layout(""),
             shapes({}),
@@ -148,7 +149,7 @@ using model_version_t = int64_t;
                     batchSize(batchSize),
                     modelVersionPolicy(""),
                     nireq(nireq),
-                    pluginConfig(""),
+                    pluginConfig({}),
                     shape({}),
                     layout(""),
                     shapes({}),
@@ -269,7 +270,7 @@ using model_version_t = int64_t;
          * 
          * @return const std::string&
          */
-        const std::string& getPluginConfig() const {
+        const plugin_config_t& getPluginConfig() const {
         	return this->pluginConfig;
         }
 
@@ -278,7 +279,7 @@ using model_version_t = int64_t;
          * 
          * @param pluginConfig 
          */
-        void setPluginConfig(const std::string& pluginConfig) {
+        void setPluginConfig(const plugin_config_t& pluginConfig) {
         	this->pluginConfig = pluginConfig;
         }
 

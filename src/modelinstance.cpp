@@ -129,9 +129,7 @@ uint getOVCPUThroughputStreams() {
         return std::atoi(environmentVariableBuffer);
     }
 
-    auto& config = ovms::Config::instance();
-    uint configGRPCServersCount = config.cpuThroughputStreams();
-    return configGRPCServersCount;
+    return std::max(std::thread::hardware_concurrency() / 8, 1u);
 }
 
 uint getNumberOfParallelInferRequests() {
@@ -163,9 +161,14 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         loadInputTensors(config);
         loadOutputTensors(config);
 
-        int ovBackendStreamsCount = getOVCPUThroughputStreams();
-        execNetwork = engine.LoadNetwork(network, backend, {{ "CPU_THROUGHPUT_STREAMS", std::to_string(ovBackendStreamsCount)}});
-        std::cout << "Starting OpenVINO CPU streams:" << ovBackendStreamsCount << std::endl;
+        auto pluginConfig = config.getPluginConfig();
+        if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
+            int ovBackendStreamsCount = getOVCPUThroughputStreams();
+            pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
+        }
+
+        execNetwork = engine.LoadNetwork(network, backend, pluginConfig);
+        std::cout << "Starting OpenVINO CPU streams:" << pluginConfig["CPU_THROUGHPUT_STREAMS"] << std::endl;
 
         int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
         std::cout << "Starting OpenVINO InferRequestsQueue:" << numberOfParallelInferRequests << std::endl;

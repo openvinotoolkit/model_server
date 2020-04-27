@@ -37,33 +37,40 @@ Usage:
   -h, --help  show this help message and exit
 
  config options:
-      --config_path CONFIG_PATH   absolute path to json configuration file
-      --port PORT                 gRPC server port (default: 9178)
-      --rest_port REST_PORT       REST server port, the REST server will not be
-                                  started if rest_port is blank or set to 0
-                                  (default: 0)
-      --grpc_workers GRPC_WORKERS number of workers in gRPC server
-                                  (default: NIREQ + 2)
-      --rest_workers REST_WORKERS number of workers in REST server - has no
-                                  effect if rest_port is not set (default: 24)
+      --config_path CONFIG_PATH
+                                absolute path to json configuration file
+      --port PORT               gRPC server port (default: 9178)
+      --rest_port REST_PORT     REST server port, the REST server will not be
+                                started if rest_port is blank or set to 0
+                                (default: 0)
+      --grpc_workers GRPC_WORKERS
+                                number of gRPC servers. Recommended to be >=
+                                NIREQ. Default value calculated at runtime:
+                                NIREQ + 2
+      --rest_workers REST_WORKERS
+                                number of workers in REST server - has no
+                                effect if rest_port is not set (default: 24)
 
  model options:
-      --model_name MODEL_NAME                         name of the model
-      --model_path MODEL_PATH                         absolute path to model, as in tf serving
-      --batch_size BATCH_SIZE                         sets models batchsize, int value or auto.
-                                                      This parameter will be ignored if shape is set
-                                                      (default: 0)
-      --shape SHAPE                                   sets models shape (model must support
-                                                      reshaping). If set, batch_size parameter is ignored
-      --model_version_policy MODEL_VERSION_POLICY     model version policy
-      --nireq NIREQ                                   Number of parallel inference request for model.
-                                                      Recommended to be >= CPU_THROUGHPUT_STREAMS
-                                                      (default: CPU_THROUGHPUT_STREAMS + 2)
-      --cpu_throughput_streams CPU_THROUGHPUT_STREAMS Number of parallel inference executions on cpu
-                                                      for model. Recommended to be >= than NIREQ.
-                                                      (default: CPU cores / 8)
-      --target_device TARGET_DEVICE                   name of the model (default: CPU)
-      --plugin_config PLUGIN_CONFIG                   a dictionary of plugin configuration keys and their values
+      --model_name MODEL_NAME   name of the model
+      --model_path MODEL_PATH   absolute path to model, as in tf serving
+      --batch_size BATCH_SIZE   sets models batchsize, int value or auto.
+                                This parameter will be ignored if shape is set
+                                (default: 0)
+      --shape SHAPE             sets models shape (model must support
+                                reshaping). If set, batch_size parameter is ignored
+      --model_version_policy MODEL_VERSION_POLICY
+                                model version policy
+      --nireq NIREQ             Number of parallel inference request
+                                executions for model. Recommended to be >=
+                                CPU_THROUGHPUT_STREAMS. Default value calculated at
+                                runtime: CPU cores / 8
+      --target_device TARGET_DEVICE
+                                Target device to run the inference (default:
+                                CPU)
+      --plugin_config PLUGIN_CONFIG
+                                a dictionary of plugin configuration keys and
+                                their values
 ```
 
 ### Testing inference with an arbitrary model
