@@ -53,11 +53,34 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     to have mean 0 and standard deviation of 1
     :param reverse_input_channels: If set to True, image channels will be reversed
     from RGB to BGR format
+    :raises TypeError: if type of provided parameters are incorrect
+    :raises ValueError: if values of provided parameters is incorrect
     :raises ImageDecodeError(ValueError): if image cannot be decoded
     :raises ImageResizeError(ValueError): if image cannot be resized
     :raises ImagePreprocessError(ValueError): if image cannot be preprocessed
     :returns: Preprocessed image as numpy array
     """
+
+    params_to_check = {'channels': channels,
+                       'scale': scale}
+                       
+    for param_name, value in params_to_check.items():
+        try:
+            if value is not None and value < 0:
+                raise ValueError('Invalid value {} for parameter {}.'.format(value, param_name))
+        except TypeError:
+            raise TypeError('Invalid type {} for parameter {}.'.format(type(value), param_name))
+    
+    try:
+        if target_size:
+            height, width = target_size
+            if height <= 0 or width <= 0:
+                raise ValueError('Invalid target size parameter.')
+    except TypeError:
+        raise TypeError('Invalid target size type.')
+
+    if not isinstance(dtype, tf.dtypes.DType):
+        raise TypeError('Invalid type {} for parameter dtype.'.format(type(dtype)))
 
     try:
         decoded_image = tf.io.decode_image(image, channels=channels, dtype=dtype)
@@ -105,3 +128,4 @@ if __name__ == "__main__":
         plt.show()
     except ImportError:
         print('Please install matplotlib if you want to inspect preprocessed image.')
+
