@@ -25,8 +25,8 @@ from utils.rest import get_model_metadata_response_rest, \
     get_model_status_response_rest
 from utils.parametrization import get_tests_suffix
 
-sys.path.append(".")
-from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
+
+from utils.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 

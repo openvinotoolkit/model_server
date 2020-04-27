@@ -21,8 +21,7 @@ from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
 
-sys.path.append(".")
-from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
+from utils.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 
