@@ -16,7 +16,6 @@
 
 from api.models.example_model import ExampleModel
 from api.ovms_connector import OvmsConnector
-OVMS_PORT = 9000
 
 # Default version for a model is the latest one
 DEFAULT_VERSION = -1 

@@ -22,11 +22,11 @@ from logger import get_logger
 
 logger = get_logger(__name__)
 
-def start_rest_service(port, num_threads):
-    dispatcher = PathInfoDispatcher({'/': create_dispatcher(AVAILABLE_MODELS)})
+def start_rest_service(port, num_threads, ovms_port):
+    dispatcher = PathInfoDispatcher({'/': create_dispatcher(AVAILABLE_MODELS, ovms_port)})
     server = WSGIServer(('0.0.0.0', port), dispatcher,
                         numthreads=num_threads)
-    logger.info(f"Server will start listetning on port {port}")
+    logger.info(f"AMS service will start listening on port {port}")
     try:
         server.start()
     except KeyboardInterrupt:
@@ -34,10 +34,12 @@ def start_rest_service(port, num_threads):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--port', type=int, help='Listening port',
+    parser.add_argument('--port', type=int, help='AMS service listening port',
                           required=False, default=5000)
     parser.add_argument('--workers', type=int, help='Number of service workers',
                           required=False, default=1)
+    parser.add_argument('--ovms_port', type=int, help='OpenVINO Model Server port',
+                          required=False, default=9000)
     args = parser.parse_args()
-    start_rest_service(args.port, args.workers)
+    start_rest_service(args.port, args.workers, args.ovms_port)
 main()

@@ -16,12 +16,11 @@
 
 import falcon
 from api.ovms_connector import OvmsConnector
-from config import OVMS_PORT
 
-def create_dispatcher(available_models: list):
+def create_dispatcher(available_models: list, ovms_port: int):
     dispatch_map = {}
     for available_model in available_models:
-        ovms_connector = OvmsConnector(OVMS_PORT, available_model['ovms_mapping'])
+        ovms_connector = OvmsConnector(ovms_port, available_model['ovms_mapping'])
         model = available_model['class'](ovms_connector)
         dispatch_map[available_model['name']] = model
 
