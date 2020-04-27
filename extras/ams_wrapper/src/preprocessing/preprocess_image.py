@@ -29,7 +29,7 @@ class ImageResizeError(ValueError):
     pass
 
 
-class ImagePreprocessError(ValueError):
+class ImageTransformError(ValueError):
     pass
 
 
@@ -57,7 +57,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     :raises ValueError: if values of provided parameters is incorrect
     :raises ImageDecodeError(ValueError): if image cannot be decoded
     :raises ImageResizeError(ValueError): if image cannot be resized
-    :raises ImagePreprocessError(ValueError): if image cannot be preprocessed
+    :raises ImageTransformError(ValueError): if image cannot be properly transformed
     :returns: Preprocessed image as numpy array
     """
 
@@ -96,9 +96,9 @@ def preprocess_binary_image(image: bytes, channels: int = None,
                                    'to: {}.'.format(tf.shape(decoded_image), target_size)) from e
 
     try:
-        image_array = decoded_image.numpy()
         if standardization:
             decoded_image = tf.image.per_image_standardization(decoded_image)
+        image_array = decoded_image.numpy()
         if reverse_input_channels:
             image_array = image_array[..., ::-1]
         if channels_first:
@@ -106,7 +106,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if scale:
             image_array = image_array * scale
     except Exception as e:
-        raise ImagePreprocessError('Failed to preprocess binary image, '
+        raise ImageTransformError('Failed to preprocess image, '
                                    'check if provided parameters are correct.') from e
 
     return image_array
@@ -114,7 +114,12 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
 
 if __name__ == "__main__":
-    img_path = '<path to the image>'
+    import sys
+    if len(sys.argv) < 2:
+        print('Pass path to the image as the first argument')
+        sys.exit(1)
+    img_path = sys.argv[1]
+
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
 
