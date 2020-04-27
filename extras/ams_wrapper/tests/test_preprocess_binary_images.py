@@ -18,7 +18,7 @@ import os
 
 import pytest
 
-from src.preprocessing import preprocess_binary_image
+from src.preprocessing import preprocess_binary_image, ImageResizeError, ImageDecodeError
 
 
 IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')
@@ -68,3 +68,15 @@ def test_preprocess_image(image, reverse_input_channels, target_size,
         else:
             assert decoded_image.shape[0] == target_size[0]
             assert decoded_image.shape[1] == target_size[1]
+
+
+@pytest.mark.parametrize("target_size", [(-1, 2), (128, None), (0,0)])
+def test_preprocess_image_resize_error(png_image, target_size):
+    with pytest.raises(ImageResizeError):
+        preprocess_binary_image(png_image, target_size=target_size)
+
+
+def test_preprocess_image_decode_error():
+    with pytest.raises(ImageDecodeError):
+        preprocess_binary_image(b'not an image')
+  

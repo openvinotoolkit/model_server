@@ -21,6 +21,18 @@ import tensorflow as tf
 import numpy as np
 
 
+class ImageDecodeError(ValueError):
+    pass
+
+
+class ImageResizeError(ValueError):
+    pass
+
+
+class ImagePreprocessError(ValueError):
+    pass
+
+
 def preprocess_binary_image(image: bytes, channels: int = None,
                             target_size: Tuple[int, int] = None,
                             channels_first=True,
@@ -41,18 +53,29 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     to have mean 0 and standard deviation of 1
     :param reverse_input_channels: If set to True, image channels will be reversed
     from RGB to BGR format
-    :raises ValueError: in case of any failure during preprocessing
+    :raises ImageDecodeError(ValueError): if image cannot be decoded
+    :raises ImageResizeError(ValueError): if image cannot be resized
+    :raises ImagePreprocessError(ValueError): if image cannot be preprocessed
     :returns: Preprocessed image as numpy array
     """
+
     try:
         decoded_image = tf.io.decode_image(image, channels=channels, dtype=dtype)
-        if target_size:
+    except Exception as e:
+        raise ImageDecodeError('Provided image is invalid, unable to decode.') from e
+
+    if target_size:
+        try:
             height, width = target_size
             decoded_image = tf.image.resize_with_crop_or_pad(decoded_image, height, width)
+        except Exception as e:
+            raise ImageResizeError('Failed to resize provided binary image from: {} '
+                                   'to: {}.'.format(tf.shape(decoded_image), target_size)) from e
+
+    try:
+        image_array = decoded_image.numpy()
         if standardization:
             decoded_image = tf.image.per_image_standardization(decoded_image)
-
-        image_array = decoded_image.numpy()
         if reverse_input_channels:
             image_array = image_array[..., ::-1]
         if channels_first:
@@ -60,8 +83,8 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if scale:
             image_array = image_array * scale
     except Exception as e:
-        print('Failed to preprocess provided binary image.')
-        raise ValueError('Failed to preprocess provided binary image.') from e
+        raise ImagePreprocessError('Failed to preprocess binary image, '
+                                   'check if provided parameters are correct.') from e
 
     return image_array
 
