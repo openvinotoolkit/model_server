@@ -1,25 +1,22 @@
+/*
 pipeline {
     agent any
-
-    /*stages {
+    stages {
         stage('prepare virtualenv') {
             steps {
                 sh './tests/scripts/prepare-virtualenv.sh'
             }
         }
-
         stage('style tests') {
             steps {
                 sh './tests/scripts/style.sh'
             }
         }
-
         stage('unit tests') {
             steps {
                 sh './tests/scripts/unit-tests.sh'
             }
         }
-
         stage('functional tests') {
             parallel {
                 stage('functional tests bin') {
@@ -39,9 +36,8 @@ pipeline {
                 }
             }
         }
-    }*/
-
-    /*post {
+    }
+    post {
         always {
             emailext body: "" +
                     "${currentBuild.currentResult}: Job ${env.JOB_NAME}, build ${env.BUILD_NUMBER}\n" +
@@ -54,5 +50,6 @@ pipeline {
                     recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']],
                     subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
         }
-    }*/
+    }
 }
+*/
