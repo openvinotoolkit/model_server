@@ -53,10 +53,6 @@ TEST(ModelConfig, getters_setters)
     auto nireq = config.getNireq();
     EXPECT_EQ(nireq, 11);
 
-    config.setPluginConfig("{config:plugin}");
-    auto plugin = config.getPluginConfig();
-    EXPECT_EQ(plugin, "{config:plugin}");
-
     ovms::model_version_t ver = 500;
     config.setVersion(ver);
     auto version = config.getVersion();
@@ -157,4 +153,19 @@ TEST(ModelConfig, shape)
     EXPECT_EQ(gs1.size(), 0);
     EXPECT_EQ(gs2.size(), 3);
     EXPECT_THAT(gs2["second"], ElementsAre(6, 6, 200, 300));
+}
+
+TEST(ModelConfig, plugin_config) {
+    ovms::ModelConfig config;
+    ovms::plugin_config_t pluginConfig{
+        {"OptionA", "ValueA"},
+        {"OptionX", "ValueX"},
+    };
+
+    config.setPluginConfig(pluginConfig);
+
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
+        Pair("OptionA", "ValueA"),
+        Pair("OptionX", "ValueX")));
 }

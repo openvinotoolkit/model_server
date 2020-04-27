@@ -24,13 +24,14 @@ namespace ovms {
  * @brief This enum contains status codes for ovms functions
  */
 enum class Status {
-    OK,                     /*!< Success */
-    PATH_INVALID,           /*!< The provided path is invalid or doesn't exists */
-    FILE_INVALID,           /*!< File not found or cannot open */
+    OK,                             /*!< Success */
+    PATH_INVALID,                   /*!< The provided path is invalid or doesn't exists */
+    FILE_INVALID,                   /*!< File not found or cannot open */
     NETWORK_NOT_LOADED,     
-    JSON_INVALID,           /*!< The file is not valid json */
-    SHAPE_WRONG_FORMAT,     /*!< The provided shape is in wrong format */
-    MODELINSTANCE_NOT_FOUND
+    JSON_INVALID,                   /*!< The file is not valid json */
+    MODELINSTANCE_NOT_FOUND,
+    SHAPE_WRONG_FORMAT,             /*!< The provided shape is in wrong format */
+    PLUGIN_CONFIG_ERROR,            /*!< Plugin config is in wrong format */
 };
 
 class StatusDescription {

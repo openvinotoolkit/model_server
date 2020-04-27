@@ -190,15 +190,6 @@ namespace ovms {
         }
 
         /**
-         * @brief Get the ov_streams queue size
-         *
-         * @return uint
-         */
-        uint cpuThroughputStreams() {
-            return result->operator[]("cpu_throughput_streams").as<uint>();
-        }
-
-        /**
          * @brief Get the target device
          * 
          * @return const std::string& 

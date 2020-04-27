@@ -19,6 +19,9 @@
 #include <string>
 #include <thread>
 
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
 #include "model.h"
 
 namespace ovms {
@@ -133,5 +136,23 @@ namespace ovms {
          * @brief Gracefully finish the thread
          */
         void join();
+
+        /**
+         * @brief Parses json node for plugin config keys and values
+         * 
+         * @param json node representing plugin_config
+         * @param target config reference where parsed data will be stored
+         * @return status
+         */
+        static Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& config);
+
+        /**
+         * @brief Parses string for plugin config keys and values
+         * 
+         * @param string representing plugin_config
+         * @param target config reference where parsed data will be stored
+         * @return status
+         */
+        static Status parsePluginConfig(std::string command, plugin_config_t& config);
     };
 }  // namespace ovms
