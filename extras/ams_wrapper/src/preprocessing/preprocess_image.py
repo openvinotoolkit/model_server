@@ -104,8 +104,9 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if channels_first:
             image_array = np.transpose(image_array, [2, 0, 1])
         if scale:
+            array_type = image_array.dtype
             image_array = image_array * scale
-            image_array = image_array.astype(int)
+            image_array = image_array.astype(array_type)
     except Exception as e:
         raise ImageTransformError('Failed to preprocess image, '
                                    'check if provided parameters are correct.') from e
