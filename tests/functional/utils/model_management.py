@@ -96,5 +96,6 @@ def convert_model(client,
                           name='convert-model-{}'.format(get_tests_suffix()),
                           volumes=volumes,
                           user=user_id,
-                          command=command)
+                          command=command,
+                          remove=True)
     return files
