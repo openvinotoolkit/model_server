@@ -21,8 +21,17 @@ from tensorflow import make_tensor_proto, make_ndarray
 import numpy as np
 
 
-class ModelNotFoundError(ValueError):
+class ModelNotFoundError(Exception):
     pass
+
+
+class RequestProcessingError(Exception):
+    pass
+
+
+class OvmsUnavailableError(Exception):
+    pass
+
 
 class OvmsConnector():
     def __init__(self, ovms_port, ovms_model_info):
@@ -31,7 +40,7 @@ class OvmsConnector():
         self.model_version = ovms_model_info['model_version']
         self.input_name = ovms_model_info['input_name']
         self.input_shape = ovms_model_info['input_shape']
-        self.output_name = ovms_model_info["output_name"] 
+        self.output_name = ovms_model_info["output_name"]
 
         channel = grpc.insecure_channel("{}:{}".format("127.0.0.1", self.ovms_port))
         self.stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -40,6 +49,7 @@ class OvmsConnector():
         # TODO: prepare request and handle response
         request = predict_pb2.PredictRequest()
         request.model_spec.name = self.model_name
+        request.model_spec.version.value = int(self.model_version)
         try:
             tensor_proto = make_tensor_proto(inference_input, shape=(inference_input.shape))
         except TypeError as e:
@@ -49,17 +59,21 @@ class OvmsConnector():
         request.inputs[self.input_name].CopyFrom(tensor_proto)
         try:
             result = self.stub.Predict(request, 10.0)
-            output = make_ndarray(result.outputs[self.output_name])
-            numpy_array = np.array(output)
+            return_dict = {}
+            for output in self.output_name:
+                return_dict[output] = make_ndarray(result.outputs[output])
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
-                raise ValueError("Invalid argument: {}".format(e.details())) from e
+                raise RequestProcessingError("Error during inference request \
+                        processing: {}".format(e.details())) from e
             elif e.code() == grpc.StatusCode.NOT_FOUND:
                 raise ModelNotFoundError("Requested model not found") from e
+            elif e.code() == grpc.StatusCode.UNAVAILABLE:
+                raise OvmsUnavailableError("Unable to connect to OVMS") from e
             else:
                 raise Exception("GRPC error") from e
         except TypeError as e:
             raise TypeError("Output datatype error") from e
 
-        return numpy_array
+        return return_dict
 
