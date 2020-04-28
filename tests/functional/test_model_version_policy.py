@@ -25,8 +25,8 @@ from utils.grpc import get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.rest import get_model_status_response_rest
 
-sys.path.append(".")
-from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
+
+from utils.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
 
