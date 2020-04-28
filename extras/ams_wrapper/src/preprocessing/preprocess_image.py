@@ -106,6 +106,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         if scale:
             image_array = image_array * scale
     except Exception as e:
+        print(str(e))
         raise ImageTransformError('Failed to preprocess image, '
                                    'check if provided parameters are correct.') from e
 
