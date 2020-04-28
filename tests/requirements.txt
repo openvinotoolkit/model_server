@@ -1,9 +1,8 @@
+boto3==1.10.2
+cpplint==1.4.5
+docker==3.7.0
 grpcio==1.24.3
 numpy==1.18.2
-tensorflow-serving-api==1.15.0
-cpplint==1.4.5
 pytest==3.7.2
-docker==3.7.0
-grpcio-testing==1.22.0
-boto3==1.10.2
 pytest-json==0.4.0
+tensorflow-serving-api==1.15.0
