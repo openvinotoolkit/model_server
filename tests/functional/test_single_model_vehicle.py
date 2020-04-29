@@ -25,6 +25,7 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 sys.path.append(".")
+sys.path.append("extras/ams_wrapper/src/api")
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
@@ -134,6 +135,63 @@ class TestVehicleDetection():
 
         print("detections_sum= " + str(detections_sum))
         assert detections_sum == 2
+
+
+    def test_run_inference_ams(self, vehicle_adas_model_downloader,
+                           vehicle_adas_data_downloader,
+                           start_server_single_vehicle_model,
+                           create_grpc_channel):
+        """
+        <b>Description</b>
+        Submit request to gRPC interface serving a single vehicle model
+
+        <b>input data</b>
+        - directory with the model in IR format
+        - docker image with ie-serving-py service
+
+        <b>fixtures used</b>
+        - model downloader
+        - service launching
+
+        <b>Expected results</b>
+        - response contains proper numpy shape
+
+        """
+
+        _, ports = start_server_single_vehicle_model
+        imgs_path =  os.path.join(vehicle_adas_data_downloader, "data", "annotation_val_images")
+
+        img_files = os.listdir(imgs_path)
+        imgs = np.zeros((0,3,384,672), np.dtype('<f'))
+        input_img = self.load_image(os.path.join(imgs_path,"image_000015.jpg"), 672, 384)
+        imgs = np.append(imgs, input_img, axis=0)
+        
+        batch_size = 1
+        # Connect to grpc service
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
+
+        in_name = 'data'
+        out_name = 'detection_out'
+        output = infer(imgs, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='vehicle-detection',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
+        
+        os.chdir("extras/ams_wrapper/src/")
+
+        from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
+
+        model_adas = VehicleDetectionAdas("ovms_connector")
+        model_adas.load_default_labels()
+
+        json_response = model_adas.postprocess_inference_output(output)
+        print("json_response=  " + str(json_response))
+
+        assert str(json_response).count("box") == 2        
+
 
 """
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
