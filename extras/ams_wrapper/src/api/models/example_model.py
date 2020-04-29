@@ -18,5 +18,37 @@ from api.models.model import Model
 
 class ExampleModel(Model):
    def postprocess_inference_output(self, inference_output: dict) -> str:
-       #TODO: Implement postprocessing for example model
+       """
+        Examplary flow:
+
+        from api.types import Tag, Box, SingleEntity, Entity
+
+        result_array = inference_output[output_name]
+
+        # assuming detection model with output shape (1,1,N,7) 
+        # with last dimension containg detection details
+        # TODO: add handling of empty rows
+
+        detections = []
+        for detection in result_array[0][0]:
+            image_id = detection[0]
+            label = detection[1]
+            conf = detection[2]
+            x_min = detection[3]
+            y_min = detection[4]
+            x_max = detection[5]
+            y_max = detection[6]
+
+            tag = Tag(value=self.labels[label], confidence=conf)
+            box = Box(x_min, y_min, x_max, y_max)
+
+            detection = SingleEntity(tag, box)
+            detections.append(detection)
+        
+        entity = Entity(subtype_name=self.model_name, entities=detections)
+        response_dict = []
+        response_dict[inferences] = [entity.as_dict()]
+        response = json.dumps(response_dict)
+        return response
+       """
        return
