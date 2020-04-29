@@ -38,7 +38,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="18")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/model_ver_policy_config.json " \

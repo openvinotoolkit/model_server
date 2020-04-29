@@ -28,7 +28,7 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir,
                                       get_docker_context):
     client = get_docker_context
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="08")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -68,7 +68,7 @@ def start_server_single_model_from_s3(request, get_image, get_test_dir,
             'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
             'AWS_REGION=' + AWS_REGION]
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="09")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -121,7 +121,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="10")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = 'server --address ":{}" /data'.format(grpc_port)
 
@@ -227,7 +227,7 @@ def start_server_single_model_from_minio(request, get_docker_network,
 
     client = get_docker_context
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="11")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \

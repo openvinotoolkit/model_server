@@ -16,6 +16,8 @@
 
 import os
 
+from utils.helpers import SingletonMeta
+
 
 def get_ports_prefixes():
     ports_prefixes = os.environ.get("PORTS_PREFIX", "90 55")
@@ -25,12 +27,24 @@ def get_ports_prefixes():
             "rest_ports_prefix": rest_ports_prefix}
 
 
+def get_ports_suffix():
+    suf = Suffix()
+    suffix = str(suf.index) if len(str(suf.index)) == 2 else "0" + str(suf.index)
+    suf.index += 1
+    return suffix
+
+
 def get_tests_suffix():
     return os.environ.get("TESTS_SUFFIX", "default")
 
 
-def get_ports_for_fixture(port_suffix):
+def get_ports_for_fixture():
     ports_prefixes = get_ports_prefixes()
+    port_suffix = get_ports_suffix()
     grpc_port = ports_prefixes["grpc_ports_prefix"]+port_suffix
     rest_port = ports_prefixes["rest_ports_prefix"]+port_suffix
     return grpc_port, rest_port
+
+
+class Suffix(metaclass=SingletonMeta):
+    index = 0

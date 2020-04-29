@@ -27,7 +27,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="12")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8/1 " \
@@ -42,6 +42,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
+
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
@@ -58,7 +59,7 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="13")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
@@ -90,7 +91,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="14")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
@@ -122,7 +123,7 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="15")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
@@ -155,7 +156,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="16")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name resnet " \
@@ -187,7 +188,7 @@ def start_server_batch_model_auto_bs4_2out(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="17")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
