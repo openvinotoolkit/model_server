@@ -10,33 +10,38 @@ def ams_object_detection_model_endpoint(ams_host, ams_port):
 
 @pytest.fixture(scope='session')
 def png_object_detection_image():
-    with open('images/005405_001.png', mode='rb') as png_file:
-        return png_file.read()
+    with open('images/car.png', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
 def jpg_object_detection_image():
-    return b'jpg'
+    with open('images/car.jpg', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
 def bmp_object_detection_image():
-    return b'bmp'
+    with open('images/car.bmp', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
 def small_object_detection_image():
-    return b'small'
+    with open('images/car_small.png', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
 def medium_object_detection_image():
-    return b'medium'
+    with open('images/car.png', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
 def large_object_detection_image():
-    return b'large'
+    with open('images/car_large.png', mode='rb') as image_file:
+        return image_file.read()
 
 
 @pytest.fixture(scope='session')
