@@ -1,8 +1,13 @@
-# OpenVINO&trade; Model Server quickstart
+# OpenVINO&trade; Model Server Quickstart
 
-## Installing Model Server
+## Deploying Model Server
 
-OpenVINO Model Server can be installed in three ways - 1. by pulling a pre-built container image from Docker Hub (preffered way), 2. by building a container image with a Dockerfile and 3. by building the application locally from source. Each approach is described below.
+Model Server can deployed using any of the following options:
+1. Download a pre-built container image from Docker Hub
+2. Build a container image with a Dockerfile
+3. Build the application locally from source 
+
+Each approach is described below.
 
 ### Pre-built Docker Container
 
@@ -15,11 +20,11 @@ To start using this image, you can pull it with the following command:
 docker pull openvino/ubuntu18_model_server
 ```
 
-### Building with Dockerfile
+### Build with a Dockerfile
 
 Three Dockerfiles are provided that can be used to build a container image locally. There is also a Makefile to simplify building an image. The Dockerfiles are listed below:
 
-#### 1.[Ubuntu 18 Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile)
+#### 1. [Ubuntu 18 Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile)
 
 To build this image use following command from the `model_server` directory:
 
@@ -27,7 +32,7 @@ To build this image use following command from the `model_server` directory:
 make docker_build_apt_ubuntu
 ```
 
-#### 2.[Clear Linux Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_clearlinux)
+#### 2. [Clear Linux Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_clearlinux)
 
 To build this image use following command from the `model_server` directory:
 
@@ -35,7 +40,7 @@ To build this image use following command from the `model_server` directory:
 make docker_build_clearlinux
 ```
 
-#### 3.[Based on OpenVINO Toolkit](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_binary_openvino)
+#### 3. [Based on OpenVINO Toolkit](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_binary_openvino)
 
 In this case an image is built based on OpenVINO Toolkit - to build it you need to obtaing an URL to the toolkit package. It can be done by registering on the [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
