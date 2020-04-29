@@ -64,9 +64,9 @@ https://cloud.google.com/docs/authentication/getting-started#creating_a_service_
           
 ## Deploy the Model Server
 
-Deploy the Model Server using _helm_:
+Deploy the Model Server using _helm_ . Please provide also required model name and model path:
 ```shell script
-helm install ovms ovms
+helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
 Use _kubectl_ to see status and wait until the model server pod is running:
@@ -80,7 +80,7 @@ By default the OVMS deploys with 1 instance. If you would like to scale it, you 
 file or by passing _--set_ flag to _helm install_:
 
 ```shell script
-helm install ovms ovms --set replicas=3
+helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
 
 ## Using OpenVINO Model Server
@@ -89,9 +89,9 @@ Now that the server is running you can send HTTP or gRPC requests to it to perfo
 By default, the service is exposed with a LoadBalancer service type. Use the following to find the 
 external IP for the server:
 ```shell script
-pskindel@ovms_dev:~$ kubectl get svc
+$ kubectl get svc
 NAME                    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                         AGE
-openvino-model-server   LoadBalancer   10.121.14.253   34.65.153.232   8080:30043/TCP,8081:32606/TCP   59m
+openvino-model-server   LoadBalancer   10.121.14.253   1.2.3.4         8080:30043/TCP,8081:32606/TCP   59m
 
 ```
 
@@ -102,7 +102,7 @@ to get the example image classification client that can be used to perform infer
 image classification models being served by the server. For example:
 
 ```shell script
-python jpeg_classification.py --grpc_port 8080 --grpc_address 34.65.153.232 --input_name data --output_name prob
+python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
 	Model name: resnet
 	Images list file: input_images.txt
 
