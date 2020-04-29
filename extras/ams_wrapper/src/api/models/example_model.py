@@ -21,7 +21,7 @@ class ExampleModel(Model):
        """
         Examplary flow:
 
-        from api.types import Tag, Box, SingleEntity, Entity
+        from api.types import Tag, Rectangle, SingleEntity, Entity
 
         result_array = inference_output[output_name]
 
@@ -39,8 +39,9 @@ class ExampleModel(Model):
             x_max = detection[5]
             y_max = detection[6]
 
-            tag = Tag(value=self.labels[label], confidence=conf)
-            box = Box(x_min, y_min, x_max, y_max)
+            tag = Tag(self.labels[label], conf)
+
+            box = Rectangle(x_min, y_min, abs(x_max-x_min), abs(y_max-y_min))
 
             detection = SingleEntity(tag, box)
             detections.append(detection)

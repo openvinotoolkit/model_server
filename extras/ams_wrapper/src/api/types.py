@@ -1,3 +1,20 @@
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+
 from typing import List
 from abc import ABC
 
@@ -21,25 +38,25 @@ class Attribute:
 
     def as_dict(self):
         result_dict = {
-            "name": self.name
+            "name": self.name,
             "value": self.value,
             "confidence": self.confidence
         }
         return result_dict
 
 class Rectangle:
-    def __init__ (self, l: float, t: float, r: float, b: float):
+    def __init__ (self, l: float, t: float, w: float, h: float):
         self.l = l
         self.t = t
-        self.r = r
-        self.b = b
+        self.w = w
+        self.h = h
 
     def as_dict(self):
         result_dict = {
             "l": self.l,
             "t": self.t,
-            "r": self.r,
-            "b": self.b
+            "w": self.w,
+            "h": self.h
         }
         return result_dict
 
