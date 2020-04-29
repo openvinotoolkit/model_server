@@ -53,7 +53,7 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
     volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="07")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving config " \
               "--config_path /opt/ml/config.json --port {} " \

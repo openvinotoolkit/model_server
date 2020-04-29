@@ -28,7 +28,7 @@ def start_server_face_detection_model_auto_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="00")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
@@ -62,7 +62,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="01")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
@@ -98,7 +98,7 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="02")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \

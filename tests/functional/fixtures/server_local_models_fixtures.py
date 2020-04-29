@@ -30,7 +30,7 @@ def start_server_single_model(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "--model_name resnet " \
               "--model_path /opt/ml/resnet_V1_50/1 " \
@@ -73,7 +73,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture(port_suffix="06")
+    grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name age_gender " \
