@@ -23,6 +23,11 @@ HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 
+OVMS_CPP_DOCKER_IMAGE ?= cpp-experiments
+OVMS_CPP_IMAGE_TAG ?= latest
+
+TEST_PATH ?= tests/functional/
+
 .PHONY: default docker_build \
 
 default: docker_build
@@ -45,17 +50,31 @@ style:
 
 docker_build:
 	@echo "Building docker image"
-	@echo docker build . --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t cpp-experiments
-	@docker build . --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t cpp-experiments
+	@echo docker build . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		-t $(OVMS_CPP_DOCKER_IMAGE)
+	@docker build . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		-t $(OVMS_CPP_DOCKER_IMAGE)
 
 test_perf: venv
 	@echo "Dropping test container if exist"
 	@docker rm --force server-test || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest --model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
+	@docker run -d --name server-test \
+		-v $(HOME)/resnet50:/models/resnet50 \
+		-p 9178:9178 \
+		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
 	@echo "Running latency test"
-	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy --iteration 1000 --batchsize 1 --report_every 100 --input_name data
+	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+		--images_numpy_path tests/performance/imgs.npy \
+		--labels_numpy_path tests/performance/labels.npy \
+		--iteration 1000 \
+		--batchsize 1 \
+		--report_every 100 \
+		--input_name data
 	@echo "Removing test container"
 	@docker rm --force server-test
 
@@ -64,11 +83,25 @@ test_throughput: venv
 	@docker rm --force server-test || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test -v $(HOME)/resnet50:/models/resnet50 -p 9178:9178 cpp-experiments:latest --model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
+	@docker run -d --name server-test \
+		-v $(HOME)/resnet50:/models/resnet50 \
+		-p 9178:9178 \
+		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--model_name resnet \
+		--model_path /models/resnet50/1 \
+		--port 9178; \
+		sleep 5
 	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 --images_numpy_path imgs.npy --labels_numpy_path labels.npy --iteration 500 --batchsize 1 --input_name data
+	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+		--images_numpy_path imgs.npy \
+		--labels_numpy_path labels.npy \
+		--iteration 500 \
+		--batchsize 1 \
+		--input_name data
 	@echo "Removing test container"
 	@docker rm --force server-test
 
 test_functional: venv
-	@. $(ACTIVATE); pytest --json=report.json -s --image=cpp-experiments:latest tests/functional/
+	@. $(ACTIVATE); pytest --json=report.json -s \
+		--image=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		$(TEST_PATH)
