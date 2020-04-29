@@ -12,7 +12,7 @@ is based on Clearlinux and contains all components needed to perform an inferenc
 To start using this image, you can pull it using the following command:
 
 ```bash
-docker pull intelaipg/openvino-model-server
+docker pull openvino/ubuntu18_model_server
 ```
 
 ### Build container from sources
