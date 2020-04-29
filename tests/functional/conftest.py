@@ -40,7 +40,7 @@ pytest_plugins = [
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--image", action="store", default="ie-serving-py:latest",
+        "--image", action="store", default="cpp-experiments:latest",
         help="docker image name which should be used to run tests"
     )
     parser.addoption(

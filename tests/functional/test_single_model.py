@@ -13,22 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import sys
 
 import numpy as np
 import pytest
+
 from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+from model.models_information import Resnet
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.models_utils import ModelVersionState, ErrorCode, \
+    _ERROR_MESSAGE  # noqa
 from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 
-from utils.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
-
-
-class TestSingleModelInference():
+class TestSingleModelInference:
 
     def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_single_model,
@@ -57,15 +56,13 @@ class TestSingleModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.ones((1, 3, 224, 224), np.float32)
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(imgs_v1_224, input_tensor=in_name, grpc_stub=stub,
-                       model_spec_name='resnet',
+        imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
+        output = infer(imgs_v1_224, input_tensor=Resnet.input_name, grpc_stub=stub,
+                       model_spec_name=Resnet.name,
                        model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+                       output_tensors=[Resnet.output_name])
+        print("output shape", output[Resnet.output_name].shape)
+        assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
