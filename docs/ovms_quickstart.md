@@ -6,8 +6,8 @@ The OpenVINO&trade; Model Server can be installed in three ways - using a prebui
 
 ### Prebuilt containers
 
-A prebuilt container with OpenVINO&trade; Model Server is available for download on [dockerhub](https://hub.docker.com/r/intelaipg/openvino-model-server/). This image
-is based on Clearlinux and contains all components needed to perform an inference. 
+A prebuilt container with OpenVINO&trade; Model Server is available for download on [dockerhub](https://hub.docker.com/r/openvino/ubuntu18_model_server). This image
+is based on Ubuntu 18 operating system and contains all components needed to perform an inference. 
 
 To start using this image, you can pull it using the following command:
 
