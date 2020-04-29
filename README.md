@@ -72,6 +72,16 @@ Usage:
                                 a dictionary of plugin configuration keys and
                                 their values
 ```
+## Testing
+
+### Python prerequisites
+
+To use Makefile targets which operate on Python it is required to have:
+* Python >= 3.6
+* `virtualenv` package installed system-wide:
+```
+pip3 install virtualenv
+```
 
 ### Testing inference with an arbitrary model
 
