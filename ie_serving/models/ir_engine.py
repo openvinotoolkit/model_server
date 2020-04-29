@@ -150,7 +150,8 @@ class IrEngine():
                     self.model_name, self.model_version, message))
         return None
 
-    def _return_proper_key_value(self, data: dict, which_way: str,
+    @staticmethod
+    def _return_proper_key_value(data: dict, which_way: str,
                                  tensors: list):
         temp_keys = {}
         for input_tensor in tensors:

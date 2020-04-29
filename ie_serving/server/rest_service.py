@@ -44,7 +44,7 @@ class GetModelStatus(object):
     def __init__(self, models):
         self.models = models
 
-    def on_get(self, req, resp, model_name, requested_version=0):
+    def on_get(self, _req, resp, model_name, requested_version=0):
         logger.debug("MODEL_STATUS, get request: {}, {}"
                      .format(model_name, requested_version))
         valid_model_status = check_availability_of_requested_status(
@@ -83,7 +83,7 @@ class GetModelMetadata(object):
     def __init__(self, models):
         self.models = models
 
-    def on_get(self, req, resp, model_name, requested_version=0):
+    def on_get(self, _req, resp, model_name, requested_version=0):
         logger.debug("MODEL_METADATA, get request: {}, {}"
                      .format(model_name, requested_version))
         valid_model_spec, version = check_availability_of_requested_model(

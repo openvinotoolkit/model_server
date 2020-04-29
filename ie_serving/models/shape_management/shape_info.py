@@ -50,7 +50,8 @@ class ShapeInfo:
 
         return shape_mode, shape
 
-    def _shape_as_dict(self, shape: tuple, net_inputs: dict):
+    @staticmethod
+    def _shape_as_dict(shape: tuple, net_inputs: dict):
         if len(net_inputs) > 1:
             raise Exception("Noname shape specified for model with "
                             "multiple inputs")
@@ -97,16 +98,18 @@ class ShapeInfo:
                 return {input_name: shape}
         return {}
 
-    def get_shape_tuple(self, shape: list):
+    @staticmethod
+    def get_shape_tuple(shape: list):
         try:
-            shape = tuple([int(dim) for dim in shape])
+            shape = tuple(int(dim) for dim in shape)
         except Exception as e:
             logger.error("Error getting shape tuple: {}"
                          .format(str(e)))
             shape = None
         return shape
 
-    def load_shape(self, shape_param: str):
+    @staticmethod
+    def load_shape(shape_param: str):
         shape = None
         try:
             shape = json.loads(shape_param)
