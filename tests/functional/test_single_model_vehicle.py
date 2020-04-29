@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 import sys
-
+import cv2
+import os
 import numpy as np
 import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
@@ -29,6 +30,13 @@ from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
 
 
 class TestVehicleDetection():
+
+    def load_image(self, file_path, width, height):
+        img = cv2.imread(file_path)  # BGR color format, shape HWC
+        img = cv2.resize(img, (width, height))
+        img = img.transpose(2,0,1).reshape(1,3,height,width)
+        # change shape to NCHW
+        return img
 
     def test_run_inference(self, vehicle_adas_model_downloader,
                            vehicle_adas_data_downloader,
@@ -51,23 +59,81 @@ class TestVehicleDetection():
 
         """
 
-        _, ports = start_server_single_vehicle__model
-        print("Downloaded model files:", vehicle_adas_data_downloader)
+        _, ports = start_server_single_vehicle_model
 
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.ones((1, 3, 224, 224))
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(imgs_v1_224, input_tensor=in_name, grpc_stub=stub,
-                       model_spec_name='resnet',
+        imgs_v1_384 = np.ones((1, 3, 384, 672))
+        in_name = 'data'
+        out_name = 'detection_out'
+        output = infer(imgs_v1_384, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='vehicle-detection',
                        model_spec_version=None,
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+        assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
 
+
+    def test_run_inference_img(self, vehicle_adas_model_downloader,
+                           vehicle_adas_data_downloader,
+                           start_server_single_vehicle_model,
+                           create_grpc_channel):
+        """
+        <b>Description</b>
+        Submit request to gRPC interface serving a single vehicle model
+
+        <b>input data</b>
+        - directory with the model in IR format
+        - docker image with ie-serving-py service
+
+        <b>fixtures used</b>
+        - model downloader
+        - service launching
+
+        <b>Expected results</b>
+        - response contains proper numpy shape
+
+        """
+
+        _, ports = start_server_single_vehicle_model
+        imgs_path =  os.path.join(vehicle_adas_data_downloader, "data", "annotation_val_images")
+
+        img_files = os.listdir(imgs_path)
+        imgs = np.zeros((0,3,384,672), np.dtype('<f'))
+        input_img = self.load_image(os.path.join(imgs_path,"image_000015.jpg"), 672, 384)
+        imgs = np.append(imgs, input_img, axis=0)
+        
+        batch_size = 1
+        # Connect to grpc service
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
+                                   PREDICTION_SERVICE)
+
+        in_name = 'data'
+        out_name = 'detection_out'
+        output = infer(imgs, input_tensor=in_name, grpc_stub=stub,
+                       model_spec_name='vehicle-detection',
+                       model_spec_version=None,
+                       output_tensors=[out_name])
+        print("output shape", output[out_name].shape)
+        assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
+        
+        detections_sum = 0
+        result = output[out_name]
+        print("result:" + str(result))
+        for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
+            img = imgs[x:(x + batch_size)]       
+            print("img: " + str(img))
+            for y in range(0,img.shape[0]):
+                for i in range(0, 200*batch_size-1):
+                    detection = result[:,:,i,:]
+                    print("detection: " + str(detection))
+                    if detection[0,0,2] > 0.5 and int(detection[0,0,0]) == y:
+                        detections_sum+=1
+
+        print("detections_sum= " + str(detections_sum))
+        assert detections_sum == 2
 
 """
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
