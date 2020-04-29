@@ -18,7 +18,7 @@ from api.models.example_model import ExampleModel
 from api.ovms_connector import OvmsConnector
 
 # Default version for a model is the latest one
-DEFAULT_VERSION = -1 
+DEFAULT_VERSION = 0 
 
 AVAILABLE_MODELS = [
     {"name": "model", 
