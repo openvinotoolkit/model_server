@@ -35,10 +35,10 @@ class Model(ABC):
 
     def load_labels(labels_path: str) -> str:
         try:
-        with open(labels_path, 'r') as labels_file:
-            data = json.load(labels_file)
+            with open(labels_path, 'r') as labels_file:
+                data = json.load(labels_file)
         except Exception as e:
-            logger.error("Error occurred while opening labels file: {}".format(e))
+            logger.exception("Error occurred while opening labels file: {}".format(e))
             sys.exit(1)
         return data
 
