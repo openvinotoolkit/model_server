@@ -34,10 +34,11 @@ def load_image(file_path):
     return img
 
 
-parser = argparse.ArgumentParser(description='Demo for face detection requests via TFS gRPC API.'
-                                             'analyses input images and saves with with detected faces.'
-                                             'it relies on model face_detection...')
+parser = argparse.ArgumentParser(description='Demo for object detection requests via TFS gRPC API.'
+                                             'analyses input images and saveswith with detected objects.'
+                                             'it relies on model given as parameter...')
 
+parser.add_argument('--model_name', required=False, help='Name of the model to be used', default="face-detaction")
 parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="images/people")
 parser.add_argument('--output_dir', required=False, help='Directory for staring images with detection results', default="results")
 parser.add_argument('--batch_size', required=False, help='How many images should be grouped in one batch', default=1, type=int)
@@ -53,8 +54,8 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 files = os.listdir(args['input_images_dir'])
 batch_size = args['batch_size']
-print(files)
-
+model_name = args['model_name']
+print("Running "+model_name+" on files:" + str(files)) 
 
 imgs = np.zeros((0,3,args['height'],args['width']), np.dtype('<f'))
 for i in files:
@@ -70,7 +71,7 @@ processing_times = np.zeros((0),int)
 for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     iteration += 1
     request = predict_pb2.PredictRequest()
-    request.model_spec.name = "face-detection"
+    request.model_spec.name = model_name
     img = imgs[x:(x + batch_size)]
     print("\nRequest shape", img.shape)
     request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
@@ -109,8 +110,11 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
 
                 img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
                 # draw each detected box on the input image
-        print("saving result to",os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'))
-        cv2.imwrite(os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'),img_out)
+        
+        output_path = os.path.join(args['output_dir'],model_name+"_"+str(iteration)+"_"+str(y)+'.jpg')
+        print("saving result to", output_path)
+        result_flag = cv2.imwrite(output_path,img_out)
+        print("write success = ", result_flag)
 
     print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'
           .format(iteration, round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)
