@@ -1,5 +1,6 @@
 /logs/*
 .idea
+.venv_ams
 .venv
 .vs
 .vscode
@@ -9,6 +10,7 @@
 *.log
 *.swp
 .pytest_cache
+extras/ams_wrapper/tests/test_images/
 *__pycache__/
 *.cache
 .cache
