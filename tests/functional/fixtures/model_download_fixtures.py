@@ -58,8 +58,8 @@ def download_data(data_url_base, model_name, model_version, dir):
         with open(local_tar_path, 'wb') as output:
             output.write(response.content)
     
-    tf = tarfile.open(local_tar_path)
-    tf.extractall(local_data_path)
+    tar_file = tarfile.open(local_tar_path)
+    tar_file.extractall(local_data_path)
 
     return local_data_path
 
