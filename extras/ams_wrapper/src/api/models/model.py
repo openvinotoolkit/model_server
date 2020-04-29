@@ -15,6 +15,7 @@
 #
 
 import datetime
+import json
 import falcon
 import tensorflow as tf
 import numpy as np
@@ -27,6 +28,18 @@ class Model(ABC):
 
     def __init__(self, ovms_connector):
         self.ovms_connector = ovms_connector
+        self.model_name = None # subtype / model name in AMS
+        self.result_type = None # type class
+        self.labels = None # load_labels
+
+    def load_labels(labels_path: str) -> str:
+        try:
+            with open(labels_path, 'r') as labels_file:
+                data = json.load(labels_file)
+        except Exception as e:
+            logger.exception("Error occurred while opening labels file: {}".format(e))
+            sys.exit(1)
+        return data
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
         # By default the only performed preprocessing is converting image 
