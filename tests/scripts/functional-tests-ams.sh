@@ -17,7 +17,7 @@ python ${TEST_DIRS}/functional/utils/ams_mock_server.py &
 mock_server_pid=$!
 
 set +e
-py.test ${TEST_DIRS}/functional/test_ams_inference.py -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} --image ${DOCKER_OVMS_TAG}
+NO_PROXY=localhost py.test ${TEST_DIRS}/functional/test_ams_inference.py -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} --image ${DOCKER_OVMS_TAG}
 exit_code=$?
-kill $mock_server_pid
-exit exit_code
+kill ${mock_server_pid}
+exit ${exit_code}
