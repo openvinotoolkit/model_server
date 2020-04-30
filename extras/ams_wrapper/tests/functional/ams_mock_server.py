@@ -32,7 +32,7 @@ class MockEntityObjectDetectionModel(object):
 app = falcon.API()
 
 model = MockEntityObjectDetectionModel()
-app.add_route('/entity-object-detection', model)
+app.add_route('/vehicle-detection', model)
 
 d = PathInfoDispatcher({'/': app})
 server = WSGIServer(('0.0.0.0', 8000), d)
