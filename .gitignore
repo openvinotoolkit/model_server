@@ -2,3 +2,4 @@
 .pytest_cache
 .vscode
 report.json
+.idea
