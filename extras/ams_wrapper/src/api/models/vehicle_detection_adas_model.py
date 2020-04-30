@@ -18,6 +18,7 @@ import sys
 import json
 from logger import get_logger
 from api.models.model import Model
+from api.types import Tag, Rectangle, SingleEntity, Entity
 
 logger = get_logger(__name__)
 
@@ -37,7 +38,6 @@ class VehicleDetectionAdas(Model):
 
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
-        from api.types import Tag, Rectangle, SingleEntity, Entity
 
         result_array = inference_output["detection_out"]
 
@@ -52,7 +52,7 @@ class VehicleDetectionAdas(Model):
                 break
 
             if not label in self.labels:
-                label_value = "unknown"
+                raise ValueError("label not found in labels definition")
             else:
                 label_value = self.labels[label]
 

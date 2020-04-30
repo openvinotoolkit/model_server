@@ -103,18 +103,16 @@ class TestVehicleDetection():
         imgs_path =  os.path.join(vehicle_adas_data_downloader, "data", "annotation_val_images")
 
         img_files = os.listdir(imgs_path)
-        imgs = np.zeros((0,3,384,672), np.dtype('<f'))
-        input_img = self.load_image(os.path.join(imgs_path,"image_000015.jpg"), 672, 384)
-        imgs = np.append(imgs, input_img, axis=0)
-        
-        batch_size = 1
+
+        input_img = self.load_image(os.path.join(imgs_path,"image_000015.jpg"),672, 384)
+
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
         in_name = 'data'
         out_name = 'detection_out'
-        output = infer(imgs, input_tensor=in_name, grpc_stub=stub,
+        output = infer(input_img, input_tensor=in_name, grpc_stub=stub,
                        model_spec_name='vehicle-detection',
                        model_spec_version=None,
                        output_tensors=[out_name])
@@ -124,21 +122,20 @@ class TestVehicleDetection():
         detections_sum = 0
         result = output[out_name]
         print("result:" + str(result))
-        for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
-            img = imgs[x:(x + batch_size)]       
-            print("img: " + str(img))
-            for y in range(0,img.shape[0]):
-                for i in range(0, 200*batch_size-1):
-                    detection = result[:,:,i,:]
-                    print("detection: " + str(detection))
-                    if detection[0,0,2] > 0.5 and int(detection[0,0,0]) == y:
-                        detections_sum+=1
+
+        CONFIDENCE = 2
+
+        for i in range(0, 200):
+            detection = result[0,0,i]
+            print("detection: " + str(detection))
+            if detection[CONFIDENCE] > 0.5:
+                detections_sum+=1
 
         print("detections_sum= " + str(detections_sum))
         assert detections_sum == 2
 
 
-    def test_run_inference_ams(self, vehicle_adas_model_downloader,
+    def test_run_inference_posprocess(self, vehicle_adas_model_downloader,
                            vehicle_adas_data_downloader,
                            start_server_single_vehicle_model,
                            create_grpc_channel):

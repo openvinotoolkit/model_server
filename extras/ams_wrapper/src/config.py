@@ -27,7 +27,8 @@ AVAILABLE_MODELS = [
         "model_name": "model",
         "model_version": DEFAULT_VERSION,
         "input_name": "input",
-        "input_shape": (1, 3, 200, 200), 
+        "output_name": "output",
+        "input_shape": (1, 3, 200, 200) 
         }
     },
 ]
