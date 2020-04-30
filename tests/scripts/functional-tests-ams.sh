@@ -6,6 +6,7 @@ DOCKER_OVMS_TAG="ie-serving-bin:latest"
 export TESTS_SUFFIX="bin"
 export PORTS_PREFIX="92 57"
 
+mkdir -p extras/models
 make DOCKER_OVMS_TAG=${DOCKER_OVMS_TAG} docker_build_ams dldt_package_url=${OPENVINO_DOWNLOAD_LINK_2020_2}
 
 . .venv-jenkins/bin/activate
