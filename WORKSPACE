@@ -62,6 +62,7 @@ http_archive(
     ],
 )  # https://github.com/bazelbuild/bazel-skylib/releases
 
+
 # END: Upstream TensorFlow dependencies
 
 # Please add all new TensorFlow Serving dependencies in workspace.bzl.
@@ -110,6 +111,8 @@ http_archive(
     sha256="f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
     strip_prefix = "cxxopts-2.2.0",
     build_file_content= """
+
+
 cc_library(
     name = "cxxopts",
     srcs = [],
@@ -127,3 +130,49 @@ cc_library(
 )    """
 )
 
+http_archive(
+    name="spdlog",
+    url="https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
+    sha256="afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
+    strip_prefix = "spdlog-1.4.0",
+    build_file_content= """
+
+cc_library(
+    name = "spdlog",
+    srcs = [],
+    hdrs = glob([
+        "include/**/*.cc",
+        "include/**/*.h",
+    ]),
+    includes = [
+        "include/",
+    ],
+    copts = ["-Iexternal/spdlog/"],
+    visibility = ["//visibility:public"],
+    deps = ["@fmtlib"],
+    defines = ["SPDLOG_FMT_EXTERNAL"],
+)    """
+)
+
+http_archive(
+    name="fmtlib",
+    url="https://github.com/fmtlib/fmt/archive/6.0.0.tar.gz",
+    sha256="f1907a58d5e86e6c382e51441d92ad9e23aea63827ba47fd647eacc0d3a16c78",
+    strip_prefix = "fmt-6.0.0",
+    build_file_content= """
+
+cc_library(
+    name = "fmtlib",
+    srcs = glob([
+        "fmt/*.cc",
+    ]),
+    hdrs = glob([
+        "include/fmt/*.h",
+    ]),
+    includes = [
+        "include/",
+    ],
+    visibility = ["//visibility:public"],
+    defines = ["FMT_HEADER_ONLY"],
+)    """
+)

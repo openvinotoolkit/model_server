@@ -147,6 +147,25 @@ sys	0m39.333s
 1076 FPS
 ``` 
 
+## Server Logging
+OpenVINO™ model server accepts 3 logging levels:
+
+* ERROR: Logs information about inference processing errors and server initialization issues.
+* INFO: Presents information about server startup procedure.
+* DEBUG: Stores information about client requests.
+
+The default setting is INFO, which can be altered by setting environment variable LOG_LEVEL.
+
+The captured logs will be displayed on the model server console. While using docker containers or kubernetes the logs can be examined using `docker logs` or `kubectl logs` commands respectively.
+
+It is also possible to save the logs to a local file system by configuring an environment variable LOG_PATH with the absolute path pointing to a log file. Please see example below for usage details.
+
+```bash
+docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 --env LOG_LEVEL=DEBUG --env LOG_PATH=/var/log/ie_serving.log \
+ cpp-experiments:latest --config_path /opt/ml/config.json --port 9001
+ 
+docker logs ie-serving 
+```
 
 ## Developer guide
 

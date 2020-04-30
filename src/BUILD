@@ -49,6 +49,7 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@openvino//:headers",
         "@openvino//:library",
+        "@spdlog//:spdlog",
         "@cxxopts//:cxxopts",
     ],
 )

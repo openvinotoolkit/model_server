@@ -19,11 +19,17 @@
 #include <grpcpp/security/server_credentials.h>
 
 #include <iostream>
+#include <cstdlib>
 #include <vector>
+#include <string>
 
 #include "config.h"
 #include "modelmanager.h"
 #include "prediction_service.hpp"
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -41,17 +47,38 @@ uint getGRPCServersCount() {
     return configGRPCServersCount;
 }
 
+void configure_logger(){
+    std::vector<spdlog::sink_ptr> sinks;
+    sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
+    if (const char* log_path = std::getenv("LOG_PATH")) {
+        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path));
+    }
+    auto serving_logger = std::make_shared<spdlog::logger>("serving", begin(sinks), end(sinks));
+
+    //auto serving_logger = spdlog::stdout_logger_mt("serving");
+    serving_logger->set_level(spdlog::level::info);
+    if (const char* log_level = std::getenv("LOG_LEVEL")){
+        if (std::strcmp(log_level,"DEBUG") == 0){
+            serving_logger->set_level(spdlog::level::debug);
+        } else if (std::strcmp(log_level,"ERROR") == 0){
+            serving_logger->set_level(spdlog::level::err);
+        }
+
+    }
+    spdlog::set_default_logger(serving_logger);
+}
+
 int server_main(int argc, char** argv)
 {
     const int GIGABYTE = 1024 * 1024 * 1024;
-
+    configure_logger();
     auto& config = ovms::Config::instance().parse(argc, argv);
     auto& manager = ModelManager::getInstance();
 
     Status status = manager.start();
 
     if (status != Status::OK) {
-        std::cout << "ovms::ModelManager::Start() Error: " << StatusDescription::getError(status) << std::endl;
+        spdlog::error("ovms::ModelManager::Start() Error: {}", StatusDescription::getError(status));
         return 1;
     }
 
@@ -64,13 +91,12 @@ int server_main(int argc, char** argv)
 
     std::vector<std::unique_ptr<Server>> servers;
     uint grpcServersCount = getGRPCServersCount();
-    std::cout << "Starting grpcservers:" << grpcServersCount << std::endl;
+    spdlog::debug("Starting grpcservers: {}", grpcServersCount);
 
     for (uint i = 0; i < grpcServersCount; ++i) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
-
-    std::cout << "Server started on port " << config.port() << std::endl;
+    spdlog::info("Server started on port {}", config.port() );
     servers[0]->Wait();
 
     return 0;
