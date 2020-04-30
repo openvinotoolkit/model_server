@@ -52,7 +52,7 @@ make docker_build_bin dldt_package_url=<url-to-openvino-package-after-registrati
 
 ### Build Locally from Source
 
-Instructions to build locally are [here](../host.md).
+Instructions to build locally are [here](host.md).
 
 
 ## Running Model Server
@@ -141,7 +141,7 @@ To run Model Server in this mode - please run the following command:
 
 ### Starting Model Server on Bare Metal/Virtual Machine
 
-Model Server can be run locally on a machine after it has been installed as described [here](./host.md).
+Model Server can be run locally on a machine after it has been installed as described [here](host.md).
 
 To start Model Server locally please run the following command:
 
