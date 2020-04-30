@@ -106,6 +106,35 @@ def start_server_single_vehicle_model(request, get_image, get_test_dir,
 
 
 @pytest.fixture(scope="class")
+def start_server_ams(request, get_image, get_docker_context):
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
+    ams_port = 5000
+    command = "./start_ams.sh"
+
+    container = \
+        client.containers.run(
+            image=get_image,
+            detach=True,
+            name='ams-test-{}'.format(get_tests_suffix()),
+            ports={'{}/tcp'.format(grpc_port): grpc_port,
+                   '{}/tcp'.format(rest_port): rest_port,
+                   '{}/tcp'.format(ams_port): ams_port},
+            remove=True,
+            volumes=volumes_dict,
+            # In this case, slower,
+            # non-default serialization method is used
+            environment=[
+                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
+            command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+
+
+@pytest.fixture(scope="class")
 def start_server_with_mapping(request, get_image, get_test_dir,
                               get_docker_context):
     shutil.copyfile('tests/functional/mapping_config.json',
