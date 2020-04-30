@@ -43,20 +43,28 @@ class VehicleDetectionAdas(Model):
 
         # model with output shape (1,1,200,7) 
         # with last dimension containg detection details
-        # TODO: add handling of empty rows
         detection_threshold = 0.5
         detections = []
         for detection in result_array[0][0]:
-            image_id = detection[0]
-            label = str(detection[1])
-            conf = detection[2]
-            x_min = detection[3]
-            y_min = detection[4]
-            x_max = detection[5]
-            y_max = detection[6]
+            label = str(detection[1].item())
+            # End of detections
+            if label == "0.0":
+                break
+
+            if not label in self.labels:
+                label_value = "unknown"
+            else:
+                label_value = self.labels[label]
+
+            image_id = detection[0].item()
+            conf = detection[2].item()
+            x_min = detection[3].item()
+            y_min = detection[4].item()
+            x_max = detection[5].item()
+            y_max = detection[6].item()
 
             if conf >= detection_threshold:
-                tag = Tag(self.labels[label], conf)
+                tag = Tag(label_value, conf)
 
                 box = Rectangle(x_min, y_min, abs(x_max-x_min), abs(y_max-y_min))
 
@@ -64,10 +72,6 @@ class VehicleDetectionAdas(Model):
                 detections.append(detection)
         
         entity = Entity(subtype_name=self.model_name, entities=detections)
-        response_dict = dict()
 
-        #TODO: what do we want to store here as inference?
-        #response_dict[inferences] = [entity.as_dict()]
-        response_dict[1] = str([entity.as_dict()])
-        response = json.dumps(response_dict)
+        response = json.dumps(entity.as_dict())
         return response

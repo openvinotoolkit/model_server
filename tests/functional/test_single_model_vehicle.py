@@ -16,6 +16,7 @@
 import sys
 import cv2
 import os
+import json
 import numpy as np
 import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
@@ -25,7 +26,7 @@ from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 sys.path.append(".")
-sys.path.append("extras/ams_wrapper/src/api")
+
 from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
@@ -186,12 +187,24 @@ class TestVehicleDetection():
 
         model_adas = VehicleDetectionAdas("ovms_connector")
         model_adas.load_default_labels()
+        model_adas.model_name = "vehicle-detection"
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
+       
+        boxes_count = str(json_response).count("box")
+        
+        print("detected boxes:" + str(boxes_count))
+        assert boxes_count == 2
+ 
+        try: 
+            format_check = json.loads(json_response)
+        except Exception as e:
+            print("json loads exception:" + str(e))
+            assert False
 
-        assert str(json_response).count("box") == 2        
-
+        print("format_check:" + str(format_check))
+        assert format_check["subtype"] == "vehicle-detection"
 
 """
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
