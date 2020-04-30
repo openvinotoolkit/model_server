@@ -25,6 +25,8 @@ NO_PROXY := "$(no_proxy)"
 
 OVMS_CPP_DOCKER_IMAGE ?= cpp-experiments
 OVMS_CPP_IMAGE_TAG ?= latest
+OVMS_CPP_CONTAINTER_NAME ?= server-test
+OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
 
@@ -52,19 +54,19 @@ docker_build:
 	@echo "Building docker image"
 	@echo docker build . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		-t $(OVMS_CPP_DOCKER_IMAGE)
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 	@docker build . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		-t $(OVMS_CPP_DOCKER_IMAGE)
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 
 test_perf: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force server-test || true
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test \
+	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
 		-v $(HOME)/resnet50:/models/resnet50 \
-		-p 9178:9178 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
 	@echo "Running latency test"
@@ -76,16 +78,16 @@ test_perf: venv
 		--report_every 100 \
 		--input_name data
 	@echo "Removing test container"
-	@docker rm --force server-test
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
 test_throughput: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force server-test || true
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name server-test \
+	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
 		-v $(HOME)/resnet50:/models/resnet50 \
-		-p 9178:9178 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet \
 		--model_path /models/resnet50/1 \
@@ -99,7 +101,7 @@ test_throughput: venv
 		--batchsize 1 \
 		--input_name data
 	@echo "Removing test container"
-	@docker rm --force server-test
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -s \
