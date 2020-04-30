@@ -23,7 +23,7 @@
 #include "prediction_service.hpp"
 
 #define DEBUG
-
+#include <spdlog/spdlog.h>
 #include "timer.h"
 
 
@@ -195,6 +195,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     const   PredictRequest*     request,
             PredictResponse*    response) {
 
+    Timer timer;
     std::shared_ptr<ovms::ModelInstance> modelVersion;
     grpc::Status status = getModelInstance(request, modelVersion);
     if(!status.ok())
@@ -204,20 +205,36 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if(!status.ok())
         return status;
 
+    timer.start("get infer request");
     ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion->getInferRequestsQueue();
     ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
     int executingInferId = executingStreamIdGuard.getId();
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
+    timer.stop("get infer request");
+    spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request->model_spec().name(),modelVersion->getVersion(),executingInferId,timer.elapsed_microseconds("get infer request")/1000);
 
+    timer.start("deserialize");
     status = deserialize(request, modelVersion->getInputsInfo(), inferRequest);
+    timer.stop("deserialize");
+    spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request->model_spec().name(),modelVersion->getVersion(),executingInferId,timer.elapsed_microseconds("deserialize")/1000);
     if(!status.ok())
         return status;
 
+    timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
+    timer.stop("prediction");
     if(!status.ok())
         return status;
+    spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request->model_spec().name(),modelVersion->getVersion(),executingInferId,timer.elapsed_microseconds("prediction")/1000);
 
+    timer.start("serialize");
     serialize(inferRequest, modelVersion->getOutputsInfo(), response);
+    timer.stop("serialize");
+    spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request->model_spec().name(),modelVersion->getVersion(),executingInferId, timer.elapsed_microseconds("serialize")/1000);
     return grpc::Status::OK;
 }
 
