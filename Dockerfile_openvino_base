@@ -1,22 +1,34 @@
-FROM openvino/ubuntu18_runtime
+FROM openvino/ubuntu18_runtime:2020.2
 USER root
-RUN apt-get update && apt-get install -y python3-dev python3-venv
-WORKDIR /ie-serving-py
-COPY start_server.sh setup.py version /ie-serving-py/
-COPY ie_serving /ie-serving-py/ie_serving
-RUN chown -R openvino .
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            libgomp1 \
+            python3-dev \
+            python3-pip \
+            virtualenv \
+            usbutils \
+            gnupg2 \
+            wget \
+            git \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /ie-serving-py && chown openvino /ie-serving-py
+
 USER openvino
-COPY requirements.txt /ie-serving-py/
-RUN python3 -m venv .venv && \
+
+ENV PYTHONPATH=$PYTHONPATH:/opt/intel/openvino/python/python3.6 \
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib:/opt/intel/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64:/opt/intel/openvino/deployment_tools/ngraph/lib
+
+WORKDIR /ie-serving-py
+RUN git clone https://github.com/IntelAI/OpenVINO-model-server.git
+RUN cp OpenVINO-model-server/requirements.txt /ie-serving-py/
+RUN virtualenv -p python3 .venv && \
     . .venv/bin/activate && \
-    pip3 install --upgrade pip && \
     pip3 --no-cache-dir install -r requirements.txt
+
+RUN cp OpenVINO-model-server/start_server.sh /ie-serving-py/
+RUN cp OpenVINO-model-server/setup.py /ie-serving-py/
+RUN cp -r OpenVINO-model-server/ie_serving /ie-serving-py/ie_serving
 RUN . .venv/bin/activate && pip3 install .
-ENV PYTHONPATH=/opt/intel/openvino/python/python3.6:/opt/intel/openvino/python/python3
-ARG OV_PATH=/opt/intel/openvino/deployment_tools
-ENV LD_LIBRARY_PATH=""
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/ngraph/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/gna/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/mkltiny_lnx/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/external/tbb/lib:
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OV_PATH/inference_engine/lib/intel64
