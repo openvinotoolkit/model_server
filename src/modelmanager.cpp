@@ -13,13 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <fstream>
 #include <sys/stat.h>
 
 #include <iostream>
+#include <fstream>
 
-#include "config.h"
-#include "modelmanager.h"
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
+#include "config.hpp"
+#include "modelmanager.hpp"
 
 namespace ovms {
 

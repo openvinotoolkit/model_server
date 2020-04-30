@@ -16,10 +16,11 @@
 
 #include <iostream>
 #include <fstream>
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "../stringutils.h"
+#include "../stringutils.hpp"
 
 using namespace testing;
 

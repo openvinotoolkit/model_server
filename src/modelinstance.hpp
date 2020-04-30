@@ -20,13 +20,12 @@
 #include <vector>
 
 #include <inference_engine.hpp>
-
-#include "tensorinfo.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "modelconfig.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "status.h"
-#include "modelconfig.h"
+#include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 

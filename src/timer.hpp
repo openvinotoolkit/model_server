@@ -16,10 +16,9 @@
 #pragma once
 
 #include <chrono>
-#include <unordered_map>
-#include <string>
 #include <iostream>
-
+#include <string>
+#include <unordered_map>
 
 class Timer {
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> startTimestamps;

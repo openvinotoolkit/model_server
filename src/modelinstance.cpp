@@ -14,14 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 #include <dirent.h>
-#include <iostream>
-#include <string>
 #include <sys/types.h>
 
 #include <cstdlib>
+#include <iostream>
+#include <string>
 
-#include "config.h"
-#include "modelinstance.h"
+#include "config.hpp"
+#include "modelinstance.hpp"
 
 using namespace InferenceEngine;
 

@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <thread>
 
-#include "config.h"
+#include "config.hpp"
 
 namespace ovms {
 

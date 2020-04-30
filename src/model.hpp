@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "modelinstance.h"
+#include "modelinstance.hpp"
 
 namespace ovms {
     /**

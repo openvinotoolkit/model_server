@@ -1,71 +1,56 @@
-
-package(
-    default_visibility = ["//tensorflow_serving:internal"],
-    features = ["no_layering_check"],
-)
-
-licenses(["notice"])  # Apache 2.0
-
-filegroup(
-    name = "all_files",
-    srcs = glob(
-        ["**/*"],
-        exclude = [
-            "**/METADATA",
-            "**/OWNERS",
-        ],
-    ),
-)
-
-
-
 cc_library(
-    name = "server_cc_lib",
-    linkstatic = True,
+    name = "ovms_lib",
+    linkstatic = 1,
     srcs = [
-        "server.cc",
+        "server.cpp",
         "config.cpp",
-        "config.h",
+        "config.hpp",
         "model.cpp",
-        "model.h",
-        "modelconfig.h",
+        "model.hpp",
+        "modelconfig.hpp",
         "modelmanager.cpp",
-        "modelmanager.h",
+        "modelmanager.hpp",
         "modelinstance.cpp",
-        "modelinstance.h",
+        "modelinstance.hpp",
         "ovinferrequestsqueue.cpp",
         "ovinferrequestsqueue.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
-        "status.h",
-        "stringutils.h",
-        "tensorinfo.h",
-        "timer.h",
+        "status.hpp",
+        "stringutils.hpp",
+        "tensorinfo.hpp",
+        "timer.hpp",
+    ],
+    copts = [
+         "--std=c++17"
     ],
     deps = [
-        "//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "@openvino//:headers",
-        "@openvino//:library",
+        "@rapidjson//:rapidjson",
+        "@openvino//:openvino",
         "@spdlog//:spdlog",
         "@cxxopts//:cxxopts",
     ],
 )
 
 cc_binary(
-  name = "server_cc",
-  srcs = [
-       "main.cpp",
-  ],
-  deps = [
-      "//tensorflow_serving/ovms:server_cc_lib",
-  ]
+    name = "ovms",
+    srcs = [
+        "main.cpp",
+    ],
+    copts = [
+         "--std=c++17"
+    ],
+    deps = [
+        "//src:ovms_lib",
+    ]
 )
 
 cc_test(
-    name = "server_cc_test",
+    name = "ovms_test",
+    linkstatic = 1,
     srcs = [
         "test/unit_tests.cpp",
         "test/modelmanager_test.cpp",
@@ -73,8 +58,11 @@ cc_test(
         "test/stringutils_test.cpp",
         "test/validation_test.cpp",
     ],
+    copts = [
+        "--std=c++17"
+    ],
     deps = [
+        "//src:ovms_lib",
         "@com_google_googletest//:gtest",
-        "//tensorflow_serving/ovms:server_cc_lib",
     ],
 )

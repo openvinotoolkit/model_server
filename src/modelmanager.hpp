@@ -22,7 +22,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
-#include "model.h"
+#include "model.hpp"
 
 namespace ovms {
     /**

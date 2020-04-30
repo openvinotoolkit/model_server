@@ -18,8 +18,9 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
-#include "status.h"
-#include "stringutils.h"
+
+#include "status.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 

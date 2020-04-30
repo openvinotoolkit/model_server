@@ -16,10 +16,11 @@
 
 #include <iostream>
 #include <fstream>
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "../modelconfig.h"
+#include "../modelconfig.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;

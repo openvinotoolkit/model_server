@@ -60,7 +60,6 @@ http_archive(
     ],
 )  # https://github.com/bazelbuild/bazel-skylib/releases
 
-
 # END: Upstream TensorFlow dependencies
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
@@ -86,16 +85,16 @@ new_local_repository(
     build_file_content = """
 cc_library(
     name = "openvino",
-    srcs = ["bin/intel64/Release/lib/libinference_engine.so"],
+    srcs = ["bin/intel64/Release/lib/libinference_engine.dylib"],
     hdrs = glob([
-        "inference-engine/include/**/*.h",
+        "inference-engine/include/**/*.h", 
         "inference-engine/include/**/*.hpp"
     ]),
     strip_include_prefix = "inference-engine/include",
     visibility = ["//visibility:public"],
 )
 """,
-    path = "/openvino",
+    path = "/Users/mgumowsk/work/openvino",
 )
 
 # cxxopts
@@ -139,51 +138,4 @@ cc_library(
     hdrs = glob(["include/rapidjson/**/*.h"]),
     includes = ["include"],
 ) """
-)
-
-http_archive(
-    name="spdlog",
-    url="https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
-    sha256="afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
-    strip_prefix = "spdlog-1.4.0",
-    build_file_content= """
-
-cc_library(
-    name = "spdlog",
-    srcs = [],
-    hdrs = glob([
-        "include/**/*.cc",
-        "include/**/*.h",
-    ]),
-    includes = [
-        "include/",
-    ],
-    copts = ["-Iexternal/spdlog/"],
-    visibility = ["//visibility:public"],
-    deps = ["@fmtlib"],
-    defines = ["SPDLOG_FMT_EXTERNAL"],
-)    """
-)
-
-http_archive(
-    name="fmtlib",
-    url="https://github.com/fmtlib/fmt/archive/6.0.0.tar.gz",
-    sha256="f1907a58d5e86e6c382e51441d92ad9e23aea63827ba47fd647eacc0d3a16c78",
-    strip_prefix = "fmt-6.0.0",
-    build_file_content= """
-
-cc_library(
-    name = "fmtlib",
-    srcs = glob([
-        "fmt/*.cc",
-    ]),
-    hdrs = glob([
-        "include/fmt/*.h",
-    ]),
-    includes = [
-        "include/",
-    ],
-    visibility = ["//visibility:public"],
-    defines = ["FMT_HEADER_ONLY"],
-)    """
 )
