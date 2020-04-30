@@ -2,4 +2,8 @@
 set -ex
 . .venv-jenkins/bin/activate
 
-make ams_test
+pushd .
+cd extras/ams_wrapper/tests
+./get_test_images.sh
+popd
+py.test extras/ams_wrapper/tests
