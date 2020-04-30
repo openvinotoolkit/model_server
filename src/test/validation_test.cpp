@@ -16,10 +16,10 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
-#include "../modelinstance.h"
+#include "../modelinstance.hpp"
 
 using ::testing::Return;
 using ::testing::ReturnRef;

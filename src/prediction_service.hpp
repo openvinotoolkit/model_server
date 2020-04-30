@@ -16,7 +16,6 @@
 #pragma once
 
 #include <grpcpp/server_context.h>
-
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 namespace ovms {

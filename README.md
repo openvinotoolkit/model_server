@@ -20,19 +20,19 @@ Build the docker image using command:
 ```bash
 ~/ovms-c$ make docker_build
 ```
-It will generate the image, tagged as `cpp-experiments:latest`.
+It will generate the image, tagged as `ovms:latest`.
 
 
 ## Running the serving component as a docker container:
 Docker container is using the serving application as the entrypoint, so you just need to pass its parameters in the docker command:
 ```bash
-docker run -d -v /models/model_folder:/opt/ml:ro -p 9178:9178 cpp-experiments --model_name <model_name> --model_path /opt/ml --port 9178
+docker run -d -v /models/model_folder:/opt/ml:ro -p 9178:9178 ovms --model_name <model_name> --model_path /opt/ml --port 9178
 ```
 All parameters are documented below:
 ```bash
 OpenVINO Model Server
 Usage:
-  ./bazel-bin/tensorflow_serving/ovms/server_cc [OPTION...]
+  ./bazel-bin/src/ovms [OPTION...]
 
   -h, --help  show this help message and exit
 
@@ -171,11 +171,11 @@ docker logs ie-serving
 
 Mount the source code inside the docker container
 ```bash
-docker run -it -v ${PWD}:/tensorflow-serving/tensorflow_serving/ovms --entrypoint bash -p 9178:9178 cpp-experiments:latest 
+docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 ovms:latest 
 ```
 
 Compile code using command:
 
 ```bash
-bazel build //tensorflow_serving/ovms:server_cc
+bazel build //src:ovms
 ```

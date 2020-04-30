@@ -17,7 +17,8 @@
 
 #include <inference_engine.hpp>
 #include "tensorflow/core/framework/tensor.h"
-#include "modelconfig.h"
+
+#include "modelconfig.hpp"
 
 namespace ovms {
 

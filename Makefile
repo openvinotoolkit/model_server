@@ -23,7 +23,7 @@ HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 
-OVMS_CPP_DOCKER_IMAGE ?= cpp-experiments
+OVMS_CPP_DOCKER_IMAGE ?= ovms
 OVMS_CPP_IMAGE_TAG ?= latest
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178

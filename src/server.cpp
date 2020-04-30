@@ -13,23 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 #include <grpcpp/security/server_credentials.h>
-
-#include <iostream>
-#include <cstdlib>
-#include <vector>
-#include <string>
-
-#include "config.h"
-#include "modelmanager.h"
-#include "prediction_service.hpp"
-
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
+
+#include "config.hpp"
+#include "modelmanager.hpp"
+#include "prediction_service.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;

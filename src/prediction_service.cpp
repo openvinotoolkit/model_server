@@ -15,17 +15,15 @@
 //*****************************************************************************
 #include <condition_variable>
 #include <inference_engine.hpp>
-
 #include "tensorflow/core/framework/tensor.h"
+#include <spdlog/spdlog.h>
 
 #include "ovinferrequestsqueue.hpp"
-#include "modelmanager.h"
+#include "modelmanager.hpp"
 #include "prediction_service.hpp"
 
 #define DEBUG
-#include <spdlog/spdlog.h>
-#include "timer.h"
-
+#include "timer.hpp"
 
 using grpc::ServerContext;
 

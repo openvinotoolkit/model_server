@@ -14,12 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "gtest/gtest.h"
-
-//#define main main_original
-//#include "server.cc"
-//#undef main
-
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

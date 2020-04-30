@@ -14,12 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "gtest/gtest.h"
-
-#include "../modelmanager.h"
-
 #include <iostream>
 #include <fstream>
+
+#include <gtest/gtest.h>
+
+#include "../modelmanager.hpp"
 
 namespace {
 // returns path to a file.
