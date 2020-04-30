@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-
-import json
-
 import pytest
 import requests
 from marshmallow import ValidationError
