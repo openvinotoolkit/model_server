@@ -17,6 +17,11 @@ pipeline {
                 sh './tests/scripts/unit-tests.sh'
             }
         }
+        stage('unit tests ams') {
+            steps {
+                sh './tests/scripts/unit-tests-ams.sh'
+            }
+        }
         stage('functional tests') {
             parallel {
                 stage('functional tests ams') {
