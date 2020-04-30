@@ -7,16 +7,19 @@ pipeline {
                 sh './tests/scripts/prepare-virtualenv.sh'
             }
         }
+        /*
         stage('style tests') {
             steps {
                 sh './tests/scripts/style.sh'
             }
         }
+        
         stage('unit tests') {
             steps {
                 sh './tests/scripts/unit-tests.sh'
             }
         }
+        */
         stage('unit tests ams') {
             steps {
                 sh './tests/scripts/unit-tests-ams.sh'
