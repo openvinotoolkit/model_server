@@ -63,7 +63,6 @@ class OtherSchema(Schema):
 
 
 class InferenceResponseSchema(Schema):
-    # TODO: make sure that type is corresponding to proper nested schema
     inference_type = fields.String(required=True,
                                    data_key='type',
                                    validate=validate.OneOf({'classification',
