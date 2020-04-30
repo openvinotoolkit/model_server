@@ -2,7 +2,7 @@
 
 ## Deploying Model Server
 
-Model Server can deployed using any of the following options:
+Model Server can be deployed using any of the following options:
 1. Download a pre-built container image from Docker Hub
 2. Build a container image with a Dockerfile
 3. Build the application locally from source 
@@ -24,7 +24,7 @@ docker pull openvino/ubuntu18_model_server
 
 Three Dockerfiles are provided that can be used to build a container image locally. There is also a Makefile to simplify building an image. The Dockerfiles are listed below:
 
-#### 1. [Ubuntu 18 Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile)
+#### 1. [Ubuntu 18 Dockerfile](../Dockerfile)
 
 To build this image use following command from the `model_server` directory:
 
@@ -32,7 +32,7 @@ To build this image use following command from the `model_server` directory:
 make docker_build_apt_ubuntu
 ```
 
-#### 2. [Clear Linux Dockerfile](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_clearlinux)
+#### 2. [Clear Linux Dockerfile](../Dockerfile_clearlinux)
 
 To build this image use following command from the `model_server` directory:
 
@@ -40,7 +40,7 @@ To build this image use following command from the `model_server` directory:
 make docker_build_clearlinux
 ```
 
-#### 3. [Based on OpenVINO Toolkit](https://github.com/openvinotoolkit/model_server/blob/master/Dockerfile_binary_openvino)
+#### 3. [Based on OpenVINO Toolkit](../Dockerfile_binary_openvino)
 
 In this case an image is built based on OpenVINO Toolkit - to build it you need to obtaing an URL to the toolkit package. It can be done by registering on the [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
@@ -52,7 +52,7 @@ make docker_build_bin dldt_package_url=<url-to-openvino-package-after-registrati
 
 ### Build Locally from Source
 
-Instructions to build locally are [here](https://github.com/openvinotoolkit/model_server/blob/master/docs/host.md).
+Instructions to build locally are [here](../host.md).
 
 
 ## Running Model Server
@@ -134,14 +134,14 @@ The file is in JSON format and contains a mandatory array `model_config_list`, w
 To run Model Server in this mode - please run the following command:
 
 ```docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving config config /opt/ml/config.json --port 9001 --rest_port 8001
+/ie-serving-py/start_server.sh ie_serving config /opt/ml/config.json --port 9001 --rest_port 8001
 ```
 
 **Note** do not forget to copy the configuration file to the `/models/` directory.
 
-### Starting Model Server Locally
+### Starting Model Server on Bare Metal/Virtual Machine
 
-Model Server can be run locally on a machine after it has been installed as described [here](https://github.com/openvinotoolkit/model_server/blob/master/docs/host.md).
+Model Server can be run locally on a machine after it has been installed as described [here](./host.md).
 
 To start Model Server locally please run the following command:
 
