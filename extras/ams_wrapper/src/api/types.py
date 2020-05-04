@@ -73,17 +73,32 @@ class Motion(ResultType):
             "box": self.box.as_dict()
         }
 
-class Classification(ResultType):
-    def __init__(self, tag: Tag, attributes: List[Attribute]):
+class SingleClassification:
+    def __init__(self, tag: Tag, attributes: List[Attribute] = None):
         self.tag = tag
         self.attributes = attributes
-        self.type_name = "classification"
 
     def as_dict(self):
         result_dict = {
             "tag": self.tag.as_dict(),
-            "attributes": [attribute.as_dict() for attribute in self.attributes]
         }
+        if self.attributes is not None:
+            result_dict[attributes] = [attribute.as_dict() for attribute in self.attributes]
+        return result_dict
+
+class Classification(ResultType):
+    def __init__(self, subtype_name: str, classifications: List[SingleClassification]):
+        self.type_name = "classification"
+        self.subtype_name = subtype_name
+        self.classifications = classifications
+
+    def as_dict(self):
+        result_dict = {
+            "type": self.type_name,
+            "subtype": self.subtype_name,
+            "classifications": [classification.as_dict() for classification in self.classifications]
+        }
+        return result_dict
 
 class SingleEntity:
     def __init__(self, tag: Tag, box: Rectangle, attributes: List[Attribute] = None):
@@ -101,7 +116,6 @@ class SingleEntity:
         return result_dict
 
 class Entity(ResultType):
-
     def __init__(self, subtype_name: str, entities: List[SingleEntity]):
         self.type_name = "entity"
         self.subtype_name = subtype_name
