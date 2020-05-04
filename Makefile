@@ -68,7 +68,7 @@ coverage: $(ACTIVATE)
 	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
 
 ams_test: $(AMS_EXAMPLE)requirements.txt $(AMS_EXAMPLE)requirements-dev.txt
-	echo "Running ams image preprocessing tests" 
+	echo "Running ams wrapper unit tests" 
 	test -d $(AMS_VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(AMS_VIRTUALENV_DIR)
 	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements.txt
 	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements-dev.txt

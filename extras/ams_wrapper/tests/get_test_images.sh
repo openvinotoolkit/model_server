@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #
 # Copyright (c) 2020 Intel Corporation
 #
@@ -16,6 +18,15 @@
 
 # Script for getting some test images with proper Creative Commons licenses
 mkdir -p test_images
+
+if [[ ! -f test_images/2207159142_8206ab6984.jpg ]]; then
 wget https://live.staticflickr.com/2106/2207159142_8206ab6984.jpg && mv 2207159142_8206ab6984.jpg test_images/
+fi
+
+if [[ ! -f test_images/Khao_Manee_cat_in_Tamra_cat_Rattanakosin.png ]]; then
 wget https://upload.wikimedia.org/wikipedia/commons/e/e0/Khao_Manee_cat_in_Tamra_cat_Rattanakosin.png && mv Khao_Manee_cat_in_Tamra_cat_Rattanakosin.png test_images/
+fi
+
+if [[ ! -f test_images/sails.bmp ]]; then
 wget https://homepages.cae.wisc.edu/~ece533/images/sails.bmp && mv sails.bmp test_images/ 
+fi

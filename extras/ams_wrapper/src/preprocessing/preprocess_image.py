@@ -20,6 +20,11 @@ from typing import Tuple
 import tensorflow as tf
 import numpy as np
 
+from src.logger import get_logger
+
+
+log = get_logger(__name__)
+
 
 class ImageDecodeError(ValueError):
     pass
@@ -108,7 +113,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
             image_array = image_array * scale
             image_array = image_array.astype(array_type)
     except Exception as e:
-        logger.exception(str(e))
+        log.exception(str(e))
         raise ImageTransformError('Failed to preprocess image, '
                                    'check if provided parameters are correct.') from e
 
