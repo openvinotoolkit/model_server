@@ -14,9 +14,17 @@
 # limitations under the License.
 #
 
+import numpy as np
+
+import preprocessing
 from api.models.model import Model
 
 class ExampleModel(Model):
+
+    def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
+        return preprocessing.preprocess_binary_image(image=binary_image)
+
+
    def postprocess_inference_output(self, inference_output: dict) -> str:
        """
         Examplary flow:
