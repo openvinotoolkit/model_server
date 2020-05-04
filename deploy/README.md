@@ -30,8 +30,9 @@ gsutil cp -r 1 gs://model-repository/1
 
 ## Bucket permissions
 
-Make sure the bucket permissions are set so that the inference server can access the model repository. If the bucket 
-is public then no additional changes are needed and you can proceed to _Using OpenVINO Model Server_ section.
+Make sure the bucket permissions are set so that the server can access the model repository. If the bucket 
+is public or you are going to run Model Server on the same GCP account as storage then no additional changes 
+are needed and you can proceed to _Deploy the Model Server_ section.
 
 If bucket permissions need to be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable then perform the 
 following steps:

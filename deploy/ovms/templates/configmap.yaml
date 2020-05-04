@@ -1,0 +1,27 @@
+{{ if .Values.config_mode }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ovms
+data:
+  config.json: |
+    {
+       "model_config_list":[
+          {
+             "config":{
+                "name":"model_name1",
+                "base_path":"/opt/ml/models/model1",
+                "batch_size": "16"
+             }
+          },
+          {
+             "config":{
+                "name":"model_name2",
+                "base_path":"/opt/ml/models/model2",
+                "batch_size": "auto",
+                "model_version_policy": {"all": {}}
+             }
+          }
+       ]
+    }
+{{ end }}

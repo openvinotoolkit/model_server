@@ -1,3 +1,9 @@
 replicas: 1
+
+config_mode: false
+
 model_name: ""
 model_path: ""
+
+gcp_creds_secret_name: ""
+
