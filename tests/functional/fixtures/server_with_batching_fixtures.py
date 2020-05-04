@@ -30,7 +30,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8/1 " \
+              "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8/1 " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
@@ -94,7 +94,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet --model_path /opt/ml/resnet_V1_50_batch8 " \
+              "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8 " \
               "--port {} --batch_size auto --rest_port {}".\
               format(grpc_port, rest_port)
 
@@ -159,7 +159,7 @@ def start_server_batch_model_bs4(request, get_image, get_test_dir,
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet " \
+              "--model_name resnet_bs8 " \
               "--model_path /opt/ml/resnet_V1_50_batch8/1 --port {} " \
               "--batch_size 4 --rest_port {}".format(grpc_port, rest_port)
 

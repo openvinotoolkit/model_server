@@ -53,8 +53,7 @@ class TestSingleModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]), PREDICTION_SERVICE)
 
         imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
         output = infer(imgs_v1_224, input_tensor=Resnet.input_name, grpc_stub=stub,
@@ -71,22 +70,16 @@ class TestSingleModelInference:
 
         _, ports = start_server_single_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]), PREDICTION_SERVICE)
 
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata = {in_name: {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
-        request = get_model_metadata(model_name='resnet')
+        expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         print(output_metadata)
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
@@ -100,7 +93,7 @@ class TestSingleModelInference:
         _, ports = start_server_single_model
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    MODEL_SERVICE)
-        request = get_model_status(model_name='resnet')
+        request = get_model_status(model_name=Resnet.name)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
@@ -112,8 +105,7 @@ class TestSingleModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
-                             [('row_name'), ('row_noname'),
-                              ('column_name'), ('column_noname')])
+                             ['row_name', 'row_noname', 'column_name', 'column_noname'])
     def test_run_inference_rest(self, resnet_multiple_batch_sizes,
                                 start_server_single_model,
                                 request_format):
@@ -137,17 +129,14 @@ class TestSingleModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         _, ports = start_server_single_model
-        imgs_v1_224 = np.ones((1, 3, 224, 224))
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(
-                    ports["rest_port"])
-        output = infer_rest(imgs_v1_224, input_tensor=in_name,
+        imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
+        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(ports["rest_port"])
+        output = infer_rest(imgs_v1_224, input_tensor=Resnet.input_name,
                             rest_url=rest_url,
-                            output_tensors=[out_name],
+                            output_tensors=[Resnet.output_name],
                             request_format=request_format)
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+        print("output shape", output[Resnet.output_name].shape)
+        assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
@@ -155,20 +144,14 @@ class TestSingleModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         _, ports = start_server_single_model
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata = {in_name: {'dtype': 1,
-                                             'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
-        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
-                    ports["rest_port"])
+        expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         print(output_metadata)
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 

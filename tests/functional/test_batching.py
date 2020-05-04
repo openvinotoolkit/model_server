@@ -16,8 +16,8 @@
 import pytest
 import numpy as np
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
-from utils.grpc import infer, get_model_metadata, \
-    model_metadata_response
+from model.models_information import ResnetBS4, ResnetBS8
+from utils.grpc import infer, get_model_metadata, model_metadata_response
 from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
@@ -50,15 +50,13 @@ class TestBatchModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        batch_input = np.ones((8, 3, 224, 224), np.float32)
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(batch_input, input_tensor=in_name,
-                       grpc_stub=stub, model_spec_name='resnet',
+        batch_input = np.ones(ResnetBS8.input_shape, ResnetBS8.dtype)
+        output = infer(batch_input, input_tensor=ResnetBS8.input_name,
+                       grpc_stub=stub, model_spec_name=ResnetBS8.name,
                        model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (8, 1001), ERROR_SHAPE
+                       output_tensors=[ResnetBS8.output_name])
+        print("output shape", output[ResnetBS8.output_name].shape)
+        assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
     def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
                                start_server_batch_model_bs4,
@@ -71,15 +69,13 @@ class TestBatchModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        batch_input = np.ones((4, 3, 224, 224), np.float32)
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(batch_input, input_tensor=in_name,
-                       grpc_stub=stub, model_spec_name='resnet',
+        batch_input = np.ones((4,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
+        output = infer(batch_input, input_tensor=ResnetBS8.input_name,
+                       grpc_stub=stub, model_spec_name=ResnetBS8.name,
                        model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (4, 1001), ERROR_SHAPE
+                       output_tensors=[ResnetBS8.output_name])
+        print("output shape", output[ResnetBS8.output_name].shape)
+        assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference_auto(self, resnet_multiple_batch_sizes,
@@ -93,25 +89,14 @@ class TestBatchModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        batch_input = np.ones((6, 3, 224, 224))
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(batch_input, input_tensor=in_name,
-                       grpc_stub=stub, model_spec_name='resnet',
-                       model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (6, 1001), ERROR_SHAPE
-
-        batch_input = np.ones((1, 3, 224, 224))
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        output = infer(batch_input, input_tensor=in_name,
-                       grpc_stub=stub, model_spec_name='resnet',
-                       model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+        for batch_size in [1,6]:
+            batch_input = np.ones((batch_size,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
+            output = infer(batch_input, input_tensor=ResnetBS8.input_name,
+                           grpc_stub=stub, model_spec_name=ResnetBS8.name,
+                           model_spec_version=None,
+                           output_tensors=[ResnetBS8.output_name])
+            print("output shape", output[ResnetBS8.output_name].shape)
+            assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
@@ -124,26 +109,22 @@ class TestBatchModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata = {in_name:   {'dtype': 1,
-                                               'shape': [8, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [8, 1001]}}
-        request = get_model_metadata(model_name='resnet')
+        print("Getting info about {} model".format(ResnetBS8.name))
+        expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
+        expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
+        request = get_model_metadata(model_name=ResnetBS8.name)
         response = stub.GetModelMetadata(request, 10)
-        input_metadata, output_metadata = model_metadata_response(
-            response=response)
+        input_metadata, output_metadata = model_metadata_response(response=response)
+
         print(output_metadata)
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == ResnetBS8.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
-                             [('row_name'), ('row_noname'),
-                              ('column_name'), ('column_noname')])
+                             ['row_name', 'row_noname',
+                              'column_name', 'column_noname'])
     def test_run_inference_rest(self, age_gender_model_downloader,
                                 start_server_batch_model_2out, request_format):
         """
@@ -276,19 +257,14 @@ class TestBatchModelInference():
         _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata = {in_name:   {'dtype': 1,
-                                               'shape': [8, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [8, 1001]}}
-        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(
-                    ports["rest_port"])
+        print("Getting info about {} model".format(ResnetBS8.name))
+        expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
+        expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
+        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(ports["rest_port"], ResnetBS8.name)
         response = get_model_metadata_response_rest(rest_url)
-        input_metadata, output_metadata = model_metadata_response(
-            response=response)
+        input_metadata, output_metadata = model_metadata_response(response=response)
+
         print(output_metadata)
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == ResnetBS8.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
