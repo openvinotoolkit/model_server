@@ -26,10 +26,13 @@ class ModelInputConfiguration:
                  self.channels = channels
                  self.target_height = target_height
                  self.target_width = target_width
-                 self.color_format = color_format
+                 self.reverse_input_channels = True if color_format == 'BGR' else False
                  self.scale = scale
                  self.standardization = standardization
-                 self.input_format = input_format
+                 self.channels_first = False if input_format == 'NHWC' else True
+    
+    def as_dict(self) -> dict:
+        return vars(self)
 
 
 class ModelInputConfigurationSchema(Schema):
