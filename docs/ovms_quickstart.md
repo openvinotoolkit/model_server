@@ -22,7 +22,7 @@ docker pull openvino/ubuntu18_model_server
 
 ### Build with a Dockerfile
 
-Three Dockerfiles are provided that can be used to build a container image locally. There is also a Makefile to simplify building an image. The Dockerfiles are listed below:
+Two main Dockerfiles are provided that can be used to build a container image locally. There is also a Makefile to simplify building an image. The Dockerfiles are listed below:
 
 #### 1. [Ubuntu 18 Dockerfile](../Dockerfile)
 
@@ -32,17 +32,9 @@ To build this image use following command from the `model_server` directory:
 make docker_build_apt_ubuntu
 ```
 
-#### 2. [Clear Linux Dockerfile](../Dockerfile_clearlinux)
+#### 2. [Based on OpenVINO Toolkit](../Dockerfile_binary_openvino)
 
-To build this image use following command from the `model_server` directory:
-
-```bash
-make docker_build_clearlinux
-```
-
-#### 3. [Based on OpenVINO Toolkit](../Dockerfile_binary_openvino)
-
-In this case an image is built based on OpenVINO Toolkit - to build it you need to obtaing an URL to the toolkit package. It can be done by registering on the [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
+In this case an image is built based on OpenVINO Toolkit - to build it you need to obtain an URL to the toolkit package. It can be done by registering on the [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
 When you have this URL, please issue the following command - passing there just obtained URL:
 
@@ -59,7 +51,7 @@ Instructions to build locally are [here](host.md).
 
 ### Model Repository
 
-Model Server uses models in Intermediate Representation (IR) format (a pair of files with .bin and .xml extensions). These models can be downloaded from the [Open Model Zoo](https://github.com/opencv/open_model_zoo) or by converting TensorFlow, ONNX, Caffe, MXNet or other supported model formats by using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) which is a part of the OpenVINO Toolkit.
+Model Server uses models in Intermediate Representation (IR) format (a pair of files with .bin and .xml extensions). These models can be downloaded from the [Open Model Zoo](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/) or by converting TensorFlow, ONNX, Caffe, MXNet or other supported model formats by using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) which is a part of the OpenVINO Toolkit.
 
 Predefined IR models should be placed in a folder structure as depicted below:
 ```bash
