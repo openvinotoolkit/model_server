@@ -123,16 +123,15 @@ class TestVehicleDetection():
         result = output[out_name]
         print("result:" + str(result))
 
-        CONFIDENCE = 2
-
+        LABEL = 1
         for i in range(0, 200):
             detection = result[0,0,i]
             print("detection: " + str(detection))
-            if detection[CONFIDENCE] > 0.5:
+            if not detection[LABEL] == 0.0:
                 detections_sum+=1
 
         print("detections_sum= " + str(detections_sum))
-        assert detections_sum == 2
+        assert detections_sum == 19
 
 
     def test_run_inference_posprocess(self, vehicle_adas_model_downloader,
@@ -192,7 +191,7 @@ class TestVehicleDetection():
         boxes_count = str(json_response).count("box")
         
         print("detected boxes:" + str(boxes_count))
-        assert boxes_count == 2
+        assert boxes_count == 19
  
         try: 
             format_check = json.loads(json_response)

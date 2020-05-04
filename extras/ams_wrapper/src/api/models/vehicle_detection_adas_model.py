@@ -23,6 +23,7 @@ from api.types import Tag, Rectangle, SingleEntity, Entity
 logger = get_logger(__name__)
 
 
+
 class VehicleDetectionAdas(Model):
 
     def load_default_labels(self):
@@ -43,7 +44,6 @@ class VehicleDetectionAdas(Model):
 
         # model with output shape (1,1,200,7) 
         # with last dimension containg detection details
-        detection_threshold = 0.5
         detections = []
         for detection in result_array[0][0]:
             label = str(detection[1].item())
@@ -63,15 +63,18 @@ class VehicleDetectionAdas(Model):
             x_max = detection[5].item()
             y_max = detection[6].item()
 
-            if conf >= detection_threshold:
-                tag = Tag(label_value, conf)
+            tag = Tag(label_value, conf)
 
-                box = Rectangle(x_min, y_min, abs(x_max-x_min), abs(y_max-y_min))
+            box = Rectangle(x_min, y_min, abs(x_max-x_min), abs(y_max-y_min))
 
-                detection = SingleEntity(tag, box)
-                detections.append(detection)
+            detection = SingleEntity(tag, box)
+            detections.append(detection)
         
         entity = Entity(subtype_name=self.model_name, entities=detections)
 
-        response = json.dumps(entity.as_dict())
+        if len(detections) == 0:
+            response = None
+        else:
+            response = json.dumps(entity.as_dict())
+
         return response
