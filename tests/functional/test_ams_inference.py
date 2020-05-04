@@ -110,7 +110,7 @@ class TestAmsInference:
         
     #     assert response.status_code == 200
     #     assert response.headers.get('Content-Type') == 'application/json'
-    #     assert response.get('inferences') and len(response.get('inferences'))  == expected_instances
+    #     assert response.get('inferences') and len(response.get('inferences', {}).get('entities'))  == expected_instances
     #     for inference_response in response['inferences']:
     #         validate_ams_inference_response_schema(inference_response)
     

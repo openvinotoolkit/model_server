@@ -35,11 +35,12 @@ class MockEntityObjectDetectionModel(object):
                 {        
                     "type": "entity",
                     "subtype": "objectDetection",    
-                    "entity":
-                    {
-                      "tag": { "value": "dog", "confidence": 0.97 },
-                      "box": { "l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0 }
-                    }
+                    "entities": [
+                        {
+                          "tag": { "value": "dog", "confidence": 0.97 },
+                          "box": { "l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0 }
+                        }
+                    ] 
                 }
             ]}
             '''

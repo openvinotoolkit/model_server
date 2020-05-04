@@ -72,10 +72,10 @@ class InferenceResponseSchema(Schema):
                                                             'other',
     }))
     subtype = fields.String(required=True)
-    classification = fields.Nested(ClassificationSchema, required=False) 
-    motion = fields.Nested(MotionSchema, required=False) 
-    entity = fields.Nested(EntitySchema, required=False) 
-    text = fields.Nested(TextSchema, required=False) 
+    classifications = fields.List(fields.Nested(ClassificationSchema, required=False))
+    motions = fields.List(fields.Nested(MotionSchema, required=False))
+    entities = fields.List(fields.Nested(EntitySchema, required=False))
+    texts = fields.List(fields.Nested(TextSchema, required=False))
     extensions = fields.Dict(required=False)
 
     @validates_schema
