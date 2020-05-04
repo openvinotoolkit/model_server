@@ -1,18 +1,14 @@
-{
+{"models":
     {
 
         "model_name": "age-gender-recognition-retail-0013",
         "outputs": [
             {
                 "output_name": "prob",
-                "classes": [
-                    {
-                        "0": "female"
-                    },
-                    {
-                        "1": "male"
+                "classes": {
+                    "0.0": "female",
+                    "1.0": "male"
                     }
-                ]
             },
             {
                 "output_name": "age_conv3"
@@ -24,46 +20,24 @@
         "outputs": [
             {
                 "output_name": "color",
-                "classes": [
-                    {
-                        "0": "white"
-                    },
-                    {
-                        "1": "gray"
-                    },
-                    {
-                        "2": "yellow"
-                    },
-                    {
-                        "3": "red"
-                    },
-                    {
-                        "4": "green"
-                    },
-                    {
-                        "5": "blue"
-                    },
-                    {
-                        "6": "black"
-                    }
-                ]
+                "classes": {
+                    "0.0": "white",
+                    "1.0": "gray",
+                    "2.0": "yellow",
+                    "3.0": "red",
+                    "4.0": "green",
+                    "5.0": "blue",
+                    "6.0": "black"
+                }
             },
             {
                 "output_name": "type",
-                "classes": [
-                    {
-                        "0": "car"
-                    },
-                    {
-                        "1": "bus"
-                    },
-                    {
-                        "2": "truck"
-                    },
-                    {
-                        "3": "van"
-                    }
-                ]
+                "classes": {
+                    "0.0": "car",
+                    "1.0": "van",
+                    "2.0": "truck",
+                    "3.0": "bus"
+                }
             }
         ]
     },
@@ -72,17 +46,12 @@
         "outputs": [
             {
                 "output_name": "detection_out",
-                "classes": [
-                    {
-                        "0": "vehicle"
-                    },
-                    {
-                        "1": "pedestrian"
-                    },
-                    {
-                        "2": "bike"
-                    }
-                ],
+                "classes": {
+                    "0.0": "None",
+                    "1.0": "person",
+                    "2.0": "vehicle",
+                    "3.0": "bike"
+                },
                 "entity": {
                     "tag": { 
                         "value": 1,
