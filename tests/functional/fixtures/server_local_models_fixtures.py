@@ -76,8 +76,8 @@ def start_server_single_vehicle_model(request, get_image, get_test_dir,
     grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
 
     command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet " \
-              "--model_path /opt/ml/resnet_V1_50 " \
+              "--model_name vehicle-detection " \
+              "--model_path /opt/ml/vehicle-detection-adas-binary-0001 " \
               "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
               " --plugin_config " \
               "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
