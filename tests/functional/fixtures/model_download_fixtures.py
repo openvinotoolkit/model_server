@@ -25,6 +25,8 @@ age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvino
 pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078"  # noqa
 vehicle_detection_adas_bin_0001_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001"  # noqa
 vehicle_data_url = "https://download.01.org/opencv/openvino_training_extensions/datasets/crossroad/crossroad_85.tar.gz"  #noqa
+vehicle_attributes_url="https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039"  # noqa
+vehicle_attributes_data_url="https://download.01.org/opencv/openvino_training_extensions/datasets/vehicle_attributes/cars_100.tar.gz"  #noqa
 
 def download_model(model_url_base, model_name, model_version, dir):
     local_model_path = os.path.join(dir, model_name, model_version)
@@ -97,6 +99,21 @@ def vehicle_adas_data_downloader(get_test_dir):
     return download_data(vehicle_data_url,
                         'vehicle-detection-adas-binary-0001', '1',
                         get_test_dir + '/saved_data/')
+
+
+@pytest.fixture(autouse=True, scope="session")
+def vehicle_attributes_model_downloader(get_test_dir):
+    return download_model(vehicle_attributes_url,
+                          'vehicle-attributes-recognition-barrier-0039', '1',
+                          get_test_dir + '/saved_models/')
+
+
+@pytest.fixture(autouse=True, scope="session")
+def vehicle_attributes_data_downloader(get_test_dir):
+    return download_data(vehicle_attributes_data_url,
+                        'vehicle-attributes-recognition-barrier-0039', '1',
+                        get_test_dir + '/saved_data/')
+
 
 
 """
