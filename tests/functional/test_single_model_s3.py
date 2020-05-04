@@ -14,13 +14,12 @@
 # limitations under the License.
 #
 
-import sys
 import pytest
 import numpy as np
 from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+from model.models_information import Resnet
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
-
 from utils.models_utils import ModelVersionState, ErrorCode, \
     _ERROR_MESSAGE  # noqa
 
@@ -53,16 +52,14 @@ class TestSingleModelInferenceS3():
         _, ports = start_server_single_model_from_minio
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
-        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
 
-        imgs_v1_224 = np.ones((1, 3, 224, 224))
-        out_name = 'softmax_tensor'
-        output = infer(imgs_v1_224, input_tensor=in_tensor, grpc_stub=stub,
-                       model_spec_name='resnet',
+        imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
+        output = infer(imgs_v1_224, input_tensor=Resnet.input_name, grpc_stub=stub,
+                       model_spec_name=Resnet.name,
                        model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
+                       output_tensors=[Resnet.output_name])
+        print("output shape", output[Resnet.output_name].shape)
+        assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, start_server_single_model_from_minio,
@@ -72,20 +69,14 @@ class TestSingleModelInferenceS3():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        model_name = 'resnet'
-        out_name = 'softmax_tensor'
-        in_tensor = 'map/TensorArrayStack/TensorArrayGatherV3'
-
-        expected_input_metadata = {in_tensor: {'dtype': 1,
-                                               'shape': [1, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [1, 1001]}}
-        request = get_model_metadata(model_name='resnet')
+        expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         print(output_metadata)
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
@@ -94,9 +85,8 @@ class TestSingleModelInferenceS3():
                               create_grpc_channel):
 
         _, ports = start_server_single_model_from_minio
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   MODEL_SERVICE)
-        request = get_model_status(model_name='resnet')
+        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]), MODEL_SERVICE)
+        request = get_model_status(model_name=Resnet.name)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
