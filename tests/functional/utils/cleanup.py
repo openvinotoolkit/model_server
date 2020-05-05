@@ -30,6 +30,7 @@ def clean_hanging_docker_resources():
     tests_suffix = get_tests_suffix()
     clean_hanging_containers(containers, tests_suffix)
     clean_hanging_networks(networks, tests_suffix)
+    client.close()
 
 
 def clean_hanging_containers(containers, tests_suffix):

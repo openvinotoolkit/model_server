@@ -3,6 +3,6 @@ cpplint==1.4.5
 docker==3.7.0
 grpcio==1.24.3
 numpy==1.18.2
-pytest==3.7.2
+pytest==5.3.5
 pytest-json==0.4.0
 tensorflow-serving-api==1.15.0
