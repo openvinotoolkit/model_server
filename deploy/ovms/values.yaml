@@ -1,6 +1,6 @@
 replicas: 1
 
-config_mode: false
+config_configmap_name: ""
 
 model_name: ""
 model_path: ""

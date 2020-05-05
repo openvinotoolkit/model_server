@@ -84,7 +84,21 @@ $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://m
 ```
 
 
-## Deploy the Model Server
+## Deploy the Model Server with configuration file
+
+To serve multiple models you can run the Model Server with configuration file as described in:
+https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files
+
+To deploy server with config file:
+* create a configuration file named _config.json_ and fill it with proper configuration
+* create a configmap from this file with a chosen name (here _ovms-config_):
+      
+      $ kubectl create configmap ovms-config --from-file config.json
+
+* deploy OpenVINO Model Server setting parameter `config_configmap_name` (without `model_name` and `model_path`):
+
+      $ helm install ovms ovms --set config_configmap_name=ovms-config
+
 
 ## Using OpenVINO Model Server
 
@@ -100,7 +114,7 @@ openvino-model-server   LoadBalancer   10.121.14.253   1.2.3.4         8080:3004
 
 The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
 
-Follow the instructions here: https://github.com/IntelAI/OpenVINO-model-server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files 
+Follow the instructions here: https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files 
 to get the example image classification client that can be used to perform inferencing using 
 image classification models being served by the server. For example:
 

@@ -50,7 +50,7 @@ spec:
         {{ end }}
         command: ["/ie-serving-py/start_server.sh"]
         args: ["ie_serving",
-        {{ if .Values.config_mode }}
+        {{ if .Values.config_configmap_name }}
                "config",
                "--config_path", "/config/config.json",
         {{ else }}
@@ -68,12 +68,12 @@ spec:
           mountPath: "/secret"
           readOnly: true
         {{ end }}
-        {{ if .Values.config_mode }}
+        {{ if .Values.config_configmap_name }}
         - name: config
           mountPath: "/config"
           readOnly: true
         {{ end }}
-      {{ if or .Values.gcp_creds_secret_name .Values.config_mode }}
+      {{ if or .Values.gcp_creds_secret_name .Values.config_configmap_name }}
       volumes:
       {{ end }}
       {{ if .Values.gcp_creds_secret_name }}
@@ -81,8 +81,8 @@ spec:
         secret:
           secretName: gcpcreds
       {{ end }}
-      {{ if .Values.config_mode }}
+      {{ if .Values.config_configmap_name }}
       - name: config
         configMap:
-          name: ovms
+          name: {{ .Values.config_configmap_name }}
       {{ end }}
