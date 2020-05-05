@@ -16,11 +16,10 @@
 
 import os
 
-import docker
-import grpc
+import grpc  # noqa
 import pytest
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from utils.cleanup import clean_hanging_docker_resources
+from utils.cleanup import clean_hanging_docker_resources, get_docker_client
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 
@@ -40,7 +39,7 @@ pytest_plugins = [
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--image", action="store", default="cpp-experiments:latest",
+        "--image", action="store", default="ovms:latest",
         help="docker image name which should be used to run tests"
     )
     parser.addoption(
@@ -61,8 +60,10 @@ def get_test_dir(request):
 
 
 @pytest.fixture(scope="session")
-def get_docker_context():
-    return docker.from_env()
+def get_docker_context(request):
+    client = get_docker_client()
+    request.addfinalizer(client.close)
+    return client
 
 
 @pytest.fixture()
