@@ -83,7 +83,7 @@ class SingleClassification:
             "tag": self.tag.as_dict(),
         }
         if self.attributes is not None:
-            result_dict[attributes] = [attribute.as_dict() for attribute in self.attributes]
+            result_dict["attributes"] = [attribute.as_dict() for attribute in self.attributes]
         return result_dict
 
 class Classification(ResultType):

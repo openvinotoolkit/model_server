@@ -18,13 +18,13 @@ import sys
 import json
 from logger import get_logger
 from api.models.model import Model
-from api.types import Tag, Rectangle, SingleEntity, Entity
+from api.types import Tag, Attribute, SingleClassification, Classification
 
 logger = get_logger(__name__)
 
 
 
-class VehicleDetectionAdas(Model):
+class VehicleAttributes(Model):
 
     def load_default_labels(self):
         labels_path = os.path.abspath(__file__).replace(".py",".json")
@@ -40,41 +40,35 @@ class VehicleDetectionAdas(Model):
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
-        result_array = inference_output["detection_out"]
+        # model with output shape for color (1,7,1,1) 
+        # with second dimension containing colors
+        # [white, gray, yellow, red, green, blue, black]
+        # model with output shape for type (1,4,1,1) 
+        # with second dimension containing types
+        # [car, bus, truck, van]
+        outputs = self.labels["outputs"] 
 
-        # model with output shape (1,1,200,7) 
-        # with last dimension containg detection details
-        detections = []
-        for detection in result_array[0][0]:
-            label = str(detection[1].item())
-            # End of detections
-            if label == "0.0":
-                break
+        classifications = []
+        for output in outputs:
+            type_name = output["output_name"]
+            attributes = []
+            highest_prob = 0.0
+            for position in output["classes"].keys():
+                class_name = output["classes"][position]
+                probability = inference_output[type_name][0,int(float(position)),0,0].item()
+                if probability > highest_prob:
+                    tag_name = class_name 
+                    highest_prob = probability
+                attribute = Attribute(type_name, class_name, probability)
+                attributes.append(attribute)
 
-            if not label in self.labels:
-                raise ValueError("label not found in labels definition")
-            else:
-                label_value = self.labels[label]
 
-            image_id = detection[0].item()
-            conf = detection[2].item()
-            x_min = detection[3].item()
-            y_min = detection[4].item()
-            x_max = detection[5].item()
-            y_max = detection[6].item()
+            tag = Tag(tag_name, highest_prob)
+            classification = SingleClassification(tag, attributes)
+            classifications.append(classification)
 
-            tag = Tag(label_value, conf)
+        model_classification = Classification(subtype_name=self.model_name, classifications=classifications)
 
-            box = Rectangle(x_min, y_min, abs(x_max-x_min), abs(y_max-y_min))
-
-            detection = SingleEntity(tag, box)
-            detections.append(detection)
-        
-        entity = Entity(subtype_name=self.model_name, entities=detections)
-
-        if len(detections) == 0:
-            response = None
-        else:
-            response = json.dumps(entity.as_dict())
+        response = json.dumps(model_classification.as_dict())
 
         return response

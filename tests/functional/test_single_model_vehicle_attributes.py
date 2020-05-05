@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2018-2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,7 +180,7 @@ class TestVehicleAttributes():
         assert color_index == expected_color_index
 
 
-    def test_run_inference_posprocess(self, vehicle_attributes_model_downloader,
+    def test_run_inference_postprocess(self, vehicle_attributes_model_downloader,
                            vehicle_attributes_data_downloader,
                            start_server_single_vehicle_attrib_model,
                            create_grpc_channel):
@@ -207,7 +206,7 @@ class TestVehicleAttributes():
 
         img_files = os.listdir(imgs_path)
         imgs = np.zeros((0,3,72,72), np.dtype('<f'))
-        input_img = self.load_image(os.path.join(imgs_path,"005405_001.png"), 72, 72)
+        input_img = self.load_image(os.path.join(imgs_path,"021471_004.png"), 72, 72)
         imgs = np.append(imgs, input_img, axis=0)
         
         batch_size = 1
@@ -216,29 +215,28 @@ class TestVehicleAttributes():
                                    PREDICTION_SERVICE)
 
         in_name = 'input'
-        out_name = 'detection_out'
-        output = infer(imgs, input_tensor=in_name, grpc_stub=stub,
+        out_color = 'color'
+        out_type = 'type'
+        output = infer(input_img, input_tensor=in_name, grpc_stub=stub,
                        model_spec_name='vehicle-attributes',
                        model_spec_version=None,
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
+                       output_tensors=[out_color, out_type])
         
         os.chdir("extras/ams_wrapper/src/")
 
         from api.models.vehicle_attributes_model import VehicleAttributes
 
-        model_adas = VehicleAttibutes("ovms_connector")
-        model_adas.load_default_labels()
-        model_adas.model_name = "vehicle-attributes"
+        model_attrib = VehicleAttributes("ovms_connector")
+        model_attrib.load_default_labels()
+        model_attrib.model_name = "vehicle-attributes"
 
-        json_response = model_adas.postprocess_inference_output(output)
+        json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
        
-        boxes_count = str(json_response).count("box")
+        class_count = str(json_response).count("tag")
         
-        print("detected boxes:" + str(boxes_count))
-        assert boxes_count == 19
+        print("detected types:" + str(class_count))
+        assert class_count == 2
  
         try: 
             format_check = json.loads(json_response)
@@ -249,3 +247,10 @@ class TestVehicleAttributes():
         print("format_check:" + str(format_check))
         assert format_check["subtype"] == "vehicle-attributes"
 
+        fst_highest_prob_class = format_check["classifications"][0]["tag"]["value"]
+        print("fst_highest_prob_class:" + fst_highest_prob_class)
+        assert fst_highest_prob_class == "red"
+
+        snd_highest_prob_class = format_check["classifications"][1]["tag"]["value"]
+        print("snd_highest_prob_class:" + snd_highest_prob_class)
+        assert snd_highest_prob_class == "truck"
