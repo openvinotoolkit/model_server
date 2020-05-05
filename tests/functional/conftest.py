@@ -46,6 +46,10 @@ def pytest_addoption(parser):
         "--test_dir", action="store", default="/tmp/ovms_models",
         help="location where models and test data should be downloaded"
     )
+    parser.addoption(
+        "--start_container_command", action="store", default="",
+        help="command to start ovms container"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -64,6 +68,11 @@ def get_docker_context(request):
     client = get_docker_client()
     request.addfinalizer(client.close)
     return client
+
+
+@pytest.fixture(scope="session")
+def get_start_container_command(request):
+    return request.config.getoption("--start_container_command")
 
 
 @pytest.fixture()

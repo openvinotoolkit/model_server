@@ -7,4 +7,4 @@ bazel-bin
 bazel-out
 bazel-ovms-c
 bazel-testlogs
-
+__pycache__
