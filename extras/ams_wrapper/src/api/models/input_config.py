@@ -20,7 +20,7 @@ from marshmallow import Schema, fields, validates_schema, ValidationError, post_
 class ModelInputConfiguration:
     def __init__(self, input_name: str, channels: int = None,
                  target_height: int = None, target_width: int = None,
-                 color_format: str = 'RGB', scale: float = None,
+                 color_format: str = 'BGR', scale: float = None,
                  standardization: bool = False, input_format: str = 'NCHW'):
                  self.input_name = input_name
                  self.channels = channels
