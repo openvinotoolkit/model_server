@@ -20,19 +20,21 @@ from https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/m
 OpenVINO Model Server needs models that it will make available for inferencing. For example you can 
 use Google Cloud Storage bucket:
 ```shell script
-gsutil mb gs://model-repository
+$ gsutil mb gs://model-repository
 ```
 
 You can download the model from the link provided above nad upload it to GCS:
 ```shell script
-gsutil cp -r 1 gs://model-repository/1
+$ gsutil cp -r 1 gs://model-repository/1
 ```
 
 ## Bucket permissions
 
 Make sure the bucket permissions are set so that the server can access the model repository. If the bucket 
-is public or you are going to run Model Server on the same GCP account as storage then no additional changes 
+is public or you are going to run Model Server on the same GCP or AWS account as storage then no additional changes 
 are needed and you can proceed to _Deploy the Model Server_ section.
+
+### GCS
 
 If bucket permissions need to be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable then perform the 
 following steps:
@@ -45,29 +47,26 @@ https://cloud.google.com/docs/authentication/getting-started#creating_a_service_
 
       $ kubectl create secret generic gcpcreds --from-file gcp-creds.json
 
-* Modify templates/deployment.yaml to include the GOOGLE_APPLICATION_CREDENTIALS environment variable:
-      
-      env:
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: /secret/gcp-creds.json
+* Deploy the server providing model path to GCS and providing name for secret created above. The key thing here is
+to provide `gcp_creds_secret_name` when deploying OVMS:
 
-* Modify templates/deployment.yaml to mount the secret in a volume at /secret:
+```shell script
+$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
+```
 
-      volumeMounts:
-        - name: gcpcreds
-          mountPath: "/secret"
-          readOnly: true
-      ...
-      volumes:
-      - name: gcpcreds
-        secret:
-          secretName: gcpcreds
-          
+### S3
+
+For S3 you need to provide AWS Access Key ID, the content of that key (AWS Secret Access Key) and the region. You need 
+to provide: `aws_access_key_id`, `aws_secret_access_key` and `aws_region`:
+```shell script
+$ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
+```
+    
 ## Deploy the Model Server
 
 Deploy the Model Server using _helm_ . Please provide also required model name and model path:
 ```shell script
-helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
+$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
 Use _kubectl_ to see status and wait until the model server pod is running:
@@ -81,8 +80,11 @@ By default the OVMS deploys with 1 instance. If you would like to scale it, you 
 file or by passing _--set_ flag to _helm install_:
 
 ```shell script
-helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
+$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
+
+
+## Deploy the Model Server
 
 ## Using OpenVINO Model Server
 
@@ -103,7 +105,7 @@ to get the example image classification client that can be used to perform infer
 image classification models being served by the server. For example:
 
 ```shell script
-python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
+$ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
 	Model name: resnet
 	Images list file: input_images.txt
 
@@ -154,6 +156,13 @@ release "ovms" uninstalled
 ```
 
 You may also want to delete the GCS bucket you created to hold the model repository:
+
+GCS:
 ```shell script
 $ gsutil rm -r gs://model-repository
+```
+
+S3:
+```shell script
+$ aws s3 rb s3://models-repository
 ```
