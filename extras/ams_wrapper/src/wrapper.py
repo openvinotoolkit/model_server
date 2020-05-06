@@ -15,6 +15,8 @@
 #
 
 import argparse
+from pathlib import Path
+
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 from src.api.dispatcher import create_dispatcher
 from src.config import AVAILABLE_MODELS
@@ -32,6 +34,14 @@ def start_rest_service(port, num_threads, ovms_port):
     except KeyboardInterrupt:
         server.stop()
 
+
+def load_models(models_directory: str):
+    models_path = Path(models_directory)
+
+    for model_dir in (d for d in models_path.iterdir() if d.is_dir()):
+        config_file = model_dir.joinpath('model_config.json')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, help='AMS service listening port',
@@ -40,6 +50,8 @@ def main():
                           required=False, default=1)
     parser.add_argument('--ovms_port', type=int, help='OpenVINO Model Server port',
                           required=False, default=9000)
+    parser.add_argument('--models_directory', type=int, help='Directory in which models are stored',
+                          required=False, default='/opt/models')
     args = parser.parse_args()
     start_rest_service(args.port, args.workers, args.ovms_port)
 

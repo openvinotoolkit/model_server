@@ -29,10 +29,6 @@ def test_model_config():
         "outputs": [
             {
                 "output_name": "prob",
-                "classes": {
-                    "0.0": "female",
-                    "1.0": "male"
-                    }
             },
             {
                 "output_name": "age_conv3"
@@ -104,7 +100,48 @@ def test_model_load_invalid_input_config(tmpdir, test_model_config,
         Model.load_input_configs(config_file_path)
 
 
-def test_model_load_non_existing_input_config():
+def test_model_load_non_existing_config():
     with pytest.raises(ValueError):
-        Model.load_input_configs('/not-existing-path')
+        Model.load_model_config('/not-existing-path')
 
+
+@pytest.mark.parametrize("output_name", ["prob"])
+@pytest.mark.parametrize("value_index_mapping", [None, {"male": 0.0, "female": 1.0}, {"male": 1, "female": 1}])
+@pytest.mark.parametrize("classes", [None, {"red": 0.0, "green": 1.0}])
+def test_model_load_valid_output_config(tmpdir, test_model_config,
+                                       output_name, value_index_mapping,
+                                       classes):
+    for param, param_value in [('output_name', output_name),
+                                ('value_index_mapping', value_index_mapping),
+                                ('classes', classes)]:
+        if param_value is not None:
+            test_model_config['inputs'][0][param] = param_value
+
+    config_file_path = tmpdir.join("model_config.json")
+    with open(config_file_path, mode='w') as config_file:
+        json.dump(test_model_config, config_file)
+
+    Model.load_output_configs(config_file_path)
+
+@pytest.mark.parametrize("output_name", ["prob"])
+@pytest.mark.parametrize("value_index_mapping", [{"male": '0.0', "female": '1.0'}, {}])
+@pytest.mark.parametrize("classes", [{}, {1: 'green', 0: 'red'}])
+@pytest.mark.parametrize("confidence_threshold", ['zero', 120])
+@pytest.mark.parametrize("top_k_results", ['zero', -1])
+def test_model_load_invalid_output_config(tmpdir, test_model_config,
+                                         output_name, value_index_mapping,
+                                         classes, confidence_threshold, top_k_results):
+    for param, param_value in [('output_name', output_name),
+                                ('value_index_mapping', value_index_mapping),
+                                ('classes', classes),
+                                ('confidence_threshold', confidence_threshold),
+                                ('top_k_results', top_k_results)]:
+        if param_value is not None:
+            test_model_config['inputs'][0][param] = param_value
+
+    config_file_path = tmpdir.join("model_config.json")
+    with open(config_file_path, mode='w') as config_file:
+        json.dump(test_model_config, config_file)
+
+    with pytest.raises(ValidationError):
+        Model.load_output_configs(config_file_path)

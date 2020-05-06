@@ -58,3 +58,29 @@ class ModelInputConfigurationSchema(Schema):
         if data.get('target_height') and not data.get('target_width'):
             raise ValidationError('target_width must defined if target_height was set. '
                                   'Invalid config: {}'.format(data))
+
+
+class ModelOutputConfiguration:
+    def __init__(self, output_name: str, value_index_mapping: dict = None,
+                 classes: dict = None,
+                 confidence_threshold: float = None, top_k_results: int = None):
+                 self.output_name = output_name
+                 self.value_index_mapping = value_index_mapping
+                 self.classes = classes
+                 self.confidence_threshold = confidence_threshold
+                 self.top_k_results = top_k_results
+    
+    def as_dict(self) -> dict:
+        return vars(self)
+
+
+class ModelOutputConfigurationSchema(Schema):
+    output_name = fields.String(required=True)
+    value_index_mapping = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
+    classes = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
+    confidence_threshold = fields.Float(required=False, validate=validate.Range(min=0, max=1))
+    top_k_results = fields.Integer(required=False, validate=validate.Range(min=0, min_inclusive=False))
+
+    @post_load
+    def make_model_output_configuration(self, data, **kwargs):
+        return ModelOutputConfiguration(**data)

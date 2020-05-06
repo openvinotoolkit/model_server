@@ -29,7 +29,8 @@ from src.logger import get_logger
 from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
 from src.api.models.input_config import ModelInputConfiguration, \
-    ModelInputConfigurationSchema, ValidationError
+    ModelInputConfigurationSchema, ValidationError, ModelOutputConfiguration, \
+    ModelOutputConfigurationSchema
 
 logger = get_logger(__name__)
 
@@ -40,9 +41,11 @@ class Model(ABC):
         self.ovms_connector = ovms_connector
         self.model_name = model_name
         self.labels = self.load_labels(labels_path)
-        self.input_configs: Dict[str, ModelInputConfiguration] = None # load input configuration
+        self.input_configs: Dict[str, ModelInputConfiguration] = None
+        self.output_configs: Dict[str, ModelOutputConfiguration] = None
         if config_file_path:
             self.input_configs = self.load_input_configs(config_file_path)
+            self.output_configs = self.load_output_configs(config_file_path)
 
     def load_labels(self, labels_path):
         try:                                                                          
@@ -152,16 +155,14 @@ class Model(ABC):
         return
 
     @staticmethod
-    def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
+    def load_model_config(config_file_path: str) -> dict:
         """
         :raises ValueError: when loading of configuration file fails
-        :raises marshmallow.ValidationError: if input configuration has invalid schema
-        :returns: a dictionary where key is the input name and value
-                 is ModelInputConfiguration for given input
         """
         try:
             with open(config_file_path, mode='r') as config_file:
                 config = json.load(config_file)
+                return config
         except FileNotFoundError as e:
             # TODO: think what exactly should we do in this case
             logger.exception('Model\'s configuration file {} was not found.'.format(config_file_path))
@@ -169,6 +170,16 @@ class Model(ABC):
         except Exception as e:
             logger.exception('Failed to load Model\'s configuration file {}.'.format(config_file_path))
             raise ValueError from e
+
+    @staticmethod
+    def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
+        """
+        :raises ValueError: when loading of configuration file fails
+        :raises marshmallow.ValidationError: if input configuration has invalid schema
+        :returns: a dictionary where key is the input name and value
+                 is ModelInputConfiguration for given input
+        """
+        config = Model.load_model_config(config_file_path)
         
         model_input_configs = {}
         input_config_schema = ModelInputConfigurationSchema()
@@ -183,5 +194,30 @@ class Model(ABC):
             model_input_configs[input_config.input_name] = input_config
         
         return model_input_configs
+    
+    @staticmethod
+    def load_output_configs(config_file_path: str) -> Dict[str, ModelOutputConfiguration]:
+        """
+        :raises ValueError: when loading of configuration file fails
+        :raises marshmallow.ValidationError: if output configuration has invalid schema
+        :returns: a dictionary where key is the output name and value
+                 is ModelOutputConfiguration for given output
+        """
+        config = Model.load_model_config(config_file_path)
+        
+        model_output_configs = {}
+        output_config_schema = ModelOutputConfigurationSchema()
+        
+        for output_config_dict in config.get('outputs'):
+            try:
+                output_config = output_config_schema.load(output_config_dict)
+            except ValidationError:
+                logger.exception('Model output configuration is invalid: {}'.format(output_config_dict))
+                raise
+
+            model_output_configs[output_config.output_name] = output_config
+        
+        return model_output_configs
+
 
         
