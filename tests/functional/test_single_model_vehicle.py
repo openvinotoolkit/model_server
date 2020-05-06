@@ -182,6 +182,8 @@ class TestVehicleDetection():
 
         model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../ams_models/vehicle_detection_adas_model.json" )
 
+        os.chdir("../../../")
+
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
        

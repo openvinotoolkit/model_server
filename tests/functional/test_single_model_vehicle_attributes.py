@@ -228,6 +228,8 @@ class TestVehicleAttributes():
 
         model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector","../../ams_models/vehicle_attributes_model.json")
 
+        os.chdir("../../../")
+
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
        
