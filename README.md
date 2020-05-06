@@ -10,7 +10,7 @@ A few key features:
 - Deploy new [model versions](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-version-policy) without changing client code.
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj). The server can be enabled both on [Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or in
 [Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
-- [Kubernetes deployments](example_k8s). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
+- [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Sagemaker integration](example_sagemaker). The server supports using AWS SageMaker containers for serving inferece execution.  
 - Supports [multi-worker configuration](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multi-worker-configuration) and [parallel inference execution](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multiple-model-server-instances).
 - [Model reshaping](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-reshaping). The server supports reshaphing models in runtime. 
@@ -72,7 +72,7 @@ and [RESTful API](example_client/#rest-api-client-to-predict-function) with nump
 - [Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
 - [Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
 - [Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
-- [Jupyter notebook - kubernetes demo](example_k8s/OVMS_demo.ipynb)
+- [Deploy with Kubernetes](deploy)
 - [Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
 ## References
