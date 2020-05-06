@@ -1,0 +1,24 @@
+{
+    "model_name": "vehicle-detection-adas-0002",
+    "outputs": [
+        {
+            "output_name": "detection_out",
+            "classes": {
+                "0.0": "background",
+                "1.0": "vehicle"
+            },
+            "entity": {
+                "tag": {
+                    "value": 1,
+                    "confidence": 2
+                },
+                "box": {
+                    "x_min": 3,
+                    "y_min": 4,
+                    "x_max": 5,
+                    "y_max": 6
+                }
+            }
+        }
+    ]
+}

@@ -14,21 +14,22 @@
 # limitations under the License.
 #
 
-from api.models.example_model import ExampleModel
+import os
+from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
 from api.ovms_connector import OvmsConnector
 
 # Default version for a model is the latest one
 DEFAULT_VERSION = 0 
 
 AVAILABLE_MODELS = [
-    {"name": "model", 
-    "class": ExampleModel, 
+    {"name": "vehicleDetection", 
+    "class": VehicleDetectionAdas, 
     "ovms_mapping": {
-        "model_name": "model",
+        "model_name": "vehicle_detection_adas",
         "model_version": DEFAULT_VERSION,
-        "input_name": "input",
-        "output_name": "output",
-        "input_shape": (1, 3, 200, 200) 
-        }
+        "input_name": "data",
+        "output_name": "detection_out",
+        },
+    "labels_path": "/opt/ams_models/vehicle_detection_adas_model.json"
     },
 ]

@@ -45,12 +45,13 @@ COPY start_server.sh setup.py version requirements.txt /ie-serving-py/
 RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 install --no-cache-dir -r requirements.txt
 
 COPY ie_serving /ie-serving-py/ie_serving
-
-RUN . .venv/bin/activate && pip3 install .
-
-# Assuming required models and config are available locally during the build
-COPY extras/models /opt/models 
-
-WORKDIR /ams_wrapper
 COPY extras/ams_wrapper /ams_wrapper
-RUN chmod +x start_ams.sh
+
+RUN . .venv/bin/activate && pip3 install . && pip3 install --no-cache-dir -r /ams_wrapper/requirements.txt && \
+    chmod +x /ams_wrapper/start_ams.sh
+
+COPY extras/ams_models /opt/ams_models
+
+RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_detection_adas/1 && \
+    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.bin && \
+    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.xml
