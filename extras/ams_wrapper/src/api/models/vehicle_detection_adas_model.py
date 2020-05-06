@@ -22,7 +22,6 @@ from api.types import Tag, Rectangle, SingleEntity, Entity
 logger = get_logger(__name__)
 
 
-
 class VehicleDetectionAdas(Model):                                                                  
 
     def postprocess_inference_output(self, inference_output: dict) -> str:

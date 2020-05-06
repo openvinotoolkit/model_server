@@ -23,20 +23,7 @@ from api.types import Tag, Attribute, SingleClassification, Classification
 logger = get_logger(__name__)
 
 
-
 class VehicleAttributes(Model):
-
-    def load_default_labels(self):
-        labels_path = os.path.abspath(__file__).replace(".py",".json")
-        try:                                                                          
-            with open(labels_path, 'r') as labels_file:                               
-                data = json.load(labels_file)                                         
-                self.labels = data
-        except Exception as e:                                                        
-            logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)                                                               
-        return                                                                   
-
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 

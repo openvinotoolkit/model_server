@@ -34,7 +34,6 @@ class TestVehicleAttributes():
 
     def load_image(self, file_path, width, height):
         img = cv2.imread(file_path)  # BGR color format, shape HWC
-        #img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img = cv2.resize(img, (width, height))
         img = img.transpose(2,0,1).reshape(1,3,height,width)
         # change shape to NCHW
