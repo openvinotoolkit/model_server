@@ -15,13 +15,29 @@
 #
 import pytest
 import numpy as np
+import json
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
-from model.models_information import ResnetBS4, ResnetBS8
+from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import infer, get_model_metadata, model_metadata_response
 from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
-class TestBatchModelInference():
+class TestBatchModelInference:
+
+    @pytest.fixture()
+    def mapping_names(self):
+        with open("mapping_config.json", 'r') as f:
+            json_string = f.read()
+            try:
+                json_dict = json.loads(json_string)
+                return json_dict
+            except ValueError as e:
+                print("Error while loading json: {}".format(json_string))
+                raise e
+
+        in_name = list(json_dict["inputs"].keys())[0]
+        out_names = list(json_dict["outputs"].keys())
+        return in_name, out_names, json_dict["outputs"]
 
     def test_run_inference(self, resnet_multiple_batch_sizes,
                            start_server_batch_model,
@@ -89,7 +105,7 @@ class TestBatchModelInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        for batch_size in [1,6]:
+        for batch_size in [1, 6]:
             batch_input = np.ones((batch_size,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
             output = infer(batch_input, input_tensor=ResnetBS8.input_name,
                            grpc_stub=stub, model_spec_name=ResnetBS8.name,
@@ -126,7 +142,7 @@ class TestBatchModelInference():
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
     def test_run_inference_rest(self, age_gender_model_downloader,
-                                start_server_batch_model_2out, request_format):
+                                start_server_batch_model_2out, mapping_names, request_format):
         """
             <b>Description</b>
             Submit request to REST API interface serving
@@ -148,25 +164,25 @@ class TestBatchModelInference():
 
         _, ports = start_server_batch_model_2out
         print("Downloaded model files:", age_gender_model_downloader)
+        in_name, out_names, out_mapping = mapping_names
 
-        batch_input = np.ones((1, 3, 62, 62))
-        in_name = 'data'
-        out_names = ['age_conv3', 'prob']
+        batch_input = np.ones(AgeGender.input_shape, AgeGender.dtype)
         rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
                    ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
                             request_format=request_format)
-        assert output[out_names[0]].shape == (1, 1, 1, 1), ERROR_SHAPE
-        assert output[out_names[1]].shape == (1, 2, 1, 1), ERROR_SHAPE
+        for output_names in out_names:
+            assert output[output_names].shape == AgeGender.output_shape[out_mapping[out_names]], ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
-                             [('row_name'), ('row_noname'),
-                              ('column_name'), ('column_noname')])
+                             ['row_name', 'row_noname',
+                              'column_name', 'column_noname'])
     def test_run_inference_bs4_rest(self, age_gender_model_downloader,
                                     start_server_batch_model_auto_bs4_2out,
+                                    mapping_names,
                                     request_format):
         """
             <b>Description</b>
@@ -190,25 +206,27 @@ class TestBatchModelInference():
         _, ports = start_server_batch_model_auto_bs4_2out
         print("Downloaded model files:", age_gender_model_downloader)
 
-        batch_input = np.ones((4, 3, 62, 62))
-        in_name = 'data'
-        out_names = ['age_conv3', 'prob']
+        in_name, out_names, out_mapping = mapping_names
+
+        batch_size = 4
+        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
         rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
                    ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
                             request_format=request_format)
-        assert output[out_names[0]].shape == (4, 1, 1, 1), ERROR_SHAPE
-        assert output[out_names[1]].shape == (4, 2, 1, 1), ERROR_SHAPE
+        for output_names in out_names:
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
-                             [('row_name'), ('row_noname'),
-                              ('column_name'), ('column_noname')])
-
+                             ['row_name', 'row_noname',
+                              'column_name', 'column_noname'])
     def test_run_inference_rest_auto(self, age_gender_model_downloader,
                                      start_server_batch_model_auto_2out,
+                                     mapping_names,
                                      request_format):
         """
             <b>Description</b>
@@ -230,25 +248,29 @@ class TestBatchModelInference():
 
         _, ports = start_server_batch_model_auto_2out
         print("Downloaded model files:", age_gender_model_downloader)
-        batch_input = np.ones((6, 3, 62, 62))
-        in_name = 'data'
-        out_names = ['age_conv3', 'prob']
+        in_name, out_names, out_mapping = mapping_names
+
+        batch_size = 6
+        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
         rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
                    ports["rest_port"])
         output = infer_rest(batch_input,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=out_names,
                             request_format=request_format)
-        assert output[out_names[0]].shape == (6, 1, 1, 1), ERROR_SHAPE
-        assert output[out_names[1]].shape == (6, 2, 1, 1), ERROR_SHAPE
+        for output_names in out_names:
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
-        batch_input = np.ones((3, 3, 62, 62))
+        batch_size = 3
+        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
                             request_format=request_format)
-        assert output[out_names[0]].shape == (3, 1, 1, 1), ERROR_SHAPE
-        assert output[out_names[1]].shape == (3, 2, 1, 1), ERROR_SHAPE
+        for output_names in out_names:
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
