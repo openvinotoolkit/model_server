@@ -17,11 +17,12 @@
 import numpy as np
 import pytest
 from constants import PREDICTION_SERVICE, ERROR_SHAPE
+from model.models_information import AgeGender
 from utils.grpc import infer, get_model_metadata, model_metadata_response
 from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
-class TestSingleModelMappingInference():
+class TestSingleModelMappingInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, age_gender_model_downloader,
@@ -51,16 +52,15 @@ class TestSingleModelMappingInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_224 = np.ones((1, 3, 62, 62))
+        imgs_v1_224 = np.ones(AgeGender.input_shape, AgeGender.dtype)
 
-        output = infer(imgs_v1_224, input_tensor='new_key', grpc_stub=stub,
-                       model_spec_name='age_gender',
+        output = infer(imgs_v1_224, input_tensor=AgeGender.input_name, grpc_stub=stub,
+                       model_spec_name=AgeGender.name,
                        model_spec_version=None,
-                       output_tensors=['age', 'gender'])
-        print("output shape", output['age'].shape)
-        print("output shape", output['gender'].shape)
-        assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
-        assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
+                       output_tensors=AgeGender.output_name)
+        for output_name, shape in AgeGender.output_shape.items():
+            print("output shape", output[output_name].shape)
+            assert output[output_name].shape == shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, age_gender_model_downloader,
@@ -73,27 +73,24 @@ class TestSingleModelMappingInference():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        model_name = 'age_gender'
-        expected_input_metadata = {'new_key': {'dtype': 1,
-                                               'shape': [1, 3, 62, 62]}}
-        expected_output_metadata = {'age': {'dtype': 1,
-                                            'shape': [1, 1, 1, 1]},
-                                    'gender': {'dtype': 1,
-                                               'shape': [1, 2, 1, 1]}}
-        request = get_model_metadata(model_name=model_name)
+        expected_input_metadata = {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}
+        expected_output_metadata = {}
+        for output_name, shape in AgeGender.output_shape.items():
+            expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
+        request = get_model_metadata(model_name=AgeGender.name)
         response = stub.GetModelMetadata(request, 10)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == AgeGender.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
-                             [('row_name'), ('row_noname'),
-                              ('column_name'), ('column_noname')])
+                             ['row_name', 'row_noname',
+                              'column_name', 'column_noname'])
     def test_run_inference_rest(self, age_gender_model_downloader,
                                 start_server_with_mapping, request_format):
         """
@@ -116,18 +113,17 @@ class TestSingleModelMappingInference():
         _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
-        imgs_v1_224 = np.ones((1, 3, 62, 62))
+        imgs_v1_224 = np.ones(AgeGender.input_shape, AgeGender.dtype)
         rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
                    ports["rest_port"])
-        output = infer_rest(imgs_v1_224, input_tensor='new_key',
+        output = infer_rest(imgs_v1_224, input_tensor=AgeGender.input_name,
                             rest_url=rest_url,
-                            output_tensors=['age', 'gender'],
+                            output_tensors=AgeGender.output_name,
                             request_format=request_format)
-        print("output shape", output['age'].shape)
-        print("output shape", output['gender'].shape)
         print(output)
-        assert output['age'].shape == (1, 1, 1, 1), ERROR_SHAPE
-        assert output['gender'].shape == (1, 2, 1, 1), ERROR_SHAPE
+        for output_name, shape in AgeGender.output_shape.items():
+            print("output shape", output[output_name].shape)
+            assert output[output_name].shape == shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, age_gender_model_downloader,
@@ -136,20 +132,16 @@ class TestSingleModelMappingInference():
         _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
-        model_name = 'age_gender'
-        expected_input_metadata = {'new_key': {'dtype': 1,
-                                               'shape': [1, 3, 62, 62]}}
-        expected_output_metadata = {'age': {'dtype': 1,
-                                            'shape': [1, 1, 1, 1]},
-                                    'gender': {'dtype': 1,
-                                               'shape': [1, 2, 1, 1]}}
+        expected_input_metadata = {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}
+        expected_output_metadata = {}
+        for output_name, shape in AgeGender.output_shape.items():
+            expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
         rest_url = 'http://localhost:{}/v1/models/age_gender/metadata'.format(
                    ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
-        input_metadata, output_metadata = model_metadata_response(
-            response=response)
+        input_metadata, output_metadata = model_metadata_response(response=response)
 
-        assert model_name == response.model_spec.name
+        assert response.model_spec.name == AgeGender.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata

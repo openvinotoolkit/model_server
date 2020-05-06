@@ -17,6 +17,17 @@
 import numpy as np
 
 
+class AgeGender:
+    name = "age_gender"
+    dtype = np.float32
+    input_name = "new_key"
+    input_shape = (1, 3, 62, 62)
+    output_name = ['age', 'gender']
+    output_shape = {'age': (1, 1, 1, 1),
+                    'gender': (1, 2, 1, 1)}
+    rest_request_format = 'column_name'
+
+
 class Resnet:
     name = "resnet"
     dtype = np.float32
