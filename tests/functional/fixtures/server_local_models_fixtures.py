@@ -65,10 +65,9 @@ def start_server_single_model(request, get_image, get_test_dir,
 @pytest.fixture(scope="class")
 def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
                               vehicle_attributes_model_downloader,
-                              get_docker_context, copy_ams_model_configs):
+                              get_docker_context):
 
     print("Downloaded model files:", vehicle_attributes_model_downloader)
-    print("Models config files:", copy_ams_model_configs)
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',

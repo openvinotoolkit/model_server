@@ -137,7 +137,7 @@ class TestVehicleDetection():
     def test_run_inference_posprocess(self, vehicle_adas_model_downloader,
                            vehicle_adas_data_downloader,
                            start_server_single_vehicle_model,
-                           create_grpc_channel, copy_ams_model_configs):
+                           create_grpc_channel):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single vehicle model
@@ -154,7 +154,6 @@ class TestVehicleDetection():
         - response contains proper numpy shape
 
         """
-        print("Models config files:", copy_ams_model_configs)
         _, ports = start_server_single_vehicle_model
         imgs_path =  os.path.join(vehicle_adas_data_downloader, "data", "annotation_val_images")
 
@@ -181,7 +180,7 @@ class TestVehicleDetection():
 
         from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
 
-        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","/opt/ams_models/vehicle_detection_adas_model.json" )
+        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../ams_models/vehicle_detection_adas_model.json" )
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))

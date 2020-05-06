@@ -27,18 +27,7 @@ vehicle_detection_adas_bin_0001_url = "https://download.01.org/opencv/2020/openv
 vehicle_data_url = "https://download.01.org/opencv/openvino_training_extensions/datasets/crossroad/crossroad_85.tar.gz"  #noqa
 vehicle_attributes_url="https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039"  # noqa
 vehicle_attributes_data_url="https://download.01.org/opencv/openvino_training_extensions/datasets/vehicle_attributes/cars_100.tar.gz"  #noqa
-model_config_path = "/opt/ams_models"  #noqa
 
-
-@pytest.fixture(autouse=True, scope="session")
-def copy_ams_model_configs():
-    if not os.path.exists(model_config_path):
-        os.makedirs(model_config_path)
-
-    config_path = os.path.join(os.getcwd(), "extras/ams_models/")
-    os.popen("cp " + config_path + "* " + model_config_path)
-
-    return os.listdir(model_config_path)
 
 def download_model(model_url_base, model_name, model_version, dir):
     local_model_path = os.path.join(dir, model_name, model_version)

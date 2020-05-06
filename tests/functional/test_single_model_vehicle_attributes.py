@@ -226,8 +226,7 @@ class TestVehicleAttributes():
 
         from api.models.vehicle_attributes_model import VehicleAttributes
 
-        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector",
-"/opt/ams_models/vehicle_attributes_model.json")
+        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector","../../ams_models/vehicle_attributes_model.json")
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
