@@ -46,7 +46,6 @@ class TestAmsInference:
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(wrong_input))},
                                  data=wrong_input)
-        print(response)
         assert response.status_code == 400
 
     # def test_wrong_input_image(self, ams_object_detection_model_endpoint):

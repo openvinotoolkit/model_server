@@ -46,14 +46,6 @@ def start_ams_service(request, get_image, get_test_dir, get_docker_context):
     return container, {"port": port}
 
 
-# TODO: use actual ams instance, started in docker container, instead of mock server
-# TODO: for now, we assume that mock server is running on localhost:8000
-@pytest.fixture(scope='session')
-def ams_object_detection_model_endpoint() -> str:
-    return 'http://{host}:{port}/vehicle-detection'.format(host='localhost',
-                                                           port=8000)
-
-
 @pytest.fixture(scope='session')
 def png_object_detection_image() -> str:
     return os.path.join(IMAGES_DIR, 'single_car_small.png')
