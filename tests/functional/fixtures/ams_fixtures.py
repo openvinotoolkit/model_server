@@ -18,17 +18,32 @@ import os
 from typing import Tuple
 
 import pytest
-
+from utils.model_management import wait_endpoint_setup
+from utils.parametrization import get_ports_for_fixture
 
 IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')
 
+@pytest.fixture(scope="class")
+def start_ams_service(request, get_image, get_test_dir, get_docker_context):
 
-# TODO: use actual ams instance, started in docker container, instead of mock server
-# TODO: for now, we assume that mock server is running on localhost:8000
-@pytest.fixture(scope='session')
-def ams_object_detection_model_endpoint() -> str:
-    return 'http://{host}:{port}/vehicle-detection'.format(host='localhost',
-                                                           port=8000)
+    client = get_docker_context
+    _, port = get_ports_for_fixture(port_suffix="05")
+
+    command = "/ams_wrapper/start_ams.sh --ams_port={}".format(port)
+
+    container = \
+        client.containers.run(
+            image=get_image,
+            detach=True,
+            name='ams-service',
+            ports={'{}/tcp'.format(port): port},
+            remove=True,
+            command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+    return container, {"port": port}
 
 
 @pytest.fixture(scope='session')
