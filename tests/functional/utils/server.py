@@ -18,8 +18,11 @@ from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
-def start_ovms_container(image, test_dir, client, command_args, container_name_infix, start_container_command):
-    container_name_prefix = image.split(":")[0]
+def start_ovms_container(image, test_dir, client, command_args, container_name_infix, start_container_command,
+                         env_vars_container=None):
+    if env_vars_container is None:
+        env_vars_container = []
+    container_name_prefix = image.split(":")[0].split("/")[-1]
     path_to_mount = test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
                                                  'mode': 'ro'}}
@@ -37,7 +40,7 @@ def start_ovms_container(image, test_dir, client, command_args, container_name_i
                                              '{}/tcp'.format(rest_port):
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
-                                      command=command)
+                                      command=command, environment=env_vars_container)
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

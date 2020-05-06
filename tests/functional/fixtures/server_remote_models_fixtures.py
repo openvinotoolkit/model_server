@@ -18,77 +18,30 @@ import os
 
 import boto3
 import pytest
-from utils.model_management import (wait_endpoint_setup, minio_condition)
 from botocore.client import Config
+
+from model.models_information import Resnet
+from utils.model_management import wait_endpoint_setup, minio_condition
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_gc(request, get_image, get_test_dir,
-                                      get_docker_context):
-    client = get_docker_context
+def start_server_single_model_from_gc(request, get_image, get_test_dir, get_docker_context,
+                                      get_start_container_command):
 
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet " \
-              "--model_path " \
-              "gs://public-artifacts/intelai_public_models/resnet_50_i8/ " \
-              "--port " + str(grpc_port) + " --target_device CPU --nireq 4" \
-              " --plugin_config " \
-              "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", " \
-              "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
+    start_server_command_args = {"model_name": Resnet.name,
+                                 "model_path": "gs://public-artifacts/intelai_public_models/resnet_50_i8/",
+                                 "target_device": "CPU",
+                                 "nireq": 4,
+                                 "plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", "
+                                                  "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""}
+    container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
-    container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single-gs-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port},
-                                      remove=True,
-                                      environment=envs,
-                                      command=command)
-
+    container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
+                                            container_name_infix, get_start_container_command, envs)
     request.addfinalizer(container.kill)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
-
-
-@pytest.fixture(scope="class")
-def start_server_single_model_from_s3(request, get_image, get_test_dir,
-                                      get_docker_context):
-    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-    AWS_REGION = os.getenv('AWS_REGION')
-
-    client = get_docker_context
-    envs = ['AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
-            'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
-            'AWS_REGION=' + AWS_REGION]
-
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet " \
-              "--model_path s3://inference-test-aipg/resnet_v1_50 " \
-              "--port {}".format(grpc_port)
-
-    container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-single-s3-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port},
-                                      remove=True,
-                                      environment=envs,
-                                      command=command)
-    request.addfinalizer(container.kill)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports
 
 
 @pytest.fixture(scope="session")
