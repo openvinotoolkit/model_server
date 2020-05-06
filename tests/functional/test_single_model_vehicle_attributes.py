@@ -226,18 +226,22 @@ class TestVehicleAttributes():
 
         from api.models.vehicle_attributes_model import VehicleAttributes
 
-        model_attrib = VehicleAttributes("ovms_connector")
-        model_attrib.load_default_labels()
-        model_attrib.model_name = "vehicle-attributes"
+        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector",
+"/opt/ams_models/vehicle_attributes_model.json")
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
        
-        class_count = str(json_response).count("tag")
+        class_count = str(json_response).count("color")
         
         print("detected types:" + str(class_count))
-        assert class_count == 2
+        assert class_count == 7
  
+        class_count = str(json_response).count('"name": "type"')
+        
+        print("detected types:" + str(class_count))
+        assert class_count == 4
+
         try: 
             format_check = json.loads(json_response)
         except Exception as e:
@@ -247,10 +251,10 @@ class TestVehicleAttributes():
         print("format_check:" + str(format_check))
         assert format_check["subtype"] == "vehicle-attributes"
 
-        fst_highest_prob_class = format_check["classifications"][0]["tag"]["value"]
-        print("fst_highest_prob_class:" + fst_highest_prob_class)
-        assert fst_highest_prob_class == "red"
+        first_color = (format_check["classifications"][0]["attributes"][0]["value"])
+        print("first color:" + first_color)
+        assert first_color == "white"
 
-        snd_highest_prob_class = format_check["classifications"][1]["tag"]["value"]
-        print("snd_highest_prob_class:" + snd_highest_prob_class)
-        assert snd_highest_prob_class == "truck"
+        first_type = (format_check["classifications"][1]["attributes"][0]["value"])
+        print("first type:" + first_type)
+        assert first_type == "car"

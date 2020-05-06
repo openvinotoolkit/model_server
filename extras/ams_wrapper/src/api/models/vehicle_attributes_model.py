@@ -46,15 +46,14 @@ class VehicleAttributes(Model):
         # model with output shape for type (1,4,1,1) 
         # with second dimension containing types
         # [car, bus, truck, van]
-        outputs = self.labels["outputs"] 
-
+        outputs = self.labels 
         classifications = []
-        for output in outputs:
-            type_name = output["output_name"]
+        for output in outputs.keys():
+            type_name = output
             attributes = []
             highest_prob = 0.0
-            for position in output["classes"].keys():
-                class_name = output["classes"][position]
+            for position in outputs[output].keys():
+                class_name = outputs[output][position]
                 probability = inference_output[type_name][0,int(float(position)),0,0].item()
                 if probability > highest_prob:
                     tag_name = class_name 
@@ -62,9 +61,7 @@ class VehicleAttributes(Model):
                 attribute = Attribute(type_name, class_name, probability)
                 attributes.append(attribute)
 
-
-            tag = Tag(tag_name, highest_prob)
-            classification = SingleClassification(tag, attributes)
+            classification = SingleClassification(attributes)
             classifications.append(classification)
 
         model_classification = Classification(subtype_name=self.model_name, classifications=classifications)

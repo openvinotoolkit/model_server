@@ -38,10 +38,10 @@ class VehicleDetectionAdas(Model):
             if label == "0.0":
                 break
 
-            if not label in self.labels:
+            if not label in self.labels["detection_out"]:
                 raise ValueError("label not found in labels definition")
             else:
-                label_value = self.labels[label]
+                label_value = self.labels["detection_out"][label]
 
             image_id = detection[0].item()
             conf = detection[2].item()

@@ -74,14 +74,11 @@ class Motion(ResultType):
         }
 
 class SingleClassification:
-    def __init__(self, tag: Tag, attributes: List[Attribute] = None):
-        self.tag = tag
+    def __init__(self, attributes: List[Attribute] = None):
         self.attributes = attributes
 
     def as_dict(self):
-        result_dict = {
-            "tag": self.tag.as_dict(),
-        }
+        result_dict = {}
         if self.attributes is not None:
             result_dict["attributes"] = [attribute.as_dict() for attribute in self.attributes]
         return result_dict
