@@ -34,9 +34,15 @@ def validate_ams_inference_response_schema(response: dict):
 
 
 class TestAmsInference:
-    def test_empty_input(self, ams_object_detection_model_endpoint):
+    @pytest.mark.skip(reason="Error handling not implemented yet")
+    def test_empty_input(self, start_ams_service):
+        _, ports = start_ams_service
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+
         wrong_input = b''
-        response = requests.post(ams_object_detection_model_endpoint,
+        response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(wrong_input))},
                                  data=wrong_input)
@@ -50,9 +56,15 @@ class TestAmsInference:
     #                                       'Content-Length': str(len(wrong_input))},
     #                              body=wrong_input)
     #     assert response.status_code == 400
+    
+    @pytest.mark.skip(reason="Error handling not implemented yet")
+    def test_wrong_input_content_type(self, start_ams_service):
+        _, ports = start_ams_service
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
 
-    def test_wrong_input_content_type(self, ams_object_detection_model_endpoint):
-        response = requests.post(ams_object_detection_model_endpoint,
+        response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'bad-content-type'},
                                  data=b'some_data')
         assert response.status_code == 400
@@ -60,10 +72,16 @@ class TestAmsInference:
     @pytest.mark.parametrize("image", [small_object_detection_image(),
                                        medium_object_detection_image(),
                                        large_object_detection_image()])
-    def test_input_image_different_sizes(self, ams_object_detection_model_endpoint, image):
+    def test_input_image_different_sizes(self, start_ams_service, image):
         with open(image, mode='rb') as image_file:
             image_bytes = image_file.read()
-        response = requests.post(ams_object_detection_model_endpoint,
+        
+        _, ports = start_ams_service
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+
+        response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(image))},
                                  data=image_bytes)
@@ -72,19 +90,21 @@ class TestAmsInference:
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
-
-        assert response_json.get('inferences')
-        for inference_response in response_json['inferences']:
-            validate_ams_inference_response_schema(inference_response)
+        validate_ams_inference_response_schema(response_json)
 
     @pytest.mark.parametrize("image_format,image", [('image/png', png_object_detection_image()),
                                                     ('image/jpg', jpg_object_detection_image()),
                                                     ('image/bmp', bmp_object_detection_image())])
-    def test_input_image_different_formats(self, ams_object_detection_model_endpoint,
-                                           image_format, image):
+    def test_input_image_different_formats(self, start_ams_service, image_format, image):
         with open(image, mode='rb') as image_file:
             image_bytes = image_file.read()
-        response = requests.post(ams_object_detection_model_endpoint,
+
+        _, ports = start_ams_service
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+
+        response = requests.post(endpoint_url,
                                  headers={'Content-Type': image_format,
                                           'Content-Length': str(len(image))},
                                  data=image_bytes)
@@ -93,10 +113,7 @@ class TestAmsInference:
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
-
-        assert response_json.get('inferences')
-        for inference_response in response_json['inferences']:
-            validate_ams_inference_response_schema(inference_response)
+        validate_ams_inference_response_schema(response_json)
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),

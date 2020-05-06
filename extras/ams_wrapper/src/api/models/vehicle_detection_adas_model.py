@@ -15,14 +15,26 @@
 #
 import os
 import json
+import numpy as np
 from logger import get_logger
 from api.models.model import Model
 from api.types import Tag, Rectangle, SingleEntity, Entity
+from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 
 logger = get_logger(__name__)
 
 
-class VehicleDetectionAdas(Model):                                                                  
+class VehicleDetectionAdas(Model):   
+
+    def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
+        try: 
+            preprocessed_image = default_preprocessing(binary_image, target_size=(384,672))
+            preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
+        except Exception as e:
+            # TODO: Error handling
+            return
+        return preprocessed_image                                                               
+
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
