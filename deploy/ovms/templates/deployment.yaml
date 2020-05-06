@@ -26,7 +26,7 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
-        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region }}
+        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint }}
         env:
         {{ end }}
         {{ if .Values.gcp_creds_secret_name }}
@@ -47,6 +47,10 @@ spec:
         {{ if .Values.aws_region }}
         - name: AWS_REGION
           value: {{ .Values.aws_region }}
+        {{ end }}
+        {{ if .Values.s3_compat_api_endpoint }}
+        - name: S3_ENDPOINT
+          value: {{ .Values.s3_compat_api_endpoint }}
         {{ end }}
         command: ["/ie-serving-py/start_server.sh"]
         args: ["ie_serving",

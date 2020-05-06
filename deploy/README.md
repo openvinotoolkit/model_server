@@ -61,6 +61,12 @@ to provide: `aws_access_key_id`, `aws_secret_access_key` and `aws_region`:
 ```shell script
 $ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
+
+In case you would like to use custom S3 service with compatible API (e.g. Minio), you need to also provide endpoint 
+to that service. Please provide it by supplying `s3_compat_api_endpoint`:
+```shell script
+$ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
+```
     
 ## Deploy the Model Server
 
@@ -87,7 +93,7 @@ $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://m
 ## Deploy the Model Server with configuration file
 
 To serve multiple models you can run the Model Server with configuration file as described in:
-https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files
+https://github.com/openvinotoolkit/model_server/blob/master/docs/docker_container.md#starting-docker-container-with-a-configuration-file
 
 To deploy server with config file:
 * create a configuration file named _config.json_ and fill it with proper configuration
