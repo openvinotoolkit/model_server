@@ -3,7 +3,8 @@
     {
       "config": {
         "name": "vehicle_detection_adas",
-        "base_path": "/opt/models/vehicle_detection_adas"
+        "base_path": "/opt/models/vehicle_detection_adas",
+        "nireq": 10
       }
     },
     {
