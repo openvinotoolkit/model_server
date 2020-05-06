@@ -39,7 +39,6 @@ class OvmsConnector():
         self.model_name = ovms_model_info['model_name']
         self.model_version = ovms_model_info['model_version']
         self.input_name = ovms_model_info['input_name']
-        self.input_shape = ovms_model_info['input_shape']
         self.output_name = ovms_model_info["output_name"]
 
         channel = grpc.insecure_channel("{}:{}".format("127.0.0.1", self.ovms_port))
@@ -60,7 +59,7 @@ class OvmsConnector():
         try:
             result = self.stub.Predict(request, 10.0)
             return_dict = {}
-            for output in self.output_name:
+            for output in result.outputs:
                 return_dict[output] = make_ndarray(result.outputs[output])
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:

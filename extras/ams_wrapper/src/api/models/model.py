@@ -18,39 +18,38 @@ import datetime
 import json
 import falcon
 import tensorflow as tf
+import sys
 import numpy as np
 from abc import ABC, abstractmethod
 from logger import get_logger
+from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 
 logger = get_logger(__name__)
 
 class Model(ABC):
 
-    def __init__(self, ovms_connector):
+    def __init__(self, model_name, ovms_connector, labels_path):
         self.ovms_connector = ovms_connector
-        self.model_name = None # subtype / model name in AMS
-        self.result_type = None # type class
-        self.labels = None # load_labels
+        self.model_name = model_name
+        self.labels = self.load_labels(labels_path)
 
-    def load_labels(labels_path: str) -> str:
-        try:
-            with open(labels_path, 'r') as labels_file:
-                data = json.load(labels_file)
-        except Exception as e:
+    def load_labels(self, labels_path):
+        try:                                                                          
+            with open(labels_path, 'r') as labels_file:                               
+                data = json.load(labels_file)                                         
+                labels = data['outputs'][0]['classes']
+        except Exception as e:                                                        
             logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)
-        return data
+            sys.exit(1)                                                               
+        return labels
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
         # By default the only performed preprocessing is converting image 
         # from binary format to numpy ndarray. If a model requires more specific 
         # preprocessing this method should be implemented in its class.
         try: 
-            """
-            # Perform default preprocessing
             preprocessed_image = default_preprocessing(binary_image)
-            """
-            preprocessed_image = None
+            preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
         except Exception as e:
             # TODO: Error handling
             return

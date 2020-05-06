@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import os
-import sys
 import json
 from logger import get_logger
 from api.models.model import Model
@@ -24,19 +23,7 @@ logger = get_logger(__name__)
 
 
 
-class VehicleDetectionAdas(Model):
-
-    def load_default_labels(self):
-        labels_path = os.path.abspath(__file__).replace(".py",".json")
-        try:                                                                          
-            with open(labels_path, 'r') as labels_file:                               
-                data = json.load(labels_file)                                         
-                self.labels = data
-        except Exception as e:                                                        
-            logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)                                                               
-        return                                                                   
-
+class VehicleDetectionAdas(Model):                                                                  
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
@@ -69,12 +56,11 @@ class VehicleDetectionAdas(Model):
 
             detection = SingleEntity(tag, box)
             detections.append(detection)
-        
-        entity = Entity(subtype_name=self.model_name, entities=detections)
 
         if len(detections) == 0:
             response = None
         else:
+            entity = Entity(subtype_name=self.model_name, entities=detections)
             response = json.dumps(entity.as_dict())
 
         return response
