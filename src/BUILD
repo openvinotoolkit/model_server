@@ -5,6 +5,8 @@ cc_library(
         "server.cpp",
         "config.cpp",
         "config.hpp",
+        "get_model_metadata_impl.cpp",
+        "get_model_metadata_impl.hpp",
         "model.cpp",
         "model.hpp",
         "modelconfig.hpp",
@@ -52,11 +54,14 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
+        "test/get_model_metadata_response_test.cpp",
+        "test/get_model_metadata_signature_test.cpp",
+        "test/get_model_metadata_validation_test.cpp",
         "test/unit_tests.cpp",
         "test/modelmanager_test.cpp",
         "test/modelconfig_test.cpp",
         "test/stringutils_test.cpp",
-        "test/validation_test.cpp",
+        "test/predict_validation_test.cpp",
     ],
     copts = [
         "--std=c++17"

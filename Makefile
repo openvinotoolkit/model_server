@@ -104,6 +104,6 @@ test_throughput: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
 test_functional: venv
-	@. $(ACTIVATE); pytest --json=report.json -s \
+	@. $(ACTIVATE); pytest --json=report.json -v \
 		--image=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		$(TEST_PATH)

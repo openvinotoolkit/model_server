@@ -22,6 +22,8 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 
+#include "get_model_metadata_impl.hpp"
+
 #define DEBUG
 #include "timer.hpp"
 
@@ -106,7 +108,7 @@ Blob::Ptr deserialize(const TensorProto& requestInput, const std::shared_ptr<Ten
     }
 }
 
-grpc::Status deserialize(const PredictRequest* request, const tensorMap& inputMap, InferenceEngine::InferRequest& inferRequest) {
+grpc::Status deserialize(const PredictRequest* request, const tensor_map_t& inputMap, InferenceEngine::InferRequest& inferRequest) {
     try {
         for (const auto& pair : inputMap) {
             const auto& name = pair.first;
@@ -146,7 +148,7 @@ void serialize(TensorProto& responseOutput, const std::shared_ptr<TensorInfo>& n
     responseOutput.mutable_tensor_content()->assign((char*) blob->buffer(), blob->byteSize());
 }
 
-void serialize(InferenceEngine::InferRequest& inferRequest, const tensorMap& outputMap, PredictResponse* response)
+void serialize(InferenceEngine::InferRequest& inferRequest, const tensor_map_t& outputMap, PredictResponse* response)
 {
     for (const auto& pair : outputMap) {
         const auto& name = pair.first;
@@ -234,6 +236,22 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
             request->model_spec().name(),modelVersion->getVersion(),executingInferId, timer.elapsed_microseconds("serialize")/1000);
     return grpc::Status::OK;
+}
+
+grpc::Status PredictionServiceImpl::GetModelMetadata(
+            grpc::ServerContext*                            context,
+    const   tensorflow::serving::GetModelMetadataRequest*   request,
+            tensorflow::serving::GetModelMetadataResponse*  response) {
+
+    auto status = GetModelMetadataImpl::getModelStatus(request, response);
+    if (status == GetModelMetadataStatusCode::OK) {
+        return grpc::Status::OK;
+    }
+
+    return grpc::Status(
+        status == GetModelMetadataStatusCode::MODEL_MISSING ? grpc::StatusCode::NOT_FOUND 
+                                                            : grpc::StatusCode::INVALID_ARGUMENT,
+        GetModelMetadataStatus::getError(status));
 }
 
 } // namespace ovms

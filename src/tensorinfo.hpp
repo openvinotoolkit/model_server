@@ -64,6 +64,20 @@ namespace ovms {
          * @param name 
          * @param precision 
          * @param shape
+         */
+        TensorInfo( const std::string& name,
+                    const InferenceEngine::Precision& precision,
+                    const shape_t& shape) :
+            name(name),
+            precision(precision),
+            shape(shape) {}
+
+        /**
+         * @brief Construct a new Tensor Info object
+         * 
+         * @param name 
+         * @param precision 
+         * @param shape
          * @param layout 
          * @param tensorDesc 
          */

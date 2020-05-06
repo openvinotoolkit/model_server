@@ -114,7 +114,6 @@ class TestBatchModelInference:
             print("output shape", output[ResnetBS8.output_name].shape)
             assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_batch_model,
                                 create_grpc_channel):

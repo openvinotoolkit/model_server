@@ -74,7 +74,6 @@ class TestMultiModelInference:
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
     """
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model,
                                 create_grpc_channel):

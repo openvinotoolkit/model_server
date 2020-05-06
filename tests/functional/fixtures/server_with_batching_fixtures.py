@@ -31,8 +31,7 @@ def start_server_batch_model(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8/1 " \
+    command = "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8/1 " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
@@ -63,8 +62,7 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age_gender " \
+    command = "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 
@@ -95,8 +93,7 @@ def start_server_batch_model_auto(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8 " \
+    command = "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8 " \
               "--port {} --batch_size auto --rest_port {}".\
               format(grpc_port, rest_port)
 
@@ -127,8 +124,7 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age_gender " \
+    command = "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --batch_size auto --rest_port {}".\
               format(grpc_port, rest_port)
@@ -175,8 +171,7 @@ def start_server_batch_model_auto_bs4_2out(request, get_image,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age_gender " \
+    command = "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --batch_size 4 --rest_port {}".\
               format(grpc_port, rest_port)
