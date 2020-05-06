@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-    using tensorMap = std::map<std::string, std::shared_ptr<TensorInfo>>;
+    using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
     /**
      * @brief This class contains all the information about inference engine model
@@ -50,6 +50,11 @@ namespace ovms {
          * @brief Inference Engine device network
          */
         InferenceEngine::ExecutableNetwork execNetwork;
+
+        /**
+         * @brief Model name
+         */
+        std::string name;
 
         /**
          * @brief A path for the model
@@ -75,12 +80,12 @@ namespace ovms {
         /**
          * @brief Holds the information about inputs and it's parameters
          */
-        tensorMap inputsInfo;
+        tensor_map_t inputsInfo;
 
         /**
          * @brief Holds the information about outputs and it's parameters
          */
-        tensorMap outputsInfo;
+        tensor_map_t outputsInfo;
 
         /**
          * @brief OpenVINO inference execution stream pool
@@ -134,6 +139,15 @@ namespace ovms {
         }
 
         /**
+         * @brief Gets the model name
+         * 
+         * @return model name
+         */
+        virtual const std::string& getName() {
+            return name;
+        }
+
+        /**
          * @brief Gets path for the model
          *
          * @return path
@@ -147,7 +161,7 @@ namespace ovms {
          *
          * @return version
          */
-        const model_version_t& getVersion() {
+        virtual const model_version_t& getVersion() {
             return version;
         }
 
@@ -172,18 +186,18 @@ namespace ovms {
         /**
          * @brief Get the Inputs Info object
          *
-         * @return const tensorMap& 
+         * @return const tensor_map_t& 
          */
-        virtual const tensorMap& getInputsInfo() {
+        virtual const tensor_map_t& getInputsInfo() {
             return inputsInfo;
         }
 
         /**
          * @brief Get the Outputs Info object
          *
-         * @return const tensorMap& 
+         * @return const tensor_map_t& 
          */
-        const tensorMap& getOutputsInfo() {
+        virtual const tensor_map_t& getOutputsInfo() {
             return outputsInfo;
         }
 

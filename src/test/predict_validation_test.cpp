@@ -26,18 +26,17 @@ using ::testing::ReturnRef;
 using ::testing::NiceMock;
 
 
-class MockModelInstance : public ovms::ModelInstance {
-public:
-    MOCK_METHOD(const ovms::tensorMap&, getInputsInfo,  ());
-    MOCK_METHOD(size_t,                 getBatchSize,   ());
-};
-
-class ModelInstanceFixture : public ::testing::Test {
+class PredictValidation : public ::testing::Test {
     using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
 
-private:
+    class MockModelInstance : public ovms::ModelInstance {
+    public:
+        MOCK_METHOD(const ovms::tensor_map_t&,  getInputsInfo,  ());
+        MOCK_METHOD(size_t,                     getBatchSize,   ());
+    };
+
     std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
-    ovms::tensorMap networkInputs;
+    ovms::tensor_map_t networkInputs;
 
 protected:
     NiceMock<MockModelInstance> instance;
@@ -101,26 +100,26 @@ protected:
     }
 };
 
-TEST_F(ModelInstanceFixture, ValidRequest) {
+TEST_F(PredictValidation, ValidRequest) {
     auto status = instance.validate(&request);
     EXPECT_EQ(ovms::ValidationStatusCode::OK, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestNotEnoughInputs) {
+TEST_F(PredictValidation, RequestNotEnoughInputs) {
     request.mutable_inputs()->erase("Input_U8_1_3_62_62_NCHW");
 
     auto status = instance.validate(&request);
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestTooManyInputs) {
+TEST_F(PredictValidation, RequestTooManyInputs) {
     auto& inputD = (*request.mutable_inputs())["input_d"];
 
     auto status = instance.validate(&request);
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestWrongInputName) {
+TEST_F(PredictValidation, RequestWrongInputName) {
     auto input = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
     request.mutable_inputs()->erase("Input_I64_1_6_128_128_16_NCDHW");
     (*request.mutable_inputs())["Some_Input"] = input;
@@ -129,7 +128,7 @@ TEST_F(ModelInstanceFixture, RequestWrongInputName) {
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestTooManyShapeDimensions) {
+TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.mutable_tensor_shape()->add_dim()->set_size(16);
 
@@ -137,7 +136,7 @@ TEST_F(ModelInstanceFixture, RequestTooManyShapeDimensions) {
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestNotEnoughShapeDimensions) {
+TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.mutable_tensor_shape()->clear_dim();
 
@@ -145,7 +144,7 @@ TEST_F(ModelInstanceFixture, RequestNotEnoughShapeDimensions) {
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestWrongBatchSize) {
+TEST_F(PredictValidation, RequestWrongBatchSize) {
     auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(10); // dim(0) is batch size
 
@@ -153,7 +152,7 @@ TEST_F(ModelInstanceFixture, RequestWrongBatchSize) {
     EXPECT_EQ(ovms::ValidationStatusCode::INCORRECT_BATCH_SIZE, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestWrongShapeValues) {
+TEST_F(PredictValidation, RequestWrongShapeValues) {
     auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
     input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
@@ -164,7 +163,7 @@ TEST_F(ModelInstanceFixture, RequestWrongShapeValues) {
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestIncorrectContentSize) {
+TEST_F(PredictValidation, RequestIncorrectContentSize) {
     auto& input = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
     *input.mutable_tensor_content() = std::string(1 * 6, '1');
 
@@ -172,7 +171,7 @@ TEST_F(ModelInstanceFixture, RequestIncorrectContentSize) {
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_CONTENT_SIZE, status);
 }
 
-TEST_F(ModelInstanceFixture, RequestWrongPrecision) {
+TEST_F(PredictValidation, RequestWrongPrecision) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.set_dtype(tensorflow::DataType::DT_UINT8);
 

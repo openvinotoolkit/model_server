@@ -118,6 +118,27 @@ namespace ovms {
         }
 
         /**
+         * @brief Finds model instance with specific name and version, returns default if version not specified
+         *
+         * @param name of the model to search for
+         * @param version of the model to search for or 0 if default
+         *
+         * @return pointer to ModelInstance or nullptr if not found 
+         */
+        const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) {
+            auto model = findModelByName(name);
+            if (!model) {
+                return nullptr;
+            }
+
+            if (version == 0) {
+                return model->getDefaultModelInstance();
+            } else {
+                return model->getModelInstanceByVersion(version);
+            }
+        }
+
+        /**
          * @brief Starts model manager using provided config file
          * 
          * @param filename

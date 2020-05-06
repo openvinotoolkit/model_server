@@ -144,6 +144,7 @@ uint getNumberOfParallelInferRequests() {
 }
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
+    this->name = config.getName();
     this->path = config.getBasePath();
     this->version = config.getVersion();
     this->backend = config.getBackend();

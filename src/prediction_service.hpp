@@ -25,6 +25,11 @@ class PredictionServiceImpl final : public tensorflow::serving::PredictionServic
                 grpc::ServerContext*                    context,
         const   tensorflow::serving::PredictRequest*    request,
                 tensorflow::serving::PredictResponse*   response);
+
+    grpc::Status GetModelMetadata(
+                grpc::ServerContext*                            context,
+        const   tensorflow::serving::GetModelMetadataRequest*   request,
+                tensorflow::serving::GetModelMetadataResponse*  response);
 };
 
 } // namespace ovms

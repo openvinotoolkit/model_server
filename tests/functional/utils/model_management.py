@@ -44,7 +44,8 @@ def wait_endpoint_setup(container, condition=serving_condition, timeout=20):
                 break
         except Exception as e:
             time.sleep(1)
-    print("Logs from container: ", str(container.logs()))
+    print("Logs from container:")
+    print("\n".join(str(container.logs()).split("\\n")))
     #  extra delay to ensure docker endpoint is ready
     time.sleep(2)
     return running

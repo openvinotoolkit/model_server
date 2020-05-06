@@ -63,7 +63,6 @@ class TestSingleModelInference:
         print("output shape", output[Resnet.output_name].shape)
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_single_model,
                                 create_grpc_channel):
