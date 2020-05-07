@@ -13,24 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import sys
 
 import pytest
 import requests
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
+
+from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from model.models_information import AgeGender, PVBDetectionV1, PVBDetectionV2
 from utils.grpc import get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.models_utils import ModelVersionState, ErrorCode, \
+    ERROR_MESSAGE  # noqa
 from utils.rest import get_model_status_response_rest
 
 
-from utils.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
-
-
-class TestModelVerPolicy():
+class TestModelVerPolicy:
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("model_name, throw_error", [
@@ -52,14 +51,17 @@ class TestModelVerPolicy():
 
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
-            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
-            {'age': {'dtype': 1, 'shape': [1, 1, 1, 1]},
-             'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
+            {PVBDetectionV1.output_name: {'dtype': 1, 'shape': list(PVBDetectionV1.output_shape)}},
+            {PVBDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBDetectionV2.output_shape)}}]
+        expected_output_metadata = {}
+        for output_name, shape in AgeGender.output_shape.items():
+            expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
+            expected_outputs_metadata.append(expected_output_metadata)
         expected_inputs_metadata = [
-            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
-            {'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
-            {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
+            {PVBDetectionV1.input_name: {'dtype': 1, 'shape': list(PVBDetectionV1.input_shape)}},
+            {PVBDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBDetectionV2.input_shape)}},
+            {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
+
         for x in range(len(versions)):
             print("Getting info about model version:".format(
                 versions[x]))
@@ -78,7 +80,7 @@ class TestModelVerPolicy():
                 assert expected_output_metadata == output_metadata
             else:
                 with pytest.raises(Exception) as e:
-                    response = stub.GetModelMetadata(request, 10)
+                    stub.GetModelMetadata(request, 10)
                 assert "Servable not found for request" in str(e.value)
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -110,11 +112,11 @@ class TestModelVerPolicy():
                 assert version_status.version == versions[x]
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
             else:
                 with pytest.raises(Exception) as e:
-                    response = stub.GetModelStatus(request, 10)
+                    stub.GetModelStatus(request, 10)
                 assert "Servable not found for request" in str(e.value)
 
         #   aggregated results check
@@ -126,7 +128,7 @@ class TestModelVerPolicy():
             for version_status in versions_statuses:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -166,14 +168,17 @@ class TestModelVerPolicy():
         print("Getting info about model")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
-            {'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}},
-            {'age': {'dtype': 1, 'shape': [1, 1, 1, 1]},
-             'gender': {'dtype': 1, 'shape': [1, 2, 1, 1]}}]
+            {PVBDetectionV1.output_name: {'dtype': 1, 'shape': list(PVBDetectionV1.output_shape)}},
+            {PVBDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBDetectionV2.output_shape)}}]
+        expected_output_metadata = {}
+        for output_name, shape in AgeGender.output_shape.items():
+            expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
+            expected_outputs_metadata.append(expected_output_metadata)
         expected_inputs_metadata = [
-            {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}},
-            {'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
-            {'new_key': {'dtype': 1, 'shape': [1, 3, 62, 62]}}]
+            {PVBDetectionV1.input_name: {'dtype': 1, 'shape': list(PVBDetectionV1.input_shape)}},
+            {PVBDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBDetectionV2.input_shape)}},
+            {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
+
         for x in range(len(versions)):
             print("Getting info about model version:".format(
                 versions[x]))
@@ -229,7 +234,7 @@ class TestModelVerPolicy():
                 assert version_status.version == versions[x]
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
             else:
                 assert 404 == result.status_code
@@ -244,5 +249,5 @@ class TestModelVerPolicy():
             for version_status in versions_statuses:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]

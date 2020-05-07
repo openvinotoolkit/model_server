@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import shutil
-import sys
 import time
 import pytest
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
@@ -27,10 +26,10 @@ from utils.parametrization import get_tests_suffix
 
 
 from utils.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
+    ERROR_MESSAGE  # noqa
 
 
-class TestSingleModelInference():
+class TestSingleModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_specific_version(self, resnet_multiple_batch_sizes, get_test_dir,
@@ -38,17 +37,17 @@ class TestSingleModelInference():
                               create_grpc_channel):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
-        # ensure model dir is empty at the beginning
-        shutil.rmtree(dir, ignore_errors=True)
+        # ensure model directory is empty at the beginning
+        shutil.rmtree(directory, ignore_errors=True)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
         status_stub = create_grpc_channel('localhost:{}'.format(
             ports["grpc_port"]), MODEL_SERVICE)
 
-        resnet_copy_dir = copy_model(resnet, 1, dir)
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        resnet_copy_dir = copy_model(resnet, 1, directory)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
 
         # This could be replaced with status polling
         time.sleep(8)
@@ -99,12 +98,12 @@ class TestSingleModelInference():
             assert version_status.version in [1, 4]
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
         shutil.rmtree(resnet_bs4_copy_dir)
-        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, directory)
         time.sleep(10)
 
         # Available versions: 1, 3
@@ -136,18 +135,18 @@ class TestSingleModelInference():
             if version_status.version == 4:
                 assert version_status.state == ModelVersionState.END
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.END][ErrorCode.OK]
             elif version_status.version == 1 or version_status.version == 3:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
         # Available versions: 1, 3, 4
 
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(10)
 
         request_v1 = get_model_metadata(model_name=model_name, version=1)
@@ -196,7 +195,7 @@ class TestSingleModelInference():
             assert version_status.version in [1, 3, 4]
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
@@ -212,11 +211,11 @@ class TestSingleModelInference():
 
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
-        # ensure model dir is empty at the beginning
-        shutil.rmtree(dir, ignore_errors=True)
-        resnet_v1_copy_dir = copy_model(resnet, 1, dir)
+        # ensure model directory is empty at the beginning
+        shutil.rmtree(directory, ignore_errors=True)
+        resnet_v1_copy_dir = copy_model(resnet, 1, directory)
         time.sleep(8)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
@@ -251,11 +250,11 @@ class TestSingleModelInference():
         assert version_status.version == 1
         assert version_status.state == ModelVersionState.AVAILABLE
         assert version_status.status.error_code == ErrorCode.OK
-        assert version_status.status.error_message == _ERROR_MESSAGE[
+        assert version_status.status.error_message == ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
-        resnet_v2_copy_dir = copy_model(resnet_bs4, 2, dir)
+        resnet_v2_copy_dir = copy_model(resnet_bs4, 2, directory)
         time.sleep(10)
 
         expected_input_metadata_v2 = {in_name: {'dtype': 1,
@@ -283,12 +282,12 @@ class TestSingleModelInference():
             if version_status.version == 1:
                 assert version_status.state == ModelVersionState.END
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.END][ErrorCode.OK]
             elif version_status.version == 2:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
         shutil.rmtree(resnet_v1_copy_dir)
@@ -301,12 +300,12 @@ class TestSingleModelInference():
                                    start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
-        # ensure model dir is empty at the beginning
-        shutil.rmtree(dir, ignore_errors=True)
-        resnet_copy_dir = copy_model(resnet, 1, dir)
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        # ensure model directory is empty at the beginning
+        shutil.rmtree(directory, ignore_errors=True)
+        resnet_copy_dir = copy_model(resnet, 1, directory)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(8)
 
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
@@ -362,12 +361,12 @@ class TestSingleModelInference():
             assert version_status.version in [1, 4]
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
         shutil.rmtree(resnet_bs4_copy_dir)
-        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, directory)
         time.sleep(10)
 
         # Available versions: 1, 3
@@ -401,18 +400,18 @@ class TestSingleModelInference():
             if version_status.version == 4:
                 assert version_status.state == ModelVersionState.END
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.END][ErrorCode.OK]
             elif version_status.version == 1 or version_status.version == 3:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
         # Available versions: 1, 3, 4
 
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(10)
 
         rest_url_v1 = 'http://localhost:{}/v1/models/resnet/' \
@@ -462,7 +461,7 @@ class TestSingleModelInference():
             assert version_status.version in [1, 3, 4]
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
@@ -477,11 +476,11 @@ class TestSingleModelInference():
                                  start_server_update_flow_latest):
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
-        # ensure model dir is empty at the beginning
-        shutil.rmtree(dir, ignore_errors=True)
-        resnet_copy_dir = copy_model(resnet, 1, dir)
+        # ensure model directory is empty at the beginning
+        shutil.rmtree(directory, ignore_errors=True)
+        resnet_copy_dir = copy_model(resnet, 1, directory)
         time.sleep(8)
 
         print("Getting info about resnet model")
@@ -514,12 +513,12 @@ class TestSingleModelInference():
         assert version_status.version == 1
         assert version_status.state == ModelVersionState.AVAILABLE
         assert version_status.status.error_code == ErrorCode.OK
-        assert version_status.status.error_message == _ERROR_MESSAGE[
+        assert version_status.status.error_message == ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
         shutil.rmtree(resnet_copy_dir)
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 2, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 2, directory)
         time.sleep(10)
 
         expected_input_metadata = {in_name: {'dtype': 1,
@@ -544,12 +543,12 @@ class TestSingleModelInference():
             if version_status.version == 1:
                 assert version_status.state == ModelVersionState.END
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.END][ErrorCode.OK]
             elif version_status.version == 2:
                 assert version_status.state == ModelVersionState.AVAILABLE
                 assert version_status.status.error_code == ErrorCode.OK
-                assert version_status.status.error_message == _ERROR_MESSAGE[
+                assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
         ###
 
@@ -562,14 +561,14 @@ class TestSingleModelInference():
                               create_grpc_channel):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        dir = get_test_dir + '/saved_models/' + 'update-{}/'.format(
+        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
-        # ensure model dir is empty at the beginning
-        shutil.rmtree(dir, ignore_errors=True)
+        # ensure model directory is empty at the beginning
+        shutil.rmtree(directory, ignore_errors=True)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
-        resnet_copy_dir = copy_model(resnet, 1, dir)
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        resnet_copy_dir = copy_model(resnet, 1, directory)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(8)
 
         # Available versions: 1, 4
@@ -610,7 +609,7 @@ class TestSingleModelInference():
         assert output_metadata_v4 == output_metadata_latest
 
         shutil.rmtree(resnet_bs4_copy_dir)
-        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
+        resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, directory)
         time.sleep(3)
 
         # Available versions: 1, 3
@@ -635,7 +634,7 @@ class TestSingleModelInference():
         # Available versions: 1, 3, 4
 
         time.sleep(3)
-        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
+        resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(3)
         rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.\
                    format(ports["rest_port"])

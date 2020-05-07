@@ -20,7 +20,7 @@ from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3, Res
 from utils.grpc import infer, get_model_metadata, \
     model_metadata_response, get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
+    ERROR_MESSAGE  # noqa
 from utils.rest import infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
@@ -116,7 +116,7 @@ class TestMultiModelInference:
             assert version_status.version == 1
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -172,5 +172,5 @@ class TestMultiModelInference:
             assert version_status.version == 1
             assert version_status.state == ModelVersionState.AVAILABLE
             assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == _ERROR_MESSAGE[
+            assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
