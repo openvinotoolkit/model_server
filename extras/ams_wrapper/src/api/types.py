@@ -74,7 +74,7 @@ class Motion(ResultType):
         }
 
 class SingleClassification:
-    def __init__(self, attributes: List[Attribute] = None):
+    def __init__(self, attributes: List[Attribute]):
         self.attributes = attributes
 
     def as_dict(self):
@@ -109,7 +109,7 @@ class SingleEntity:
             "box": self.box.as_dict()
         }
         if self.attributes is not None:
-            result_dict[attributes] = [attribute.as_dict() for attribute in self.attributes]
+            result_dict["attributes"] = [attribute.as_dict() for attribute in self.attributes]
         return result_dict
 
 class Entity(ResultType):

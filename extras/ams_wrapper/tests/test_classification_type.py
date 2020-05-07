@@ -29,8 +29,8 @@ def test_single_classification():
     attribute = Attribute("type", "car", 0.97) 
     attribs = []
     attribs.append(attribute)
-    single_classification = SingleClassification(attribs)
-    assert expected_dict == single_classification.as_dict()
+    test_classification = SingleClassification(attribs)
+    assert expected_dict == test_classification.as_dict()
 
 def test_entity():
     expected_dict = {
