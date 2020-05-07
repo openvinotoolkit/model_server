@@ -94,8 +94,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
     if target_size:
         try:
-            height, width = target_size
-            decoded_image = tf.image.resize_with_crop_or_pad(decoded_image, height, width)
+            decoded_image = tf.image.resize(decoded_image, target_size)
         except Exception as e:
             raise ImageResizeError('Failed to resize provided binary image from: {} '
                                    'to: {}.'.format(tf.shape(decoded_image), target_size)) from e
