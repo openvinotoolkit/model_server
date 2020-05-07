@@ -154,7 +154,6 @@ class TestVehicleDetection():
         - response contains proper numpy shape
 
         """
-
         _, ports = start_server_single_vehicle_model
         imgs_path =  os.path.join(vehicle_adas_data_downloader, "data", "annotation_val_images")
 
@@ -181,9 +180,9 @@ class TestVehicleDetection():
 
         from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
 
-        model_adas = VehicleDetectionAdas("ovms_connector")
-        model_adas.load_default_labels()
-        model_adas.model_name = "vehicle-detection"
+        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../ams_models/vehicle_detection_adas_model.json" )
+
+        os.chdir("../../../")
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))

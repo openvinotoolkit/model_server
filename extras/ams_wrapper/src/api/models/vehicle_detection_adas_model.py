@@ -24,7 +24,6 @@ from preprocessing.preprocess_image import preprocess_binary_image as default_pr
 logger = get_logger(__name__)
 
 
-
 class VehicleDetectionAdas(Model):   
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
@@ -35,6 +34,7 @@ class VehicleDetectionAdas(Model):
             # TODO: Error handling
             return
         return preprocessed_image                                                               
+
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
@@ -49,10 +49,10 @@ class VehicleDetectionAdas(Model):
             if label == "0.0":
                 break
 
-            if not label in self.labels:
+            if not label in self.labels["detection_out"]:
                 raise ValueError("label not found in labels definition")
             else:
-                label_value = self.labels[label]
+                label_value = self.labels["detection_out"][label]
 
             image_id = detection[0].item()
             conf = detection[2].item()

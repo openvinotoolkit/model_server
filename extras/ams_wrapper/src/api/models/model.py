@@ -35,11 +35,13 @@ class Model(ABC):
         self.labels = self.load_labels(labels_path)
 
     def load_labels(self, labels_path):
-        try:
-            with open(labels_path, 'r') as labels_file:
+        try:                                                                          
+            with open(labels_path, 'r') as labels_file:                               
                 data = json.load(labels_file)
-                labels = data['outputs'][0]['classes']
-        except Exception as e:
+                labels = dict()
+                for output in data['outputs']: 
+                    labels[output["output_name"]] = output['classes']
+        except Exception as e:                                                        
             logger.exception("Error occurred while opening labels file: {}".format(e))
             sys.exit(1)
         return labels
