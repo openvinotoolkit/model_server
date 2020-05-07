@@ -31,9 +31,11 @@ def download_model(model_url_base, model_name, model_version, dir):
     local_xml_path = os.path.join(local_model_path,
                                   "{}.{}".format(model_name, "xml"))
     if not os.path.exists(local_model_path):
+        os.makedirs(local_model_path)
+
+    if not os.path.exists(local_bin_path) or not os.path.exists(local_xml_path):
         print("Downloading " + model_name + " model...")
         print(dir)
-        os.makedirs(local_model_path)
         response = requests.get(model_url_base + '.bin', stream=True)
         with open(local_bin_path, 'wb') as output:
             output.write(response.content)
