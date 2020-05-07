@@ -23,7 +23,7 @@ use Google Cloud Storage bucket:
 $ gsutil mb gs://model-repository
 ```
 
-You can download the model from the link provided above nad upload it to GCS:
+You can download the model from the link provided above and upload it to GCS:
 ```shell script
 $ gsutil cp -r 1 gs://model-repository/1
 ```
