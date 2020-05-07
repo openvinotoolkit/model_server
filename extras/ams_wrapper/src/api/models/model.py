@@ -69,7 +69,6 @@ class Model(ABC):
         logger.debug(f"Received request with headers: {request_headers}")
         # Retrieve raw bytes from the request
         request_body = req.bounded_stream.read()
-        inference_output = {}
 
         # Preprocess request body
         try:
@@ -88,7 +87,7 @@ class Model(ABC):
         # Send inference request to corresponding model in OVMS
         try:
             connection_start_time = datetime.datetime.now()
-            inference_ouput = self.ovms_connector.send(input_image)
+            inference_output = self.ovms_connector.send(input_image)
             duration = (datetime.datetime.now() -
                         connection_start_time).total_seconds() * 1000
             logger.debug(f"OVMS request handling time: {duration} ms")
@@ -120,7 +119,7 @@ class Model(ABC):
         # Postprocess
         try:
             postprocessing_start_time = datetime.datetime.now()
-            results = self.postprocess_inference_output(inference_ouput)
+            results = self.postprocess_inference_output(inference_output)
             duration = (datetime.datetime.now() -
                         postprocessing_start_time).total_seconds() * 1000
             logger.debug(f"Output postprocessing time: {duration} ms")
