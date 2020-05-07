@@ -26,11 +26,11 @@ First, we need to create a folder where the model will be stored:
 ```
 mkdir model
 ```
-Then within this folder we need to download both components of the model (for example using curl):
+Then download both components of the model (for example using curl):
 ```
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o face-detection-retail-0004.xml
+curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/face-detection-retail-0004.xml
 
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o face-detection-retail-0004.bin
+curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.bin
 ```
 
 ### Start the Model Server container
@@ -83,9 +83,7 @@ a folder passed to it as a parameter.
 ```
 mdkir images
 
-cd images 
-
-curl https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o people1.jpeg
+curl https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
 ```
 
 ### Run the inference
