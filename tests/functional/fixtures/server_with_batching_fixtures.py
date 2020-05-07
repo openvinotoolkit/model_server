@@ -22,34 +22,15 @@ from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model(request, get_image, get_test_dir,
-                             get_docker_context):
-    client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
-                                                 'mode': 'ro'}}
+def start_server_batch_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8/1 " \
-              "--port {} --rest_port {}".format(grpc_port, rest_port)
-
-    container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-batch-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port,
-                                             '{}/tcp'.format(rest_port):
-                                             rest_port},
-                                      remove=True, volumes=volumes_dict,
-                                      command=command)
-
+    start_server_command_args = {"model_name": ResnetBS8.name,
+                                 "model_path": ResnetBS8.model_path + "/1"}
+    container_name_infix = "test-batch"
+    container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
+                                            container_name_infix, get_start_container_command)
     request.addfinalizer(container.kill)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -84,34 +65,16 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto(request, get_image, get_test_dir,
-                                  get_docker_context):
-    client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
-                                                 'mode': 'ro'}}
+def start_server_batch_model_auto(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = "--model_name resnet_bs8 --model_path /opt/ml/resnet_V1_50_batch8 " \
-              "--port {} --batch_size auto --rest_port {}".\
-              format(grpc_port, rest_port)
-
-    container = client.containers.run(image=get_image, detach=True,
-                                      name='ie-serving-py-test-autobatch-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port,
-                                             '{}/tcp'.format(rest_port):
-                                             rest_port},
-                                      remove=True, volumes=volumes_dict,
-                                      command=command)
+    start_server_command_args = {"model_name": ResnetBS8.name,
+                                 "model_path": ResnetBS8.model_path,
+                                 "batch_size": "auto"}
+    container_name_infix = "test-autobatch"
+    container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
+                                            container_name_infix, get_start_container_command)
     request.addfinalizer(container.kill)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports
 
 
 @pytest.fixture(scope="class")
@@ -150,14 +113,12 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
 def start_server_batch_model_bs4(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
-                                 "model_path": "/opt/ml/resnet_V1_50_batch8/1",
+                                 "model_path": ResnetBS8.model_path + "/1",
                                  "batch_size": 4}
     container_name_infix = "test-batch4"
-
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
                                             container_name_infix, get_start_container_command)
     request.addfinalizer(container.kill)
-
     return container, ports
 
 

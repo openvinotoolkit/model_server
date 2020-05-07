@@ -17,48 +17,29 @@
 import shutil
 import os
 import pytest
+
+from model.models_information import Resnet
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model(request, get_image, get_test_dir,
-                              get_docker_context):
+def start_server_single_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
-    client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
-                                                 'mode': 'ro'}}
+    start_server_command_args = {"model_name": Resnet.name,
+                                 "model_path": Resnet.model_path + "/1",
+                                 "plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"CPU_THROUGHPUT_AUTO\\\"}\""}
+    container_name_infix = "test-single"
 
-    grpc_port, rest_port = get_ports_for_fixture()
+    # In this case, slower, non-default serialization method is used
+    env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
 
-    command = "--model_name resnet " \
-              "--model_path /opt/ml/resnet_V1_50/1 " \
-              "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
-              " --plugin_config " \
-              "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
-              "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
+    container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
+                                            container_name_infix, get_start_container_command, env_variables)
 
-    container = \
-        client.containers.run(
-            image=get_image,
-            detach=True,
-            name='ie-serving-py-test-single-{}'.format(get_tests_suffix()),
-            ports={'{}/tcp'.format(grpc_port): grpc_port,
-                   '{}/tcp'.format(rest_port): rest_port},
-            remove=True,
-            volumes=volumes_dict,
-            # In this case, slower,
-            # non-default serialization method is used
-            environment=[
-                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
-            command=command)
     request.addfinalizer(container.kill)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports
 
 
 @pytest.fixture(scope="class")

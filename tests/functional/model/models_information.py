@@ -36,6 +36,7 @@ class Resnet:
     output_name = "softmax_tensor"
     output_shape = (1, 1001)
     rest_request_format = 'column_name'
+    model_path = "/opt/ml/resnet_V1_50"
 
 
 class ResnetBS4:
@@ -56,6 +57,7 @@ class ResnetBS8:
     output_name = "softmax_tensor"
     output_shape = (8, 1001)
     rest_request_format = 'row_noname'
+    model_path = "/opt/ml/resnet_V1_50_batch8"
 
 
 class ResnetS3:
