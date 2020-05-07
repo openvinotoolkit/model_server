@@ -20,6 +20,8 @@
 #include <iostream>
 #include <string>
 
+#include <spdlog/spdlog.h>
+
 #include "config.hpp"
 #include "modelinstance.hpp"
 
@@ -169,14 +171,17 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         }
 
         execNetwork = engine.LoadNetwork(network, backend, pluginConfig);
-        std::cout << "Starting OpenVINO CPU streams:" << pluginConfig["CPU_THROUGHPUT_STREAMS"] << std::endl;
 
         int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
-        std::cout << "Starting OpenVINO InferRequestsQueue:" << numberOfParallelInferRequests << std::endl;
         inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(execNetwork, numberOfParallelInferRequests);
+
+        spdlog::info("Loaded model {}; version: {}; CPU streams: {}; No of InferRequests: {}", 
+            config.getName(), 
+            config.getVersion(),
+            pluginConfig["CPU_THROUGHPUT_STREAMS"],
+            numberOfParallelInferRequests);
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
-        // Logger(Log::Error, e.what());
         std::cout << e.what() << std::endl;
         return Status::NETWORK_NOT_LOADED;
     }

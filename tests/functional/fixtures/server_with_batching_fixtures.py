@@ -25,7 +25,7 @@ from utils.server import start_ovms_container
 def start_server_batch_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
-                                 "model_path": ResnetBS8.model_path + "/1"}
+                                 "model_path": ResnetBS8.model_path}
     container_name_infix = "test-batch"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
                                             container_name_infix, get_start_container_command)
@@ -113,7 +113,7 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
 def start_server_batch_model_bs4(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
-                                 "model_path": ResnetBS8.model_path + "/1",
+                                 "model_path": ResnetBS8.model_path,
                                  "batch_size": 4}
     container_name_infix = "test-batch4"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,

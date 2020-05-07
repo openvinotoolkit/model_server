@@ -28,7 +28,7 @@ from utils.server import start_ovms_container
 def start_server_single_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
 
     start_server_command_args = {"model_name": Resnet.name,
-                                 "model_path": Resnet.model_path + "/1",
+                                 "model_path": Resnet.model_path,
                                  "plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"CPU_THROUGHPUT_AUTO\\\"}\""}
     container_name_infix = "test-single"
 
