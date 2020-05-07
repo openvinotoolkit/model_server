@@ -1,6 +1,6 @@
-# Kubernetes deployment
+# Kubernetes Deployment
 
-A helm chart for installing OpenVino Model Server on Kubernetes cluster is provided. By default the cluster contains 
+A helm chart for installing OpenVINO Model Server on Kubernetes cluster is provided. By default the cluster contains 
 a single instance of the server but the _replicas_ configuration parameter can be set to create a cluster 
 of any size, as described below. This guide assumes you already have a functional Kubernetes cluster and helm 
 installed (see below for instructions on installing helm).
@@ -12,13 +12,13 @@ inference requests to the running server.
 
 Please refer to: https://helm.sh/docs/intro/install for Helm installation.
 
-## Model repository
+## Model Repository
 
 If you already have a model repository you may use that with this helm chart. If you don't, you can use any model
-from https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin .
+from https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin.
 
-OpenVINO Model Server needs models that it will make available for inferencing. For example you can 
-use Google Cloud Storage bucket:
+Model Server requires respository of models to make available for inferencing. For example you can 
+use a Google Cloud Storage (GCS) bucket:
 ```shell script
 $ gsutil mb gs://model-repository
 ```
@@ -28,102 +28,92 @@ You can download the model from the link provided above and upload it to GCS:
 $ gsutil cp -r 1 gs://model-repository/1
 ```
 
-## Bucket permissions
+## Bucket Permissions
 
-Make sure the bucket permissions are set so that the server can access the model repository. If the bucket 
-is public or you are going to run Model Server on the same GCP or AWS account as storage then no additional changes 
+Make sure to set bucket permissions so the server can access the model repository. If the bucket 
+is public or Model Server is run on the same GCP or AWS account as the storage bucket, then no additional changes 
 are needed and you can proceed to _Deploy the Model Server_ section.
 
 ### GCS
 
-If bucket permissions need to be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable then perform the 
-following steps:
+Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable. Please follow the steps below:
 
-* Generate Google service account JSON with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_,
- _Storage Object Viewer_ . Name a file for example: _gcp-creds.json_ 
-(you can follow these instructions to create Service Account and download JSON: 
+* Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_ . Name a file for example: _gcp-creds.json_ 
+(you can follow these instructions to create a Service Account and download JSON: 
 https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account)
-* Create a Kubernetes secret from this file:
+* Create a Kubernetes secret from this JSON file:
 
       $ kubectl create secret generic gcpcreds --from-file gcp-creds.json
 
-* Deploy the server providing model path to GCS and providing name for secret created above. The key thing here is
-to provide `gcp_creds_secret_name` when deploying OVMS:
-
+* When deploying Model Server, provide the model path to GCS bucket and name for the secret created above. Make sure to provide `gcp_creds_secret_name` when deploying:
 ```shell script
 $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
 ```
 
 ### S3
 
-For S3 you need to provide AWS Access Key ID, the content of that key (AWS Secret Access Key) and the region. You need 
-to provide: `aws_access_key_id`, `aws_secret_access_key` and `aws_region`:
+For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below)
 ```shell script
 $ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
 
-In case you would like to use custom S3 service with compatible API (e.g. Minio), you need to also provide endpoint 
+In case you would like to use custom S3 service with compatible API (e.g. MinIO), you need to also provide endpoint 
 to that service. Please provide it by supplying `s3_compat_api_endpoint`:
 ```shell script
 $ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
 ```
     
-## Deploy the Model Server
+## Deploy Model Server
 
-Deploy the Model Server using _helm_ . Please provide also required model name and model path:
+Deploy Model Server using _helm_. Please include the required model name and model path:
 ```shell script
 $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
-Use _kubectl_ to see status and wait until the model server pod is running:
+Use _kubectl_ to see status and wait until the Model Server pod is running:
 ```shell script
 $ kubectl get pods
 NAME                    READY   STATUS    RESTARTS   AGE
 ovms-5fd8d6b845-w87jl   1/1     Running   0          27s
 ```
 
-By default the OVMS deploys with 1 instance. If you would like to scale it, you could override value in values.yaml
-file or by passing _--set_ flag to _helm install_:
+By default, Model Server is deployed with 1 instance. If you would like to scale up additional replicas, override the value in values.yaml file or by passing _--set_ flag to _helm install_:
 
 ```shell script
 $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
 
 
-## Deploy the Model Server with configuration file
+## Deploy Model Server with a Configuration File
 
-To serve multiple models you can run the Model Server with configuration file as described in:
+To serve multiple models you can run Model Server with a configuration file as described here:
 https://github.com/openvinotoolkit/model_server/blob/master/docs/docker_container.md#starting-docker-container-with-a-configuration-file
 
-To deploy server with config file:
-* create a configuration file named _config.json_ and fill it with proper configuration
+To deploy with config file:
+* create a configuration file named _config.json_ and fill it with proper information
 * create a configmap from this file with a chosen name (here _ovms-config_):
       
       $ kubectl create configmap ovms-config --from-file config.json
 
-* deploy OpenVINO Model Server setting parameter `config_configmap_name` (without `model_name` and `model_path`):
+* deploy Model Server with parameter `config_configmap_name` (without `model_name` and `model_path`):
 
       $ helm install ovms ovms --set config_configmap_name=ovms-config
 
 
-## Using OpenVINO Model Server
+## Using Model Server
 
-Now that the server is running you can send HTTP or gRPC requests to it to perform inferencing. 
-By default, the service is exposed with a LoadBalancer service type. Use the following to find the 
+Now that the server is running you can send HTTP or gRPC requests to perform inferencing. 
+By default, the service is exposed with a LoadBalancer service type. Use the following command to find the 
 external IP for the server:
 ```shell script
 $ kubectl get svc
 NAME                    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                         AGE
 openvino-model-server   LoadBalancer   10.121.14.253   1.2.3.4         8080:30043/TCP,8081:32606/TCP   59m
-
 ```
 
 The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
 
-Follow the instructions here: https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files 
-to get the example image classification client that can be used to perform inferencing using 
-image classification models being served by the server. For example:
-
+Follow the instructions here: https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
 $ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
 	Model name: resnet
