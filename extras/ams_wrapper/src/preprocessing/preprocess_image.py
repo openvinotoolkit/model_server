@@ -43,7 +43,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
                             channels_first=True,
                             dtype=tf.dtypes.uint8, scale: float = None,
                             standardization=False,
-                            reverse_input_channels=False) -> np.ndarray:
+                            reverse_input_channels=True) -> np.ndarray:
     """
     Preprocess binary image in PNG, JPG or BMP format, producing numpy array as a result.
 
