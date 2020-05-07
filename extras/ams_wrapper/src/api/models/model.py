@@ -79,6 +79,7 @@ class Model(ABC):
                         preprocessing_start_time).total_seconds() * 1000
             logger.debug(f"Input preprocessing time: {duration} ms")
         except Exception as ex:
+            logger.exception("Failed request preprocessing")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_400
             resp.body = json.dumps(body)
@@ -92,24 +93,22 @@ class Model(ABC):
                         connection_start_time).total_seconds() * 1000
             logger.debug(f"OVMS request handling time: {duration} ms")
         except (ValueError, TypeError) as ex:
+            logger.exception("Invalid request data")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_400
             resp.body = json.dumps(body)
             return
         except OvmsUnavailableError as ex:
+            logger.exception("OVMS unavailable")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_503
             resp.body = json.dumps(body)
             return
         except Exception as ex:
+            logger.exception("Error during inference")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_500
             resp.body = json.dumps(body)
-            return
-
-        # If model did not found results
-        if inference_output is None:
-            resp.status = falcon.HTTP_204
             return
 
         # Postprocess
@@ -120,9 +119,15 @@ class Model(ABC):
                         postprocessing_start_time).total_seconds() * 1000
             logger.debug(f"Output postprocessing time: {duration} ms")
         except Exception as ex:
+            logger.exception("Error during request postprocessing")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_500
             resp.body = json.dumps(body)
+            return
+
+        # If model did not found results
+        if results is None:
+            resp.status = falcon.HTTP_204
             return
 
         # Send response back

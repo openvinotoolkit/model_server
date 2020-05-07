@@ -53,7 +53,6 @@ class TestAmsInference:
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
         wrong_input = b'INVALIDINPUT'
         # TODO: define User-Agent header?
-        print(endpoint_url)
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(wrong_input))},
@@ -77,17 +76,14 @@ class TestAmsInference:
     def test_input_image_different_sizes(self, start_ams_service, image):
         with open(image, mode='rb') as image_file:
             image_bytes = image_file.read()
-        
         _, ports = start_ams_service
         ams_port = ports['port']
         target = "vehicleDetection"
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
-
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(image))},
                                  data=image_bytes)
-
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
