@@ -23,7 +23,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from logger import get_logger
 from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
-from api.ovms_connector import OvmsUnavailableError
+from api.ovms_connector import OvmsUnavailableError, ModelNotFoundError
 
 logger = get_logger(__name__)
 
@@ -98,6 +98,12 @@ class Model(ABC):
             resp.status = falcon.HTTP_400
             resp.body = json.dumps(body)
             return
+        except ModelNotFoundError as ex:
+            logger.exception("Model not found")
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_500
+            resp.body = json.dumps(body)
+            return
         except OvmsUnavailableError as ex:
             logger.exception("OVMS unavailable")
             body = {"message": str(ex)}
@@ -105,7 +111,7 @@ class Model(ABC):
             resp.body = json.dumps(body)
             return
         except Exception as ex:
-            logger.exception("Error during inference")
+            logger.exception("Internal OVMS error")
             body = {"message": str(ex)}
             resp.status = falcon.HTTP_500
             resp.body = json.dumps(body)
