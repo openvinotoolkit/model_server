@@ -20,7 +20,7 @@ from typing import Tuple
 import tensorflow as tf
 import numpy as np
 
-from src.logger import get_logger
+from logger import get_logger
 
 
 log = get_logger(__name__)

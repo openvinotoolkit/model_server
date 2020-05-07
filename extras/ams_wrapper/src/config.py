@@ -31,7 +31,7 @@ AVAILABLE_MODELS = [
         "model_version": DEFAULT_VERSION,
         "input_name": "data",
         },
-    "labels_path": "/opt/ams_models/vehicle_detection_adas_model.json"
+    "config_path": "/opt/ams_models/vehicle_detection_adas_model.json",
     },
     {"name": "vehicleClassification", 
     "class": VehicleAttributes, 

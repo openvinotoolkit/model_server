@@ -50,7 +50,7 @@ def main():
                           required=False, default=1)
     parser.add_argument('--ovms_port', type=int, help='OpenVINO Model Server port',
                           required=False, default=9000)
-    parser.add_argument('--models_directory', type=int, help='Directory in which models are stored',
+    parser.add_argument('--models_directory', type=str, help='Directory in which models are stored',
                           required=False, default='/opt/models')
     args = parser.parse_args()
     start_rest_service(args.port, args.workers, args.ovms_port)

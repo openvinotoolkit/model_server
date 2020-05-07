@@ -37,29 +37,29 @@ class VehicleDetectionAdas(Model):
 
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
-
-        result_array = inference_output["detection_out"]
+        # Assuming single output
+        output_config = next(iter(self.output_configs.values()))
+        result_array = inference_output[output_config.output_name]
 
         # model with output shape (1,1,200,7) 
         # with last dimension containg detection details
         detections = []
         for detection in result_array[0][0]:
-            label = str(detection[1].item())
+            label = detection[output_config.value_index_mapping['value']].item()
             # End of detections
-            if label == "0.0":
+            if label == 0.0:
                 break
 
-            if not label in self.labels["detection_out"]:
+            if not label in self.labels[output_config.output_name]:
                 raise ValueError("label not found in labels definition")
             else:
-                label_value = self.labels["detection_out"][label]
+                label_value = self.labels[output_config.output_name][label]
 
-            image_id = detection[0].item()
-            conf = detection[2].item()
-            x_min = detection[3].item()
-            y_min = detection[4].item()
-            x_max = detection[5].item()
-            y_max = detection[6].item()
+            conf = detection[output_config.value_index_mapping['confidence']].item()
+            x_min = detection[output_config.value_index_mapping['x_min']].item()
+            y_min = detection[output_config.value_index_mapping['y_min']].item()
+            x_max = detection[output_config.value_index_mapping['x_max']].item()
+            y_max = detection[output_config.value_index_mapping['y_max']].item()
 
             tag = Tag(label_value, conf)
 

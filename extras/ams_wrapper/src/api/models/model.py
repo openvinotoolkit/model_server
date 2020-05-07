@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 import datetime
 import json
 import sys
-from typing import Dict
+from typing import Dict, Union
 
 import falcon
 import tensorflow as tf
@@ -28,7 +28,7 @@ import numpy as np
 from src.logger import get_logger
 from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
-from src.api.models.input_config import ModelInputConfiguration, \
+from src.api.models.model_config import ModelInputConfiguration, \
     ModelInputConfigurationSchema, ValidationError, ModelOutputConfiguration, \
     ModelOutputConfigurationSchema
 
@@ -37,37 +37,36 @@ logger = get_logger(__name__)
 
 class Model(ABC):
     def __init__(self, model_name: str, ovms_connector: OvmsConnector,
-                 labels_path: str, config_file_path: str = None):
+                 config_file_path: str = None):
         self.ovms_connector = ovms_connector
         self.model_name = model_name
-        self.labels = self.load_labels(labels_path)
-        self.input_configs: Dict[str, ModelInputConfiguration] = None
-        self.output_configs: Dict[str, ModelOutputConfiguration] = None
-        if config_file_path:
-            self.input_configs = self.load_input_configs(config_file_path)
-            self.output_configs = self.load_output_configs(config_file_path)
+        self.labels = self.load_labels(config_file_path)
+        self.input_configs = self.load_input_configs(config_file_path)
+        self.output_configs = self.load_output_configs(config_file_path) 
 
-    def load_labels(self, labels_path):
+    def load_labels(self, labels_path) -> Dict[Union[int, float], str]:
         try:                                                                          
             with open(labels_path, 'r') as labels_file:
                 data = json.load(labels_file)
                 labels = dict()
                 for output in data['outputs']: 
-                    labels[output["output_name"]] = output['classes']
+                    output_labels = {v: k for k,v in output['classes'].items()}
+                    labels[output["output_name"]] = output_labels
         except Exception as e:                                                        
             logger.exception("Error occurred while opening labels file: {}".format(e))
             sys.exit(1)
         return labels
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
-        # By default the only performed preprocessing is converting image
-        # from binary format to numpy ndarray. If a model requires more specific
-        # preprocessing this method should be implemented in its class.
-        try:
-            preprocessed_image = default_preprocessing(binary_image)
+        try: 
+            # Assuming single input for now
+            preprocessing_config = next(iter(self.input_configs.values()))
+            preprocessing_config = preprocessing_config.as_preprocessing_options()
+            preprocessed_image = default_preprocessing(binary_image, **preprocessing_config)
             preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
         except Exception as e:
-            raise e
+            logger.exception('Failed to preprocess binary image')
+            raise
         return preprocessed_image
 
     @abstractmethod
@@ -192,6 +191,7 @@ class Model(ABC):
                 raise
 
             model_input_configs[input_config.input_name] = input_config
+            logger.info('Loaded model input configuration: {}'.format(input_config_dict))
         
         return model_input_configs
     
@@ -216,6 +216,7 @@ class Model(ABC):
                 raise
 
             model_output_configs[output_config.output_name] = output_config
+            logger.info('Loaded model output configuration: {}'.format(output_config_dict))
         
         return model_output_configs
 

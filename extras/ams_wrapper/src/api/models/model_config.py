@@ -31,8 +31,17 @@ class ModelInputConfiguration:
                  self.standardization = standardization
                  self.channels_first = False if input_format == 'NHWC' else True
     
-    def as_dict(self) -> dict:
-        return vars(self)
+    def as_preprocessing_options(self) -> dict:
+        return {
+            'channels': self.channels,
+            'target_size': (self.target_height, self.target_width)
+                            if self.target_height and self.target_width else None,
+            'channels_first': self.channels_first,
+            'scale': self.scale,
+            'standardization': self.standardization,
+            'reverse_input_channels': self.reverse_input_channels
+
+        }
 
 
 class ModelInputConfigurationSchema(Schema):
@@ -69,14 +78,11 @@ class ModelOutputConfiguration:
                  self.classes = classes
                  self.confidence_threshold = confidence_threshold
                  self.top_k_results = top_k_results
-    
-    def as_dict(self) -> dict:
-        return vars(self)
 
 
 class ModelOutputConfigurationSchema(Schema):
     output_name = fields.String(required=True)
-    value_index_mapping = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
+    value_index_mapping = fields.Dict(keys=fields.String(), values=fields.Integer(), required=False)
     classes = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
     confidence_threshold = fields.Float(required=False, validate=validate.Range(min=0, max=1))
     top_k_results = fields.Integer(required=False, validate=validate.Range(min=0, min_inclusive=False))
