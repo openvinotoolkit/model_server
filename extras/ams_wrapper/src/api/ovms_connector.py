@@ -45,7 +45,9 @@ class OvmsConnector():
         self.stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     def send(self, inference_input):
-        # TODO: prepare request and handle response
+        if inference_input is None:
+            raise ValueError("Invalid inference input")
+
         request = predict_pb2.PredictRequest()
         request.model_spec.name = self.model_name
         request.model_spec.version.value = int(self.model_version)

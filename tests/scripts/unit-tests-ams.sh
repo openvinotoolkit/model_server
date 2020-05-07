@@ -2,7 +2,7 @@
 set -ex
 . .venv-jenkins/bin/activate
 
-pip install -r extras/ams_wrapper/requirements.txt
+pip install -r requirements.txt
 
 pushd .
 cd extras/ams_wrapper/tests
