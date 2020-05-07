@@ -23,6 +23,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from logger import get_logger
 from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
+from api.ovms_connector import OvmsUnavailableError
 
 logger = get_logger(__name__)
 
@@ -34,20 +35,20 @@ class Model(ABC):
         self.labels = self.load_labels(labels_path)
 
     def load_labels(self, labels_path):
-        try:                                                                          
-            with open(labels_path, 'r') as labels_file:                               
-                data = json.load(labels_file)                                         
+        try:
+            with open(labels_path, 'r') as labels_file:
+                data = json.load(labels_file)
                 labels = data['outputs'][0]['classes']
-        except Exception as e:                                                        
+        except Exception as e:
             logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)                                                               
+            sys.exit(1)
         return labels
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
-        # By default the only performed preprocessing is converting image 
-        # from binary format to numpy ndarray. If a model requires more specific 
+        # By default the only performed preprocessing is converting image
+        # from binary format to numpy ndarray. If a model requires more specific
         # preprocessing this method should be implemented in its class.
-        try: 
+        try:
             preprocessed_image = default_preprocessing(binary_image)
             preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
         except Exception as e:
@@ -63,38 +64,69 @@ class Model(ABC):
     def on_post(self, req, resp):
         # Main flow for the inference request
 
-        # TODO: Handle errors
-
-        # Retrieve request headers as python dictionary 
+        # Retrieve request headers as python dictionary
         request_headers = req.headers
         logger.debug(f"Received request with headers: {request_headers}")
         # Retrieve raw bytes from the request
         request_body = req.bounded_stream.read()
+        inference_output = {}
 
         # Preprocess request body
-        preprocessing_start_time = datetime.datetime.now()
-        input_image = self.preprocess_binary_image(request_body)
-        duration = (datetime.datetime.now() -
-                    preprocessing_start_time).total_seconds() * 1000
-        logger.debug(f"Input preprocessing time: {duration} ms")
+        try:
+            preprocessing_start_time = datetime.datetime.now()
+            input_image = self.preprocess_binary_image(request_body)
+            duration = (datetime.datetime.now() -
+                        preprocessing_start_time).total_seconds() * 1000
+            logger.debug(f"Input preprocessing time: {duration} ms")
+        except Exception as ex:
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_400
+            resp.body = json.dumps(body)
+            return
 
         # Send inference request to corresponding model in OVMS
-        connection_start_time = datetime.datetime.now()
-        inference_ouput = self.ovms_connector.send(input_image)
-        duration = (datetime.datetime.now() -
-                    connection_start_time).total_seconds() * 1000
-        logger.debug(f"OVMS request handling time: {duration} ms")
+        try:
+            connection_start_time = datetime.datetime.now()
+            inference_ouput = self.ovms_connector.send(input_image)
+            duration = (datetime.datetime.now() -
+                        connection_start_time).total_seconds() * 1000
+            logger.debug(f"OVMS request handling time: {duration} ms")
+        except (ValueError, TypeError) as ex:
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_400
+            resp.body = json.dumps(body)
+            return
+        except OvmsUnavailableError as ex:
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_503
+            resp.body = json.dumps(body)
+            return
+        except Exception as ex:
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_500
+            resp.body = json.dumps(body)
+            return
+
+        # If model did not found results
+        if inference_output is None:
+            resp.status = falcon.HTTP_204
+            return
 
         # Postprocess
-        postprocessing_start_time = datetime.datetime.now()
-        results = self.postprocess_inference_output(inference_ouput)
-        duration = (datetime.datetime.now() -
-                    postprocessing_start_time).total_seconds() * 1000
-        logger.debug(f"Output postprocessing time: {duration} ms")
+        try:
+            postprocessing_start_time = datetime.datetime.now()
+            results = self.postprocess_inference_output(inference_ouput)
+            duration = (datetime.datetime.now() -
+                        postprocessing_start_time).total_seconds() * 1000
+            logger.debug(f"Output postprocessing time: {duration} ms")
+        except Exception as ex:
+            body = {"message": str(ex)}
+            resp.status = falcon.HTTP_500
+            resp.body = json.dumps(body)
+            return
 
         # Send response back
         resp.status = falcon.HTTP_200
         resp.body = results
         return
-
 
