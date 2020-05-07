@@ -4,6 +4,7 @@
 .venv
 .vs
 .vscode
+version
 *~
 *.pyc
 *.pyo
