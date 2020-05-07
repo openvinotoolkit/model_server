@@ -43,7 +43,10 @@ cc_binary(
         "main.cpp",
     ],
     copts = [
-         "--std=c++17"
+        "--std=c++17"
+    ],
+    linkopts = [
+        "-lstdc++fs"
     ],
     deps = [
         "//src:ovms_lib",
@@ -65,6 +68,9 @@ cc_test(
     ],
     copts = [
         "--std=c++17"
+    ],
+    linkopts = [
+        "-lstdc++fs"
     ],
     deps = [
         "//src:ovms_lib",

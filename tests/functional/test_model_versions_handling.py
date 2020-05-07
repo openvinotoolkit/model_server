@@ -30,7 +30,6 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
 class TestModelVersionHandling():
     model_name = "pvb_face_multi_version"
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, download_two_model_versions,
                            start_server_multi_model,
                            create_grpc_channel):
@@ -42,8 +41,8 @@ class TestModelVersionHandling():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        face_img = np.ones((1, 3, 300, 300))
-        pvb_img = np.ones((1, 3, 1024, 1024))
+        face_img = np.ones((1, 3, 300, 300), dtype=np.float32)
+        pvb_img = np.ones((1, 3, 1024, 1024), dtype=np.float32)
 
         out_name = "detection_out"
         in_name = "data"

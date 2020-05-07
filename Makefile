@@ -68,7 +68,7 @@ test_perf: venv
 		-v $(HOME)/resnet50:/models/resnet50 \
 		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet --model_path /models/resnet50/1 --port 9178; sleep 5
+		--model_name resnet --model_path /models/resnet50 --port 9178; sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
 		--images_numpy_path tests/performance/imgs.npy \
@@ -90,7 +90,7 @@ test_throughput: venv
 		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet \
-		--model_path /models/resnet50/1 \
+		--model_path /models/resnet50 \
 		--port 9178; \
 		sleep 5
 	@echo "Running throughput test"

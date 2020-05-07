@@ -144,7 +144,18 @@ namespace ovms {
          * @param filename
          * @return status
          */
-        Status start(const std::string& jsonFilename);
+        Status start(const std::string& jsonFilename); 
+
+        /**
+         * @brief Load model versions located in base path
+         * 
+         * @param string base path, where versions are located
+         * @param ModelConfig config
+         * @return status
+         */
+        Status loadModelWithVersions(
+            const   std::string& basePath,
+                    ModelConfig& config);
 
         /**
          * @brief Starts model manager using ovms::Config
@@ -175,5 +186,14 @@ namespace ovms {
          * @return status
          */
         static Status parsePluginConfig(std::string command, plugin_config_t& config);
+
+        /**
+         * @brief Iterates over directories in specific path and returns available model versions
+         * 
+         * @param string path where to look for versions
+         * @param reference to container of available model version results
+         * @return operation status
+         */
+        static Status readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions);
     };
 }  // namespace ovms

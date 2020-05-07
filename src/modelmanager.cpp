@@ -17,9 +17,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#include <spdlog/spdlog.h>
 
 #include "config.hpp"
 #include "modelmanager.hpp"
@@ -43,28 +45,17 @@ Status ModelManager::start() {
         config.batchSize(),
         config.nireq()
     };
-    // Until we have filesystem, we need to provide version somehow
-    modelConfig.setVersion(1);
 
-    Status status;
     if (config.pluginConfig() != "") {
         plugin_config_t pluginConfig;
-        status = ModelManager::parsePluginConfig(config.pluginConfig(), pluginConfig);
+        auto status = ModelManager::parsePluginConfig(config.pluginConfig(), pluginConfig);
         if (status != Status::OK) {
             return status;
         }
         modelConfig.setPluginConfig(pluginConfig);
     }
 
-    std::shared_ptr<Model> model = std::make_shared<Model>();
-    models[modelConfig.getName()] = std::move(model);
-    status = models[modelConfig.getName()]->addVersion(modelConfig);
-    if (status != Status::OK) {
-        // Logger(Log::Warning, "There was an error loading a model ", config.modelName());
-        return status;
-    }
-
-    return Status::OK;
+    return loadModelWithVersions(config.modelPath(), modelConfig);
 }
 
 Status ModelManager::start(const std::string& jsonFilename) {
@@ -108,17 +99,9 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     configFilename = jsonFilename;
     for (const auto& configs : itr->value.GetArray()) {
         const auto& v = configs["config"].GetObject();
-        std::shared_ptr<Model> model = std::make_shared<Model>();
         ModelConfig modelConfig;
         modelConfig.setName(v["name"].GetString());
-        std::string base_path = v["base_path"].GetString();
-        // Until we have filesystem, we need to provide version somehow
-        modelConfig.setVersion(1);
-        base_path.append("/1");
-        modelConfig.setBasePath(base_path);
-        if (models.find(modelConfig.getName()) == models.end()) {
-            models[modelConfig.getName()] = std::move(model);
-        }
+
 
         // Check for optional parameters
         if (v.HasMember("batch_size")) {
@@ -190,12 +173,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             modelConfig.setPluginConfig(pluginConfig);
         }
 
-        auto status = models[modelConfig.getName()]->addVersion(modelConfig);
-        if (status != Status::OK) {
-            // to be replaced with proper logger
-            std::cout << "There was an error loading a model: " << v["name"].GetString() << std::endl;
-            std::cout << "Reason: " << StatusDescription::getError(status) << std::endl;
-        }
+        loadModelWithVersions(v["base_path"].GetString(), modelConfig);
     }
 
     return Status::OK;
@@ -247,6 +225,55 @@ Status ModelManager::parsePluginConfig(std::string command, plugin_config_t& con
         return Status::PLUGIN_CONFIG_ERROR;
     }
     return ModelManager::parsePluginConfig(node, config);
+}
+
+Status ModelManager::readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions) {
+    std::filesystem::directory_iterator it;
+    try {
+        it = std::filesystem::directory_iterator(path);
+    } catch (const std::filesystem::filesystem_error&) {
+        return Status::PATH_INVALID;
+    }
+
+    for (const auto& entry : it) {
+        if (!entry.is_directory()) {
+            continue;
+        }
+        try {
+            ovms::model_version_t version = std::stoll(entry.path().filename().string());
+            versions.push_back(version);
+        } catch(const std::exception& e) {
+            continue;
+        }
+    }
+
+    return Status::OK;
+}
+
+Status ModelManager::loadModelWithVersions(const std::string& basePath, ModelConfig& config) {
+   std::vector<model_version_t> versions;
+   auto status = readAvailableVersions(basePath, versions);
+   if  (status != Status::OK) {
+       return status;
+   }
+
+   std::shared_ptr<Model> model = std::make_shared<Model>();
+   models[config.getName()] = std::move(model);
+
+   for (const auto version : versions) {
+       config.setVersion(version);
+       config.setBasePath(basePath + "/" + std::to_string(version));
+
+       auto status = models[config.getName()]->addVersion(config);
+       if (status != Status::OK) {
+           spdlog::info("Error while loading model: {}; version: {}; error: {}",
+               config.getName(),
+               version,
+               StatusDescription::getError(status));
+       }
+   }
+
+   return Status::OK;
 }
   
 } // namespace ovms
