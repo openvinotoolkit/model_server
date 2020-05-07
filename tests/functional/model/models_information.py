@@ -28,6 +28,20 @@ class AgeGender:
     rest_request_format = 'column_name'
 
 
+class PVBDetectionV1:
+    name = "pvb_detection"
+    dtype = np.float32
+    input_name = "data"
+    input_shape = (1, 3, 300, 300)
+    output_name = "detection_out"
+    output_shape = (1, 1, 200, 7)
+    rest_request_format = 'column_name'
+
+
+class PVBDetectionV2(PVBDetectionV1):
+    input_shape = (1, 3, 1024, 1024)
+
+
 class Resnet:
     name = "resnet"
     dtype = np.float32

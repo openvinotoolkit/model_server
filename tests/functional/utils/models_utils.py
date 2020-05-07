@@ -45,7 +45,7 @@ class ModelVersionState:
     END = 50
 
 
-_ERROR_MESSAGE = {
+ERROR_MESSAGE = {
     ModelVersionState.START: {
         ErrorCode.OK: "",  # "Version detected"
     },
@@ -64,7 +64,7 @@ _ERROR_MESSAGE = {
     },
 }
 
-_STATE_NAME = {
+STATE_NAME = {
     # ModelVersionState.UNKNOWN: "UNKNOWN",
     ModelVersionState.START: "START",
     ModelVersionState.LOADING: "LOADING",
@@ -73,7 +73,7 @@ _STATE_NAME = {
     ModelVersionState.END: "END",
 }
 
-_ERROR_CODE_NAME = {
+ERROR_CODE_NAME = {
     ErrorCode.OK: "OK",
     # ErrorCode.CANCELLED: "CANCELLED",
     ErrorCode.UNKNOWN: "UNKNOWN",
