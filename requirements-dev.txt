@@ -7,4 +7,3 @@ grpcio-testing==1.22.0
 docker==3.7.0
 protobuf==3.6.1
 opencv-python==4.1.2.30
-marshmallow==3.5.1

@@ -28,7 +28,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from logger import get_logger
 from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
-from api.ovms_connector import OvmsUnavailableError, ModelNotFoundError
+from api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
 from .input_config import ModelInputConfiguration, \
     ModelInputConfigurationSchema, ValidationError
 
@@ -36,7 +36,8 @@ logger = get_logger(__name__)
 
 
 class Model(ABC):
-    def __init__(self, ovms_connector, labels_path, config_file_path: str = None):
+    def __init__(self, model_name: str, ovms_connector: OvmsConnector,
+                 labels_path: str, config_file_path: str = None):
         self.ovms_connector = ovms_connector
         self.model_name = None # subtype / model name in AMS
         self.result_type = None # type class
@@ -153,8 +154,6 @@ class Model(ABC):
         resp.body = results
         return
 
-<<<<<<< HEAD
-=======
     @staticmethod
     def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
         """
@@ -189,4 +188,3 @@ class Model(ABC):
         return model_input_configs
 
         
->>>>>>> 9b2a38e... Parse model input configuration
