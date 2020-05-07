@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-A helm chart for installing OpenVINO Model Server on Kubernetes cluster is provided. By default the cluster contains 
+A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. By default the cluster contains 
 a single instance of the server but the _replicas_ configuration parameter can be set to create a cluster 
 of any size, as described below. This guide assumes you already have a functional Kubernetes cluster and helm 
 installed (see below for instructions on installing helm).
