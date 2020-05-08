@@ -39,7 +39,8 @@ class VehicleDetectionAdas(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         # Assuming single output
         output_config = next(iter(self.output_configs.values()))
-        result_array = inference_output[output_config.output_name]
+        output_name = output_config.output_name
+        result_array = inference_output[output_name]
 
         # model with output shape (1,1,200,7) 
         # with last dimension containg detection details
@@ -50,10 +51,10 @@ class VehicleDetectionAdas(Model):
             if label == 0.0:
                 break
 
-            if not label in self.labels[output_config.output_name]:
+            if not label in self.labels[output_name]:
                 raise ValueError("label not found in labels definition")
             else:
-                label_value = self.labels[output_config.output_name][label]
+                label_value = self.labels[output_name][label]
 
             conf = detection[output_config.value_index_mapping['confidence']].item()
             x_min = detection[output_config.value_index_mapping['x_min']].item()

@@ -44,7 +44,7 @@ class VehicleAttributes(Model):
         # model with output shape for type (1,4,1,1) 
         # with second dimension containing types
         # [car, bus, truck, van]
-        outputs = self.labels 
+        outputs = self.labels
         classifications = []
         for output in outputs.keys():
             type_name = output

@@ -46,19 +46,6 @@ class Model(ABC):
         self.labels = {output_name: {index: label for label, index in self.output_configs[output_name].classes.items()}
                        for output_name in self.output_configs.keys()}
 
-    def load_labels(self, labels_path) -> Dict[Union[int, float], str]:
-        try:                                                                          
-            with open(labels_path, 'r') as labels_file:
-                data = json.load(labels_file)
-                labels = dict()
-                for output in data['outputs']: 
-                    output_labels = {v: k for k,v in output['classes'].items()}
-                    labels[output["output_name"]] = output_labels
-        except Exception as e:                                                        
-            logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)
-        return labels
-
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
         try: 
             # Assuming single input for now
@@ -185,7 +172,7 @@ class Model(ABC):
         model_input_configs = {}
         input_config_schema = ModelInputConfigurationSchema()
         
-        for input_config_dict in config.get('inputs'):
+        for input_config_dict in config.get('inputs', []):
             try:
                 input_config = input_config_schema.load(input_config_dict)
             except ValidationError:
@@ -210,7 +197,7 @@ class Model(ABC):
         model_output_configs = {}
         output_config_schema = ModelOutputConfigurationSchema()
         
-        for output_config_dict in config.get('outputs'):
+        for output_config_dict in config.get('outputs', []):
             try:
                 output_config = output_config_schema.load(output_config_dict)
             except ValidationError:

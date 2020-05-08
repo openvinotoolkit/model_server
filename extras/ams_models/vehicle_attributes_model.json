@@ -5,22 +5,22 @@
             {
                 "output_name": "color",
                 "classes": {
-                    "0.0": "white",
-                    "1.0": "gray",
-                    "2.0": "yellow",
-                    "3.0": "red",
-                    "4.0": "green",
-                    "5.0": "blue",
-                    "6.0": "black"
+                    "white": 0.0,
+                    "gray": 1.0,
+                    "yellow": 2.0,
+                    "red": 3.0,
+                    "green": 4.0,
+                    "blue": 5.0,
+                    "black": 6.0
                 }
             },
             {
                 "output_name": "type",
                 "classes": {
-                    "0.0": "car",
-                    "1.0": "van",
-                    "2.0": "truck",
-                    "3.0": "bus"
+                    "car": 0.0,
+                    "van": 1.0,
+                    "truck": 2.0,
+                    "bus": 3.0
                 }
             }
     ]
