@@ -7,10 +7,6 @@ OVMS_PORT=9000
 for i in "$@"
 do
 case $i in
-    --help=*)
-        echo "$help_message"
-        exit 0
-    ;;
     --ams_port=*)
         AMS_PORT="${i#*=}"
         shift # past argument=value
@@ -20,7 +16,6 @@ case $i in
         shift # past argument=value
     ;;
     *)
-        echo "$help_message"
         exit 0
     ;;
 esac
