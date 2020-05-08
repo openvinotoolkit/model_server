@@ -15,7 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <string>
+
 #include <inference_engine.hpp>
+
 #include "tensorflow/core/framework/tensor.h"
 
 #include "modelconfig.hpp"
@@ -84,13 +88,11 @@ namespace ovms {
         TensorInfo( const std::string& name,
                     const InferenceEngine::Precision& precision,
                     const shape_t& shape,
-                    const InferenceEngine::Layout& layout,
-                    const InferenceEngine::TensorDesc& tensorDesc) :
+                    const InferenceEngine::Layout& layout) :
             name(name),
             precision(precision),
             shape(shape),
-            layout(layout),
-            tensorDesc(tensorDesc) {}
+            layout(layout) {}
 
         /**
          * @brief Get the Name object
@@ -108,6 +110,15 @@ namespace ovms {
          */
         const InferenceEngine::Precision getPrecision() {
             return precision;
+        }
+
+        /**
+         * @brief Set the Precision object
+         * 
+         * @return const InferenceEngine::Precision
+         */
+        void setPrecision(const InferenceEngine::Precision& requestedPrecision) {
+            precision = requestedPrecision;
         }
 
         /**
@@ -182,8 +193,10 @@ namespace ovms {
          * 
          * @return const InferenceEngine::TensorDesc& 
          */
-        const InferenceEngine::TensorDesc& getTensorDesc() {
-            return tensorDesc;
+        const InferenceEngine::TensorDesc getTensorDesc() {
+            return InferenceEngine::TensorDesc{precision, shape, layout};
         }
     };
+
+    using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 }  // namespace ovms

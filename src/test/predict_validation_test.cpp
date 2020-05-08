@@ -25,7 +25,6 @@ using ::testing::Return;
 using ::testing::ReturnRef;
 using ::testing::NiceMock;
 
-
 class PredictValidation : public ::testing::Test {
     using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
 
@@ -39,6 +38,7 @@ class PredictValidation : public ::testing::Test {
     ovms::tensor_map_t networkInputs;
 
 protected:
+
     NiceMock<MockModelInstance> instance;
     tensorflow::serving::PredictRequest request;
 
@@ -66,8 +66,7 @@ protected:
                 pair.first,
                 pair.second.getPrecision(),
                 pair.second.getDims(),
-                pair.second.getLayout(),
-                pair.second);
+                pair.second.getLayout());
         }
 
         ON_CALL(instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));

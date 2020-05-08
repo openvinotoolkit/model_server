@@ -30,7 +30,6 @@
 namespace ovms {
 
     using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
-
     /**
      * @brief This class contains all the information about inference engine model
      */
@@ -220,7 +219,7 @@ namespace ovms {
         Status loadModel(const ModelConfig& config);
 
         const ValidationStatusCode validate(const tensorflow::serving::PredictRequest* request);
-        // const grpc::Status validate(const kf::serving::PredictRequest* request);
-        // const grpc::Status validate(const trt::PredictRequest* request);
+        // const ValidationStatusCode validate(const kf::serving::PredictRequest* request);
+        // const ValidationStatusCode validate(const trt::PredictRequest* request);
     };
 }  // namespace ovms
