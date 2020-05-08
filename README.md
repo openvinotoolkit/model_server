@@ -23,27 +23,17 @@ Start using OpenVino&trade; Model Server in less than 60 seconds
 # Download the OpenVino Model Server image
 docker pull openvino/ubuntu18_model_server:latest
 
-# Download model and put it into a separate directory
-mkdir model
-
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/face-detection-retail-0004.xml
-
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.bin
+# Download model into a separate directory
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 
 # Start the Model Server container serving the gRpc port
 docker run -d -v $(pwd)/model:/models/face-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/ubuntu18_model_server /ie-serving-py/start_server.sh ie_serving model --model_path /models --model_name face-detection --port 9000  --shape auto
 
 # Download the example client script
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py
-
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py
-
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
 
 # Download and image to be analyzed
-mkdir images
-
-curl https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
+curl --create-dirs https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
 
 # Install client's dependencies
 pip install -r client_requirements.txt

@@ -22,15 +22,9 @@ can be downloaded from various sites in the Internet (for example from the [Open
 
 Let's use the face detection model available under the following [link](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/). 
 
-First, we need to create a folder where the model will be stored:
+Then download both components of the model to the `model` directory (for example using curl):
 ```
-mkdir model
-```
-Then download both components of the model (for example using curl):
-```
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/face-detection-retail-0004.xml
-
-curl https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.bin
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 ```
 
 ### Start the Model Server container
@@ -64,11 +58,7 @@ Together with this script we need to download a requirements.txt file with a lis
 To download all this components we will use curl:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py
-
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py
-
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
 ```
 
 More details about this particular script can be found [here](../example_client/face_detection.md). There is more scripts client scripts provided for Model Server - the
@@ -81,9 +71,7 @@ Example images that can be used for inference can be downloaded from this [url](
 a folder passed to it as a parameter.
 
 ```
-mdkir images
-
-curl https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
+curl --create-dirs https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
 ```
 
 ### Run the inference
