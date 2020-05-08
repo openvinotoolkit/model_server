@@ -16,4 +16,4 @@ esac
 done
 
 . /ie-serving-py/.venv/bin/activate 
-python /ams_wrapper/src/wrapper.py --port $AMS_PORT
+cd /ams_wrapper && python -m src.wrapper --port $AMS_PORT

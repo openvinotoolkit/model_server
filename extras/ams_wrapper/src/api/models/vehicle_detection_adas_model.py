@@ -32,8 +32,7 @@ class VehicleDetectionAdas(Model):
             preprocessed_image = default_preprocessing(binary_image, target_size=(384,672))
             preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
         except Exception as e:
-            # TODO: Error handling
-            return
+            raise e
         return preprocessed_image                                                               
 
 

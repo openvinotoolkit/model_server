@@ -23,4 +23,4 @@ done
 
 . /ie-serving-py/.venv/bin/activate
 /ie-serving-py/start_server.sh ie_serving model --model_path /opt/models/vehicle_detection_adas --model_name bad_name --port $OVMS_PORT & 
-python /ams_wrapper/src/wrapper.py --port $AMS_PORT
+cd /ams_wrapper && python -m src.wrapper --port $AMS_PORT

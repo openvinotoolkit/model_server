@@ -16,15 +16,25 @@
 import os
 import sys
 import json
+import numpy as np
 
 from src.logger import get_logger
 from src.api.models.model import Model
 from src.api.types import Tag, Attribute, SingleClassification, Classification
+from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 
 logger = get_logger(__name__)
 
 
 class VehicleAttributes(Model):
+
+    def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
+        try: 
+            preprocessed_image = default_preprocessing(binary_image, target_size=(72,72))
+            preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
+        except Exception as e:
+            raise e
+        return preprocessed_image    
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
