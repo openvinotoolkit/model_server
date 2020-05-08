@@ -30,7 +30,9 @@ def load_tf_image(file_path):
 def send_image_ovms(file_path):
     channel = grpc.insecure_channel("{}:{}".format("localhost","9000"))
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    img = load_tf_image(file_path).reshape(1,3,384, 672)
+    #img = load_tf_image(file_path).reshape(1,3,384, 672)
+    # when the same preprocessing is used, results would be identical
+    img = load_cv_image(file_path).reshape(1,3,384, 672)
     request = predict_pb2.PredictRequest()
     request.model_spec.name = "vehicle_detection_adas"
     request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
@@ -39,7 +41,6 @@ def send_image_ovms(file_path):
     return output
 
 def interpret_array(output, img_out):
-    #img_out = cv2.imread(file_image)
     results = np.zeros((200,5),np.float32)
     for i in range(0, 199):  # there is returned 200 detections for each image in the batch
         detection = output[:,:,i,:]
@@ -54,15 +55,14 @@ def interpret_array(output, img_out):
         y_min = detection[0,0,4]
         x_max = detection[0,0,5]
         y_max = detection[0,0,6]
-        results[i:] = [detection[0,0,2],x_min,y_min,x_max-x_min,y_max-y_min]
-        if detection[0,0,2] > 0.5:  # ignore detections for image_id != y and confidence <0.5
+        results[[i],:] = [detection[0,0,2],x_min,y_min,x_max-x_min,y_max-y_min]
+        if detection[0,0,2] > 0.5:  # ignore detections confidence <0.5
             print("detection", i )
             x_min_s = int(detection[0,0,3]*672)
             y_min_s = int(detection[0,0,4]*384)
             x_max_s = int(detection[0,0,5]*672)
             y_max_s = int(detection[0,0,6]*384)
         # box coordinates are proportional to the image size
-            print("label", detection[0,0,1])
             print("confidence", detection[0,0,2])
             print("x_min", x_min, x_min_s )
             print("y_min", y_min, y_min_s)
@@ -89,7 +89,7 @@ def interpret_ams(json_txt, img_out):
                                     (int(box["l"]*672),int(box["t"]*384)),
                                     (int((box["l"]+box["w"])*672),int((box["t"]+box["h"])*384)),
                                      (255,0,0),1)
-        results[i:]=[confidence,box["l"],box["t"],box["w"],box["h"]]
+        results[[i],:]=[confidence,box["l"],box["t"],box["w"],box["h"]]
         i=i+1
     cv2.imwrite("results_combined.jpeg",img_out)
 
@@ -131,11 +131,16 @@ t1 = interpret_array(output, img_out)
 
 
 json_output = send_image_ams(test_image)
-#print(json_output)
+print("AMS json response",json_output)
 
 t2 = interpret_ams(json_output, img_out)
 # array with all detection results from AMS endpoint
-print("OVMS results" , t1)
-print("AMS results" , t2)
+np.printoptions(precision=4, suppress=True)
+
+print("OVMS results" , t1,t1.dtype)
+print("AMS results" , t2, t2.dtype)
+
+#print("differences", np.array2string(t1 - t2, formatter={'float_kind':'{0:.4f}'.format}) )
+
 
 
