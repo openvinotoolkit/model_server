@@ -37,7 +37,6 @@ class BoxSchema(Schema):
 
 
 class ClassificationSchema(Schema):
-    tag = fields.Nested(TagSchema)
     attributes = fields.List(fields.Nested(AttributeSchema))
 
 
