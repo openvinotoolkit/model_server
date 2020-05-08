@@ -71,7 +71,7 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
 
         networkShapes[name] = shape;
         this->inputsInfo[name] = std::make_shared<TensorInfo>(
-            name, precision, shape, layout, desc);
+            name, precision, shape, layout);
     }
 
     // Update OV model shapes
@@ -87,10 +87,9 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto precision = output->getPrecision();
         auto layout = output->getLayout();
         auto shape = output->getDims();
-        auto desc = output->getTensorDesc();
 
         this->outputsInfo[name] = std::make_shared<TensorInfo>(
-            name, precision, shape, layout, desc);
+            name, precision, shape, layout);
     }
 }
 
@@ -216,13 +215,15 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         }
 
         // First shape must be equal to batch size
-        if (requestInput.tensor_shape().dim_size() > 0 && requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
+        if (requestInput.tensor_shape().dim_size() > 0 &&
+            requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
             return ValidationStatusCode::INCORRECT_BATCH_SIZE;
         }
 
         // Network and request must have the same shape
         for (int i = 1; i < requestInput.tensor_shape().dim_size(); i++) {
-            if (requestInput.tensor_shape().dim(i).size() >= 0 && shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
+            if (requestInput.tensor_shape().dim(i).size() >= 0 &&
+                shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
                 return ValidationStatusCode::INVALID_SHAPE;
             }
         }

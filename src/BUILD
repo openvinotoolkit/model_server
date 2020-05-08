@@ -5,6 +5,7 @@ cc_library(
         "server.cpp",
         "config.cpp",
         "config.hpp",
+        "deserialization.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "model.cpp",
@@ -18,6 +19,7 @@ cc_library(
         "ovinferrequestsqueue.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
+        "serialization.hpp",
         "status.hpp",
         "stringutils.hpp",
         "tensorinfo.hpp",
@@ -57,14 +59,17 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
+        "test/deserialization_tests.cpp",
         "test/get_model_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/unit_tests.cpp",
         "test/modelmanager_test.cpp",
         "test/modelconfig_test.cpp",
+        "test/ovtestutils.hpp",
         "test/stringutils_test.cpp",
         "test/predict_validation_test.cpp",
+        "test/serialization_tests.cpp",
     ],
     copts = [
         "--std=c++17"

@@ -65,24 +65,42 @@ enum class ValidationStatusCode {
     INVALID_PRECISION,      /*!< Invalid precision */
     INVALID_CONTENT_SIZE,   /*!< Invalid content size */
     DESERIALIZATION_ERROR,  /*!< Error occured during deserialization */
+    DESERIALIZATION_ERROR_USUPPORTED_PRECISION, /*!<Unsupported deserialization precision */
     INFERENCE_ERROR,        /*!< Error occured during inference */
+    SERIALIZATION_ERROR_INCORRECT_TYPE, /*!< Unsupported serializaton precision */
+    SERIALIZATION_ERROR    /*!< Error occurred during serialization */
 };
-
 
 class ValidationStatus {
 public:
     static const std::string& getError(const ValidationStatusCode code) {
         static const std::map<ValidationStatusCode, std::string> errors = {
-            { ValidationStatusCode::OK,                     ""                                          },
-            { ValidationStatusCode::MODEL_NAME_MISSING,     "Model with requested name is not found"    },
-            { ValidationStatusCode::MODEL_VERSION_MISSING,  "Model with requested version is not found" },
-            { ValidationStatusCode::INCORRECT_BATCH_SIZE,   "Incorrect batch size"                      },
-            { ValidationStatusCode::INVALID_INPUT_ALIAS,    "Unexpected input tensor alias"             },
-            { ValidationStatusCode::INVALID_SHAPE,          "Invalid input shape"                       },
-            { ValidationStatusCode::INVALID_PRECISION,      "Invalid input precision"                   },
-            { ValidationStatusCode::INVALID_CONTENT_SIZE,   "Invalid content size"                      },
-            { ValidationStatusCode::DESERIALIZATION_ERROR,  "Error occured during deserialization"      },
-            { ValidationStatusCode::INFERENCE_ERROR,        "Error occured during inference"            },
+            {ValidationStatusCode::OK,
+             ""},
+            {ValidationStatusCode::MODEL_NAME_MISSING,
+             "Model with requested name is not found"},
+            {ValidationStatusCode::MODEL_VERSION_MISSING,
+             "Model with requested version is not found"},
+            {ValidationStatusCode::INCORRECT_BATCH_SIZE,
+             "Incorrect batch size"},
+            {ValidationStatusCode::INVALID_INPUT_ALIAS,
+             "Unexpected input tensor alias"},
+            {ValidationStatusCode::INVALID_SHAPE,
+             "Invalid input shape"},
+            {ValidationStatusCode::INVALID_PRECISION,
+             "Invalid input precision"},
+            {ValidationStatusCode::INVALID_CONTENT_SIZE,
+             "Invalid content size"},
+            {ValidationStatusCode::DESERIALIZATION_ERROR,
+             "Error occured during deserialization"},
+            {ValidationStatusCode::DESERIALIZATION_ERROR_USUPPORTED_PRECISION,
+             "Unsupported deserialization precision"},
+            {ValidationStatusCode::INFERENCE_ERROR,
+             "Error occured during inference"},
+            {ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE,
+             "Unsupported serializaton precision"},
+            {ValidationStatusCode::SERIALIZATION_ERROR,
+             "Error occured during serialization"}
         };
 
         return errors.find(code)->second;
