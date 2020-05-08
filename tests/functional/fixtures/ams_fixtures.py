@@ -38,6 +38,7 @@ def start_ams_service(request, get_image, get_test_dir, get_docker_context):
             name='ams-service',
             ports={'{}/tcp'.format(port): port},
             remove=True,
+            environment=['LOG_LEVEL=DEBUG'],
             command=command)
     request.addfinalizer(container.kill)
 
@@ -64,6 +65,7 @@ def start_ams_service_without_ovms(request, get_image, get_test_dir, get_docker_
             name='ams-service-no-ovms',
             ports={'{}/tcp'.format(port): port},
             remove=True,
+            environment=['LOG_LEVEL=DEBUG'],
             command=command)
     request.addfinalizer(container.kill)
 
@@ -86,6 +88,7 @@ def start_ams_service_with_wrong_model_name(request, get_image, get_test_dir, ge
             name='ams-service-wrong-model-name',
             ports={'{}/tcp'.format(port): port},
             remove=True,
+            environment=['LOG_LEVEL=DEBUG'],
             command=command)
     request.addfinalizer(container.kill)
 

@@ -17,6 +17,7 @@
 import os
 
 from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
+from src.api.models.vehicle_attributes_model import VehicleAttributes
 from src.api.ovms_connector import OvmsConnector
 
 # Default version for a model is the latest one
@@ -29,8 +30,16 @@ AVAILABLE_MODELS = [
         "model_name": "vehicle_detection_adas",
         "model_version": DEFAULT_VERSION,
         "input_name": "data",
-        "output_name": "detection_out",
         },
     "labels_path": "/opt/ams_models/vehicle_detection_adas_model.json"
+    },
+    {"name": "vehicleClassification", 
+    "class": VehicleAttributes, 
+    "ovms_mapping": {
+        "model_name": "vehicle_attributes",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "input",
+        },
+    "labels_path": "/opt/ams_models/vehicle_attributes_model.json"
     },
 ]

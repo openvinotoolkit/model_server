@@ -51,5 +51,5 @@ esac
 done
 
 . /ie-serving-py/.venv/bin/activate
-/ie-serving-py/start_server.sh ie_serving model --model_path /opt/models/vehicle_detection_adas --model_name vehicle_detection_adas --port $OVMS_PORT & 
+/ie-serving-py/start_server.sh ie_serving config --config_path /opt/ams_models/ovms_config.json --port $OVMS_PORT & 
 cd /ams_wrapper && python -m src.wrapper --port $AMS_PORT

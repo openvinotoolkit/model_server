@@ -1,0 +1,16 @@
+{
+  "model_config_list":[
+    {
+      "config": {
+        "name": "vehicle_detection_adas",
+        "base_path": "/opt/models/vehicle_detection_adas"
+      }
+    },
+    {
+      "config": {
+        "name": "vehicle_attributes",
+        "base_path": "/opt/models/vehicle_attributes"
+      }
+    }
+  ]
+}

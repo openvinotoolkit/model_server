@@ -39,7 +39,6 @@ class OvmsConnector():
         self.model_name = ovms_model_info['model_name']
         self.model_version = ovms_model_info['model_version']
         self.input_name = ovms_model_info['input_name']
-        self.output_name = ovms_model_info["output_name"]
 
         channel = grpc.insecure_channel("{}:{}".format("127.0.0.1", self.ovms_port))
         self.stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
