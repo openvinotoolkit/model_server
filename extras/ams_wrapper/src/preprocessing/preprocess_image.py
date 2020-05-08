@@ -89,7 +89,7 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
     try:
         decoded_image = tf.io.decode_image(image, channels=channels)
-        tf.dtypes.cast(decoded_image, dtype)
+        decoded_image = tf.dtypes.cast(decoded_image, dtype)
     except Exception as e:
         raise ImageDecodeError('Provided image is invalid, unable to decode.') from e
 
