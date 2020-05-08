@@ -19,7 +19,7 @@ import json
 import pytest
 
 from src.api.models.model import Model
-from src.api.models.input_config import ValidationError
+from src.api.models.model_config import ValidationError
 
 
 @pytest.fixture()
@@ -30,9 +30,6 @@ def test_model_config():
             {
                 "output_name": "prob",
             },
-            {
-                "output_name": "age_conv3"
-            }
         ],
         "inputs": [
             {
@@ -115,7 +112,7 @@ def test_model_load_valid_output_config(tmpdir, test_model_config,
                                 ('value_index_mapping', value_index_mapping),
                                 ('classes', classes)]:
         if param_value is not None:
-            test_model_config['inputs'][0][param] = param_value
+            test_model_config['outputs'][0][param] = param_value
 
     config_file_path = tmpdir.join("model_config.json")
     with open(config_file_path, mode='w') as config_file:
@@ -132,16 +129,16 @@ def test_model_load_invalid_output_config(tmpdir, test_model_config,
                                          output_name, value_index_mapping,
                                          classes, confidence_threshold, top_k_results):
     for param, param_value in [('output_name', output_name),
-                                ('value_index_mapping', value_index_mapping),
-                                ('classes', classes),
-                                ('confidence_threshold', confidence_threshold),
-                                ('top_k_results', top_k_results)]:
+                               ('value_index_mapping', value_index_mapping),
+                               ('classes', classes),
+                               ('confidence_threshold', confidence_threshold),
+                               ('top_k_results', top_k_results)]:
         if param_value is not None:
-            test_model_config['inputs'][0][param] = param_value
+            test_model_config['outputs'][0][param] = param_value
 
     config_file_path = tmpdir.join("model_config.json")
     with open(config_file_path, mode='w') as config_file:
         json.dump(test_model_config, config_file)
 
     with pytest.raises(ValidationError):
-        Model.load_output_configs(config_file_path)
+        config = Model.load_output_configs(config_file_path)

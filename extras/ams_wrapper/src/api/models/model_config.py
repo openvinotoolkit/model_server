@@ -71,13 +71,19 @@ class ModelInputConfigurationSchema(Schema):
 
 class ModelOutputConfiguration:
     def __init__(self, output_name: str, value_index_mapping: dict = None,
-                 classes: dict = None,
-                 confidence_threshold: float = None, top_k_results: int = None):
+                 classes: dict = None, confidence_threshold: float = None,
+                 top_k_results: int = None):
                  self.output_name = output_name
                  self.value_index_mapping = value_index_mapping
                  self.classes = classes
                  self.confidence_threshold = confidence_threshold
                  self.top_k_results = top_k_results
+    
+    def __str__(self):
+        return 'ModelOutputConfiguration({})'.format(vars(self))
+    
+    def __repr__(self):
+        return 'ModelOutputConfiguration({})'.format(vars(self))
 
 
 class ModelOutputConfigurationSchema(Schema):
