@@ -24,11 +24,6 @@ from utils.grpc import infer, get_model_metadata, model_metadata_response, \
 from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
-sys.path.append(".")
-
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
-
 
 class TestVehicleAttributes():
 
@@ -221,13 +216,11 @@ class TestVehicleAttributes():
                        model_spec_version=None,
                        output_tensors=[out_color, out_type])
         
-        os.chdir("extras/ams_wrapper/src/")
+        sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_wrapper/')))
+        from src.api.models.vehicle_attributes_model import VehicleAttributes
 
-        from api.models.vehicle_attributes_model import VehicleAttributes
-
-        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector","../../ams_models/vehicle_attributes_model.json")
-
-        os.chdir("../../../")
+        config_path = os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_models/vehicle_attributes_model.json'))
+        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector", config_path)
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))

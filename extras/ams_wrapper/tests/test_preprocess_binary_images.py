@@ -21,10 +21,7 @@ import pytest
 import sys
 import pathlib
 
-ams_root_path = pathlib.Path(__file__).parent.parent.absolute()
-sys.path.append(os.path.join(ams_root_path, "src"))
-
-from preprocessing import preprocess_binary_image, ImageResizeError, ImageDecodeError
+from src.preprocessing import preprocess_binary_image, ImageResizeError, ImageDecodeError
 
 
 IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')

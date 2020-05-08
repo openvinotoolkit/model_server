@@ -16,10 +16,11 @@
 import os
 import json
 import numpy as np
-from logger import get_logger
-from api.models.model import Model
-from api.types import Tag, Rectangle, SingleEntity, Entity
-from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
+
+from src.logger import get_logger
+from src.api.models.model import Model
+from src.api.types import Tag, Rectangle, SingleEntity, Entity
+from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 
 logger = get_logger(__name__)
 

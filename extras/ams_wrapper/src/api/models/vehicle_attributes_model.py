@@ -16,9 +16,10 @@
 import os
 import sys
 import json
-from logger import get_logger
-from api.models.model import Model
-from api.types import Tag, Attribute, SingleClassification, Classification
+
+from src.logger import get_logger
+from src.api.models.model import Model
+from src.api.types import Tag, Attribute, SingleClassification, Classification
 
 logger = get_logger(__name__)
 

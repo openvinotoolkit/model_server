@@ -25,11 +25,6 @@ from utils.grpc import infer, get_model_metadata, model_metadata_response, \
 from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
-sys.path.append(".")
-
-from ie_serving.models.models_utils import ModelVersionState, ErrorCode, \
-    _ERROR_MESSAGE  # noqa
-
 
 class TestVehicleDetection():
 
@@ -176,13 +171,11 @@ class TestVehicleDetection():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
         
-        os.chdir("extras/ams_wrapper/src/")
+        sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_wrapper/')))
+        from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
 
-        from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
-
-        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../ams_models/vehicle_detection_adas_model.json" )
-
-        os.chdir("../../../")
+        config_path = os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_models/vehicle_detection_adas_model.json'))
+        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector", config_path)
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
