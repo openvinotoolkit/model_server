@@ -23,7 +23,7 @@ from src.api.models.input_config import ValidationError
 
 
 @pytest.fixture()
-def test_model_config(tmpdir):
+def test_model_config():
     config_file_content = {
         "model_name": "age-gender-recognition-retail-0013",
         "outputs": [
