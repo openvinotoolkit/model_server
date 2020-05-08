@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 import datetime
 import json
 import sys
-from typing import Dict, Union
+from typing import Dict
 
 import falcon
 import tensorflow as tf
