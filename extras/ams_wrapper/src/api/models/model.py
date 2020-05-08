@@ -38,8 +38,7 @@ class Model(ABC):
     def __init__(self, model_name: str, ovms_connector: OvmsConnector,
                  labels_path: str, config_file_path: str = None):
         self.ovms_connector = ovms_connector
-        self.model_name = None # subtype / model name in AMS
-        self.result_type = None # type class
+        self.model_name = model_name
         self.labels = self.load_labels(labels_path)
         self.input_configs: Dict[str, ModelInputConfiguration] = None # load input configuration
         if config_file_path:

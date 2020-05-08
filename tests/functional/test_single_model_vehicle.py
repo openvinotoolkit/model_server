@@ -176,13 +176,10 @@ class TestVehicleDetection():
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
         
-        os.chdir("extras/ams_wrapper/src/")
+        sys.path.append(os.path.abspath('../../extras/ams_wrapper'))
+        from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
 
-        from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
-
-        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../ams_models/vehicle_detection_adas_model.json" )
-
-        os.chdir("../../../")
+        model_adas = VehicleDetectionAdas("vehicle-detection","ovms_connector","../../extras/ams_models/vehicle_detection_adas_model.json" )
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
