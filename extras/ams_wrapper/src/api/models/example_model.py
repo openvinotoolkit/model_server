@@ -16,15 +16,15 @@
 
 import numpy as np
 
-import preprocessing
-from api.models.model import Model
+from src.preprocessing import preprocess_binary_image
+from src.api.models.model import Model
 
 class ExampleModel(Model):
 
     # TODO: think how to handle multiple different inputs
     def preprocess_binary_image(self, binary_image: bytes, input_name: str) -> np.ndarray:
         preprocessing_config = self.input_configs[input_name]
-        return preprocessing.preprocess_binary_image(image=binary_image, **preprocessing_config)
+        return preprocess_binary_image(image=binary_image, **preprocessing_config)
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
        """

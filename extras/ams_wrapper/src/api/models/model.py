@@ -25,11 +25,10 @@ import tensorflow as tf
 import sys
 import numpy as np
 
-from abc import ABC, abstractmethod
-from logger import get_logger
-from preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
-from api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
-from .input_config import ModelInputConfiguration, \
+from src.logger import get_logger
+from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
+from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
+from src.api.models.input_config import ModelInputConfiguration, \
     ModelInputConfigurationSchema, ValidationError
 
 logger = get_logger(__name__)

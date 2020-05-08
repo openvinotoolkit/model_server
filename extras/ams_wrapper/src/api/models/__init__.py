@@ -14,4 +14,3 @@
 # limitations under the License.
 #
 
-from .model import *

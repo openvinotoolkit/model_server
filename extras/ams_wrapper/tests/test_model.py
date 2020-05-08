@@ -18,7 +18,7 @@ import json
 
 import pytest
 
-from src.api.models import Model
+from src.api.models.model import Model
 from src.api.models.input_config import ValidationError
 
 

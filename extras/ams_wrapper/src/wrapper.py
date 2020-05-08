@@ -16,9 +16,9 @@
 
 import argparse
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
-from api.dispatcher import create_dispatcher
-from config import AVAILABLE_MODELS
-from logger import get_logger
+from src.api.dispatcher import create_dispatcher
+from src.config import AVAILABLE_MODELS
+from src.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -42,4 +42,5 @@ def main():
                           required=False, default=9000)
     args = parser.parse_args()
     start_rest_service(args.port, args.workers, args.ovms_port)
+
 main()

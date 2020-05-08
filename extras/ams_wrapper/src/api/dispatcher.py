@@ -15,7 +15,8 @@
 #
 
 import falcon
-from api.ovms_connector import OvmsConnector
+
+from src.api.ovms_connector import OvmsConnector
 
 def create_dispatcher(available_models: list, ovms_port: int):
     dispatch_map = {}

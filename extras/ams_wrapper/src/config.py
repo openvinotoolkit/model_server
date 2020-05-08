@@ -15,8 +15,9 @@
 #
 
 import os
-from api.models.vehicle_detection_adas_model import VehicleDetectionAdas
-from api.ovms_connector import OvmsConnector
+
+from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
+from src.api.ovms_connector import OvmsConnector
 
 # Default version for a model is the latest one
 DEFAULT_VERSION = 0 
