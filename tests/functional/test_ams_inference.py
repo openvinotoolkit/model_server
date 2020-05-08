@@ -25,7 +25,7 @@ from fixtures.ams_fixtures import small_object_detection_image, \
      bmp_object_detection_image, object_detection_image_no_entities
 
 
-def validate_ams_inference_response_schema(response: dict):
+def validate_inference_response_schema(response: dict):
     try:
         parsed_response = InferenceResponseSchema().validate(response)
     except ValidationError as e:
@@ -90,7 +90,7 @@ class TestAmsInference:
             assert response.headers.get('Content-Type') == 'application/json'
 
             response_json = response.json()
-            validate_ams_inference_response_schema(response_json)
+            validate_inference_response_schema(response_json)
 
     @pytest.mark.parametrize("image_format,image", [('image/png', png_object_detection_image()),
                                                     ('image/jpg', jpg_object_detection_image()),
@@ -114,7 +114,7 @@ class TestAmsInference:
             assert response.headers.get('Content-Type') == 'application/json'
 
             response_json = response.json()
-            validate_ams_inference_response_schema(response_json)
+            validate_inference_response_schema(response_json)
 
     def test_input_blank_image(self, start_ams_service, object_detection_image_no_entities):
         with open(object_detection_image_no_entities, mode='rb') as image_file:
