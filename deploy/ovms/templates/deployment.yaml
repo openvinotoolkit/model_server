@@ -1,0 +1,92 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ovms
+  labels:
+    app: ovms
+spec:
+  selector:
+    matchLabels:
+       app: ovms
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        app: ovms
+    spec:
+      containers:
+      - name: ovms-resnet
+        image: intelaipg/openvino-model-server:latest
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint }}
+        env:
+        {{ end }}
+        {{ if .Values.gcp_creds_secret_name }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /secret/gcp-creds.json
+        {{ end }}
+        {{ if .Values.aws_access_key_id }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.aws_access_key_id }}
+        {{ end }}
+        {{ if .Values.aws_secret_access_key }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ovms-aws-secret
+              key: secret_access_key
+        {{ end }}
+        {{ if .Values.aws_region }}
+        - name: AWS_REGION
+          value: {{ .Values.aws_region }}
+        {{ end }}
+        {{ if .Values.s3_compat_api_endpoint }}
+        - name: S3_ENDPOINT
+          value: {{ .Values.s3_compat_api_endpoint }}
+        {{ end }}
+        command: ["/ie-serving-py/start_server.sh"]
+        args: ["ie_serving",
+        {{ if .Values.config_configmap_name }}
+               "config",
+               "--config_path", "/config/config.json",
+        {{ else }}
+               "model",
+               "--model_path", "{{ .Values.model_path }}",
+               "--model_name", "{{ .Values.model_name }}",
+        {{ end }}
+               "--port", "8080",
+               "--rest_port", "8081"]
+        {{ if or .Values.gcp_creds_secret_name .Values.config_mode }}
+        volumeMounts:
+        {{ end }}
+        {{ if .Values.gcp_creds_secret_name }}
+        - name: gcpcreds
+          mountPath: "/secret"
+          readOnly: true
+        {{ end }}
+        {{ if .Values.config_configmap_name }}
+        - name: config
+          mountPath: "/config"
+          readOnly: true
+        {{ end }}
+      {{ if or .Values.gcp_creds_secret_name .Values.config_configmap_name }}
+      volumes:
+      {{ end }}
+      {{ if .Values.gcp_creds_secret_name }}
+      - name: gcpcreds
+        secret:
+          secretName: gcpcreds
+      {{ end }}
+      {{ if .Values.config_configmap_name }}
+      - name: config
+        configMap:
+          name: {{ .Values.config_configmap_name }}
+      {{ end }}

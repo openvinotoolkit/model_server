@@ -1,0 +1,13 @@
+replicas: 1
+
+config_configmap_name: ""
+
+model_name: ""
+model_path: ""
+
+gcp_creds_secret_name: ""
+
+aws_access_key_id: ""
+aws_secret_access_key: ""
+aws_region: ""
+s3_compat_api_endpoint: ""

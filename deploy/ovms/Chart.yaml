@@ -1,0 +1,4 @@
+apiVersion: v1
+description: OpenVINO Model Server
+name: ovms
+version: 1.0.0
