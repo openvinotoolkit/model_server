@@ -128,6 +128,32 @@ class TestAmsInference:
                                  data=image_bytes)
         assert response.status_code == 204
 
+    def test_ams_without_ovms(self, start_ams_service_without_ovms, png_object_detection_image):
+        with open(png_object_detection_image, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service_without_ovms
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+        response = requests.post(endpoint_url,
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(image_bytes))},
+                                 data=image_bytes)
+        assert response.status_code == 503
+
+    
+    def test_ams_with_wrong_model_name(self, start_ams_service_with_wrong_model_name, jpg_object_detection_image):
+        with open(jpg_object_detection_image, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service_with_wrong_model_name
+        ams_port = ports['port']
+        target = "vehicleDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+        response = requests.post(endpoint_url,
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(image_bytes))},
+                                 data=image_bytes)
+        assert response.status_code == 500
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),
