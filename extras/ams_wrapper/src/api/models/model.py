@@ -40,7 +40,6 @@ class Model(ABC):
                  config_file_path: str = None):
         self.ovms_connector = ovms_connector
         self.model_name = model_name
-        #self.labels = self.load_labels(config_file_path)
         self.input_configs = self.load_input_configs(config_file_path)
         self.output_configs = self.load_output_configs(config_file_path) 
         self.labels = {output_name: {index: label for label, index in self.output_configs[output_name].classes.items()}
