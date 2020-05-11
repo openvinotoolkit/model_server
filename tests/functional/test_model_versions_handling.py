@@ -13,26 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import sys
 import pytest
 import numpy as np
+
 from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from model.models_information import PVBDetection, PVBDetectionV2
 from utils.grpc import infer, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.models_utils import ModelVersionState, ErrorCode, \
+    ERROR_MESSAGE  # noqa
 from utils.rest import infer_rest, get_model_metadata_response_rest, \
     get_model_status_response_rest
 
 
-from utils.models_utils import ModelVersionState, ErrorCode, \
-    ERROR_MESSAGE  # noqa
-
-
-class TestModelVersionHandling():
+class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_run_inference(self, download_two_model_versions,
                            start_server_multi_model,
-                           create_grpc_channel):
+                           create_grpc_channel, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
@@ -40,33 +40,23 @@ class TestModelVersionHandling():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
+        model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        face_img = np.ones((1, 3, 300, 300), dtype=np.float32)
-        pvb_img = np.ones((1, 3, 1024, 1024), dtype=np.float32)
+        img = np.ones(model_info.input_shape, dtype=model_info.dtype)
 
-        out_name = "detection_out"
-        in_name = "data"
-        output = infer(face_img, input_tensor=in_name,
+        output = infer(img, input_tensor=model_info.input_name,
                        grpc_stub=stub, model_spec_name=self.model_name,
-                       model_spec_version=1,  # face detection
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7), \
+                       model_spec_version=version,  # face detection
+                       output_tensors=[model_info.output_name])
+        print("output shape", output[model_info.output_name].shape)
+        assert output[model_info.output_name].shape == model_info.output_shape, \
             '{} with version 1 has invalid output'.format(self.model_name)
 
-        output = infer(pvb_img, input_tensor=in_name,
-                       grpc_stub=stub,
-                       model_spec_name='pvb_face_multi_version',
-                       model_spec_version=None,  # PVB detection
-                       output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7), \
-            '{} with version latest has invalid output'.format(self.model_name)
-
     @pytest.mark.skip(reason="not implemented yet")
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_metadata(self, download_two_model_versions,
                                 start_server_multi_model,
-                                create_grpc_channel):
+                                create_grpc_channel, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
@@ -74,37 +64,29 @@ class TestModelVersionHandling():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
-        versions = [None, 1]
+        model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        expected_inputs_metadata = \
-            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
-             # PVB detection
-             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
-             # face detection
-             ]
-        # Same output shape for both versions
-        expected_output_metadata = {
-            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
-        }
-        for i in range(len(versions)):
-            print("Getting info about pvb_face_detection model "
-                  "version:".format(versions[i]))
-            expected_input_metadata = expected_inputs_metadata[i]
-            request = get_model_metadata(model_name=self.model_name,
-                                         version=versions[i])
-            response = stub.GetModelMetadata(request, 10)
-            input_metadata, output_metadata = model_metadata_response(
-                response=response)
+        print("Getting info about pvb_face_detection model "
+              "version:".format("no_version" if version is None else version))
+        expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
+        expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
 
-            print(output_metadata)
-            assert self.model_name == response.model_spec.name
-            assert expected_input_metadata == input_metadata
-            assert expected_output_metadata == output_metadata
+        request = get_model_metadata(model_name=self.model_name,
+                                     version=version)
+        response = stub.GetModelMetadata(request, 10)
+        input_metadata, output_metadata = model_metadata_response(
+            response=response)
+
+        print(output_metadata)
+        assert response.model_spec.name == self.model_name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_status(self, download_two_model_versions,
                               start_server_multi_model,
-                              create_grpc_channel):
+                              create_grpc_channel, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
@@ -112,115 +94,93 @@ class TestModelVersionHandling():
         # Connect to grpc service
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    MODEL_SERVICE)
-        versions = [None, 1]
-        for x in range(len(versions)):
-            request = get_model_status(model_name=self.model_name,
-                                       version=versions[x])
-            response = stub.GetModelStatus(request, 10)
+        request = get_model_status(model_name=self.model_name,
+                                   version=version)
+        response = stub.GetModelStatus(request, 10)
 
-            versions_statuses = response.model_version_status
-            version_status = versions_statuses[0]
-            if x == 0:
-                assert len(versions_statuses) == 2
-            else:
-                assert version_status.version == 1
-            assert version_status.state == ModelVersionState.AVAILABLE
-            assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == ERROR_MESSAGE[
-                ModelVersionState.AVAILABLE][ErrorCode.OK]
+        versions_statuses = response.model_version_status
+        version_status = versions_statuses[0]
+        if version is None:
+            assert len(versions_statuses) == 2
+        else:
+            assert version_status.version == 1
+        assert version_status.state == ModelVersionState.AVAILABLE
+        assert version_status.status.error_code == ErrorCode.OK
+        assert version_status.status.error_message == ERROR_MESSAGE[
+            ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.skip(reason="not implemented yet")
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_run_inference_rest(self, download_two_model_versions,
-                                start_server_multi_model):
+                                start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        face_img = np.ones((1, 3, 300, 300))
-        pvb_img = np.ones((1, 3, 1024, 1024))
-        out_name = "detection_out"
+        model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        in_name = "data"
-        rest_url = 'http://localhost:{}/v1/models/{}' \
-                   '/versions/1:predict'.format(ports["rest_port"],
-                                                self.model_name)
-        output = infer_rest(face_img,
-                            input_tensor=in_name, rest_url=rest_url,
-                            output_tensors=[out_name],
+        img = np.ones(model_info.input_shape, dtype=model_info.dtype)
+        if version is None:
+            rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(ports["rest_port"], self.model_name)
+        else:
+            rest_url = 'http://localhost:{}/v1/models/{}' \
+                       '/versions/{}:predict'.format(ports["rest_port"], self.model_name, version)
+        output = infer_rest(img,
+                            input_tensor=model_info.input_name, rest_url=rest_url,
+                            output_tensors=[model_info.output_name],
                             request_format='column_name')
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7), \
+        print("output shape", output[model_info.output_name].shape)
+        assert output[model_info.output_name].shape == model_info.output_shape, \
             '{} with version 1 has invalid output'.format(self.model_name)
 
-        rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(
-            ports["rest_port"], self.model_name)
-        output = infer_rest(pvb_img,
-                            input_tensor=in_name, rest_url=rest_url,
-                            output_tensors=[out_name],
-                            request_format='column_name')
-        print("output shape", output[out_name].shape)
-        assert output[out_name].shape == (1, 1, 200, 7), \
-            '{} with version latest has invalid output'.format(self.model_name)
-
-        # both model versions use the same input data shape
-
     @pytest.mark.skip(reason="not implemented yet")
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_metadata_rest(self, download_two_model_versions,
-                                     start_server_multi_model):
+                                     start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
+        model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        urls = ['http://localhost:{}/v1/models/{}'
-                '/metadata'.format(ports["rest_port"], self.model_name),
-                'http://localhost:{}/v1/models/{}'
-                '/versions/1/metadata'.format(ports["rest_port"],
-                                              self.model_name)]
+        if version is None:
+            rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(ports["rest_port"], self.model_name)
+        else:
+            rest_url = 'http://localhost:{}/v1/models/{}/versions/{}/metadata'.format(ports["rest_port"],
+                                                                                      self.model_name, version)
 
-        expected_inputs_metadata = \
-            [{'data': {'dtype': 1, 'shape': [1, 3, 1024, 1024]}},
-             # PVB detection
-             {'data': {'dtype': 1, 'shape': [1, 3, 300, 300]}}
-             # face detection
-             ]
-        # Same output shape for both versions
-        expected_output_metadata = {
-            'detection_out': {'dtype': 1, 'shape': [1, 1, 200, 7]}
-        }
-        for i in range(len(urls)):
-            print("Getting info about resnet model version:".format(
-                urls[i]))
-            expected_input_metadata = expected_inputs_metadata[i]
-            response = get_model_metadata_response_rest(urls[i])
-            input_metadata, output_metadata = model_metadata_response(
-                response=response)
+        expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
+        expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
+        print("Getting info about resnet model version:".format(rest_url))
+        response = get_model_metadata_response_rest(rest_url)
+        input_metadata, output_metadata = model_metadata_response(response=response)
 
-            print(output_metadata)
-            assert self.model_name == response.model_spec.name
-            assert expected_input_metadata == input_metadata
-            assert expected_output_metadata == output_metadata
+        print(output_metadata)
+        assert response.model_spec.name == self.model_name
+        assert expected_input_metadata == input_metadata
+        assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
+    @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_status_rest(self, download_two_model_versions,
-                                   start_server_multi_model):
+                                   start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        urls = ['http://localhost:{}/v1/models/{}'.format(ports["rest_port"],
-                                                          self.model_name),
-                'http://localhost:{}/v1/models/{}'
-                '/versions/1'.format(ports["rest_port"], self.model_name)]
+        if version is None:
+            rest_url = 'http://localhost:{}/v1/models/{}'.format(ports["rest_port"], self.model_name)
+        else:
+            rest_url = 'http://localhost:{}/v1/models/{}/versions/{}'.format(ports["rest_port"],
+                                                                             self.model_name, version)
 
-        for x in range(len(urls)):
-            response = get_model_status_response_rest(urls[x])
-            versions_statuses = response.model_version_status
-            version_status = versions_statuses[0]
-            if x == 0:
-                assert len(versions_statuses) == 2
-            else:
-                assert version_status.version == 1
-            assert version_status.state == ModelVersionState.AVAILABLE
-            assert version_status.status.error_code == ErrorCode.OK
-            assert version_status.status.error_message == ERROR_MESSAGE[
-                ModelVersionState.AVAILABLE][ErrorCode.OK]
+        response = get_model_status_response_rest(rest_url)
+        versions_statuses = response.model_version_status
+        version_status = versions_statuses[0]
+        if version is None:
+            assert len(versions_statuses) == 2
+        else:
+            assert version_status.version == 1
+        assert version_status.state == ModelVersionState.AVAILABLE
+        assert version_status.status.error_code == ErrorCode.OK
+        assert version_status.status.error_message == ERROR_MESSAGE[
+            ModelVersionState.AVAILABLE][ErrorCode.OK]

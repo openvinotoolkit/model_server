@@ -42,6 +42,9 @@ class PVBDetectionV2(PVBDetectionV1):
     input_shape = (1, 3, 1024, 1024)
 
 
+PVBDetection = [PVBDetectionV1, PVBDetectionV2]
+
+
 class Resnet:
     name = "resnet"
     dtype = np.float32

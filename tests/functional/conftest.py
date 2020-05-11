@@ -37,6 +37,11 @@ pytest_plugins = [
     ]
 
 
+def pytest_sessionstart(session):
+    for item in os.environ.items():
+        print(item)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--image", action="store", default="ovms:latest",
