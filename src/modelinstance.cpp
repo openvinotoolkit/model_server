@@ -149,10 +149,12 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     this->path = config.getBasePath();
     this->version = config.getVersion();
     this->backend = config.getBackend();
-
+    this->status = ModelVersionStatus(this->name, this->version);
     // load network
     try {
+        this->status.setLoading();
         if (!dirExists(path)) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return Status::PATH_INVALID;
         }
         network = engine.ReadNetwork(getModelFile(path));
@@ -179,9 +181,12 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             config.getVersion(),
             pluginConfig["CPU_THROUGHPUT_STREAMS"],
             numberOfParallelInferRequests);
+
+        this->status.setAvailable();
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         std::cout << e.what() << std::endl;
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return Status::NETWORK_NOT_LOADED;
     }
 

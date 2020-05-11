@@ -29,6 +29,7 @@
 #include "config.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
+#include "model_service.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -82,11 +83,13 @@ int server_main(int argc, char** argv)
     }
 
     PredictionServiceImpl service;
+    ModelServiceImpl model_service;
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
     builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
+    builder.RegisterService(&model_service);
 
     std::vector<std::unique_ptr<Server>> servers;
     uint grpcServersCount = getGRPCServersCount();

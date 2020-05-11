@@ -15,6 +15,8 @@ cc_library(
         "modelmanager.hpp",
         "modelinstance.cpp",
         "modelinstance.hpp",
+        "model_service.hpp",
+        "model_service.cpp",
         "ovinferrequestsqueue.cpp",
         "ovinferrequestsqueue.hpp",
         "prediction_service.cpp",
@@ -24,12 +26,14 @@ cc_library(
         "stringutils.hpp",
         "tensorinfo.hpp",
         "timer.hpp",
+        "modelversionstatus.hpp",
     ],
     copts = [
          "--std=c++17"
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
         "@rapidjson//:rapidjson",
@@ -70,6 +74,8 @@ cc_test(
         "test/stringutils_test.cpp",
         "test/predict_validation_test.cpp",
         "test/serialization_tests.cpp",
+        "test/modelversionstatus_test.cpp",
+        "test/model_service_test.cpp",
     ],
     copts = [
         "--std=c++17"

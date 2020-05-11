@@ -179,3 +179,15 @@ Compile code using command:
 ```bash
 bazel build //src:ovms
 ```
+
+Run single unit test with flag "--test_filter", e.g.:
+
+```bash
+bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+```
+
+Run build on shared machine with extra makefile flags:
+
+```bash
+OVMS_CPP_DOCKER_IMAGE=rr_ovms OVMS_CPP_CONTAINTER_PORT=9278 make docker_build
+```

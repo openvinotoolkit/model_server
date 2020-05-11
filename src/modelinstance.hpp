@@ -26,6 +26,7 @@
 #include "ovinferrequestsqueue.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
+#include "modelversionstatus.hpp"
 
 namespace ovms {
 
@@ -64,6 +65,11 @@ namespace ovms {
          * @brief A model version
          */
         model_version_t version;
+
+        /**
+         * @brief A model status
+         */
+        ModelVersionStatus status;
 
         /**
          * @brief A backend to run model
@@ -162,6 +168,15 @@ namespace ovms {
          */
         virtual const model_version_t& getVersion() {
             return version;
+        }
+
+        /**
+         * @brief Gets model status
+         *
+         * @return status
+         */
+        const ModelVersionStatus& getStatus() {
+            return status;
         }
 
         /**
