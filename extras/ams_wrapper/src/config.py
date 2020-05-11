@@ -42,4 +42,13 @@ AVAILABLE_MODELS = [
         },
     "config_path": "/opt/ams_models/vehicle_attributes_model.json"
     },
+    {"name": "emotionsRecognition", 
+    "class": VehicleAttributes, 
+    "ovms_mapping": {
+        "model_name": "emotions_recognition",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/emotions_recognition_model.json"
+    },
 ]

@@ -79,7 +79,7 @@ class TestAmsInference:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["vehicleDetection", "vehicleClassification"]
+        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
             response = requests.post(endpoint_url,
@@ -101,7 +101,7 @@ class TestAmsInference:
 
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["vehicleDetection", "vehicleClassification"]
+        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
 

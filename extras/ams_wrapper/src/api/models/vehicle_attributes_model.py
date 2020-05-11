@@ -44,7 +44,14 @@ class VehicleAttributes(Model):
             highest_prob = 0.0
             for position in outputs[output].keys():
                 class_name = outputs[output][position]
-                probability = inference_output[type_name][0,int(float(position)),0,0].item()
+                if type_name in inference_output:
+                    probability = inference_output[type_name][0,int(float(position)),0,0].item()
+                else:
+                    message = 'Model configuration label- {}'
+                    ' not found in model output - {}'.format(type_name, inference_output)
+                    logger.exception(message)
+                    raise ValidationError(message)
+
                 if probability > highest_prob:
                     tag_name = class_name 
                     highest_prob = probability
