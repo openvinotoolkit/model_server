@@ -33,7 +33,7 @@ To start the Model Server container use the following command:
 
 ```bash
 docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/ubuntu18_model_server \
-/ie-serving-py/start_server.sh ie_serving model --model_path /models --model_name face-detection --port 9000  --shape auto
+/ie-serving-py/start_server.sh ie_serving model --model_path /models/face-detection --model_name face-detection --port 9000  --shape auto
 ```
 
 Model Server expects models in the predefined structure of folders - that is why the folder with downloaded models is mounted as `/models/face-detection/1`. In our case this expected structure is as follows:
