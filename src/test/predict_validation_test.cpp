@@ -38,7 +38,6 @@ class PredictValidation : public ::testing::Test {
     ovms::tensor_map_t networkInputs;
 
 protected:
-
     NiceMock<MockModelInstance> instance;
     tensorflow::serving::PredictRequest request;
 
@@ -145,7 +144,7 @@ TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
 
 TEST_F(PredictValidation, RequestWrongBatchSize) {
     auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
-    input.mutable_tensor_shape()->mutable_dim(0)->set_size(10); // dim(0) is batch size
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(10);  // dim(0) is batch size
 
     auto status = instance.validate(&request);
     EXPECT_EQ(ovms::ValidationStatusCode::INCORRECT_BATCH_SIZE, status);

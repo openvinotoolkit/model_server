@@ -31,30 +31,27 @@ std::string createConfigFileWithContent(const std::string& content) {
    std::ofstream configFile;
    configFile.open(configFilePath);
    configFile << content << std::endl;
-   configFile.close(); 
+   configFile.close();
    return configFilePath;
 }
 
-} // namespace anon.
+}  // namespace
 
-TEST(ModelManager, ConfigParseNoModels)
-{
+TEST(ModelManager, ConfigParseNoModels) {
    std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
    ovms::Status status = manager.start(configFile);
    EXPECT_EQ(status, ovms::Status::OK);
 }
 
-TEST(ModelManager, ConfigParseEmpty)
-{
+TEST(ModelManager, ConfigParseEmpty) {
    std::string configFile = createConfigFileWithContent("\n");
    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
    ovms::Status status = manager.start(configFile);
    EXPECT_NE(status, ovms::Status::OK);
 }
 
-TEST(ModelManager, ConfigParseEmptyJson)
-{
+TEST(ModelManager, ConfigParseEmptyJson) {
    std::string configFile = createConfigFileWithContent("{}\n");
    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
    ovms::Status status = manager.start(configFile);
@@ -68,7 +65,7 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
       std::filesystem::create_directories(path + std::to_string(i));
    }
 
-   std::filesystem::create_directories(path + "unknown_dir11"); // invalid version directory
+   std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
 
    std::vector<ovms::model_version_t> versions;
    auto status = ovms::ModelManager::readAvailableVersions(path, versions);

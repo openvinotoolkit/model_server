@@ -2,6 +2,12 @@ pipeline {
     agent any
 
     stages {
+        stage('style check') {
+            steps {
+                sh 'make style'
+            }
+        }
+
         stage('docker build') {
             steps {
                 sh 'make docker_build'

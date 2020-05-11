@@ -83,7 +83,7 @@ TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
 
     auto isShape = [](
-        const tensorflow::TensorShapeProto& actual, 
+        const tensorflow::TensorShapeProto& actual,
         const std::vector<size_t>&&         expected) -> bool {
         if (actual.dim_size() != expected.size()) {
             return false;

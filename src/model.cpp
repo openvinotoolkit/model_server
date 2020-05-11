@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <map>
+#include <memory>
+#include <utility>
+
 #include "model.hpp"
 
 namespace ovms {
@@ -27,7 +31,7 @@ Status Model::addVersion(const ModelConfig& config) {
     if (this->defaultVersion < config.getVersion())
         this->defaultVersion = config.getVersion();
     modelVersions[config.getVersion()] = std::move(modelInstance);
-    
+
     return Status::OK;
 }
 
@@ -42,4 +46,4 @@ Status Model::dropVersion(const model_version_t& version) {
     return Status::OK;
 }
 
-} // namespace ovms
+}  // namespace ovms

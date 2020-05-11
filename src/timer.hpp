@@ -23,8 +23,8 @@
 class Timer {
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> startTimestamps;
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> stopTimestamps;
-public:
 
+public:
     void start(const std::string& name) {
 #ifdef DEBUG
         startTimestamps[name] = std::chrono::high_resolution_clock::now();
@@ -50,9 +50,9 @@ public:
         std::cout << "-----\n";
         for (const auto& pair : stopTimestamps) {
             const auto& name = pair.first;
-            auto elapsed = std::to_string(std::chrono::duration<double, std::milli>(stopTimestamps[name] - startTimestamps[name]).count()); 
+            auto elapsed = std::to_string(std::chrono::duration<double, std::milli>(stopTimestamps[name] - startTimestamps[name]).count());
 
-            std::cout 
+            std::cout
                 << name
                 << ": "
                 << elapsed
@@ -61,5 +61,4 @@ public:
         }
 #endif
     }
-
 };

@@ -15,6 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
 #include <utility>
 
 namespace ovms {
@@ -27,7 +30,7 @@ enum class Status {
     OK,                             /*!< Success */
     PATH_INVALID,                   /*!< The provided path is invalid or doesn't exists */
     FILE_INVALID,                   /*!< File not found or cannot open */
-    NETWORK_NOT_LOADED,     
+    NETWORK_NOT_LOADED,
     JSON_INVALID,                   /*!< The file is not valid json */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,             /*!< The provided shape is in wrong format */
@@ -107,4 +110,4 @@ public:
     }
 };
 
-} // namespace ovms
+}  // namespace ovms

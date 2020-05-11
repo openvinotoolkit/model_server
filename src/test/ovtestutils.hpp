@@ -15,9 +15,10 @@
 //*****************************************************************************
 #pragma once
 
-#include <vector>
-#include <string>
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -46,13 +47,13 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
     switch (precision) {
         case Precision::FP32:  return tensorflow::DataType::DT_FLOAT;
         case Precision::FP16:  return tensorflow::DataType::DT_HALF;
-        //case Precision::Q78:   return tensorflow::DataType::
+        // case Precision::Q78:   return tensorflow::DataType::
         case Precision::I16:   return tensorflow::DataType::DT_INT16;
         case Precision::U8:    return tensorflow::DataType::DT_UINT8;
         case Precision::U16:   return tensorflow::DataType::DT_UINT16;
         case Precision::I32:   return tensorflow::DataType::DT_INT32;
         case Precision::I64:   return tensorflow::DataType::DT_INT64;
-        //case Precision::BIN:   return tensorflow::DataType::
+        // case Precision::BIN:   return tensorflow::DataType::
         case Precision::BOOL:  return tensorflow::DataType::DT_BOOL;
         default:
             throw "Not all types mapped yet";
@@ -90,7 +91,7 @@ public:
     MockBlob(const InferenceEngine::TensorDesc& tensorDesc) : Blob(tensorDesc) {
         to = const_cast<char*>("12345678");
         _allocator = details::make_pre_allocator(to, 8);
-    };
+    }
     MOCK_METHOD(void, allocate, (), (noexcept));
     MOCK_METHOD(bool, deallocate, (), (noexcept));
     InferenceEngine::LockedMemory<void> buffer() noexcept {
@@ -102,21 +103,18 @@ public:
 private:
     std::shared_ptr<IAllocator> _allocator;
     char* to;
-
 };
 
 class MockIInferRequestProperGetBlob : public MockIInferRequest {
 public:
     using Ptr = std::shared_ptr<MockIInferRequest>;
     MockIInferRequestProperGetBlob(const InferenceEngine::TensorDesc& tensorDesc) :
-        MockIInferRequest()
-    {
+        MockIInferRequest() {
         mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
     }
     MOCK_METHOD(InferenceEngine::StatusCode, GetBlob_mocked, (const char*, Blob::Ptr&, ResponseDesc*), (noexcept));
 
-    InferenceEngine::StatusCode GetBlob(const char* c, Blob::Ptr& ptr, ResponseDesc* d) noexcept
-    {
+    InferenceEngine::StatusCode GetBlob(const char* c, Blob::Ptr& ptr, ResponseDesc* d) noexcept {
         // this is just to register GetBlob call
         this->GetBlob_mocked(c, ptr, d);
         ptr = mockBlobPtr;

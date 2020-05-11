@@ -16,9 +16,12 @@
 #include <dirent.h>
 #include <sys/types.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -30,7 +33,6 @@ using namespace InferenceEngine;
 namespace ovms {
 
 const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
-const int DEFAULT_OV_BACKEND_STREAMS = DEFAULT_OV_STREAMS;
 
 void ModelInstance::loadInputTensors(const ModelConfig& config) {
     auto networkShapes = network.getInputShapes();
@@ -43,14 +45,12 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
         auto precision = input->getPrecision();
         auto layout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
-        auto desc = input->getTensorDesc();
 
         // Data from config
         if (config.getLayout().size()) {
             // Single layout for all inputs
             layout = TensorInfo::getLayoutFromString(config.getLayout());
-        } 
-        else if (config.getLayouts().count(name)) {
+        } else if (config.getLayouts().count(name)) {
             // Layout defined for specific input
             layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
         }
@@ -59,9 +59,8 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
         // One shape for all inputs
         if (config.getShape().size()) {
             shape = config.getShape();
-        }
-        // Shape for specific input
-        else if (config.getShapes().count(name)) {
+        } else if (config.getShapes().count(name)) {
+            // Shape for specific input
             shape = config.getShapes().at(name);
         }
 
@@ -70,8 +69,8 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
         }
 
         networkShapes[name] = shape;
-        this->inputsInfo[name] = std::make_shared<TensorInfo>(
-            name, precision, shape, layout);
+        auto tensor = std::make_shared<TensorInfo>(name, config.getMappingInputByKey(name), precision, shape, layout);
+        this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
 
     // Update OV model shapes
@@ -88,8 +87,8 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto layout = output->getLayout();
         auto shape = output->getDims();
 
-        this->outputsInfo[name] = std::make_shared<TensorInfo>(
-            name, precision, shape, layout);
+        auto tensor = std::make_shared<TensorInfo>(name, config.getMappingOutputByKey(name), precision, shape, layout);
+        this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
 }
 
@@ -176,8 +175,8 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
         inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(execNetwork, numberOfParallelInferRequests);
 
-        spdlog::info("Loaded model {}; version: {}; CPU streams: {}; No of InferRequests: {}", 
-            config.getName(), 
+        spdlog::info("Loaded model {}; version: {}; CPU streams: {}; No of InferRequests: {}",
+            config.getName(),
             config.getVersion(),
             pluginConfig["CPU_THROUGHPUT_STREAMS"],
             numberOfParallelInferRequests);
@@ -194,7 +193,6 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
 }
 
 const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
-
     // Network and request must have the same amount of inputs
     if (request->inputs_size() >= 0 && getInputsInfo().size() != (size_t) request->inputs_size()) {
         return ValidationStatusCode::INVALID_INPUT_ALIAS;
@@ -255,4 +253,4 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
     return ValidationStatusCode::OK;
 }
 
-} // namespace ovms
+}  // namespace ovms

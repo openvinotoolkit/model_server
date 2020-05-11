@@ -16,8 +16,11 @@
 #pragma once
 
 #include <future>
+#include <map>
+#include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -39,7 +42,7 @@ namespace ovms {
          * @brief Private copying constructor
          */
         ModelManager(const ModelManager&);
-    
+
         /**
          * @brief Reads models from configuration file
          * 
@@ -77,6 +80,7 @@ namespace ovms {
          * @brief An exit signal to notify watcher thread to exit
          */
         std::promise<void> exit;
+
     public:
         /**
          * @brief Gets the instance of ModelManager
@@ -144,7 +148,7 @@ namespace ovms {
          * @param filename
          * @return status
          */
-        Status start(const std::string& jsonFilename); 
+        Status start(const std::string& jsonFilename);
 
         /**
          * @brief Load model versions located in base path
@@ -195,5 +199,14 @@ namespace ovms {
          * @return operation status
          */
         static Status readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions);
+
+        /**
+         * @brief  Parses mapping_config.json for mapping input/outputs in the model
+         * 
+         * @param base 
+         * @param mappingInputs 
+         * @param mappingOutputs 
+         */
+        void parseModelMapping(const std::string& base, mapping_config_t& mappingInputs, mapping_config_t& mappingOutputs);
     };
 }  // namespace ovms

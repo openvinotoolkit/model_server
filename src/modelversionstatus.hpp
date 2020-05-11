@@ -65,7 +65,7 @@ enum class ModelVersionStatusErrorCode : int {
     // INTERNAL = 13,
     // UNAVAILABLE = 14,
     // DATA_LOSS = 15,
-    // DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_ 
+    // DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_
     //    = 20
 };
 
@@ -82,6 +82,7 @@ class ModelVersionStatus {
       model_version_t version;
       ModelVersionState state;
       ModelVersionStatusErrorCode errorCode;
+
   public:
     ModelVersionStatus() = default;
 
@@ -131,6 +132,7 @@ class ModelVersionStatus {
       errorCode = error_code;
       logStatus();
     }
+
   private:
       void logStatus() {
         spdlog::info("STATUS CHANGE: Version {} of model {} status change. New status: { \"state\": \"{}\", \"status\": { \"error_code\": \"{}\", \"error_message\": \"\" } }",
@@ -141,4 +143,4 @@ class ModelVersionStatus {
       }
 };
 
-} // namespace ovms
+}  // namespace ovms

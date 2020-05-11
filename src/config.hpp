@@ -15,6 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <cxxopts.hpp>
 
 namespace ovms {
@@ -47,7 +51,7 @@ namespace ovms {
          * @brief 
          */
         const std::string empty;
-        
+
         /**
          * @brief 
          */
@@ -209,4 +213,4 @@ namespace ovms {
             return empty;
         }
     };
-} // namespace ovms 
+}  // namespace ovms

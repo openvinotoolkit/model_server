@@ -16,8 +16,10 @@
 #include <sys/stat.h>
 
 #include <iostream>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <utility>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -29,6 +31,7 @@
 namespace ovms {
 
 const uint ModelManager::watcherIntervalSec = 1;
+const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
@@ -68,7 +71,7 @@ Status ModelManager::start(const std::string& jsonFilename) {
     std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
     monitor = std::move(t);
     monitor.detach();
-    
+
     return Status::OK;
 }
 
@@ -78,23 +81,23 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::ifstream ifs(jsonFilename.c_str());
     // Perform some basic checks on the config file
     if (!ifs.good()) {
-        // Logger(Log::Error, "File is invalid ", jsonFilename);
+        spdlog::error("File is invalid {}", jsonFilename);
         return Status::FILE_INVALID;
     }
 
     rapidjson::IStreamWrapper isw(ifs);
     if (doc.ParseStream(isw).HasParseError()) {
-        // Logger(Log::Error, "Configuration file is not a valid JSON file.");
+        spdlog::error("Configuration file is not a valid JSON file.");
         return Status::JSON_INVALID;
     }
 
     // TODO validate json against schema
     const auto itr = doc.FindMember("model_config_list");
     if (itr == doc.MemberEnd() || !itr->value.IsArray()) {
-        // Logger(Log::Error, "Configuration file doesn't have models property.");
+        spdlog::error("Configuration file doesn't have models property.");
         return Status::JSON_INVALID;
     }
-    
+
     models.clear();
     configFilename = jsonFilename;
     for (const auto& configs : itr->value.GetArray()) {
@@ -123,7 +126,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             // Legacy format as string
             if (v["shape"].IsString()) {
                 if (modelConfig.setShape(v["shape"].GetString()) != Status::OK) {
-                    std::cout << "There was an error parsing shape: " << v["shape"].GetString() << std::endl;
+                    spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                 }
             } else {
                 if (v["shape"].IsArray()) {
@@ -140,7 +143,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
                         // check if legacy format is used
                         if (s.value.IsString()) {
                             if (ModelConfig::parseShape(shape, s.value.GetString()) != Status::OK) {
-                                std::cout << "There was an error parsing shape: " << v["shape"].GetString() << std::endl;
+                                spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                             }
                         } else {
                             for (auto& sh : s.value.GetArray()) {
@@ -167,7 +170,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             plugin_config_t pluginConfig;
             auto status = ModelManager::parsePluginConfig(v["plugin_config"], pluginConfig);
             if (status != Status::OK) {
-                std::cout << StatusDescription::getError(status) << std::endl;
+                spdlog::error("Couldn't parse plugin config: {}", StatusDescription::getError(status));
                 return status;
             }
             modelConfig.setPluginConfig(pluginConfig);
@@ -180,23 +183,22 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 }
 
 void ModelManager::watcher(std::future<void> exit) {
-    // Logger(Log::Info, "Started config watcher thread");
+    spdlog::info("Started config watcher thread");
     int64_t lastTime;
     struct stat statTime;
 
     stat(configFilename.c_str(), &statTime);
     lastTime = statTime.st_ctime;
-	while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout)
-	{
+    while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         stat(configFilename.c_str(), &statTime);
         if (lastTime != statTime.st_ctime) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
-            // Logger(Log::Info, "Configuration changed");
+            spdlog::info("Model configuration changed");
         }
-	}
-    // Logger(Log::Info, "Exited config watcher thread");
+    }
+    spdlog::info("Exited config watcher thread");
 }
 
 void ModelManager::join() {
@@ -227,6 +229,48 @@ Status ModelManager::parsePluginConfig(std::string command, plugin_config_t& con
     return ModelManager::parsePluginConfig(node, config);
 }
 
+void ModelManager::parseModelMapping(const std::string& base,
+                                     mapping_config_t& mappingInputs,
+                                     mapping_config_t& mappingOutputs) {
+    rapidjson::Document doc;
+
+    std::filesystem::path path = base;
+    path.append(MAPPING_CONFIG_JSON);
+
+    std::ifstream ifs(path.c_str());
+    if (!ifs.good()) {
+        return;
+    }
+
+    rapidjson::IStreamWrapper isw(ifs);
+    if (doc.ParseStream(isw).HasParseError()) {
+        spdlog::warn("Couldn't load {} from dir {}", MAPPING_CONFIG_JSON, base);
+        return;
+    }
+
+    // Process inputs
+    const auto itr = doc.FindMember("inputs");
+    if (itr == doc.MemberEnd() || !itr->value.IsObject()) {
+        spdlog::warn("Couldn't load inputs object in file {} from dir {}", MAPPING_CONFIG_JSON, base);
+    } else {
+        for (const auto& key : itr->value.GetObject()) {
+            spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+            mappingInputs[key.name.GetString()] = key.value.GetString();
+        }
+    }
+
+    // Process outputs
+    const auto it = doc.FindMember("outputs");
+    if (it == doc.MemberEnd() || !it->value.IsObject()) {
+        spdlog::warn("Couldn't load outputs object in file {} from dir {}", MAPPING_CONFIG_JSON, base);
+    } else {
+        for (const auto& key : it->value.GetObject()) {
+            spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+            mappingOutputs[key.name.GetString()] = key.value.GetString();
+        }
+    }
+}
+
 Status ModelManager::readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions) {
     std::filesystem::directory_iterator it;
     try {
@@ -251,29 +295,33 @@ Status ModelManager::readAvailableVersions(const std::string& path, std::vector<
 }
 
 Status ModelManager::loadModelWithVersions(const std::string& basePath, ModelConfig& config) {
-   std::vector<model_version_t> versions;
-   auto status = readAvailableVersions(basePath, versions);
-   if  (status != Status::OK) {
-       return status;
-   }
+    std::vector<model_version_t> versions;
+    auto status = readAvailableVersions(basePath, versions);
+    if  (status != Status::OK) {
+        return status;
+    }
 
-   std::shared_ptr<Model> model = std::make_shared<Model>();
-   models[config.getName()] = std::move(model);
+    std::shared_ptr<Model> model = std::make_shared<Model>();
+    models[config.getName()] = std::move(model);
 
-   for (const auto version : versions) {
-       config.setVersion(version);
-       config.setBasePath(basePath + "/" + std::to_string(version));
+    for (const auto version : versions) {
+        config.setVersion(version);
+        config.setBasePath(basePath + "/" + std::to_string(version));
+        mapping_config_t mappingInputs, mappingOutputs = {};
+        parseModelMapping(config.getBasePath(), mappingInputs, mappingOutputs);
+        config.setMappingInputs(mappingInputs);
+        config.setMappingOutputs(mappingOutputs);
 
-       auto status = models[config.getName()]->addVersion(config);
-       if (status != Status::OK) {
-           spdlog::info("Error while loading model: {}; version: {}; error: {}",
-               config.getName(),
-               version,
-               StatusDescription::getError(status));
-       }
-   }
+        auto status = models[config.getName()]->addVersion(config);
+        if (status != Status::OK) {
+            spdlog::error("Error while loading model: {}; version: {}; error: {}",
+                          config.getName(),
+                          version,
+                          StatusDescription::getError(status));
+        }
+    }
 
-   return Status::OK;
+    return Status::OK;
 }
-  
-} // namespace ovms
+
+}  // namespace ovms

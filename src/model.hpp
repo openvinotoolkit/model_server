@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -113,4 +115,4 @@ namespace ovms {
          */
         Status dropVersion(const model_version_t& version);
     };
-} // namespace ovms
+}  // namespace ovms

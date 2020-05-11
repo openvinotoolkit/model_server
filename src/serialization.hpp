@@ -15,11 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
-
 #include "tensorflow/core/framework/tensor.h"
-
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "status.hpp"
@@ -30,13 +30,12 @@ namespace ovms {
 ValidationStatusCode serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
-    InferenceEngine::Blob::Ptr blob)
-{
+    InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
     switch (networkOutput->getPrecision()) {
         case InferenceEngine::Precision::FP32: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
         case InferenceEngine::Precision::I32:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value); break;
-        //case Precision::DOUBLE?: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); // unsupported by OV?
+        // case Precision::DOUBLE?: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); // unsupported by OV?
         case InferenceEngine::Precision::I64:
         case InferenceEngine::Precision::I8:
         case InferenceEngine::Precision::U8:
@@ -64,27 +63,25 @@ ValidationStatusCode serializeBlobToTensorProto(
 ValidationStatusCode serializePredictResponse(
     InferenceEngine::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response)
-{
+    tensorflow::serving::PredictResponse* response) {
     ValidationStatusCode status;
     for (const auto& pair : outputMap) {
-        const auto& name = pair.first;
         auto networkOutput = pair.second;
         InferenceEngine::Blob::Ptr blob;
         try {
-            blob = inferRequest.GetBlob(name);
+            blob = inferRequest.GetBlob(networkOutput->getName());
         } catch (const InferenceEngine::details::InferenceEngineException& e) {
             ValidationStatusCode status = ValidationStatusCode::SERIALIZATION_ERROR;
             spdlog::error("ovms::{}:{}: {} details:{}", __FUNCTION__, __LINE__, ValidationStatus::getError(status), e.what());
             return status;
         }
-        auto& tensorProto = (*response->mutable_outputs())[name];
+        auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
         status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
-        if(ValidationStatusCode::OK != status) {
+        if (ValidationStatusCode::OK != status) {
             return status;
         }
     }
     return ValidationStatusCode::OK;
 }
 
-} // namespace
+}  // namespace ovms

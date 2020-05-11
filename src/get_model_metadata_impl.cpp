@@ -18,9 +18,8 @@
 namespace ovms {
 
 GetModelMetadataStatusCode GetModelMetadataImpl::getModelStatus(
-    const   tensorflow::serving::GetModelMetadataRequest*   request, 
+    const   tensorflow::serving::GetModelMetadataRequest*   request,
             tensorflow::serving::GetModelMetadataResponse*  response) {
-
     auto status = validate(request);
     if (status != GetModelMetadataStatusCode::OK) {
         return status;
@@ -70,11 +69,11 @@ void GetModelMetadataImpl::convert(
             proto_signature_map_t*  to) {
     for (const auto& pair : from) {
         auto tensor = pair.second;
-        auto& input = (*to)[tensor->getName()];
-        
+        auto& input = (*to)[tensor->getMappedName()];
+
         input.set_dtype(tensor->getPrecisionAsDataType());
 
-        *input.mutable_name() = tensor->getName();
+        *input.mutable_name() = tensor->getMappedName();
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
         for (auto dim : tensor->getShape()) {
@@ -84,7 +83,7 @@ void GetModelMetadataImpl::convert(
 }
 
 void GetModelMetadataImpl::buildResponse(
-    std::shared_ptr<ModelInstance>                  instance, 
+    std::shared_ptr<ModelInstance>                  instance,
     tensorflow::serving::GetModelMetadataResponse*  response) {
 
     response->Clear();
@@ -92,10 +91,10 @@ void GetModelMetadataImpl::buildResponse(
     response->mutable_model_spec()->mutable_version()->set_value(instance->getVersion());
 
     tensorflow::serving::SignatureDefMap def;
-    convert(instance->getInputsInfo (), ((*def.mutable_signature_def())["serving_default"]).mutable_inputs ());
+    convert(instance->getInputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_inputs());
     convert(instance->getOutputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
 
     (*response->mutable_metadata())["signature_def"].PackFrom(def);
 }
 
-} // namespace ovms
+}  // namespace ovms

@@ -47,7 +47,7 @@ uint getGRPCServersCount() {
     return configGRPCServersCount;
 }
 
-void configure_logger(){
+void configure_logger() {
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
     if (const char* log_path = std::getenv("LOG_PATH")) {
@@ -55,21 +55,19 @@ void configure_logger(){
     }
     auto serving_logger = std::make_shared<spdlog::logger>("serving", begin(sinks), end(sinks));
 
-    //auto serving_logger = spdlog::stdout_logger_mt("serving");
+    // auto serving_logger = spdlog::stdout_logger_mt("serving");
     serving_logger->set_level(spdlog::level::info);
-    if (const char* log_level = std::getenv("LOG_LEVEL")){
-        if (std::strcmp(log_level,"DEBUG") == 0){
+    if (const char* log_level = std::getenv("LOG_LEVEL")) {
+        if (std::strcmp(log_level, "DEBUG") == 0) {
             serving_logger->set_level(spdlog::level::debug);
-        } else if (std::strcmp(log_level,"ERROR") == 0){
+        } else if (std::strcmp(log_level, "ERROR") == 0) {
             serving_logger->set_level(spdlog::level::err);
         }
-
     }
     spdlog::set_default_logger(serving_logger);
 }
 
-int server_main(int argc, char** argv)
-{
+int server_main(int argc, char** argv) {
     const int GIGABYTE = 1024 * 1024 * 1024;
     configure_logger();
     auto& config = ovms::Config::instance().parse(argc, argv);

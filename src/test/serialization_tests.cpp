@@ -66,18 +66,19 @@ const std::vector<Precision> SUPPORTED_OUTPUT_PRECISIONS {
 const std::vector<Precision> UNSUPPORTED_OUTPUT_PRECISIONS {
         Precision::UNSPECIFIED,
         Precision::MIXED,
-        //Precision::FP32,//
+        // Precision::FP32,
         Precision::FP16,
         Precision::Q78,
         Precision::I16,
-        Precision::U8,//
+        Precision::U8,
         Precision::I8,
         Precision::U16,
-        //Precision::I32,//
+        // Precision::I32,
         Precision::I64,
         Precision::BIN,
         Precision::BOOL
-        //Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+        // Precision::CUSTOM),
+        // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
@@ -88,7 +89,7 @@ class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
                 precision,
                 {1, 3, 1, 1},
                 InferenceEngine::Layout::NHWC};
-            
+
             tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
                 tensorName,
                 tensorDesc_prec_1_3_1_1_NHWC.getPrecision(),
@@ -96,6 +97,7 @@ class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
                 tensorDesc_prec_1_3_1_1_NHWC.getLayout());
             SetUpTensorProto(fromInferenceEnginePrecision(precision));
         }
+
         void SetUpTensorProto(tensorflow::DataType dataType) {
             tensorProto.set_dtype(dataType);
             auto tensorShape = tensorProto.mutable_tensor_shape();
@@ -143,8 +145,7 @@ public:
     }
 };
 
-TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision)
-{
+TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
@@ -153,7 +154,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision)
     ValidationStatusCode status = serializeBlobToTensorProto(responseOutput,
                                             std::get<0>(inputs),
                                             std::get<1>(inputs));
-    EXPECT_EQ(ValidationStatusCode::OK, status) 
+    EXPECT_EQ(ValidationStatusCode::OK, status)
         << "Supported OV serialization precision"
         << testedPrecision
         << "should succeed";
@@ -161,8 +162,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision)
 
 class SerializeTFTensorProtoNegative : public SerializeTFTensorProto { };
 
-TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision)
-{
+TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
@@ -194,8 +194,7 @@ public:
     }
  };
 
-TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision)
-{
+TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     InferenceEngine::InferRequest inferRequest = std::get<0>(inputs);
@@ -213,8 +212,7 @@ TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision)
 
 class SerializeTFGRPCPredictResponseNegative : public SerializeTFGRPCPredictResponse {};
 
-TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision)
-{
+TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     InferenceEngine::InferRequest inferRequest = std::get<0>(inputs);
@@ -226,12 +224,11 @@ TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision
     ValidationStatusCode status = serializePredictResponse(
         std::get<0>(inputs),
         std::get<1>(inputs),
-         &response);
+        &response);
     EXPECT_EQ(ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE, status);
 }
 
-TEST_F(SerializeTFGRPCPredictResponseNegative, OutputNameNotCreatedInInferenceShouldFail)
-{
+TEST_F(SerializeTFGRPCPredictResponseNegative, OutputNameNotCreatedInInferenceShouldFail) {
     auto inputs = getInputs(Precision::FP32);
     std::shared_ptr<MockIInferRequest> mInferRequestPtr =
         std::make_shared<MockIInferRequest>();

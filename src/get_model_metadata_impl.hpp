@@ -15,6 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
 
 #include "modelmanager.hpp"
@@ -54,12 +58,12 @@ public:
                 proto_signature_map_t*  to);
 
     static void buildResponse(
-        std::shared_ptr<ModelInstance>                  instance, 
+        std::shared_ptr<ModelInstance>                  instance,
         tensorflow::serving::GetModelMetadataResponse*  response);
 
     static GetModelMetadataStatusCode getModelStatus(
-        const   tensorflow::serving::GetModelMetadataRequest*   request, 
+        const   tensorflow::serving::GetModelMetadataRequest*   request,
                 tensorflow::serving::GetModelMetadataResponse*  response);
 };
 
-} // namespace ovms
+}  // namespace ovms

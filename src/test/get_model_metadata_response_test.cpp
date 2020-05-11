@@ -76,9 +76,8 @@ protected:
             }},
         });
 
-        auto prepare = [](
-            const   tensor_desc_map_t&  desc, 
-                    ovms::tensor_map_t& tensors) {
+        auto prepare = [](const tensor_desc_map_t& desc,
+                          ovms::tensor_map_t& tensors) {
             for (const auto& pair : desc) {
                 tensors[pair.first] = std::make_shared<ovms::TensorInfo>(
                     pair.first,
@@ -87,7 +86,7 @@ protected:
             }
         };
 
-        prepare(inputTensors,  networkInputs );
+        prepare(inputTensors,  networkInputs);
         prepare(outputTensors, networkOutputs);
 
         ON_CALL(*instance, getInputsInfo())
@@ -124,7 +123,7 @@ TEST_F(GetModelMetadataResponse, HasOneMetadataInfo) {
 TEST_F(GetModelMetadataResponse, HasCorrectMetadataSignatureName) {
     ovms::GetModelMetadataImpl::buildResponse(instance, &response);
     EXPECT_NE(
-        response.metadata().find("signature_def"), 
+        response.metadata().find("signature_def"),
         response.metadata().end());
 }
 
@@ -144,7 +143,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectSignatureDefName) {
     response.metadata().at("signature_def").UnpackTo(&def);
 
     EXPECT_NE(
-        def.signature_def().find("serving_default"), 
+        def.signature_def().find("serving_default"),
         def.signature_def().end());
 }
 
@@ -154,23 +153,23 @@ TEST_F(GetModelMetadataResponse, HasCorrectTensorNames) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs ();
+    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
     EXPECT_EQ(inputs .size(), 2);
     EXPECT_EQ(outputs.size(), 2);
-    
+
     EXPECT_EQ(
-        inputs.at("Input_FP32_1_3_224_224").name(), 
+        inputs.at("Input_FP32_1_3_224_224").name(),
         "Input_FP32_1_3_224_224");
     EXPECT_EQ(
-        inputs.at("Input_U8_1_3_62_62").name(), 
+        inputs.at("Input_U8_1_3_62_62").name(),
         "Input_U8_1_3_62_62");
     EXPECT_EQ(
-        outputs.at("Output_I32_1_2000").name(), 
+        outputs.at("Output_I32_1_2000").name(),
         "Output_I32_1_2000");
     EXPECT_EQ(
-        outputs.at("Output_FP32_2_20_3").name(), 
+        outputs.at("Output_FP32_2_20_3").name(),
         "Output_FP32_2_20_3");
 }
 
@@ -180,20 +179,20 @@ TEST_F(GetModelMetadataResponse, HasCorrectPrecision) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs ();
+    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
     EXPECT_EQ(
-        inputs.at("Input_FP32_1_3_224_224").dtype(), 
+        inputs.at("Input_FP32_1_3_224_224").dtype(),
         tensorflow::DT_FLOAT);
     EXPECT_EQ(
-        inputs.at("Input_U8_1_3_62_62").dtype(), 
+        inputs.at("Input_U8_1_3_62_62").dtype(),
         tensorflow::DT_UINT8);
     EXPECT_EQ(
-        outputs.at("Output_I32_1_2000").dtype(), 
+        outputs.at("Output_I32_1_2000").dtype(),
         tensorflow::DT_INT32);
     EXPECT_EQ(
-        outputs.at("Output_FP32_2_20_3").dtype(), 
+        outputs.at("Output_FP32_2_20_3").dtype(),
         tensorflow::DT_FLOAT);
 }
 
@@ -203,11 +202,11 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs ();
+    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
     auto isShape = [](
-        const tensorflow::TensorShapeProto& actual, 
+        const tensorflow::TensorShapeProto& actual,
         const std::vector<size_t>&&         expected) -> bool {
         if (actual.dim_size() != expected.size()) {
             return false;

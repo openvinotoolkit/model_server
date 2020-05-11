@@ -14,10 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "modelmanager.hpp"
-#include "model_service.hpp"
+#include <string>
+#include <memory>
 
 #include <spdlog/spdlog.h>
+
+#include "modelmanager.hpp"
+#include "model_service.hpp"
 
 namespace ovms {
 
@@ -36,10 +39,10 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
   auto requested_version = request->model_spec().version().value();
   std::string requested_model_name = request->model_spec().name();
   spdlog::debug("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
-  if(has_requested_version || requested_version != 0) {
+  if (has_requested_version || requested_version != 0) {
     // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
     std::shared_ptr<ModelInstance> model_instance = ModelManager::getInstance().findModelInstance(requested_model_name, requested_version);
-    if(!model_instance) {
+    if (!model_instance) {
       spdlog::info("requested model {} in version {} was not found.", requested_model_name, requested_version);
       return grpc::Status(grpc::StatusCode::NOT_FOUND, GetModelStatus::getError(GetModelStatusCode::NO_SUCH_MODEL_VERSION));
     }
@@ -49,13 +52,13 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
   } else {
     // return status details of all versions of a requested model.
     const std::shared_ptr<Model> model_ptr = ModelManager::getInstance().findModelByName(requested_model_name);
-    if(!model_ptr) {
+    if (!model_ptr) {
       spdlog::info("requested model {} was not found.", requested_model_name);
       return grpc::Status(grpc::StatusCode::NOT_FOUND, GetModelStatus::getError(GetModelStatusCode::NO_SUCH_MODEL_NAME));
     }
     auto model_versions = model_ptr->getModelVersions();
-    for(const auto& [model_version, model_instance_ptr] : model_versions) {
-      if(!model_instance_ptr) {
+    for (const auto& [model_version, model_instance_ptr] : model_versions) {
+      if (!model_instance_ptr) {
         spdlog::error("during model iteration, found null model instance pointer!");
         return grpc::Status(grpc::StatusCode::UNKNOWN, GetModelStatus::getError(GetModelStatusCode::INTERNAL_ERROR));
       }
@@ -73,7 +76,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     ::grpc::ServerContext *context, const tensorflow::serving::ReloadConfigRequest *request,
     tensorflow::serving::ReloadConfigResponse *response) {
   spdlog::info("Requested HandleReloadConfigRequest - but this service is reloading config automatically by itself, therefore this operation has no *EXTRA* affect.");
-  return grpc::Status::OK; // we're reloading config all the time; for a total client compatibility, this means returning success here.
+  return grpc::Status::OK;  // we're reloading config all the time; for a total client compatibility, this means returning success here.
 }
 
-} // namespace ovms
+}  // namespace ovms

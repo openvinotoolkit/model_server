@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <algorithm> 
+#include <algorithm>
 #include <cctype>
 #include <locale>
 #include <string>
@@ -61,10 +61,9 @@ static inline void trim(std::string &str) {
  * @param str
  */
 static inline void erase_spaces(std::string &str) {
-    str.erase(std::remove_if(str.begin(), str.end(), 
-        [](char c) -> bool
-        { 
-            return std::isspace<char>(c, std::locale::classic()); 
+    str.erase(std::remove_if(str.begin(), str.end(),
+        [](char c) -> bool {
+            return std::isspace<char>(c, std::locale::classic());
         }), str.end());
 }
 
@@ -76,8 +75,7 @@ static inline void erase_spaces(std::string &str) {
  * @return std::vector<std::string> 
  */
 static inline
-std::vector<std::string> tokenize(const std::string& str, const char delimiter)
-{
+std::vector<std::string> tokenize(const std::string& str, const char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     std::istringstream iss(str);
@@ -97,13 +95,12 @@ std::vector<std::string> tokenize(const std::string& str, const char delimiter)
  * @return false
  */
 static inline
-bool endsWith(const std::string& str, const std::string& match)
-{
-	auto it = match.begin();
-	return str.size() >= match.size() &&
-		std::all_of(std::next(str.begin(),str.size() - match.size()), str.end(), [&it](const char & c){
-			return ::tolower(c) == ::tolower(*(it++))  ;
-	    });
+bool endsWith(const std::string& str, const std::string& match) {
+    auto it = match.begin();
+    return str.size() >= match.size() &&
+        std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char & c){
+            return ::tolower(c) == ::tolower(*(it++));
+        });
 }
 
-} // namespace ovms
+}  // namespace ovms
