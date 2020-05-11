@@ -56,8 +56,7 @@ class OVInferRequestsQueue {
         streams(streamsLength),
         front_idx{0},
         back_idx{0},
-        activeStreams(streamsLength)
-    {
+        activeStreams(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
             inferRequests.push_back(network.CreateInferRequest());
@@ -98,4 +97,4 @@ class OVInferRequestsQueue {
      */
     std::vector<InferenceEngine::InferRequest> inferRequests;
 };
-}
+}  // namespace ovms

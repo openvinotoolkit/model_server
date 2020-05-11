@@ -16,6 +16,8 @@
 #pragma once
 
 #include <functional>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -110,6 +112,7 @@ namespace ovms {
          * @param config
          */
         void loadOutputTensors(const ModelConfig& config);
+
     public:
         /**
          * @brief A default constructor

@@ -25,8 +25,7 @@ const std::string DEFAULT_NIREQ = std::to_string(AVAILABLE_CORES / 8 + 2);
 const std::string DEFAULT_GRPC_SERVERS = std::to_string(AVAILABLE_CORES / 8 + 4);
 
 Config& Config::parse(int argc, char** argv) {
-    try
-    {
+    try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
 
         options->add_options()
@@ -88,16 +87,14 @@ Config& Config::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        if (result->count("help") || result->arguments().size() == 0)
-        {
+        if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "config", "model"}) << std::endl;
             exit(0);
         }
 
         validate();
     }
-    catch (const cxxopts::OptionException& e)
-    {
+    catch (const cxxopts::OptionException& e) {
         std::cout << "error parsing options: " << e.what() << std::endl;
         exit(1);
     }
@@ -120,4 +117,4 @@ bool Config::validate() {
     return true;
 }
 
-} // namespace ovms 
+}  // namespace ovms

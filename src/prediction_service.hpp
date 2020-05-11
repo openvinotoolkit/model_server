@@ -32,4 +32,4 @@ class PredictionServiceImpl final : public tensorflow::serving::PredictionServic
                 tensorflow::serving::GetModelMetadataResponse*  response);
 };
 
-} // namespace ovms
+}  // namespace ovms

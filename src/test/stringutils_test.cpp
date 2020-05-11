@@ -24,8 +24,7 @@
 
 using namespace testing;
 
-TEST(StringUtils, ltrim)
-{
+TEST(StringUtils, ltrim) {
     std::string str0 = "";
     std::string str1 = "   {1234 5 67890}   ";
     std::string str2 = "\n\r\t \n\r\t{1234 5 67890}\n\r\t  ";
@@ -33,14 +32,13 @@ TEST(StringUtils, ltrim)
     ovms::ltrim(str0);
     ovms::ltrim(str1);
     ovms::ltrim(str2);
-    
+
     EXPECT_EQ(str0, "");
     EXPECT_EQ(str1, "{1234 5 67890}   ");
     EXPECT_EQ(str2, "{1234 5 67890}\n\r\t  ");
 }
 
-TEST(StringUtils, rtrim)
-{
+TEST(StringUtils, rtrim) {
     std::string str0 = "";
     std::string str1 = "   {1234 5 67890}   ";
     std::string str2 = "\n\r\t \n\r\t{1234 5 67890}\n\r\t  ";
@@ -48,14 +46,13 @@ TEST(StringUtils, rtrim)
     ovms::rtrim(str0);
     ovms::rtrim(str1);
     ovms::rtrim(str2);
-    
+
     EXPECT_EQ(str0, "");
     EXPECT_EQ(str1, "   {1234 5 67890}");
     EXPECT_EQ(str2, "\n\r\t \n\r\t{1234 5 67890}");
 }
 
-TEST(StringUtils, trim)
-{
+TEST(StringUtils, trim) {
     std::string str0 = "";
     std::string str1 = "   {1234 5 67890}   ";
     std::string str2 = "\n\r\t \n\r\t{1234 5 67890}\n\r\t  ";
@@ -63,14 +60,13 @@ TEST(StringUtils, trim)
     ovms::trim(str0);
     ovms::trim(str1);
     ovms::trim(str2);
-    
+
     EXPECT_EQ(str0, "");
     EXPECT_EQ(str1, "{1234 5 67890}");
     EXPECT_EQ(str2, "{1234 5 67890}");
 }
 
-TEST(StringUtils, erase_spaces)
-{
+TEST(StringUtils, erase_spaces) {
     std::string str0 = "";
     std::string str1 = "   {1234 5 67890}   ";
     std::string str2 = "\n\r\t \n\r\t{1234 5 67890}\n\r\t  ";
@@ -78,14 +74,13 @@ TEST(StringUtils, erase_spaces)
     ovms::erase_spaces(str0);
     ovms::erase_spaces(str1);
     ovms::erase_spaces(str2);
-    
+
     EXPECT_EQ(str0, "");
     EXPECT_EQ(str1, "{1234567890}");
     EXPECT_EQ(str2, "{1234567890}");
 }
 
-TEST(StringUtils, tokenize)
-{
+TEST(StringUtils, tokenize) {
     std::string str0 = "";
     std::string str1 = "uno dos tres";
     std::string str2 = "   ";
@@ -93,7 +88,7 @@ TEST(StringUtils, tokenize)
 
     auto t0 = ovms::tokenize(str0, ';');
     auto t1 = ovms::tokenize(str1, ' ');
-    auto t2= ovms::tokenize(str2, ' ');
+    auto t2 = ovms::tokenize(str2, ' ');
     auto t3 = ovms::tokenize(str3, ',');
 
     EXPECT_EQ(t0.size(), 0);
@@ -102,8 +97,7 @@ TEST(StringUtils, tokenize)
     EXPECT_THAT(t3, ElementsAre("1", "2", "3", "4", "", ""));
 }
 
-TEST(StringUtils, endsWith)
-{
+TEST(StringUtils, endsWith) {
     std::string str0 = "";
     std::string str1 = "test case 1";
     std::string str2 = "not really matter 1 }";

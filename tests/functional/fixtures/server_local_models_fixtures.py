@@ -56,8 +56,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
-              "--model_name age_gender " \
+    command = "--model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --rest_port {}".format(grpc_port, rest_port)
 

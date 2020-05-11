@@ -17,7 +17,9 @@
 
 #include <algorithm>
 #include <string>
+#include <map>
 #include <unordered_map>
+#include <vector>
 
 #include "status.hpp"
 #include "stringutils.hpp"
@@ -27,6 +29,7 @@ namespace ovms {
 using shape_t = std::vector<size_t>;
 using shapes_map_t = std::unordered_map<std::string, shape_t>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
+using mapping_config_t = std::unordered_map<std::string, std::string>;
 using model_version_t = int64_t;
 using plugin_config_t = std::map<std::string, std::string>;
 
@@ -96,6 +99,16 @@ using plugin_config_t = std::map<std::string, std::string>;
         model_version_t version;
 
         /**
+         * @brief Input mapping configuration
+         */
+        mapping_config_t mappingInputs;
+
+        /**
+         * @brief Input mapping configuration
+         */
+        mapping_config_t mappingOutputs;
+
+        /**
          * @brief Shape left opening bracket in string format
          */
         static const char shapeLeft = '(';
@@ -126,7 +139,9 @@ using plugin_config_t = std::map<std::string, std::string>;
             layout(""),
             shapes({}),
             layouts({}),
-            version(0)
+            version(0),
+            mappingInputs({}),
+            mappingOutputs({})
             {}
 
         /**
@@ -142,8 +157,7 @@ using plugin_config_t = std::map<std::string, std::string>;
                     const std::string& basePath,
                     const std::string& backend,
                     size_t batchSize,
-                    uint64_t nireq
-                    ) : 
+                    uint64_t nireq) :
                     name(name),
                     basePath(basePath),
                     backend(backend),
@@ -155,7 +169,9 @@ using plugin_config_t = std::map<std::string, std::string>;
                     layout(""),
                     shapes({}),
                     layouts({}),
-                    version(0)
+                    version(0),
+                    mappingInputs({}),
+                    mappingOutputs({})
                     {}
 
         /**
@@ -164,16 +180,16 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string& 
          */
         const std::string& getName() const {
-        	return this->name;
+            return this->name;
         }
-        
+
         /**
          * @brief Set the name
          * 
          * @param name 
          */
         void setName(const std::string& name) {
-        	this->name = name;
+            this->name = name;
         }
 
         /**
@@ -182,7 +198,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string& 
          */
         const std::string& getBasePath() const {
-        	return this->basePath;
+            return this->basePath;
         }
 
         /**
@@ -191,7 +207,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param basePath 
          */
         void setBasePath(const std::string& basePath) {
-        	this->basePath = basePath;
+            this->basePath = basePath;
         }
 
         /**
@@ -200,7 +216,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string& 
          */
         const std::string& getBackend() const {
-        	return this->backend;
+            return this->backend;
         }
 
         /**
@@ -209,7 +225,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param backend 
          */
         void setBackend(const std::string& backend) {
-        	this->backend = backend;
+            this->backend = backend;
         }
 
         /**
@@ -218,7 +234,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return size_t 
          */
         size_t getBatchSize() const {
-        	return this->batchSize;
+            return this->batchSize;
         }
 
         /**
@@ -227,7 +243,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param batchSize 
          */
         void setBatchSize(const size_t batchSize) {
-        	this->batchSize = batchSize;
+            this->batchSize = batchSize;
         }
 
         /**
@@ -236,7 +252,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string&
          */
         const std::string& getModelVersionPolicy() const {
-        	return this->modelVersionPolicy;
+            return this->modelVersionPolicy;
         }
 
         /**
@@ -245,7 +261,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param modelVersionPolicy 
          */
         void setModelVersionPolicy(const std::string& modelVersionPolicy) {
-        	this->modelVersionPolicy = modelVersionPolicy;
+            this->modelVersionPolicy = modelVersionPolicy;
         }
 
         /**
@@ -254,7 +270,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return uint64_t 
          */
         uint64_t getNireq() const {
-        	return this->nireq;
+            return this->nireq;
         }
 
         /**
@@ -263,7 +279,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param nireq 
          */
         void setNireq(const uint64_t nireq) {
-        	this->nireq = nireq;
+            this->nireq = nireq;
         }
 
         /**
@@ -272,7 +288,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string&
          */
         const plugin_config_t& getPluginConfig() const {
-        	return this->pluginConfig;
+            return this->pluginConfig;
         }
 
         /**
@@ -281,7 +297,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param pluginConfig 
          */
         void setPluginConfig(const plugin_config_t& pluginConfig) {
-        	this->pluginConfig = pluginConfig;
+            this->pluginConfig = pluginConfig;
         }
 
         /**
@@ -290,7 +306,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const shape_t& 
          */
         const shape_t& getShape() const {
-        	return this->shape;
+            return this->shape;
         }
 
         /**
@@ -310,7 +326,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const shapes_map_t& 
          */
         const shapes_map_t& getShapes() const {
-        	return this->shapes;
+            return this->shapes;
         }
 
         /**
@@ -351,8 +367,8 @@ using plugin_config_t = std::map<std::string, std::string>;
                 return Status::SHAPE_WRONG_FORMAT;
 
             if (s.front() != shapeLeft || s.back() != shapeRight)
-                return Status::SHAPE_WRONG_FORMAT; 
-            
+                return Status::SHAPE_WRONG_FORMAT;
+
             s.pop_back();
             s.erase(s.begin());
 
@@ -381,7 +397,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const std::string& 
          */
         const std::string& getLayout() const {
-        	return this->layout;
+            return this->layout;
         }
 
         /**
@@ -390,7 +406,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param layout
          */
         void setLayout(const std::string& layout) {
-        	this->layout = layout;
+            this->layout = layout;
             this->layouts.clear();
         }
 
@@ -400,7 +416,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const layouts_map_t& 
          */
         const layouts_map_t& getLayouts() const {
-        	return this->layouts;
+            return this->layouts;
         }
 
         /**
@@ -409,7 +425,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param layouts 
          */
         void setLayouts(const layouts_map_t& layouts) {
-        	this->layouts = layouts;
+            this->layouts = layouts;
             this->layout = "";
         }
 
@@ -430,7 +446,7 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @return const model_version_t& 
          */
         const model_version_t& getVersion() const {
-        	return this->version;
+            return this->version;
         }
 
         /**
@@ -439,7 +455,65 @@ using plugin_config_t = std::map<std::string, std::string>;
          * @param version 
          */
         void setVersion(const model_version_t& version) {
-        	this->version = version;
+            this->version = version;
+        }
+
+        /**
+         * @brief Get the mapping for inputs
+         * 
+         * @return const mapping_config_t& 
+         */
+        const mapping_config_t& getMappingInputs() const {
+            return this->mappingInputs;
+        }
+
+        /**
+         * @brief Get the mapping for outputs
+         * 
+         * @return const mapping_config_t& 
+         */
+        const mapping_config_t& getMappingOutputs() const {
+            return this->mappingOutputs;
+        }
+
+        /**
+         * @brief Get the mapping inputs by key
+         * 
+         * @param key 
+         * @return const std::string 
+         */
+        const std::string getMappingInputByKey(const std::string& key) const {
+            auto it = mappingInputs.find(key);
+            return it != mappingInputs.end() ? it->second : "";
+        }
+
+        /**
+         * @brief Get the mapping outputs by key
+         * 
+         * @param key 
+         * @return const std::string 
+         */
+        const std::string getMappingOutputByKey(const std::string& key) const {
+            auto it = mappingOutputs.find(key);
+            return it != mappingOutputs.end() ? it->second : "";
+        }
+
+        /**
+         * @brief Set the mapping inputs
+         * 
+         * @param mapping 
+         */
+        void setMappingInputs(const mapping_config_t& mapping) {
+            this->mappingInputs = mapping;
+        }
+
+        /**
+         * @brief Set the mapping outputs
+         * 
+         * @param mapping 
+         */
+        void setMappingOutputs(const mapping_config_t& mapping) {
+            this->mappingOutputs = mapping;
         }
     };
-}
+}  // namespace ovms

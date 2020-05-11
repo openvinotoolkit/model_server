@@ -28,8 +28,7 @@
 
 using namespace ovms;
 
-TEST(ModelService, config_reload)
-{
+TEST(ModelService, config_reload) {
   ModelServiceImpl s;
 
   tensorflow::serving::ReloadConfigRequest req;
@@ -37,7 +36,7 @@ TEST(ModelService, config_reload)
 
   spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
   ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &req, &res);
-  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details()); 
+  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
   EXPECT_EQ(ret.ok(), true);
 }
 
@@ -48,12 +47,11 @@ static void test_LoadModels() {
 ::grpc::Status test_PerformModelStatusRequest(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
   spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
   ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
-  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details()); 
+  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
   return ret;
 }
 
-TEST(ModelService, empty_request)
-{
+TEST(ModelService, empty_request) {
   test_LoadModels();
   ModelServiceImpl s;
   tensorflow::serving::GetModelStatusRequest req;
@@ -97,8 +95,7 @@ TEST(ModelService, all_versions)
 }
 */
 
-TEST(ModelService, non_existing_model)
-{
+TEST(ModelService, non_existing_model) {
   test_LoadModels();
   ModelServiceImpl s;
   tensorflow::serving::GetModelStatusRequest req;
@@ -112,8 +109,7 @@ TEST(ModelService, non_existing_model)
   EXPECT_EQ(ret.ok(), false);
 }
 
-TEST(ModelService, non_existing_version)
-{
+TEST(ModelService, non_existing_version) {
   test_LoadModels();
   ModelServiceImpl s;
   tensorflow::serving::GetModelStatusRequest req;
@@ -122,10 +118,8 @@ TEST(ModelService, non_existing_version)
   auto model_spec = req.mutable_model_spec();
   model_spec->Clear();
   model_spec->set_name("existing_model");
-  model_spec->mutable_version()->set_value(9894689454358); // non-existing version
+  model_spec->mutable_version()->set_value(9894689454358);  // non-existing version
 
   ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
   EXPECT_EQ(ret.ok(), false);
 }
-
-

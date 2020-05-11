@@ -24,7 +24,6 @@ from utils.rest import infer_rest, get_model_metadata_response_rest
 
 class TestSingleModelMappingInference:
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, age_gender_model_downloader,
                            start_server_with_mapping):
         """
@@ -60,7 +59,6 @@ class TestSingleModelMappingInference:
             print("output shape", output[output_name].shape)
             assert output[output_name].shape == shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, age_gender_model_downloader,
                                 start_server_with_mapping):
 

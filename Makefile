@@ -17,7 +17,11 @@
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
-STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h --recursive
+STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
+	--output=vs7 \
+	--recursive \
+	--linelength=120 \
+	--filter=-build/c++11,-runtime/references,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
@@ -46,7 +50,7 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
-style:
+style: venv
 	@echo "Style-checking codebase..."
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 

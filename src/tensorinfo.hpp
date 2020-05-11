@@ -16,10 +16,10 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include <inference_engine.hpp>
-
 #include "tensorflow/core/framework/tensor.h"
 
 #include "modelconfig.hpp"
@@ -35,6 +35,11 @@ namespace ovms {
          * @brief Input name
          */
         std::string name;
+
+        /**
+         * @brief Mapping name
+         */
+        std::string mapping;
 
         /**
          * @brief Tensor precision data type
@@ -55,6 +60,7 @@ namespace ovms {
          * @brief TensorDesc
          */
         InferenceEngine::TensorDesc tensorDesc;
+
     public:
         /**
          * @brief Construct a new Tensor Info object
@@ -69,10 +75,11 @@ namespace ovms {
          * @param precision 
          * @param shape
          */
-        TensorInfo( const std::string& name,
-                    const InferenceEngine::Precision& precision,
-                    const shape_t& shape) :
+        TensorInfo(const std::string& name,
+                   const InferenceEngine::Precision& precision,
+                   const shape_t& shape) :
             name(name),
+            mapping(""),
             precision(precision),
             shape(shape) {}
 
@@ -85,11 +92,31 @@ namespace ovms {
          * @param layout 
          * @param tensorDesc 
          */
-        TensorInfo( const std::string& name,
-                    const InferenceEngine::Precision& precision,
-                    const shape_t& shape,
-                    const InferenceEngine::Layout& layout) :
+        TensorInfo(const std::string& name,
+                   const InferenceEngine::Precision& precision,
+                   const shape_t& shape,
+                   const InferenceEngine::Layout& layout) :
             name(name),
+            mapping(""),
+            precision(precision),
+            shape(shape),
+            layout(layout) {}
+
+        /**
+         * @brief Construct a new Tensor Info object
+         * 
+         * @param name 
+         * @param precision 
+         * @param shape
+         * @param layout 
+         */
+        TensorInfo(const std::string& name,
+                   const std::string& mapping,
+                   const InferenceEngine::Precision& precision,
+                   const shape_t& shape,
+                   const InferenceEngine::Layout& layout) :
+            name(name),
+            mapping(mapping),
             precision(precision),
             shape(shape),
             layout(layout) {}
@@ -101,6 +128,15 @@ namespace ovms {
          */
         const std::string& getName() {
             return name;
+        }
+
+        /**
+         * @brief Get the tensor name - as in network model or mapped name
+         * 
+         * @return const std::string& 
+         */
+        const std::string& getMappedName() {
+            return mapping.size() == 0 ? name : mapping;
         }
 
         /**
@@ -127,17 +163,16 @@ namespace ovms {
          * @return const tensorflow::DataType
          */
         const tensorflow::DataType getPrecisionAsDataType() {
-            switch (precision)
-            {
+            switch (precision) {
                 case InferenceEngine::Precision::FP32:  return tensorflow::DataType::DT_FLOAT;
                 case InferenceEngine::Precision::FP16:  return tensorflow::DataType::DT_HALF;
-                //case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
+                // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
                 case InferenceEngine::Precision::I16:   return tensorflow::DataType::DT_INT16;
                 case InferenceEngine::Precision::U8:    return tensorflow::DataType::DT_UINT8;
                 case InferenceEngine::Precision::U16:   return tensorflow::DataType::DT_UINT16;
                 case InferenceEngine::Precision::I32:   return tensorflow::DataType::DT_INT32;
                 case InferenceEngine::Precision::I64:   return tensorflow::DataType::DT_INT64;
-                //case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
+                // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
                 case InferenceEngine::Precision::BOOL:  return tensorflow::DataType::DT_BOOL;
                 default:                                return tensorflow::DataType::DT_INVALID;
             }

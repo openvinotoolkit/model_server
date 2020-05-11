@@ -14,10 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #include <condition_variable>
+#include <memory>
+
 #include <inference_engine.hpp>
 #include "tensorflow/core/framework/tensor.h"
 #include <spdlog/spdlog.h>
-
 
 #include "deserialization.hpp"
 #include "get_model_metadata_impl.hpp"
@@ -90,7 +91,7 @@ struct ExecutingStreamIdGuard {
     ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),
         id_(inferRequestsQueue_.getIdleStream()) {}
-    ~ExecutingStreamIdGuard(){
+    ~ExecutingStreamIdGuard() {
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
@@ -146,11 +147,11 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     std::shared_ptr<ovms::ModelInstance> modelVersion;
 
     ValidationStatusCode status = getModelInstance(request, modelVersion);
-    if(ValidationStatusCode::OK != status)
+    if (ValidationStatusCode::OK != status)
         return convertStatus(status);
 
     status = modelVersion->validate(request);
-    if(ValidationStatusCode::OK != status)
+    if (ValidationStatusCode::OK != status)
         return convertStatus(status);
 
     timer.start("get infer request");
@@ -160,16 +161,15 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     timer.stop("get infer request");
     spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(),modelVersion->getVersion(),executingInferId,timer.elapsed_microseconds("get infer request") / 1000);
+            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("get infer request") / 1000);
 
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, modelVersion->getInputsInfo(), inferRequest);
     timer.stop("deserialize");
-    if(ValidationStatusCode::OK != status)
+    if (ValidationStatusCode::OK != status)
         return convertStatus(status);
     spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("deserialize") / 1000);
-
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     timer.stop("prediction");
@@ -178,7 +178,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if (ValidationStatusCode::OK != status)
         return convertStatus(status);
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(),modelVersion->getVersion(),executingInferId,timer.elapsed_microseconds("prediction") / 1000);
+            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("prediction") / 1000);
 
     timer.start("serialize");
     status = serializePredictResponse(inferRequest, modelVersion->getOutputsInfo(), response);
@@ -195,16 +195,15 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
             grpc::ServerContext*                            context,
     const   tensorflow::serving::GetModelMetadataRequest*   request,
             tensorflow::serving::GetModelMetadataResponse*  response) {
-
     auto status = GetModelMetadataImpl::getModelStatus(request, response);
     if (status == GetModelMetadataStatusCode::OK) {
         return grpc::Status::OK;
     }
 
     return grpc::Status(
-        status == GetModelMetadataStatusCode::MODEL_MISSING ? grpc::StatusCode::NOT_FOUND 
+        status == GetModelMetadataStatusCode::MODEL_MISSING ? grpc::StatusCode::NOT_FOUND
                                                             : grpc::StatusCode::INVALID_ARGUMENT,
         GetModelMetadataStatus::getError(status));
 }
 
-} // namespace ovms
+}  // namespace ovms

@@ -15,6 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <string>
+
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/status.h>
 
@@ -56,8 +59,6 @@ class ModelServiceImpl final : public tensorflow::serving::ModelService::Service
   ::grpc::Status HandleReloadConfigRequest(::grpc::ServerContext *context,
                                            const tensorflow::serving::ReloadConfigRequest *request,
                                            tensorflow::serving::ReloadConfigResponse *response);
-
 };
 
-} // namespace ovms
-
+}  // namespace ovms

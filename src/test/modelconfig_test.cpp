@@ -26,10 +26,9 @@ using namespace testing;
 using ::testing::UnorderedElementsAre;
 
 
-TEST(ModelConfig, getters_setters)
-{
+TEST(ModelConfig, getters_setters) {
     ovms::ModelConfig config;
-    
+
     config.setName("alexnet");
     auto name = config.getName();
     EXPECT_EQ(name, "alexnet");
@@ -60,8 +59,7 @@ TEST(ModelConfig, getters_setters)
     EXPECT_EQ(version, ver);
 }
 
-TEST(ModelConfig, layout_single)
-{
+TEST(ModelConfig, layout_single) {
     ovms::ModelConfig config;
 
     config.setLayout("NHWC");
@@ -71,8 +69,7 @@ TEST(ModelConfig, layout_single)
     EXPECT_EQ(l2.size(), 0);
 }
 
-TEST(ModelConfig, layout_multi)
-{
+TEST(ModelConfig, layout_multi) {
     ovms::ModelConfig config;
 
     ovms::layouts_map_t layouts;
@@ -104,8 +101,7 @@ TEST(ModelConfig, layout_multi)
         Pair("C", "layout_C")));
 }
 
-TEST(ModelConfig, shape)
-{
+TEST(ModelConfig, shape) {
     ovms::ModelConfig config;
 
     ovms::shape_t s1{1, 2, 3};
@@ -116,7 +112,7 @@ TEST(ModelConfig, shape)
     shapeMap["first"] = s1;
     shapeMap["second"] = s2;
 
-    // single shape 
+    // single shape
     config.setShape(s1);
     auto gs1 = config.getShape();
     auto gs2 = config.getShapes();
@@ -169,4 +165,44 @@ TEST(ModelConfig, plugin_config) {
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
         Pair("OptionA", "ValueA"),
         Pair("OptionX", "ValueX")));
+}
+
+TEST(ModelConfig, mappingInputs) {
+    ovms::ModelConfig config;
+    ovms::mapping_config_t mapping {
+        { "resnet", "value" },
+        { "output", "input"}
+    };
+
+    config.setMappingInputs(mapping);
+    auto ret = config.getMappingInputs();
+    EXPECT_THAT(ret, UnorderedElementsAre(
+        Pair("resnet", "value"),
+        Pair("output", "input")));
+
+    auto in = config.getMappingInputByKey("output");
+    auto empty = config.getMappingInputByKey("notexist");
+
+    EXPECT_EQ(in, "input");
+    EXPECT_EQ(empty, "");
+}
+
+TEST(ModelConfig, mappingOutputs) {
+    ovms::ModelConfig config;
+    ovms::mapping_config_t mapping {
+        { "resnet", "value" },
+        { "output", "input"}
+    };
+
+    config.setMappingOutputs(mapping);
+    auto ret = config.getMappingOutputs();
+    EXPECT_THAT(ret, UnorderedElementsAre(
+        Pair("resnet", "value"),
+        Pair("output", "input")));
+
+    auto in = config.getMappingOutputByKey("output");
+    auto empty = config.getMappingOutputByKey("notexist");
+
+    EXPECT_EQ(in, "input");
+    EXPECT_EQ(empty, "");
 }

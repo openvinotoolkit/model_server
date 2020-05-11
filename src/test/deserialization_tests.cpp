@@ -66,18 +66,18 @@ const std::vector<Precision> SUPPORTED_INPUT_PRECISIONS {
 const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS {
         Precision::UNSPECIFIED,
         Precision::MIXED,
-        //Precision::FP32,//
+        // Precision::FP32,
         Precision::FP16,
         Precision::Q78,
         Precision::I16,
         // Precision::U8,
         Precision::I8,
         Precision::U16,
-        //Precision::I32,//
+        // Precision::I32,
         Precision::I64,
         Precision::BIN,
         Precision::BOOL
-        //Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+        // Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
@@ -88,7 +88,7 @@ class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
                 precision,
                 {1, 3, 1, 1},
                 InferenceEngine::Layout::NHWC};
-            
+
             tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
                 tensorName,
                 tensorDesc_prec_1_3_1_1_NHWC.getPrecision(),
@@ -130,8 +130,7 @@ class GRPCPredictRequest : public TensorflowGRPCPredict {
 
 class GRPCPredictRequestNegative : public GRPCPredictRequest { };
 
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
-{
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::InferRequest inferRequest;
@@ -142,8 +141,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
         << " should return error";
 }
 
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException)
-{
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     std::shared_ptr<MockIInferRequestFailingInSetBlob> mInferRequestPtr =
@@ -174,8 +172,7 @@ public:
 
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2)
-{
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     std::shared_ptr<MockIInferRequestFailingInSetBlob> mInferRequestPtr =
@@ -187,14 +184,13 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
         .Times(1)
         .WillRepeatedly(
             Throw(InferenceEngine::details::InferenceEngineException(__FILE__, __LINE__)));
-    ValidationStatusCode status = 
+    ValidationStatusCode status =
         deserializePredictRequest<MockTensorProtoDeserializator>(
             request, tensorMap, inferRequest);
     EXPECT_EQ(ValidationStatusCode::DESERIALIZATION_ERROR, status);
 }
 
-TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision)
-{
+TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     std::shared_ptr<MockIInferRequest> mInferRequestPtr = std::make_shared<MockIInferRequest>();

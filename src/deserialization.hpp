@@ -15,11 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
-
 #include "tensorflow/core/framework/tensor.h"
-
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "status.hpp"
@@ -56,7 +56,7 @@ class ConcreteTensorProtoDeserializator {
         case InferenceEngine::Precision::BIN:
         case InferenceEngine::Precision::BOOL:
         case InferenceEngine::Precision::CUSTOM:
-        default:                
+        default:
             return nullptr;
         }
     }
@@ -89,10 +89,10 @@ ValidationStatusCode deserializePredictRequest(
                 spdlog::error("ovms::{}:{}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status));
                 return status;
             }
-            inferRequest.SetBlob(name, blob);
+            inferRequest.SetBlob(tensorInfo->getName(), blob);
         }
         // OV implementation the InferenceEngineException is not
-        // a base class for all other exceptions thrown from OV. 
+        // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR;
@@ -105,4 +105,4 @@ ValidationStatusCode deserializePredictRequest(
     }
     return ValidationStatusCode::OK;
 }
-} // namespace
+}  // namespace ovms
