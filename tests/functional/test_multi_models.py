@@ -93,7 +93,6 @@ class TestMultiModelInference:
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_status(self, resnet_multiple_batch_sizes,
                               start_server_multi_model):
 
