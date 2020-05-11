@@ -15,6 +15,7 @@
 #
 
 import argparse
+
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 from src.api.dispatcher import create_dispatcher
 from src.config import AVAILABLE_MODELS
@@ -31,6 +32,7 @@ def start_rest_service(port, num_threads, ovms_port):
         server.start()
     except KeyboardInterrupt:
         server.stop()
+
 
 def main():
     parser = argparse.ArgumentParser()

@@ -28,43 +28,33 @@ import numpy as np
 from src.logger import get_logger
 from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
-from src.api.models.input_config import ModelInputConfiguration, \
-    ModelInputConfigurationSchema, ValidationError
+from src.api.models.model_config import ModelInputConfiguration, \
+    ModelInputConfigurationSchema, ValidationError, ModelOutputConfiguration, \
+    ModelOutputConfigurationSchema
 
 logger = get_logger(__name__)
 
 
 class Model(ABC):
     def __init__(self, model_name: str, ovms_connector: OvmsConnector,
-                 labels_path: str, config_file_path: str = None):
+                 config_file_path: str = None):
         self.ovms_connector = ovms_connector
         self.model_name = model_name
-        self.labels = self.load_labels(labels_path)
-        self.input_configs: Dict[str, ModelInputConfiguration] = None # load input configuration
-        if config_file_path:
-            self.input_configs = self.load_input_configs(config_file_path)
-
-    def load_labels(self, labels_path):
-        try:                                                                          
-            with open(labels_path, 'r') as labels_file:
-                data = json.load(labels_file)
-                labels = dict()
-                for output in data['outputs']: 
-                    labels[output["output_name"]] = output['classes']
-        except Exception as e:                                                        
-            logger.exception("Error occurred while opening labels file: {}".format(e))
-            sys.exit(1)
-        return labels
+        self.input_configs = self.load_input_configs(config_file_path)
+        self.output_configs = self.load_output_configs(config_file_path) 
+        self.labels = {output_name: {index: label for label, index in self.output_configs[output_name].classes.items()}
+                       for output_name in self.output_configs.keys()}
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
-        # By default the only performed preprocessing is converting image
-        # from binary format to numpy ndarray. If a model requires more specific
-        # preprocessing this method should be implemented in its class.
-        try:
-            preprocessed_image = default_preprocessing(binary_image)
+        try: 
+            # Assuming single input for now
+            preprocessing_config = next(iter(self.input_configs.values()))
+            preprocessing_config = preprocessing_config.as_preprocessing_options()
+            preprocessed_image = default_preprocessing(binary_image, **preprocessing_config)
             preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
         except Exception as e:
-            raise e
+            logger.exception('Failed to preprocess binary image')
+            raise
         return preprocessed_image
 
     @abstractmethod
@@ -152,16 +142,14 @@ class Model(ABC):
         return
 
     @staticmethod
-    def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
+    def load_model_config(config_file_path: str) -> dict:
         """
         :raises ValueError: when loading of configuration file fails
-        :raises marshmallow.ValidationError: if input configuration has invalid schema
-        :returns: a dictionary where key is the input name and value
-                 is ModelInputConfiguration for given input
         """
         try:
             with open(config_file_path, mode='r') as config_file:
                 config = json.load(config_file)
+                return config
         except FileNotFoundError as e:
             # TODO: think what exactly should we do in this case
             logger.exception('Model\'s configuration file {} was not found.'.format(config_file_path))
@@ -169,11 +157,21 @@ class Model(ABC):
         except Exception as e:
             logger.exception('Failed to load Model\'s configuration file {}.'.format(config_file_path))
             raise ValueError from e
+
+    @staticmethod
+    def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
+        """
+        :raises ValueError: when loading of configuration file fails
+        :raises marshmallow.ValidationError: if input configuration has invalid schema
+        :returns: a dictionary where key is the input name and value
+                 is ModelInputConfiguration for given input
+        """
+        config = Model.load_model_config(config_file_path)
         
         model_input_configs = {}
         input_config_schema = ModelInputConfigurationSchema()
         
-        for input_config_dict in config.get('inputs'):
+        for input_config_dict in config.get('inputs', []):
             try:
                 input_config = input_config_schema.load(input_config_dict)
             except ValidationError:
@@ -181,7 +179,34 @@ class Model(ABC):
                 raise
 
             model_input_configs[input_config.input_name] = input_config
+            logger.info('Loaded model input configuration: {}'.format(input_config_dict))
         
         return model_input_configs
+    
+    @staticmethod
+    def load_output_configs(config_file_path: str) -> Dict[str, ModelOutputConfiguration]:
+        """
+        :raises ValueError: when loading of configuration file fails
+        :raises marshmallow.ValidationError: if output configuration has invalid schema
+        :returns: a dictionary where key is the output name and value
+                 is ModelOutputConfiguration for given output
+        """
+        config = Model.load_model_config(config_file_path)
+        
+        model_output_configs = {}
+        output_config_schema = ModelOutputConfigurationSchema()
+        
+        for output_config_dict in config.get('outputs', []):
+            try:
+                output_config = output_config_schema.load(output_config_dict)
+            except ValidationError:
+                logger.exception('Model output configuration is invalid: {}'.format(output_config_dict))
+                raise
+
+            model_output_configs[output_config.output_name] = output_config
+            logger.info('Loaded model output configuration: {}'.format(output_config_dict))
+        
+        return model_output_configs
+
 
         

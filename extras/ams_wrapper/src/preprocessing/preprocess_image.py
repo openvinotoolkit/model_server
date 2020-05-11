@@ -132,6 +132,7 @@ if __name__ == "__main__":
         binary_image = img_file.read()
 
     preprocessed_image = preprocess_binary_image(binary_image, channels_first=False)
+    print(preprocessed_image)
     print(preprocessed_image.shape)
 
     # Keep in mind that matplotlib will not be able to display image in NCHW format
