@@ -15,11 +15,17 @@
 #
 
 import json
+import io
 
 import pytest
+import unittest.mock as mock
+import falcon
 
 from src.api.models.model import Model
 from src.api.models.model_config import ValidationError
+from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, \
+        OvmsConnector, RequestProcessingError
+from src.preprocessing import ImageResizeError, ImageDecodeError, ImageTransformError
 
 
 @pytest.fixture()
@@ -142,3 +148,54 @@ def test_model_load_invalid_output_config(tmpdir, test_model_config,
 
     with pytest.raises(ValidationError):
         config = Model.load_output_configs(config_file_path)
+
+class TestModel(Model):
+    def postprocess_inference_output(self, inference_output: dict) -> str:
+        pass
+
+exc = [ValueError, TypeError, ImageDecodeError, ImageResizeError, ImageTransformError]
+@pytest.mark.parametrize('exceptions', exc)
+@mock.patch('src.api.models.model.Model.load_model_config')
+@mock.patch('src.api.models.model.Model.load_input_configs')
+@mock.patch('src.api.models.model.Model.load_output_configs')
+def test_model_image_preprocessing_exception(mock_load_model_config,
+        mock_load_input_configs, mock_load_output_configs, exceptions):
+    ovms_connector = OvmsConnector("4000",
+            {"model_name": "test", "model_version": 1, "input_name": "input"})
+    mod = TestModel("test_model", ovms_connector)
+    mock_load_model_config.return_value = []
+    mock_load_input_configs.return_value = []
+    mock_load_output_configs.return_value = []
+    mod.preprocess_binary_image = mock.Mock(side_effect=exceptions)
+    resp = falcon.Response()
+    req = type('test', (), {})()
+    req.headers = {}
+    req.bounded_stream = io.BytesIO(b"")
+    mod.on_post(req, resp)
+    assert resp.status == falcon.HTTP_400
+
+exceptions_and_statuses = [(ValueError, falcon.HTTP_400),
+        (TypeError, falcon.HTTP_400), (ModelNotFoundError, falcon.HTTP_500),
+        (OvmsUnavailableError, falcon.HTTP_503), (RequestProcessingError, falcon.HTTP_500)]
+@pytest.mark.parametrize("exceptions", exceptions_and_statuses)
+@mock.patch('src.api.models.model.Model.load_model_config')
+@mock.patch('src.api.models.model.Model.load_input_configs')
+@mock.patch('src.api.models.model.Model.load_output_configs')
+def test_model_inference_exceptions(mock_load_model_config,
+        mock_load_input_configs, mock_load_output_configs, exceptions):
+    ovms_connector = OvmsConnector("4000",
+        {"model_name": "test", "model_version": 1, "input_name": "input"})
+    ovms_connector.send = mock.Mock(
+            side_effect=exceptions[0])
+    mod = TestModel("test_model", ovms_connector)
+    mock_load_model_config.return_value = []
+    mock_load_input_configs.return_value = []
+    mock_load_output_configs.return_value = []
+    mod.preprocess_binary_image = mock.Mock()
+    resp = falcon.Response()
+    req = type('test', (), {})()
+    req.headers = {}
+    req.bounded_stream = io.BytesIO(b"")
+    mod.on_post(req, resp)
+    assert resp.status == exceptions[1]
+
