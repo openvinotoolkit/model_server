@@ -83,6 +83,40 @@ There are many models, which meets this criteria, in the [OpenVINO Model Zoo](ht
 Each model should include also a configuration file in json format. Example of such
 configuration file is [here](ams_models/vehicle_detection_adas_model.json)
 
+Below is a sample of the model output:
+```json
+{
+   "subtype" : "vehicleDetection",
+   "entities" : [
+      {
+         "box" : {
+            "h" : 0.10686594247818,
+            "t" : 0.336242735385895,
+            "w" : 0.130945563316345,
+            "l" : 0.789495408535004
+         },
+         "tag" : {
+            "confidence" : 0.999798119068146,
+            "value" : "vehicle"
+         }
+      },
+      {
+         "box" : {
+            "h" : 0.143958985805511,
+            "l" : 0.640124976634979,
+            "t" : 0.308264225721359,
+            "w" : 0.159151077270508
+         },
+         "tag" : {
+            "value" : "vehicle",
+            "confidence" : 0.572816431522369
+         }
+      },
+    ],
+   "type" : "entity"
+}
+```
+
 ### Classification models
 
 Classification models, in this category, give the results in softmax layer. This include a set
@@ -95,6 +129,79 @@ Examples of such models are available in the [OpenVINO Model Zoo](https://docs.o
 2 of such models are copied into the Inference Server docker image:
 * vehicle-attributes-recognition - [vehicle-attributes-recognition-barrier-0039](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-attributes-recognition-barrier-0039)
 * emotions-recognition - [emotions-recognition-retail-0003](https://github.com/opencv/open_model_zoo/tree/master/models/intel/emotions-recognition-retail-0003) 
+
+Below is a sample of such model:
+```json
+{
+   "subtype" : "vehicleClassification",
+   "type" : "classification",
+   "classifications" : [
+      {
+         "attributes" : [
+            {
+               "name" : "color",
+               "confidence" : 0.289313167333603,
+               "value" : "white"
+            },
+            {
+               "confidence" : 0.0435199774801731,
+               "value" : "gray",
+               "name" : "color"
+            },
+            {
+               "confidence" : 0.00365369999781251,
+               "value" : "yellow",
+               "name" : "color"
+            },
+            {
+               "name" : "color",
+               "confidence" : 0.589816808700562,
+               "value" : "red"
+            },
+            {
+               "confidence" : 0.00414687860757113,
+               "value" : "green",
+               "name" : "color"
+            },
+            {
+               "value" : "blue",
+               "confidence" : 0.0417489744722843,
+               "name" : "color"
+            },
+            {
+               "name" : "color",
+               "value" : "black",
+               "confidence" : 0.0278004333376884
+            }
+         ]
+      },
+      {
+         "attributes" : [
+            {
+               "name" : "type",
+               "confidence" : 0.00293471338227391,
+               "value" : "car"
+            },
+            {
+               "name" : "type",
+               "value" : "van",
+               "confidence" : 0.000757944362703711
+            },
+            {
+               "confidence" : 0.996138155460358,
+               "value" : "truck",
+               "name" : "type"
+            },
+            {
+               "name" : "type",
+               "confidence" : 0.000169166218256578,
+               "value" : "bus"
+            }
+         ]
+      }
+   ]
+}
+```
 
 ## Launching and configuration of OpenVINO Inference Server
 
