@@ -26,15 +26,7 @@ from src.preprocessing.preprocess_image import preprocess_binary_image as defaul
 logger = get_logger(__name__)
 
 
-class VehicleAttributes(Model):
-
-    def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:
-        try: 
-            preprocessed_image = default_preprocessing(binary_image, target_size=(72,72))
-            preprocessed_image = np.expand_dims(preprocessed_image, axis=0)
-        except Exception as e:
-            raise e
-        return preprocessed_image    
+class VehicleAttributes(Model):  
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 

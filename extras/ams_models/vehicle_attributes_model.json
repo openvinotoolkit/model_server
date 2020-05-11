@@ -1,5 +1,14 @@
 {
     "model_name": "vehicle-attributes-recognition-barrier-0039",
+    "inputs": [
+        {
+          "input_name": "input",
+          "input_format": "NCHW",
+          "color_format": "BGR",
+          "target_height": 72,
+          "target_width": 72
+        }
+      ],
     "outputs":
      [
             {
