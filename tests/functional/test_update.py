@@ -16,8 +16,8 @@
 import shutil
 import time
 import pytest
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
-from utils.grpc import get_model_metadata, model_metadata_response, \
+from constants import MODEL_SERVICE
+from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.model_management import copy_model
 from utils.rest import get_model_metadata_response_rest, \
@@ -33,18 +33,15 @@ class TestSingleModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_specific_version(self, resnet_multiple_batch_sizes, get_test_dir,
-                              start_server_update_flow_specific,
-                              create_grpc_channel):
+                              start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
-        status_stub = create_grpc_channel('localhost:{}'.format(
-            ports["grpc_port"]), MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
+        status_stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
         resnet_copy_dir = copy_model(resnet, 1, directory)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
@@ -206,8 +203,7 @@ class TestSingleModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_latest_version(self, resnet_multiple_batch_sizes, get_test_dir,
-                            start_server_update_flow_latest,
-                            create_grpc_channel):
+                            start_server_update_flow_latest):
 
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
@@ -217,10 +213,8 @@ class TestSingleModelInference:
         shutil.rmtree(directory, ignore_errors=True)
         resnet_v1_copy_dir = copy_model(resnet, 1, directory)
         time.sleep(8)
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
-        status_stub = create_grpc_channel('localhost:{}'.format(
-                                   ports["grpc_port"]), MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
+        status_stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
@@ -557,16 +551,14 @@ class TestSingleModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_update_rest_grpc(self, resnet_multiple_batch_sizes, get_test_dir,
-                              start_server_update_flow_specific,
-                              create_grpc_channel):
+                              start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
         directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
                 get_tests_suffix())
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
         resnet_copy_dir = copy_model(resnet, 1, directory)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(8)

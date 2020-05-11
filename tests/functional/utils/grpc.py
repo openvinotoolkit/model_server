@@ -14,9 +14,25 @@
 # limitations under the License.
 #
 
+import grpc  # noqa
 from tensorflow import make_tensor_proto, make_ndarray
-from tensorflow_serving.apis import predict_pb2, get_model_metadata_pb2, \
-    get_model_status_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
+    get_model_metadata_pb2, get_model_status_pb2
+
+from constants import MODEL_SERVICE, PREDICTION_SERVICE
+
+DEFAULT_GRPC_PORT = "9000"
+DEFAULT_ADDRESS = 'localhost'
+
+
+def create_channel(address: str = DEFAULT_ADDRESS, port: str = DEFAULT_GRPC_PORT, service: int = PREDICTION_SERVICE):
+    url = '{}:{}'.format(address, port)
+    channel = grpc.insecure_channel(url)
+    if service == PREDICTION_SERVICE:
+        return prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    elif service == MODEL_SERVICE:
+        return model_service_pb2_grpc.ModelServiceStub(channel)
+    return None
 
 
 def infer(img, input_tensor, grpc_stub, model_spec_name,

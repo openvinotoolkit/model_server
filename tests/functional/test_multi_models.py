@@ -15,9 +15,9 @@
 #
 import pytest
 import numpy as np
-from constants import PREDICTION_SERVICE, MODEL_SERVICE, ERROR_SHAPE
+from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS
-from utils.grpc import infer, get_model_metadata, \
+from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
@@ -28,15 +28,13 @@ from utils.rest import infer_rest, \
 class TestMultiModelInference:
 
     def test_run_inference(self, resnet_multiple_batch_sizes,
-                           start_server_multi_model,
-                           create_grpc_channel):
+                           start_server_multi_model):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         for model in [Resnet, ResnetBS4, ResnetBS8]:
             input_data = np.ones(model.input_shape, model.dtype)
@@ -75,14 +73,12 @@ class TestMultiModelInference:
     """
 
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
-                                start_server_multi_model,
-                                create_grpc_channel):
+                                start_server_multi_model):
         _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         for model in [Resnet, ResnetBS4, ResnetBS8]:
             print("Getting info about {} model".format(model.name))
@@ -99,14 +95,12 @@ class TestMultiModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_status(self, resnet_multiple_batch_sizes,
-                              start_server_multi_model,
-                              create_grpc_channel):
+                              start_server_multi_model):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
         for model in [Resnet, ResnetBS4, ResnetBS8]:
             request = get_model_status(model_name=model.name, version=1)

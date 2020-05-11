@@ -16,9 +16,9 @@
 import pytest
 import numpy as np
 import json
-from constants import PREDICTION_SERVICE, ERROR_SHAPE
+from constants import ERROR_SHAPE
 from model.models_information import ResnetBS8, AgeGender
-from utils.grpc import infer, get_model_metadata, model_metadata_response
+from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
@@ -40,8 +40,7 @@ class TestBatchModelInference:
         return in_name, out_names, json_dict["outputs"]
 
     def test_run_inference(self, resnet_multiple_batch_sizes,
-                           start_server_batch_model,
-                           create_grpc_channel):
+                           start_server_batch_model):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -63,8 +62,7 @@ class TestBatchModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         batch_input = np.ones(ResnetBS8.input_shape, ResnetBS8.dtype)
         output = infer(batch_input, input_tensor=ResnetBS8.input_name,
@@ -75,15 +73,13 @@ class TestBatchModelInference:
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
     def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
-                               start_server_batch_model_bs4,
-                               create_grpc_channel):
+                               start_server_batch_model_bs4):
 
         _, ports = start_server_batch_model_bs4
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         batch_input = np.ones((4,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
         output = infer(batch_input, input_tensor=ResnetBS8.input_name,
@@ -95,15 +91,13 @@ class TestBatchModelInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference_auto(self, resnet_multiple_batch_sizes,
-                                start_server_batch_model_auto,
-                                create_grpc_channel):
+                                start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         for batch_size in [1, 6]:
             batch_input = np.ones((batch_size,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
@@ -115,14 +109,12 @@ class TestBatchModelInference:
             assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
-                                start_server_batch_model,
-                                create_grpc_channel):
+                                start_server_batch_model):
 
         _, ports = start_server_batch_model
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         print("Getting info about {} model".format(ResnetBS8.name))
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}

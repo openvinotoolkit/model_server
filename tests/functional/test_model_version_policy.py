@@ -20,9 +20,9 @@ from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from constants import MODEL_SERVICE
 from model.models_information import AgeGender, PVBDetectionV1, PVBDetectionV2
-from utils.grpc import get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
@@ -39,15 +39,13 @@ class TestModelVerPolicy:
     ])
     def test_get_model_metadata(self, model_version_policy_models,
                                 start_server_model_ver_policy,
-                                create_grpc_channel,
                                 model_name, throw_error):
 
         _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         versions = [1, 2, 3]
         expected_outputs_metadata = [
@@ -91,15 +89,13 @@ class TestModelVerPolicy:
     ])
     def test_get_model_status(self, model_version_policy_models,
                               start_server_model_ver_policy,
-                              create_grpc_channel,
                               model_name, throw_error):
 
         _, ports = start_server_model_ver_policy
         print("Downloaded model files:", model_version_policy_models)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
         versions = [1, 2, 3]
         for x in range(len(versions)):

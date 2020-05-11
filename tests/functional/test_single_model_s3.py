@@ -16,9 +16,9 @@
 
 import pytest
 import numpy as np
-from constants import MODEL_SERVICE, PREDICTION_SERVICE, ERROR_SHAPE
+from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet
-from utils.grpc import infer, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
@@ -27,8 +27,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
 class TestSingleModelInferenceS3:
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_run_inference(self, start_server_single_model_from_minio,
-                           create_grpc_channel):
+    def test_run_inference(self, start_server_single_model_from_minio):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -50,8 +49,7 @@ class TestSingleModelInferenceS3:
 
         # Connect to grpc service
         _, ports = start_server_single_model_from_minio
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
         output = infer(imgs_v1_224, input_tensor=Resnet.input_name, grpc_stub=stub,
@@ -62,12 +60,10 @@ class TestSingleModelInferenceS3:
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_get_model_metadata(self, start_server_single_model_from_minio,
-                                create_grpc_channel):
+    def test_get_model_metadata(self, start_server_single_model_from_minio):
 
         _, ports = start_server_single_model_from_minio
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
@@ -81,11 +77,10 @@ class TestSingleModelInferenceS3:
         assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_get_model_status(self, start_server_single_model_from_minio,
-                              create_grpc_channel):
+    def test_get_model_status(self, start_server_single_model_from_minio):
 
         _, ports = start_server_single_model_from_minio
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]), MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
         request = get_model_status(model_name=Resnet.name)
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status

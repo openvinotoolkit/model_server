@@ -16,9 +16,9 @@
 
 import numpy as np
 import pytest
-from constants import PREDICTION_SERVICE, ERROR_SHAPE
+from constants import ERROR_SHAPE
 from model.models_information import AgeGender
-from utils.grpc import infer, get_model_metadata, model_metadata_response
+from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 from utils.rest import infer_rest, get_model_metadata_response_rest
 
 
@@ -26,7 +26,6 @@ class TestSingleModelMappingInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, age_gender_model_downloader,
-                           create_grpc_channel,
                            start_server_with_mapping):
         """
         <b>Description</b>
@@ -49,8 +48,7 @@ class TestSingleModelMappingInference:
         print("Downloaded model files:", age_gender_model_downloader)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         imgs_v1_224 = np.ones(AgeGender.input_shape, AgeGender.dtype)
 
@@ -64,14 +62,12 @@ class TestSingleModelMappingInference:
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, age_gender_model_downloader,
-                                create_grpc_channel,
                                 start_server_with_mapping):
 
         _, ports = start_server_with_mapping
         print("Downloaded model files:", age_gender_model_downloader)
 
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
 
         expected_input_metadata = {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}
         expected_output_metadata = {}
