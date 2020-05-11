@@ -66,9 +66,9 @@ test_perf: venv
 	@./tests/performance/download_model.sh
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
 		-v $(HOME)/resnet50:/models/resnet50 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet --model_path /models/resnet50 --port 9178; sleep 5
+		--model_name resnet --model_path /models/resnet50 --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
 		--images_numpy_path tests/performance/imgs.npy \
@@ -87,11 +87,11 @@ test_throughput: venv
 	@./tests/performance/download_model.sh
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
 		-v $(HOME)/resnet50:/models/resnet50 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):9178 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet \
 		--model_path /models/resnet50 \
-		--port 9178; \
+		--port $(OVMS_CPP_CONTAINTER_PORT); \
 		sleep 5
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
