@@ -19,7 +19,7 @@ import json
 from constants import ERROR_SHAPE
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
-from utils.rest import infer_rest, get_model_metadata_response_rest
+from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
 
 class TestBatchModelInference:
@@ -158,8 +158,7 @@ class TestBatchModelInference:
         in_name, out_names, out_mapping = mapping_names
 
         batch_input = np.ones(AgeGender.input_shape, AgeGender.dtype)
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
-                   ports["rest_port"])
+        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
@@ -201,8 +200,7 @@ class TestBatchModelInference:
 
         batch_size = 4
         batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
-                   ports["rest_port"])
+        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
         output = infer_rest(batch_input, input_tensor=in_name,
                             rest_url=rest_url,
                             output_tensors=out_names,
@@ -243,8 +241,7 @@ class TestBatchModelInference:
 
         batch_size = 6
         batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
-                   ports["rest_port"])
+        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
         output = infer_rest(batch_input,
                             input_tensor=in_name, rest_url=rest_url,
                             output_tensors=out_names,
@@ -273,7 +270,7 @@ class TestBatchModelInference:
         print("Getting info about {} model".format(ResnetBS8.name))
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
         expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
-        rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(ports["rest_port"], ResnetBS8.name)
+        rest_url = get_metadata_url(model=ResnetBS8.name, port=ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(response=response)
 

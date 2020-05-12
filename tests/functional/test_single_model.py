@@ -23,8 +23,8 @@ from utils.grpc import create_channel, infer, get_model_metadata, model_metadata
     get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import infer_rest, get_model_metadata_response_rest, \
-    get_model_status_response_rest
+from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
+    get_model_metadata_response_rest, get_model_status_response_rest
 
 
 class TestSingleModelInference:
@@ -124,7 +124,7 @@ class TestSingleModelInference:
 
         _, ports = start_server_single_model
         imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
-        rest_url = 'http://localhost:{}/v1/models/resnet:predict'.format(ports["rest_port"])
+        rest_url = get_predict_url(model=Resnet.name, port=ports["rest_port"])
         output = infer_rest(imgs_v1_224, input_tensor=Resnet.input_name,
                             rest_url=rest_url,
                             output_tensors=[Resnet.output_name],
@@ -140,7 +140,7 @@ class TestSingleModelInference:
         _, ports = start_server_single_model
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
-        rest_url = 'http://localhost:{}/v1/models/resnet/metadata'.format(ports["rest_port"])
+        rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -155,8 +155,7 @@ class TestSingleModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         _, ports = start_server_single_model
-        rest_url = 'http://localhost:{}/v1/models/resnet'.format(
-                    ports["rest_port"])
+        rest_url = get_status_url(model=Resnet.name, port=ports["rest_port"])
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

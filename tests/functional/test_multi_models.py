@@ -21,7 +21,7 @@ from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import infer_rest, \
+from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
 
@@ -123,7 +123,7 @@ class TestMultiModelInference:
             input_data = np.ones(model.input_shape, model.dtype)
             print("Starting inference using {} model".format(model.name))
 
-            rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(ports["rest_port"], model.name)
+            rest_url = get_predict_url(model=model.name, port=ports["rest_port"])
             output = infer_rest(input_data, input_tensor=model.input_name, rest_url=rest_url,
                                 output_tensors=[model.output_name],
                                 request_format=model.rest_request_format)
@@ -141,7 +141,7 @@ class TestMultiModelInference:
             print("Getting info about {} model".format(model.name))
             expected_input_metadata = {model.input_name: {'dtype': 1, 'shape': list(model.input_shape)}}
             expected_output_metadata = {model.output_name: {'dtype': 1, 'shape': list(model.output_shape)}}
-            rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(ports["rest_port"], model.name)
+            rest_url = get_metadata_url(model=model.name, port=ports["rest_port"])
             response = get_model_metadata_response_rest(rest_url)
             input_metadata, output_metadata = model_metadata_response(response=response)
 
@@ -158,7 +158,7 @@ class TestMultiModelInference:
         print("Downloaded model files:", resnet_multiple_batch_sizes)
 
         for model in [Resnet, ResnetBS4]:
-            rest_url = 'http://localhost:{}/v1/models/{}'.format(ports["rest_port"], model.name)
+            rest_url = get_status_url(model=model.name, port=ports["rest_port"])
             response = get_model_status_response_rest(rest_url)
             versions_statuses = response.model_version_status
             version_status = versions_statuses[0]

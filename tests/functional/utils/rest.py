@@ -18,9 +18,42 @@ import json
 
 import numpy as np
 import requests
+from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
+
+DEFAULT_ADDRESS = 'localhost'
+DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])
+PREDICT = ':predict'
+METADATA = '/metadata'
+
+
+def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,
+            version: str = None, service: str = None):
+    version_string = ""
+    if version is not None:
+        version_string = "/versions/{}".format(version)
+    if version == "all":
+        version_string = "/all"
+
+    service_string = ""
+    if service is not None:
+        service_string = service
+    rest_url = 'http://{}:{}/v1/models/{}{}{}'.format(address, port, model, version_string, service_string)
+    return rest_url
+
+
+def get_predict_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT, version: str = None):
+    return get_url(model=model, address=address, port=port, version=version, service=PREDICT)
+
+
+def get_metadata_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT, version: str = None):
+    return get_url(model=model, address=address, port=port, version=version, service=METADATA)
+
+
+def get_status_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT, version: str = None):
+    return get_url(model=model, address=address, port=port, version=version)
 
 
 def prepare_body_format(img, request_format, input_name):
