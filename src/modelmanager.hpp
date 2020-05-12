@@ -26,6 +26,7 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include "model.hpp"
+#include "model_version_policy.hpp"
 
 namespace ovms {
     /**
@@ -190,6 +191,16 @@ namespace ovms {
          * @return status
          */
         static Status parsePluginConfig(std::string command, plugin_config_t& config);
+
+        /**
+         * @brief Parses string for model version policy
+         * 
+         * @param string representing model version policy configuration
+         * @param ModelVersionPolicy pointer reference to target model version policy
+         * @return status
+         * 
+         */
+        static Status parseModelVersionPolicy(std::string command, std::shared_ptr<ModelVersionPolicy>& policy);
 
         /**
          * @brief Iterates over directories in specific path and returns available model versions

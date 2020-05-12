@@ -38,10 +38,10 @@ class GetModelMetadataStatus {
 public:
     static const std::string& getError(const GetModelMetadataStatusCode code) {
         static const std::map<GetModelMetadataStatusCode, std::string> errors = {
-            { GetModelMetadataStatusCode::OK,                               ""                                                      },
-            { GetModelMetadataStatusCode::REQUEST_MODEL_SPEC_MISSING,       "model_spec missing in request"                         },
-            { GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF,            "Invalid signature name"                                },
-            { GetModelMetadataStatusCode::MODEL_MISSING,                    "Requested model name and/or version does not exist"    },
+            { GetModelMetadataStatusCode::OK,                               ""                                  },
+            { GetModelMetadataStatusCode::REQUEST_MODEL_SPEC_MISSING,       "model_spec missing in request"     },
+            { GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF,            "Invalid signature name"            },
+            { GetModelMetadataStatusCode::MODEL_MISSING,                    "Servable not found for request"    },
         };
 
         return errors.find(code)->second;

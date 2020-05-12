@@ -35,19 +35,22 @@ enum class Status {
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,             /*!< The provided shape is in wrong format */
     PLUGIN_CONFIG_ERROR,            /*!< Plugin config is in wrong format */
+    MODEL_VERSION_POLICY_ERROR,     /*!< Model version policy is in wrong format */
 };
 
 class StatusDescription {
 public:
     static const std::string& getError(const Status code) {
         static const std::map<Status, std::string> errors = {
-            { Status::OK,                      "OK"                                                  },
-            { Status::PATH_INVALID,            "The provided base path is invalid or doesn't exists" },
-            { Status::FILE_INVALID,            "File not found or cannot open"                       },
-            { Status::NETWORK_NOT_LOADED,      "Error while loading a network"                       },
-            { Status::JSON_INVALID,            "The file is not valid json"                          },
-            { Status::SHAPE_WRONG_FORMAT,      "The provided shape is in wrong format"               },
-            { Status::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"                             }
+            { Status::OK,                           "OK"                                                    },
+            { Status::PATH_INVALID,                 "The provided base path is invalid or doesn't exists"   },
+            { Status::FILE_INVALID,                 "File not found or cannot open"                         },
+            { Status::NETWORK_NOT_LOADED,           "Error while loading a network"                         },
+            { Status::JSON_INVALID,                 "The file is not valid json"                            },
+            { Status::MODELINSTANCE_NOT_FOUND,      "ModelInstance not found"                               },
+            { Status::SHAPE_WRONG_FORMAT,           "The provided shape is in wrong format"                 },
+            { Status::PLUGIN_CONFIG_ERROR,          "Plugin config is in wrong format"                      },
+            { Status::MODEL_VERSION_POLICY_ERROR,   "Model version policy is in wrong format"               },
         };
 
         return errors.find(code)->second;
