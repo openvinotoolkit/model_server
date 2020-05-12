@@ -6,7 +6,8 @@
           "input_format": "NCHW",
           "color_format": "BGR",
           "target_height": 384,
-          "target_width": 672
+          "target_width": 672,
+          "channels": 3
         }
       ],
     "outputs": [

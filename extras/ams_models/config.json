@@ -1,0 +1,14 @@
+{
+    "model_config_list":[
+      {
+        "config":{
+          "name":"vehicle-detection-adas",
+          "base_path":"/opt/models/vehicle-detection-adas",
+          "output_name": "detection_out",
+          "batch_size":"auto",
+          "shape":"auto"
+        }
+      }
+    ]
+  }
+  

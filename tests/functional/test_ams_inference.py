@@ -79,13 +79,15 @@ class TestAmsInference:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition"]
+        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition",
+                   "personVehicleBikeDetection", "faceDetection"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
             response = requests.post(endpoint_url,
                                     headers={'Content-Type': 'image/png',
                                             'Content-Length': str(len(image))},
                                     data=image_bytes)
+            print(response.text)
             assert response.status_code == 200
             assert response.headers.get('Content-Type') == 'application/json'
 
@@ -101,7 +103,8 @@ class TestAmsInference:
 
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition"]
+        targets = ["vehicleDetection", "vehicleClassification", "emotionsRecognition",
+                   "personVehicleBikeDetection", "faceDetection"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
 

@@ -2,11 +2,12 @@
     "model_name": "face-detection-adas",
     "inputs": [
         {
-          "input_name": "input",
+          "input_name": "data",
           "input_format": "NCHW",
           "color_format": "BGR",
           "target_height": 384,
-          "target_width": 672
+          "target_width": 672,
+          "channels": 3
         }
       ],
     "outputs": [

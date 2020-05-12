@@ -60,4 +60,13 @@ AVAILABLE_MODELS = [
         },
     "config_path": "/opt/ams_models/person_vehicle_bike_detection.json"
     },
+    {"name": "faceDetection", 
+    "class": DetectionModel, 
+    "ovms_mapping": {
+        "model_name": "face_detection_adas",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/face_detection_adas.json"
+    },
 ]
