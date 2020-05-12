@@ -32,8 +32,6 @@ class ClassificationAttributes(Model):
         # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
 
-        current_conf = self.output_configs[0]
-
         for output_name in self.labels.keys():
             attributes = []
             highest_prob = 0.0
@@ -44,9 +42,9 @@ class ClassificationAttributes(Model):
                 logger.exception(message)
                 raise ValidationError(message)
 
-            for output_conf in self.output_configs:
-                if output_conf.output_name == output_name:
-                    current_conf == output_conf
+            # get output configuration for current output_name
+            current_conf  = next(iter(self.output_configs[output_name]))
+            print("Current config:-" + str(current_conf)
 
             is_softmax = 0.0
             value_multiplyer = 1
