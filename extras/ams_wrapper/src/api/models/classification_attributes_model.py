@@ -43,8 +43,8 @@ class ClassificationAttributes(Model):
                 raise ValidationError(message)
 
             # get output configuration for current output_name
-            current_conf  = next(iter(self.output_configs[output_name]))
-            print("Current config:-" + str(current_conf)
+            current_conf  = self.output_configs[output_name]
+            print("Current config:-" + str(current_conf))
 
             is_softmax = 0.0
             value_multiplyer = 1
@@ -64,7 +64,7 @@ class ClassificationAttributes(Model):
                     attribute = Attribute(output_name, class_name, probability)
                 else:
                     value = probability * float(value_multiplyer)
-                    attribute = Attribute(class_name, value, output_configs.is_softmax)
+                    attribute = Attribute(class_name, value, current_conf.is_softmax)
 
                 attributes.append(attribute)
 
