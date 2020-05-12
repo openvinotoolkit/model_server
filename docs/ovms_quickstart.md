@@ -70,7 +70,7 @@ Example images that can be used for inference can be downloaded from this [url](
 a folder passed to it as a parameter.
 
 ```
-curl --create-dirs https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
+curl --create-dirs ://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Run Inference
