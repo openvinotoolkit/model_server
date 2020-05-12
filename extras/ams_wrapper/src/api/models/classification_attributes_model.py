@@ -29,27 +29,25 @@ logger = get_logger(__name__)
 class ClassificationAttributes(Model):  
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
-
-        # model with output shape for each classification type (1,N,1,1) 
-        classes = self.labels
+        # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
-        for type_name in classes.keys():
+        for output_name in self.labels.keys():
             attributes = []
             highest_prob = 0.0
-            for position in classes[type_name].keys():
-                class_name = classes[type_name][position]
-                if type_name in inference_output:
-                    probability = inference_output[type_name][0,int(float(position)),0,0].item()
-                else:
-                    message = 'Model configuration label- {}'
-                    ' not found in model output - {}'.format(type_name, inference_output)
-                    logger.exception(message)
-                    raise ValidationError(message)
 
+            if output_name not in inference_output:
+                message = 'Model configuration label- {}'
+                ' not found in model output - {}'.format(output_name, inference_output)
+                logger.exception(message)
+                raise ValidationError(message)
+
+            for class_id in self.labels[output_name].keys():
+                class_name = self.labels[output_name][position]
+                probability = inference_output[output_name][0,int(float(class_id)),0,0].item()
                 if probability > highest_prob:
                     tag_name = class_name 
                     highest_prob = probability
-                attribute = Attribute(type_name, class_name, probability)
+                attribute = Attribute(output_name, class_name, probability)
                 attributes.append(attribute)
 
             classification = SingleClassification(attributes)
