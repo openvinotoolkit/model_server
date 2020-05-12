@@ -148,5 +148,5 @@ def object_classification_red_truck() -> str:
 
 @pytest.fixture(scope='session')
 def object_classification_emotions_smile() -> str:
-    return os.path.join(IMAGES_DIR, 'emotions_smile.png')
+    return os.path.join(IMAGES_DIR, 'emotions_smile.jpg')
 

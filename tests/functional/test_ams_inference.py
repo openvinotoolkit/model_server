@@ -60,6 +60,20 @@ class TestAmsInference:
                                  data=wrong_input)
         assert response.status_code == 400
 
+    def test_wrong_model_name(self, start_ams_service, image):
+        _, ports = start_ams_service
+        ams_port = ports['port']
+        target = "noSuchModelDetection"
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
+        with open(image, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        
+        response = requests.post(endpoint_url,
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(image))},
+                                 data=image_bytes)
+        assert response.status_code == 404
+
     def test_wrong_input_content_type(self, start_ams_service):
         _, ports = start_ams_service
         ams_port = ports['port']
@@ -191,7 +205,7 @@ class TestAmsInference:
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleAttributes")
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleClassification")
         response = requests.post(endpoint_url,
                                 headers={'Content-Type': 'image/png',
                                         'Content-Length': str(len(object_classification_red_truck))},
@@ -260,7 +274,7 @@ class TestAmsInference:
                 tag_value = detection["tag"]["value"]
 
         assert highest_probability > 0.67
-        assert highest_emotion == "happy"
+        assert tag_value == "vehicle"
         assert detections_count == 11
         assert highest_box["w"] == 0.034460186958313
         assert highest_box["l"] == 0.783527314662933
