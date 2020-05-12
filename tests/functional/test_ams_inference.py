@@ -60,17 +60,17 @@ class TestAmsInference:
                                  data=wrong_input)
         assert response.status_code == 400
 
-    def test_wrong_model_name(self, start_ams_service, image):
+    def test_wrong_model_name(self, start_ams_service, jpg_object_detection_image):
         _, ports = start_ams_service
         ams_port = ports['port']
         target = "noSuchModelDetection"
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
-        with open(image, mode='rb') as image_file:
+        with open(jpg_object_detection_image, mode='rb') as image_file:
             image_bytes = image_file.read()
         
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
-                                          'Content-Length': str(len(image))},
+                                          'Content-Length': str(len(jpg_object_detection_image))},
                                  data=image_bytes)
         assert response.status_code == 404
 
@@ -191,8 +191,8 @@ class TestAmsInference:
         highest_probability = 0.0
         highest_emotion = ""
         for classification in response_json["classifications"][0]["attributes"]:
-            if classification["confidcence"] > highest_probability:
-                highest_probability = classification["confidcence"]
+            if classification["confidence"] > highest_probability:
+                highest_probability = classification["confidence"]
                 highest_emotion = classification["value"]
 
         assert highest_probability > 0.947
@@ -220,8 +220,8 @@ class TestAmsInference:
         type_name = ""
 
         for classification in response_json["classifications"][0]["attributes"]:
-            if classification["confidcence"] > highest_probability:
-                highest_probability = classification["confidcence"]
+            if classification["confidence"] > highest_probability:
+                highest_probability = classification["confidence"]
                 highest_value = classification["value"]
                 type_name = classification["name"]
 
@@ -234,8 +234,8 @@ class TestAmsInference:
         type_name = ""
 
         for classification in response_json["classifications"][1]["attributes"]:
-            if classification["confidcence"] > highest_probability:
-                highest_probability = classification["confidcence"]
+            if classification["confidence"] > highest_probability:
+                highest_probability = classification["confidence"]
                 highest_value = classification["value"]
                 type_name = classification["name"]
 
@@ -273,13 +273,18 @@ class TestAmsInference:
                 highest_box = detection["box"]
                 tag_value = detection["tag"]["value"]
 
+        epsilon = 0.00000000001
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
         assert detections_count == 11
-        assert highest_box["w"] == 0.034460186958313
-        assert highest_box["l"] == 0.783527314662933
-        assert highest_box["h"] == 0.0431380569934845
-        assert highest_box["t"] == 0.173053205013275
+        assert highest_box["w"] + epsilon >= 0.034460186958313
+        assert highest_box["l"] + epsilon >= 0.783527314662933
+        assert highest_box["h"] + epsilon >= 0.0431380569934845
+        assert highest_box["t"] + epsilon >= 0.173053205013275
+        assert highest_box["w"] - epsilon <= 0.034460186958313
+        assert highest_box["l"] - epsilon <= 0.783527314662933
+        assert highest_box["h"] - epsilon <= 0.0431380569934845
+        assert highest_box["t"] - epsilon <= 0.173053205013275
 
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
