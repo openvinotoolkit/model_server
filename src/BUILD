@@ -5,6 +5,7 @@ cc_library(
         "config.cpp",
         "config.hpp",
         "deserialization.hpp",
+        "directoryversionreader.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "model.cpp",
@@ -74,6 +75,7 @@ cc_test(
         "test/get_model_metadata_validation_test.cpp",
         "test/unit_tests.cpp",
         "test/model_version_policy_test.cpp",
+        "test/modelinstance_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelconfig_test.cpp",
         "test/ovtestutils.hpp",
@@ -85,8 +87,8 @@ cc_test(
         "test/stringutils_test.cpp",
     ],
     data = [
-        "test/dummy.xml",
-        "test/dummy.bin",
+        "test/dummy/0/dummy.xml",
+        "test/dummy/0/dummy.bin",
     ],
     copts = [
         "--std=c++17"

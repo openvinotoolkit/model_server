@@ -36,6 +36,10 @@ enum class Status {
     SHAPE_WRONG_FORMAT,             /*!< The provided shape is in wrong format */
     PLUGIN_CONFIG_ERROR,            /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_ERROR,     /*!< Model version policy is in wrong format */
+    NO_MODEL_VERSION_AVAILABLE, /*!< No model version found in path */
+    MODEL_LOADING, /*!<  */
+    MODEL_RETIRED, /*!<  */
+    UNKNOWN_ERROR /*!<  */
 };
 
 class StatusDescription {
@@ -51,8 +55,10 @@ public:
             { Status::SHAPE_WRONG_FORMAT,           "The provided shape is in wrong format"                 },
             { Status::PLUGIN_CONFIG_ERROR,          "Plugin config is in wrong format"                      },
             { Status::MODEL_VERSION_POLICY_ERROR,   "Model version policy is in wrong format"               },
+            { Status::MODEL_LOADING,                "Model with requested version is not loaded yet"        },
+            { Status::MODEL_RETIRED,                "Model with requested version is retired"               },
+            { Status::UNKNOWN_ERROR,                "Unknown error occured"                                 }
         };
-
         return errors.find(code)->second;
     }
 };
@@ -65,6 +71,8 @@ enum class ValidationStatusCode {
     OK,                     /*!< Success */
     MODEL_NAME_MISSING,     /*!< Model with requested name is not found */
     MODEL_VERSION_MISSING,  /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET, /*!< Model with requested version is not loaded yet */
     INCORRECT_BATCH_SIZE,   /*!< Input batch size other than required */
     INVALID_INPUT_ALIAS,    /*!< Invalid number of inputs or name mismatch */
     INVALID_SHAPE,          /*!< Invalid shape dimension number or dimension value */
@@ -88,6 +96,10 @@ public:
              "Model with requested name is not found"},
             {ValidationStatusCode::MODEL_VERSION_MISSING,
              "Model with requested version is not found"},
+            {ValidationStatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
+             "Model with requested version is retired"},
+            {ValidationStatusCode::MODEL_VERSION_NOT_LOADED_YET,
+             "Model with requested version is not loaded yet"},
             {ValidationStatusCode::INCORRECT_BATCH_SIZE,
              "Incorrect batch size"},
             {ValidationStatusCode::INVALID_INPUT_ALIAS,
@@ -111,7 +123,6 @@ public:
             {ValidationStatusCode::SERIALIZATION_ERROR,
              "Error occured during serialization"}
         };
-
         return errors.find(code)->second;
     }
 };

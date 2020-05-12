@@ -38,6 +38,9 @@ GetModelMetadataStatusCode GetModelMetadataImpl::getModelStatus(
     if (instance == nullptr) {
         return GetModelMetadataStatusCode::MODEL_MISSING;
     }
+    if (ModelVersionState::AVAILABLE != instance->getStatus().getState()) {
+        return GetModelMetadataStatusCode::MODEL_MISSING;
+    }
 
     buildResponse(instance, response);
 

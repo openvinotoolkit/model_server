@@ -33,6 +33,7 @@
 namespace ovms {
 
     using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+
     /**
      * @brief This class contains all the information about inference engine model
      */
@@ -41,17 +42,17 @@ namespace ovms {
         /**
          * @brief Inference Engine core object
          */
-        InferenceEngine::Core engine;
+        std::unique_ptr<InferenceEngine::Core> engine;
 
         /**
          * @brief Inference Engine CNNNetwork object
          */
-        InferenceEngine::CNNNetwork network;
+        std::unique_ptr<InferenceEngine::CNNNetwork> network;
 
         /**
          * @brief Inference Engine device network
          */
-        InferenceEngine::ExecutableNetwork execNetwork;
+        std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetwork;
 
         /**
          * @brief Model name
@@ -97,7 +98,7 @@ namespace ovms {
         /**
          * @brief OpenVINO inference execution stream pool
          */
-        std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
+        std::shared_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
         /**
          * @brief Internal method for loading inputs
@@ -122,34 +123,7 @@ namespace ovms {
         /**
          * @brief Destroy the Model Instance object
          */
-        virtual ~ModelInstance() {}
-
-        /**
-         * @brief Gets Inference Engine reference
-         *
-         * @return InferenceEngine::Core
-         */
-        const InferenceEngine::Core& getInferenceEngine() {
-            return engine;
-        }
-
-        /**
-         * @brief Gets Inference Engine ICNNNetwork reference
-         *
-         * @return InferenceEngine::CNNNetwork
-         */
-        const InferenceEngine::CNNNetwork& getCNNNetwork() {
-            return network;
-        }
-
-        /**
-         * @brief Gets Inference Engine Executable Network reference
-         *
-         * @return InferenceEngine::ExecutableNetwork
-         */
-        const InferenceEngine::ExecutableNetwork& getExecutableNetwork() {
-            return execNetwork;
-        }
+        virtual ~ModelInstance() = default;
 
         /**
          * @brief Gets the model name
@@ -183,7 +157,7 @@ namespace ovms {
          *
          * @return status
          */
-        const ModelVersionStatus& getStatus() {
+        const ModelVersionStatus& getStatus() const {
             return status;
         }
 
@@ -224,12 +198,37 @@ namespace ovms {
         }
 
         /**
+         * @brief Check if can unload infer requests
+         *
+         * @return bool 
+         */
+        virtual bool canUnloadInferRequests() const {
+            return inferRequestsQueue.use_count() < 2;
+        }
+
+        /**
          * @brief Get OV streams pool
          * 
          * @return OVStreamsQueue
          * */
-        OVInferRequestsQueue& getInferRequestsQueue() {
-            return *inferRequestsQueue;
+        Status getInferRequestsQueue(std::shared_ptr<OVInferRequestsQueue>& inferRequestsQueueIn) {
+            switch (getStatus().getState()) {
+                case ModelVersionState::AVAILABLE: {
+                    inferRequestsQueueIn = inferRequestsQueue;
+                    return Status::OK;
+                }
+                case ModelVersionState::START:
+                case ModelVersionState::LOADING: {
+                    return Status::MODEL_LOADING;
+                }
+                case ModelVersionState::UNLOADING:
+                case ModelVersionState::END: {
+                    return Status::MODEL_RETIRED;
+                }
+                default: {
+                    return Status::UNKNOWN_ERROR;
+                }
+            }
         }
 
         /**
@@ -240,6 +239,12 @@ namespace ovms {
          * @return Status
          */
         Status loadModel(const ModelConfig& config);
+
+        /**
+         * @brief Unloads model version
+         *
+         */
+        void unloadModel();
 
         const ValidationStatusCode validate(const tensorflow::serving::PredictRequest* request);
         // const ValidationStatusCode validate(const kf::serving::PredictRequest* request);

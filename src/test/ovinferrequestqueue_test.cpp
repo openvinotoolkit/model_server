@@ -29,12 +29,11 @@
 
 using namespace testing;
 
+const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/dummy/0/dummy.xml";
+
 TEST(OVInferRequestQueue, ShortQueue) {
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::cout << "current dir" << dir.u8string() << "\n";
-    std::string dummy_model = dir.u8string() + "/src/test/dummy.xml";
     InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(dummy_model);
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 3);
     int reqid;
@@ -56,10 +55,8 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
 
 TEST(OVInferRequestQueue, FullQueue) {
     Timer timer;
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy.xml";
     InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(dummy_model);
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 50);
     int reqid;
@@ -94,10 +91,8 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
 TEST(OVInferRequestQueue, MultiThread) {
     int nireq = 30;  // represnet queue size
     int number_clients = 100;  // represent number of serving clients
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy.xml";
     InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(dummy_model);
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
 
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);

@@ -22,6 +22,7 @@
 namespace ovms {
 
 using model_version_t = int64_t;
+using model_versions_t = std::vector<ovms::model_version_t>;
 
 /**
  * @brief Base class for model version policy types
