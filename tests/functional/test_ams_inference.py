@@ -157,6 +157,117 @@ class TestAmsInference:
                                  data=image_bytes)
         assert response.status_code == 500
 
+
+    def test_emotionsRecognition(self, start_ams_service, object_classification_emotions_smile):
+        with open(object_classification_emotions_smile, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service
+        ams_port = ports['port']
+
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, "emotionsRecognition")
+        response = requests.post(endpoint_url,
+                                headers={'Content-Type': 'image/png',
+                                        'Content-Length': str(len(object_classification_emotions_smile))},
+                                data=image_bytes)
+        assert response.status_code == 200
+        assert response.headers.get('Content-Type') == 'application/json'
+
+        response_json = response.json()
+
+        highest_probability = 0.0
+        highest_emotion = ""
+        for classification in response_json["classifications"][0]["attributes"]:
+            if classification["confidcence"] > highest_probability:
+                highest_probability = classification["confidcence"]
+                highest_emotion = classification["value"]
+
+        assert highest_probability > 0.947
+        assert highest_emotion == "happy"
+
+
+    def test_vehicleClassification(self, start_ams_service, object_classification_red_truck):
+        with open(object_classification_red_truck, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service
+        ams_port = ports['port']
+
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleAttributes")
+        response = requests.post(endpoint_url,
+                                headers={'Content-Type': 'image/png',
+                                        'Content-Length': str(len(object_classification_red_truck))},
+                                data=image_bytes)
+        assert response.status_code == 200
+        assert response.headers.get('Content-Type') == 'application/json'
+
+        response_json = response.json()
+
+        highest_probability = 0.0
+        highest_value = ""
+        type_name = ""
+
+        for classification in response_json["classifications"][0]["attributes"]:
+            if classification["confidcence"] > highest_probability:
+                highest_probability = classification["confidcence"]
+                highest_value = classification["value"]
+                type_name = classification["name"]
+
+        assert highest_probability > 0.547
+        assert highest_value == "red"
+        assert type_name == "color"
+
+        highest_probability = 0.0
+        highest_value = ""
+        type_name = ""
+
+        for classification in response_json["classifications"][1]["attributes"]:
+            if classification["confidcence"] > highest_probability:
+                highest_probability = classification["confidcence"]
+                highest_value = classification["value"]
+                type_name = classification["name"]
+
+        assert highest_probability > 0.9421
+        assert highest_value == "truck"
+        assert type_name == "type"
+
+
+    def test_vehicleDetection(self, start_ams_service, object_detection_image_two_entities):
+        with open(object_detection_image_two_entities, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service
+        ams_port = ports['port']
+
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleDetection")
+        response = requests.post(endpoint_url,
+                                headers={'Content-Type': 'image/png',
+                                        'Content-Length': str(len(object_detection_image_two_entities))},
+                                data=image_bytes)
+        assert response.status_code == 200
+        assert response.headers.get('Content-Type') == 'application/json'
+
+        response_json = response.json()
+
+        highest_probability = 0.0
+        highest_box = dict()
+        tag_value = ""
+        detections_count = 0
+
+        for detection in response_json["entities"]:
+            detections_count += 1
+
+            if detection["tag"]["confidence"] > highest_probability:
+                highest_probability = detection["tag"]["confidence"]
+                highest_box = detection["box"]
+                tag_value = detection["tag"]["value"]
+
+        assert highest_probability > 0.67
+        assert highest_emotion == "happy"
+        assert detections_count == 11
+        assert highest_box["w"] == 0.034460186958313
+        assert highest_box["l"] == 0.783527314662933
+        assert highest_box["h"] == 0.0431380569934845
+        assert highest_box["t"] == 0.173053205013275
+
+
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),
     #                                                       (object_detection_image_two_entities, 2)])
