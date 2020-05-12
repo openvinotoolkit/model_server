@@ -44,12 +44,11 @@ class ClassificationAttributes(Model):
 
             # get output configuration for current output_name
             current_conf  = self.output_configs[output_name]
-            print("Current config:-" + str(current_conf))
 
-            is_softmax = 0.0
-            value_multiplyer = 1
+            is_softmax = None
+            value_multiplyer = 1.0
 
-            if current_conf.is_softmax:
+            if current_conf.is_softmax is not "yes" && current_conf.is_softmax is not None:
                 is_softmax = current_conf.is_softmax
                 value_multiplyer = current_conf.value_multiplyer
 
@@ -63,7 +62,7 @@ class ClassificationAttributes(Model):
                 if is_softmax == 1.0:
                     attribute = Attribute(output_name, class_name, probability)
                 else:
-                    value = probability * float(value_multiplyer)
+                    value = probability * value_multiplyer
                     attribute = Attribute(class_name, value, current_conf.is_softmax)
 
                 attributes.append(attribute)
