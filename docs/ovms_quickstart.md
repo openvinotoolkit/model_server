@@ -1,22 +1,21 @@
 # OpenVINO&trade; Model Server Quickstart
 
-To quickly start using OpenVino&trade; Model Server please execute the following steps.
+To quickly start using OpenVINO Model Server please execute the following steps.
 
 ### Deploy Model Server
 
-The Docker image with OpenVino&trade; Model Server is available on the DockerHub. Issue the
-following command to start using it:
+A Docker image with OpenVINO Model Server is available on DockerHub. Use the following command to download the latest release:
 
 ```bash
 docker pull openvino/ubuntu18_model_server
 ```
-There are also other ways to obtain Model Server application:
-* Building a container image with a Dockerfile - more details can be found [here](docker_container.md)
-* Building the application locally from source - detailed description is located [here](host.md)  
+In addition to the pre-built container image, see instructions to:
+* [Build a container image with a Dockerfile](docker_container.md)
+* [Build the application locally from source](host.md)
 
-### Download a desired model
+### Download a Model
 
-OpenVino&trade; Model Server requires a trained model to be able to perform an inference. The model
+OpenVINO Model Server requires a trained model to be able to perform an inference. The model
 must be in IR format - a pair of files with .bin and .xml extensions. A model 
 can be downloaded from various sites in the Internet (for example from the [Open Model Zoo](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/) ) or converted from other formats - like TensorFlow, ONNX, Caffe or MXNet using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) which is a part of the OpenVINO Toolkit.
 
@@ -27,7 +26,7 @@ Then download both components of the model to the `model` directory (for example
 curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 ```
 
-### Start the Model Server container
+### Start the Model Server Container
 
 To start the Model Server container use the following command:
 
@@ -49,7 +48,7 @@ models/
 
 More about this structure and about how to deploy more than one model at the time can be found [here](./docker_container.md#preparing-the-models) and [here](./docker_container.md#starting-docker-container-with-a-configuration-file).
 
-### Download the example client script
+### Download the Example Client Script
 
 The easiest way to access Model Server is using prepared client scripts. In our case we need to get a script that performs a face detection - like [this](../example_client/face_detection.py).
 
@@ -65,7 +64,7 @@ More details about this particular script can be found [here](../example_client/
 full list is [here](../example_client). 
 
 
-### Download the data needed for inference
+### Download Data for Inference
 
 Example images that can be used for inference can be downloaded from this [url](../example_client/images/people). Let's download the following [one](../example_client/images/people/people1.jpeg). The image should be located in the separate folder - as the script we are going to use makes an inference on all images in
 a folder passed to it as a parameter.
@@ -74,7 +73,7 @@ a folder passed to it as a parameter.
 curl --create-dirs https://github.com/openvinotoolkit/model_server/blob/master/example_client/images/people/people1.jpeg?raw=true -o images/people1.jpeg
 ```
 
-### Run the inference
+### Run Inference
 
 After downloading the files mentioned earlier, go to the folder with test client script and execute the following commands:
 
