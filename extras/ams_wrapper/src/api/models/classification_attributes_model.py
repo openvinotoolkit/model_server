@@ -36,8 +36,8 @@ class ClassificationAttributes(Model):
             highest_prob = 0.0
 
             if output_name not in inference_output:
-                message = 'Model configuration label- {}'
-                ' not found in model output - {}'.format(output_name, inference_output)
+                message = 'Output name from model config - {}'
+                ' does not match model outputs - {}'.format(output_name, inference_output)
                 logger.exception(message)
                 raise ValidationError(message)
 
