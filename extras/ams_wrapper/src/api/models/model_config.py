@@ -88,6 +88,8 @@ class ModelOutputConfiguration:
 
 class ModelOutputConfigurationSchema(Schema):
     output_name = fields.String(required=True)
+    is_softmax = fields.String(required=False)
+    value_multiplyer = fields.String(required=False)
     value_index_mapping = fields.Dict(keys=fields.String(), values=fields.Integer(), required=False)
     classes = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
     confidence_threshold = fields.Float(required=False, validate=validate.Range(min=0, max=1))

@@ -32,7 +32,12 @@ class ClassificationAttributes(Model):
         # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
 
-         output_config = next(iter(self.output_configs.values()))
+        is_softmax = 0.0
+        value_multiplyer = 1
+
+        if "is_softmax" in output_configs:
+            is_softmax = output_configs["is_softmax"]
+            value_multiplyer = output_configs["value_multiplyer"]
 
         for output_name in self.labels.keys():
             attributes = []
@@ -51,10 +56,10 @@ class ClassificationAttributes(Model):
                     tag_name = class_name 
                     highest_prob = probability
 
-                if output_configs.is_softmax == 1.0:
+                if is_softmax == 1.0:
                     attribute = Attribute(output_name, class_name, probability)
                 else:
-                    value = probability * float(output_configs.value_multiplyer)
+                    value = probability * float(value_multiplyer)
                     attribute = Attribute(class_name, value, output_configs.is_softmax)
 
                 attributes.append(attribute)
