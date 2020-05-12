@@ -217,31 +217,31 @@ class TestAmsInference:
 
         highest_probability = 0.0
         highest_value = ""
-        type_name = ""
+        attribute_name = ""
 
         for classification in response_json["classifications"][0]["attributes"]:
             if classification["confidence"] > highest_probability:
                 highest_probability = classification["confidence"]
                 highest_value = classification["value"]
-                type_name = classification["name"]
+                attribute_name = classification["name"]
 
         assert highest_probability > 0.547
         assert highest_value == "red"
-        assert type_name == "color"
+        assert attribute_name == "color"
 
         highest_probability = 0.0
         highest_value = ""
-        type_name = ""
+        attribute_name = ""
 
         for classification in response_json["classifications"][1]["attributes"]:
             if classification["confidence"] > highest_probability:
                 highest_probability = classification["confidence"]
                 highest_value = classification["value"]
-                type_name = classification["name"]
+                attribute_name = classification["name"]
 
         assert highest_probability > 0.9421
         assert highest_value == "truck"
-        assert type_name == "type"
+        assert attribute_name == "type"
 
 
     def test_vehicleDetection(self, start_ams_service, object_detection_image_two_entities):
@@ -273,18 +273,14 @@ class TestAmsInference:
                 highest_box = detection["box"]
                 tag_value = detection["tag"]["value"]
 
-        epsilon = 0.00000000001
+        epsilon = 0.000001
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
         assert detections_count == 11
-        assert highest_box["w"] + epsilon >= 0.034460186958313
-        assert highest_box["l"] + epsilon >= 0.783527314662933
-        assert highest_box["h"] + epsilon >= 0.0431380569934845
-        assert highest_box["t"] + epsilon >= 0.173053205013275
-        assert highest_box["w"] - epsilon <= 0.034460186958313
-        assert highest_box["l"] - epsilon <= 0.783527314662933
-        assert highest_box["h"] - epsilon <= 0.0431380569934845
-        assert highest_box["t"] - epsilon <= 0.173053205013275
+        assert 0.034460186958313 - epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
+        assert 0.0431380569934845 - epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
+        assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
+        assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
 
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
