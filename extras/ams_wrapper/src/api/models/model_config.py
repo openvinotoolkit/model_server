@@ -72,12 +72,14 @@ class ModelInputConfigurationSchema(Schema):
 class ModelOutputConfiguration:
     def __init__(self, output_name: str, value_index_mapping: dict = None,
                  classes: dict = None, confidence_threshold: float = None,
-                 top_k_results: int = None):
+                 top_k_results: int = None, is_softmax = None, value_multiplyer = None):
                  self.output_name = output_name
                  self.value_index_mapping = value_index_mapping
                  self.classes = classes
                  self.confidence_threshold = confidence_threshold
                  self.top_k_results = top_k_results
+                 self.is_softmax = is_softmax
+                 self.value_multiplyer = value_multiplyer
     
     def __str__(self):
         return 'ModelOutputConfiguration({})'.format(vars(self))
