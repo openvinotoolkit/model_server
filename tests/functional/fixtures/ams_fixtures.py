@@ -139,3 +139,14 @@ def object_detection_image_one_entity() -> str:
 @pytest.fixture(scope='session')
 def object_detection_image_two_entities() -> str:
     return os.path.join(IMAGES_DIR, 'two_cars.jpg')
+
+
+@pytest.fixture(scope='session')
+def object_classification_red_truck() -> str:
+    return os.path.join(IMAGES_DIR, 'red_truck.png')
+
+
+@pytest.fixture(scope='session')
+def object_classification_emotions_smile() -> str:
+    return os.path.join(IMAGES_DIR, 'emotions_smile.jpg')
+
