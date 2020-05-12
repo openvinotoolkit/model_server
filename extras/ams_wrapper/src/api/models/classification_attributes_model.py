@@ -32,12 +32,7 @@ class ClassificationAttributes(Model):
         # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
 
-        is_softmax = 0.0
-        value_multiplyer = 1
-
-        if "is_softmax" in output_configs:
-            is_softmax = output_configs["is_softmax"]
-            value_multiplyer = output_configs["value_multiplyer"]
+        current_conf = self.output_configs[0]
 
         for output_name in self.labels.keys():
             attributes = []
@@ -48,6 +43,17 @@ class ClassificationAttributes(Model):
                 ' does not match model outputs - {}'.format(output_name, inference_output)
                 logger.exception(message)
                 raise ValidationError(message)
+
+            for output_conf in self.output_configs:
+                if output_conf.output_name == output_name:
+                    current_conf == output_conf
+
+            is_softmax = 0.0
+            value_multiplyer = 1
+
+            if current_conf.is_softmax:
+                is_softmax = current_conf.is_softmax
+                value_multiplyer = current_conf.value_multiplyer
 
             for class_id in self.labels[output_name].keys():
                 class_name = self.labels[output_name][class_id]
