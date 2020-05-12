@@ -31,6 +31,9 @@ class ClassificationAttributes(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
+
+         output_config = next(iter(self.output_configs.values()))
+
         for output_name in self.labels.keys():
             attributes = []
             highest_prob = 0.0
@@ -47,7 +50,13 @@ class ClassificationAttributes(Model):
                 if probability > highest_prob:
                     tag_name = class_name 
                     highest_prob = probability
-                attribute = Attribute(output_name, class_name, probability)
+
+                if output_configs.is_softmax == 1.0:
+                    attribute = Attribute(output_name, class_name, probability)
+                else:
+                    value = probability * float(output_configs.value_multiplyer)
+                    attribute = Attribute(class_name, value, output_configs.is_softmax)
+
                 attributes.append(attribute)
 
             classification = SingleClassification(attributes)

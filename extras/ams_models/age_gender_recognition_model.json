@@ -15,13 +15,16 @@
             "classes": {
                 "female": 0.0,
                 "male": 1.0
-            }
+            },
+            "is_softmax":  1.0
         },
         {
             "output_name": "age_conv3",
             "classes": {
                 "age": 0.0
-            }
+            },
+            "is_softmax": 0.0,
+            "value_multiplyer": 100.0
         }
     ]
 }

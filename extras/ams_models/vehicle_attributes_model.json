@@ -11,26 +11,28 @@
       ],
     "outputs":
      [
-            {
-                "output_name": "color",
-                "classes": {
-                    "white": 0.0,
-                    "gray": 1.0,
-                    "yellow": 2.0,
-                    "red": 3.0,
-                    "green": 4.0,
-                    "blue": 5.0,
-                    "black": 6.0
-                }
+        {
+            "output_name": "color",
+            "classes": {
+                "white": 0.0,
+                "gray": 1.0,
+                "yellow": 2.0,
+                "red": 3.0,
+                "green": 4.0,
+                "blue": 5.0,
+                "black": 6.0
             },
-            {
-                "output_name": "type",
-                "classes": {
-                    "car": 0.0,
-                    "van": 1.0,
-                    "truck": 2.0,
-                    "bus": 3.0
-                }
-            }
+            "is_softmax": 1.0
+        },
+        {
+            "output_name": "type",
+            "classes": {
+                "car": 0.0,
+                "van": 1.0,
+                "truck": 2.0,
+                "bus": 3.0
+            },
+            "is_softmax": 1.0
+        }
     ]
 }
