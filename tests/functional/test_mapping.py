@@ -19,7 +19,7 @@ import pytest
 from constants import ERROR_SHAPE
 from model.models_information import AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
-from utils.rest import infer_rest, get_model_metadata_response_rest
+from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
 
 class TestSingleModelMappingInference:
@@ -108,8 +108,7 @@ class TestSingleModelMappingInference:
         print("Downloaded model files:", age_gender_model_downloader)
 
         imgs_v1_224 = np.ones(AgeGender.input_shape, AgeGender.dtype)
-        rest_url = 'http://localhost:{}/v1/models/age_gender:predict'.format(
-                   ports["rest_port"])
+        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
         output = infer_rest(imgs_v1_224, input_tensor=AgeGender.input_name,
                             rest_url=rest_url,
                             output_tensors=AgeGender.output_name,
@@ -130,8 +129,7 @@ class TestSingleModelMappingInference:
         expected_output_metadata = {}
         for output_name, shape in AgeGender.output_shape.items():
             expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
-        rest_url = 'http://localhost:{}/v1/models/age_gender/metadata'.format(
-                   ports["rest_port"])
+        rest_url = get_metadata_url(model=AgeGender.name, port=ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         print("response", response)
         input_metadata, output_metadata = model_metadata_response(response=response)

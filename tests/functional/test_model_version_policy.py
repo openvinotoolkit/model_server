@@ -26,7 +26,7 @@ from utils.grpc import create_channel, get_model_metadata, model_metadata_respon
     get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import get_model_status_response_rest
+from utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
 
 
 class TestModelVerPolicy:
@@ -180,9 +180,7 @@ class TestModelVerPolicy:
                 versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
-            rest_url = 'http://localhost:{}/v1/models/{}/' \
-                       'versions/{}/metadata'.format(ports["rest_port"],
-                                                     model_name, versions[x])
+            rest_url = get_metadata_url(model=model_name, port=ports["rest_port"], version=str(versions[x]))
             result = requests.get(rest_url)
             print(result.text)
             if not throw_error[x]:
@@ -216,9 +214,7 @@ class TestModelVerPolicy:
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
-            rest_url = 'http://localhost:{}/v1/models/{}/' \
-                       'versions/{}'.format(ports["rest_port"], model_name,
-                                            versions[x])
+            rest_url = get_status_url(model=model_name, port=ports["rest_port"], version=str(x))
             result = requests.get(rest_url)
             if not throw_error[x]:
                 output_json = result.text
@@ -237,8 +233,7 @@ class TestModelVerPolicy:
 
                 #   aggregated results check
         if model_name == 'all':
-            rest_url = 'http://localhost:{}/v1/models/all'.format(
-                        ports["rest_port"])
+            rest_url = get_status_url(model=model_name, port=ports["rest_port"], version="all")
             response = get_model_status_response_rest(rest_url)
             versions_statuses = response.model_version_status
             assert len(versions_statuses) == 3

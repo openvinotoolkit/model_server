@@ -16,14 +16,14 @@
 import pytest
 import numpy as np
 
-from constants import PREDICTION_SERVICE, MODEL_SERVICE
+from constants import MODEL_SERVICE
 from model.models_information import PVBDetection, PVBDetectionV2
-from utils.grpc import infer, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import infer_rest, get_model_metadata_response_rest, \
-    get_model_status_response_rest
+from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
+    get_model_metadata_response_rest, get_model_status_response_rest
 
 
 class TestModelVersionHandling:
@@ -31,15 +31,13 @@ class TestModelVersionHandling:
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_run_inference(self, download_two_model_versions,
-                           start_server_multi_model,
-                           create_grpc_channel, version):
+                           start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
         img = np.ones(model_info.input_shape, dtype=model_info.dtype)
@@ -55,15 +53,13 @@ class TestModelVersionHandling:
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_metadata(self, download_two_model_versions,
-                                start_server_multi_model,
-                                create_grpc_channel, version):
+                                start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   PREDICTION_SERVICE)
+        stub = create_channel(port=ports["grpc_port"])
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
         print("Getting info about pvb_face_detection model "
@@ -84,15 +80,13 @@ class TestModelVersionHandling:
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_status(self, download_two_model_versions,
-                              start_server_multi_model,
-                              create_grpc_channel, version):
+                              start_server_multi_model, version):
 
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
         # Connect to grpc service
-        stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
-                                   MODEL_SERVICE)
+        stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
         request = get_model_status(model_name=self.model_name,
                                    version=version)
         response = stub.GetModelStatus(request, 10)
@@ -119,11 +113,7 @@ class TestModelVersionHandling:
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
         img = np.ones(model_info.input_shape, dtype=model_info.dtype)
-        if version is None:
-            rest_url = 'http://localhost:{}/v1/models/{}:predict'.format(ports["rest_port"], self.model_name)
-        else:
-            rest_url = 'http://localhost:{}/v1/models/{}' \
-                       '/versions/{}:predict'.format(ports["rest_port"], self.model_name, version)
+        rest_url = get_predict_url(model=self.model_name, port=ports["rest_port"], version=version)
         output = infer_rest(img,
                             input_tensor=model_info.input_name, rest_url=rest_url,
                             output_tensors=[model_info.output_name],
@@ -141,11 +131,7 @@ class TestModelVersionHandling:
         print("Downloaded model files:", download_two_model_versions)
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        if version is None:
-            rest_url = 'http://localhost:{}/v1/models/{}/metadata'.format(ports["rest_port"], self.model_name)
-        else:
-            rest_url = 'http://localhost:{}/v1/models/{}/versions/{}/metadata'.format(ports["rest_port"],
-                                                                                      self.model_name, version)
+        rest_url = get_metadata_url(model=self.model_name, port=ports["rest_port"], version=version)
 
         expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
         expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
@@ -166,11 +152,7 @@ class TestModelVersionHandling:
         _, ports = start_server_multi_model
         print("Downloaded model files:", download_two_model_versions)
 
-        if version is None:
-            rest_url = 'http://localhost:{}/v1/models/{}'.format(ports["rest_port"], self.model_name)
-        else:
-            rest_url = 'http://localhost:{}/v1/models/{}/versions/{}'.format(ports["rest_port"],
-                                                                             self.model_name, version)
+        rest_url = get_status_url(model=self.model_name, port=ports["rest_port"], version=version)
 
         response = get_model_status_response_rest(rest_url)
         versions_statuses = response.model_version_status

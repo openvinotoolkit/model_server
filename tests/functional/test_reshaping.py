@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from constants import ERROR_SHAPE
 from utils.grpc import create_channel, infer
-from utils.rest import infer_rest
+from utils.rest import get_predict_url, infer_rest
 
 auto_shapes = [
     {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
@@ -88,8 +88,7 @@ class TestModelReshaping:
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
-            rest_url = 'http://localhost:{}/v1/models/face_detection' \
-                       ':predict'.format(ports["rest_port"])
+            rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
             self.run_inference_rest(imgs, out_name, shape['out'], True,
                                     request_format, rest_url)
 
@@ -114,8 +113,7 @@ class TestModelReshaping:
         rest_ports = [ports_named["rest_port"], ports_nonamed["rest_port"]]
         for rest_port in rest_ports:
             imgs = np.zeros(shape)
-            rest_url = 'http://localhost:{}/v1/models/face_detection:predict' \
-                .format(rest_port)
+            rest_url = get_predict_url(model="face_detection", port=rest_port)
             self.run_inference_rest(imgs, out_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
@@ -174,8 +172,7 @@ class TestModelReshaping:
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
-            rest_url = 'http://localhost:{}/v1/models/face_detection_auto' \
-                       ':predict'.format(ports["rest_port"])
+            rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
             self.run_inference_rest(imgs, out_name, shape['out'], True,
                                     request_format, rest_url)
 
@@ -198,8 +195,7 @@ class TestModelReshaping:
         out_name = 'detection_out'
         imgs = np.zeros(shape)
         for model_name in models_names:
-            rest_url = 'http://localhost:{}/v1/models/{}' \
-                       ':predict'.format(ports["rest_port"], model_name)
+            rest_url = get_predict_url(model=model_name, port=ports["rest_port"])
             self.run_inference_rest(imgs, out_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
