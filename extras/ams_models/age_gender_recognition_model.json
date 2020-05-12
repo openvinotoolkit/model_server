@@ -1,0 +1,27 @@
+{
+    "model_name": "age-gender-recognition-retail-0013",
+    "inputs": [
+        {
+            "input_name": "input",
+            "input_format": "NCHW",
+            "color_format": "BGR",
+            "target_height": 62,
+            "target_width": 62
+        }
+    ],
+    "outputs": [
+        {
+            "output_name": "prob",
+            "classes": {
+                "female": 0.0,
+                "male": 1.0
+            }
+        },
+        {
+            "output_name": "age_conv3",
+            "classes": {
+                "age": 0.0
+            }
+        }
+    ]
+}

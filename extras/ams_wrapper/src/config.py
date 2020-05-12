@@ -51,4 +51,13 @@ AVAILABLE_MODELS = [
         },
     "config_path": "/opt/ams_models/emotions_recognition_model.json"
     },
+    {"name": "ageGenderRecognition", 
+    "class": ClassificationAttributes, 
+    "ovms_mapping": {
+        "model_name": "age_gender_recognition",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/age_gender_recognition_model.json"
+    },
 ]
