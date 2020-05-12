@@ -20,6 +20,7 @@
 #include <locale>
 #include <string>
 #include <vector>
+#include <sstream>
 
 namespace ovms {
 

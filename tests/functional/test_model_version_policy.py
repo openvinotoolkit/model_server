@@ -31,7 +31,6 @@ from utils.rest import get_metadata_url, get_status_url, get_model_status_respon
 
 class TestModelVerPolicy:
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
         ('specific', [False, True, False]),
@@ -81,7 +80,6 @@ class TestModelVerPolicy:
                     stub.GetModelMetadata(request, 10)
                 assert "Servable not found for request" in str(e.value)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
         ('specific', [False, True, False]),

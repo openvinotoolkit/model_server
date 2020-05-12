@@ -23,6 +23,8 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -46,7 +48,8 @@ Status ModelManager::start() {
         config.modelPath(),
         config.targetDevice(),
         config.batchSize(),
-        config.nireq()
+        config.nireq(),
+        config.modelVersionPolicy()
     };
 
     if (config.pluginConfig() != "") {
@@ -176,6 +179,14 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             modelConfig.setPluginConfig(pluginConfig);
         }
 
+        if (v.HasMember("model_version_policy")) {
+            rapidjson::StringBuffer buffer;
+            buffer.Clear();
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            v["model_version_policy"].Accept(writer);
+            modelConfig.setModelVersionPolicy(buffer.GetString());
+        }
+
         loadModelWithVersions(v["base_path"].GetString(), modelConfig);
     }
 
@@ -271,6 +282,60 @@ void ModelManager::parseModelMapping(const std::string& base,
     }
 }
 
+Status ModelManager::parseModelVersionPolicy(std::string command, std::shared_ptr<ModelVersionPolicy>& policy) {
+    rapidjson::Document node;
+    if (node.Parse(command.c_str()).HasParseError()) {
+        return Status::MODEL_VERSION_POLICY_ERROR;
+    }
+
+    if (!node.IsObject()) {
+        return Status::MODEL_VERSION_POLICY_ERROR;
+    }
+    if (node.MemberCount() != 1) {
+        return Status::MODEL_VERSION_POLICY_ERROR;
+    }
+
+    auto m = node.FindMember("all");
+    if (m != node.MemberEnd()) {
+        policy = std::make_shared<AllModelVersionPolicy>();
+        return Status::OK;
+    }
+
+    m = node.FindMember("specific");
+    if (m != node.MemberEnd()) {
+        auto& specific = m->value;
+        if (specific.MemberCount() != 1) {
+            return Status::MODEL_VERSION_POLICY_ERROR;
+        }
+        m = specific.FindMember("versions");
+        if (m == specific.MemberEnd()) {
+            return Status::MODEL_VERSION_POLICY_ERROR;
+        }
+        std::vector<model_version_t> versions;
+        for (auto& version : m->value.GetArray()) {
+            versions.push_back(version.GetInt64());
+        }
+        policy = std::make_shared<SpecificModelVersionPolicy>(versions);
+        return Status::OK;
+    }
+
+    m = node.FindMember("latest");
+    if (m != node.MemberEnd()) {
+        auto& latest = m->value;
+        if (latest.MemberCount() != 1) {
+            return Status::MODEL_VERSION_POLICY_ERROR;
+        }
+        m = latest.FindMember("num_versions");
+        if (m == latest.MemberEnd()) {
+            return Status::MODEL_VERSION_POLICY_ERROR;
+        }
+        policy = std::make_shared<LatestModelVersionPolicy>(m->value.GetInt64());
+        return Status::OK;
+    }
+
+    return Status::MODEL_VERSION_POLICY_ERROR;
+}
+
 Status ModelManager::readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions) {
     std::filesystem::directory_iterator it;
     try {
@@ -301,6 +366,23 @@ Status ModelManager::loadModelWithVersions(const std::string& basePath, ModelCon
         return status;
     }
 
+    // TODO: In future, unload models
+    if (versions.size() == 0) {
+        return Status::OK;
+    }
+
+    std::shared_ptr<ModelVersionPolicy> policy = nullptr;
+    if (config.getModelVersionPolicy() == "") {
+        policy = ModelVersionPolicy::getDefaultVersionPolicy();
+    } else {
+        status = parseModelVersionPolicy(config.getModelVersionPolicy(), policy);
+        if (status != Status::OK) {
+            return status;
+        }
+    }
+
+    versions = policy->filter(versions);
+
     std::shared_ptr<Model> model = std::make_shared<Model>();
     models[config.getName()] = std::move(model);
 
@@ -314,10 +396,10 @@ Status ModelManager::loadModelWithVersions(const std::string& basePath, ModelCon
 
         auto status = models[config.getName()]->addVersion(config);
         if (status != Status::OK) {
-            spdlog::error("Error while loading model: {}; version: {}; error: {}",
-                          config.getName(),
-                          version,
-                          StatusDescription::getError(status));
+            spdlog::info("Error while loading model: {}; version: {}; error: {}",
+                config.getName(),
+                version,
+                StatusDescription::getError(status));
         }
     }
 

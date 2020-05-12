@@ -40,11 +40,11 @@ class GetModelStatus {
 public:
     static const std::string& getError(const GetModelStatusCode code) {
         static const std::map<GetModelStatusCode, std::string> errors = {
-            { GetModelStatusCode::OK,                               ""                                                      },
-            { GetModelStatusCode::INTERNAL_ERROR,                   "Internal server error"                                 },
-            { GetModelStatusCode::INVALID_REQUEST,                  "Request lacks valid input data"                        },
-            { GetModelStatusCode::NO_SUCH_MODEL_NAME,               "Model with such name (in any version) does not exist"  },
-            { GetModelStatusCode::NO_SUCH_MODEL_VERSION,            "Model with such name and version does not exist"       },
+            { GetModelStatusCode::OK,                               ""                              },
+            { GetModelStatusCode::INTERNAL_ERROR,                   "Internal server error"         },
+            { GetModelStatusCode::INVALID_REQUEST,                  "Request lacks valid input data"},
+            { GetModelStatusCode::NO_SUCH_MODEL_NAME,               "Servable not found for request"},
+            { GetModelStatusCode::NO_SUCH_MODEL_VERSION,            "Servable not found for request"},
         };
 
         return errors.find(code)->second;

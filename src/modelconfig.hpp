@@ -157,12 +157,13 @@ using plugin_config_t = std::map<std::string, std::string>;
                     const std::string& basePath,
                     const std::string& backend,
                     size_t batchSize,
-                    uint64_t nireq) :
+                    uint64_t nireq,
+                    const std::string& modelVersionPolicy) :
                     name(name),
                     basePath(basePath),
                     backend(backend),
                     batchSize(batchSize),
-                    modelVersionPolicy(""),
+                    modelVersionPolicy(modelVersionPolicy),
                     nireq(nireq),
                     pluginConfig({}),
                     shape({}),
