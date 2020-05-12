@@ -17,7 +17,7 @@
 import os
 
 from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
-from src.api.models.vehicle_attributes_model import VehicleAttributes
+from src.api.models.classification_attributes_model import ClassificationAttributes
 from src.api.ovms_connector import OvmsConnector
 
 # Default version for a model is the latest one
@@ -34,12 +34,21 @@ AVAILABLE_MODELS = [
     "config_path": "/opt/ams_models/vehicle_detection_adas_model.json",
     },
     {"name": "vehicleClassification", 
-    "class": VehicleAttributes, 
+    "class": ClassificationAttributes, 
     "ovms_mapping": {
         "model_name": "vehicle_attributes",
         "model_version": DEFAULT_VERSION,
         "input_name": "input",
         },
     "config_path": "/opt/ams_models/vehicle_attributes_model.json"
+    },
+    {"name": "emotionsRecognition", 
+    "class": ClassificationAttributes, 
+    "ovms_mapping": {
+        "model_name": "emotions_recognition",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/emotions_recognition_model.json"
     },
 ]

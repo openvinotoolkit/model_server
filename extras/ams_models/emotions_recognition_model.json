@@ -1,0 +1,25 @@
+{
+    "model_name": "emotions-recognition-retail-0003",
+    "inputs": [
+        {
+          "input_name": "input",
+          "input_format": "NCHW",
+          "color_format": "BGR",
+          "target_height": 64,
+          "target_width": 64
+        }
+      ],
+    "outputs":
+     [
+            {
+                "output_name": "prob_emotion",
+                "classes": {
+                    "neutral": 0.0,
+                    "happy": 1.0,
+                    "sad": 2.0,
+                    "surprise": 3.0,
+                    "anger": 4.0
+                }
+            }
+    ]
+}

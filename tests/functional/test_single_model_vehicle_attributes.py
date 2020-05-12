@@ -217,10 +217,10 @@ class TestVehicleAttributes():
                        output_tensors=[out_color, out_type])
         
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_wrapper/')))
-        from src.api.models.vehicle_attributes_model import VehicleAttributes
+        from src.api.models.classification_attributes_model import ClassificationAttributes
 
         config_path = os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_models/vehicle_attributes_model.json'))
-        model_attrib = VehicleAttributes("vehicle-attributes","ovms_connector", config_path)
+        model_attrib = ClassificationAttributes("vehicle-attributes","ovms_connector", config_path)
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
