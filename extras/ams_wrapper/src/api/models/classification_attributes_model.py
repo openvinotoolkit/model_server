@@ -26,24 +26,18 @@ from src.preprocessing.preprocess_image import preprocess_binary_image as defaul
 logger = get_logger(__name__)
 
 
-class VehicleAttributes(Model):  
+class ClassificationAttributes(Model):  
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
 
-        # model with output shape for color (1,7,1,1) 
-        # with second dimension containing colors
-        # [white, gray, yellow, red, green, blue, black]
-        # model with output shape for type (1,4,1,1) 
-        # with second dimension containing types
-        # [car, bus, truck, van]
-        outputs = self.labels
+        # model with output shape for each classification type (1,N,1,1) 
+        classes = self.labels
         classifications = []
-        for output in outputs.keys():
-            type_name = output
+        for type_name in classes.keys():
             attributes = []
             highest_prob = 0.0
-            for position in outputs[output].keys():
-                class_name = outputs[output][position]
+            for position in classes[type_name].keys():
+                class_name = classes[type_name][position]
                 if type_name in inference_output:
                     probability = inference_output[type_name][0,int(float(position)),0,0].item()
                 else:
