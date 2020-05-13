@@ -45,7 +45,7 @@ class ClassificationAttributes(Model):
             # get output configuration for current output_name
             current_conf  = self.output_configs[output_name]
 
-            is_softmax = False
+            is_softmax = True
             value_multiplier = 1.0
 
             if not current_conf.is_softmax and current_conf.is_softmax is not None:
