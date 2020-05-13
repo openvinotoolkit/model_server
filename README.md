@@ -15,11 +15,42 @@ A few key features:
 - Supports [multi-worker configuration](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multi-worker-configuration) and [parallel inference execution](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multiple-model-server-instances).
 - [Model reshaping](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-reshaping). The server supports reshaphing models in runtime. 
 
-## Getting Up and Running
+## Running the Server
 
-[Using a docker container](docs/docker_container.md)
+Start using OpenVINO Model Server in 5 Minutes or less:
 
-[Landing on bare metal or virtual machine](docs/host.md)
+```bash
+# Download the latest Model Server image
+docker pull openvino/ubuntu18_model_server:latest
+
+# Download model into a separate directory
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
+
+# Start the container serving gRPC on port 9000
+docker run -d -v $(pwd)/model:/models/face-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/ubuntu18_model_server /ie-serving-py/start_server.sh ie_serving model --model_path /models/face-detection --model_name face-detection --port 9000  --shape auto
+
+# Download the example client script
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+
+# Download an image to be analyzed
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
+
+# Install client dependencies
+pip install -r client_requirements.txt
+
+# Create a folder for results
+mkdir results
+
+# Run inference and store results in the newly created folder
+python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results
+```
+A more detailed description of the steps above can be found [here](docs/ovms_quickstart.md).
+
+More complete guides to using Model Server in various scenarios can be found here:
+
+* [Using a docker container](docs/docker_container.md)
+
+* [Landing on bare metal or virtual machine](docs/host.md)
 
 
 ## Advanced Configuration
