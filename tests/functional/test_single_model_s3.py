@@ -20,8 +20,10 @@ from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.models_utils import ModelVersionState, ErrorCode, \
-    ERROR_MESSAGE  # noqa
+from utils.logger import get_logger
+from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
+
+logger = get_logger(__name__)
 
 
 class TestSingleModelInferenceS3:
@@ -56,7 +58,7 @@ class TestSingleModelInferenceS3:
                        model_spec_name=Resnet.name,
                        model_spec_version=None,
                        output_tensors=[Resnet.output_name])
-        print("output shape", output[Resnet.output_name].shape)
+        logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -69,9 +71,10 @@ class TestSingleModelInferenceS3:
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
         request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
-        input_metadata, output_metadata = model_metadata_response(
-            response=response)
-        print(output_metadata)
+        input_metadata, output_metadata = model_metadata_response(response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
+
         assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata

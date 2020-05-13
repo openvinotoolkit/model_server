@@ -21,10 +21,13 @@ from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.logger import get_logger
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
+
+logger = get_logger(__name__)
 
 
 class TestSingleModelInference:
@@ -49,7 +52,7 @@ class TestSingleModelInference:
         """
 
         _, ports = start_server_single_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -59,23 +62,24 @@ class TestSingleModelInference:
                        model_spec_name=Resnet.name,
                        model_spec_version=None,
                        output_tensors=[Resnet.output_name])
-        print("output shape", output[Resnet.output_name].shape)
-        assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
+        logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
+        assert output[Resnet.output_name].shape == Resnet.output_shape, EROR_SHAPE
 
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_single_model):
 
         _, ports = start_server_single_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
         stub = create_channel(port=ports["grpc_port"])
 
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
         request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
-        input_metadata, output_metadata = model_metadata_response(
-            response=response)
-        print(output_metadata)
+        input_metadata, output_metadata = model_metadata_response(response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
+
         assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -83,7 +87,7 @@ class TestSingleModelInference:
     def test_get_model_status(self, resnet_multiple_batch_sizes,
                               start_server_single_model):
 
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         _, ports = start_server_single_model
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
@@ -120,7 +124,7 @@ class TestSingleModelInference:
 
         """
 
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         _, ports = start_server_single_model
         imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
@@ -129,13 +133,13 @@ class TestSingleModelInference:
                             rest_url=rest_url,
                             output_tensors=[Resnet.output_name],
                             request_format=request_format)
-        print("output shape", output[Resnet.output_name].shape)
+        logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_single_model):
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         _, ports = start_server_single_model
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
@@ -144,7 +148,9 @@ class TestSingleModelInference:
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
-        print(output_metadata)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
+
         assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -152,7 +158,7 @@ class TestSingleModelInference:
     @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_status_rest(self, resnet_multiple_batch_sizes,
                                    start_server_single_model):
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         _, ports = start_server_single_model
         rest_url = get_status_url(model=Resnet.name, port=ports["rest_port"])

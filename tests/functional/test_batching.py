@@ -19,7 +19,10 @@ import json
 from constants import ERROR_SHAPE
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
+from utils.logger import get_logger
 from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
+
+logger = get_logger(__name__)
 
 
 class TestBatchModelInference:
@@ -32,7 +35,7 @@ class TestBatchModelInference:
                 json_dict = json.loads(json_string)
                 return json_dict
             except ValueError as e:
-                print("Error while loading json: {}".format(json_string))
+                logger.error("Error while loading json: {}".format(json_string))
                 raise e
 
         in_name = list(json_dict["inputs"].keys())[0]
@@ -59,7 +62,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -69,14 +72,14 @@ class TestBatchModelInference:
                        grpc_stub=stub, model_spec_name=ResnetBS8.name,
                        model_spec_version=None,
                        output_tensors=[ResnetBS8.output_name])
-        print("output shape", output[ResnetBS8.output_name].shape)
+        logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
     def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
                                start_server_batch_model_bs4):
 
         _, ports = start_server_batch_model_bs4
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -86,7 +89,7 @@ class TestBatchModelInference:
                        grpc_stub=stub, model_spec_name=ResnetBS8.name,
                        model_spec_version=None,
                        output_tensors=[ResnetBS8.output_name])
-        print("output shape", output[ResnetBS8.output_name].shape)
+        logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -94,7 +97,7 @@ class TestBatchModelInference:
                                 start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -105,25 +108,26 @@ class TestBatchModelInference:
                            grpc_stub=stub, model_spec_name=ResnetBS8.name,
                            model_spec_version=None,
                            output_tensors=[ResnetBS8.output_name])
-            print("output shape", output[ResnetBS8.output_name].shape)
+            logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
             assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_batch_model):
 
         _, ports = start_server_batch_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         stub = create_channel(port=ports["grpc_port"])
 
-        print("Getting info about {} model".format(ResnetBS8.name))
+        logger.info("Getting info about {} model".format(ResnetBS8.name))
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
         expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
         request = get_model_metadata(model_name=ResnetBS8.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert response.model_spec.name == ResnetBS8.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -154,7 +158,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_2out
-        print("Downloaded model files:", age_gender_model_downloader)
+        logger.info("Downloaded model files: {}", age_gender_model_downloader)
         in_name, out_names, out_mapping = mapping_names
 
         batch_input = np.ones(AgeGender.input_shape, AgeGender.dtype)
@@ -194,7 +198,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_auto_bs4_2out
-        print("Downloaded model files:", age_gender_model_downloader)
+        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         in_name, out_names, out_mapping = mapping_names
 
@@ -236,7 +240,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_auto_2out
-        print("Downloaded model files:", age_gender_model_downloader)
+        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
         in_name, out_names, out_mapping = mapping_names
 
         batch_size = 6
@@ -265,16 +269,17 @@ class TestBatchModelInference:
                                      start_server_batch_model):
 
         _, ports = start_server_batch_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
-        print("Getting info about {} model".format(ResnetBS8.name))
+        logger.info("Getting info about {} model".format(ResnetBS8.name))
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
         expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
         rest_url = get_metadata_url(model=ResnetBS8.name, port=ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert response.model_spec.name == ResnetBS8.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata

@@ -20,6 +20,7 @@ from constants import MODEL_SERVICE
 from model.models_information import Resnet
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.logger import get_logger
 from utils.model_management import copy_model
 from utils.rest import get_metadata_url, get_status_url, get_model_metadata_response_rest, \
     get_model_status_response_rest
@@ -28,6 +29,8 @@ from utils.parametrization import get_tests_suffix
 
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
+
+logger = get_logger(__name__)
 
 
 class TestSingleModelInference:
@@ -52,7 +55,7 @@ class TestSingleModelInference:
 
         # Available versions: 1, 4
 
-        print("Getting info about resnet model")
+        logger.info("Getting info about resnet model")
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -64,23 +67,26 @@ class TestSingleModelInference:
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
         request_latest = get_model_metadata(model_name=model_name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
 
         request_v4 = get_model_metadata(model_name=model_name, version=4)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
-        print("response", response_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_v4))
+        logger.info("Output metadata: {}".format(output_metadata_v4))
 
         assert response_v4.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v4 == input_metadata_latest
@@ -108,15 +114,17 @@ class TestSingleModelInference:
 
         request_latest = get_model_metadata(model_name=model_name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
 
         request_v3 = get_model_metadata(model_name=model_name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
-        print("response", response_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
+        logger.info("Input metadata: {}".format(input_metadata_v3))
+        logger.info("Output metadata: {}".format(output_metadata_v3))
 
         assert response_v3.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v3 == input_metadata_latest
@@ -217,7 +225,7 @@ class TestSingleModelInference:
         stub = create_channel(port=ports["grpc_port"])
         status_stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
-        print("Getting info about resnet model")
+        logger.info("Getting info about resnet model")
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -229,8 +237,9 @@ class TestSingleModelInference:
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
@@ -260,8 +269,9 @@ class TestSingleModelInference:
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v2 == input_metadata
         assert expected_output_metadata_v2 == output_metadata
@@ -308,7 +318,7 @@ class TestSingleModelInference:
 
         # Available versions: 1, 4
 
-        print("Getting info about resnet model")
+        logger.info("Getting info about resnet model")
         model_name = 'resnet'
 
         expected_input_metadata_v1 = {in_name: {'dtype': 1,
@@ -320,23 +330,26 @@ class TestSingleModelInference:
         response = get_model_metadata_response_rest(rest_url_latest)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
 
         rest_url_v4 = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="4")
         response_v4 = get_model_metadata_response_rest(rest_url_v4)
-        print("response", response_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_v4))
+        logger.info("Output metadata: {}".format(output_metadata_v4))
 
         assert response_v4.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v4 == input_metadata_latest
@@ -363,15 +376,17 @@ class TestSingleModelInference:
 
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
 
         rest_url_v3 = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="3")
         response_v3 = get_model_metadata_response_rest(rest_url_v3)
-        print("response", response_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
+        logger.info("Input metadata: {}".format(input_metadata_v3))
+        logger.info("Output metadata: {}".format(output_metadata_v3))
 
         assert response_v3.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v3 == input_metadata_latest
@@ -467,7 +482,7 @@ class TestSingleModelInference:
         resnet_copy_dir = copy_model(resnet, 1, directory)
         time.sleep(8)
 
-        print("Getting info about resnet model")
+        logger.info("Getting info about resnet model")
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -481,7 +496,8 @@ class TestSingleModelInference:
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
-        print(output_metadata)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
@@ -510,8 +526,9 @@ class TestSingleModelInference:
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert model_name == response.model_spec.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -553,7 +570,7 @@ class TestSingleModelInference:
 
         # Available versions: 1, 4
 
-        print("Getting info about resnet model")
+        logger.info("Getting info about resnet model")
         model_name = 'resnet'
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -566,22 +583,27 @@ class TestSingleModelInference:
         input_metadata, output_metadata = model_metadata_response(
             response=response)
 
-        print(output_metadata)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
+
         assert model_name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"])
         response_latest = get_model_metadata_response_rest(rest_url)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
 
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
+
         request_v4 = get_model_metadata(model_name=model_name, version=4)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
-        print("response", response_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_v4))
+        logger.info("Output metadata: {}".format(output_metadata_v4))
 
         assert response_v4.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v4 == input_metadata_latest
@@ -595,15 +617,17 @@ class TestSingleModelInference:
 
         request_latest = get_model_metadata(model_name=model_name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
-        print("response", response_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
+        logger.info("Input metadata: {}".format(input_metadata_latest))
+        logger.info("Output metadata: {}".format(output_metadata_latest))
 
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="3")
         response_v3 = get_model_metadata_response_rest(rest_url)
-        print("response", response_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
+        logger.info("Input metadata: {}".format(input_metadata_v3))
+        logger.info("Output metadata: {}".format(output_metadata_v3))
 
         assert response_v3.model_spec.name == response_latest.model_spec.name
         assert input_metadata_v3 == input_metadata_latest

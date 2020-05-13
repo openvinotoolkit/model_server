@@ -18,7 +18,10 @@ import numpy as np
 import pytest
 from constants import ERROR_SHAPE
 from utils.grpc import create_channel, infer
+from utils.logger import get_logger
 from utils.rest import get_predict_url, infer_rest
+
+logger = get_logger(__name__)
 
 auto_shapes = [
     {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},
@@ -40,7 +43,7 @@ class TestModelReshaping:
             start_server_face_detection_model_auto_shape):
 
         _, ports = start_server_face_detection_model_auto_shape
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -63,7 +66,7 @@ class TestModelReshaping:
 
         _, ports_named = start_server_face_detection_model_named_shape
         _, ports_nonamed = start_server_face_detection_model_nonamed_shape
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stubs = [create_channel(port=ports_named["grpc_port"]), create_channel(port=ports_nonamed["grpc_port"])]
@@ -84,7 +87,7 @@ class TestModelReshaping:
             start_server_face_detection_model_auto_shape, request_format):
 
         _, ports = start_server_face_detection_model_auto_shape
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
@@ -107,7 +110,7 @@ class TestModelReshaping:
 
         _, ports_named = start_server_face_detection_model_named_shape
         _, ports_nonamed = start_server_face_detection_model_nonamed_shape
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         out_name = 'detection_out'
         rest_ports = [ports_named["rest_port"], ports_nonamed["rest_port"]]
@@ -123,7 +126,7 @@ class TestModelReshaping:
             start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -144,7 +147,7 @@ class TestModelReshaping:
             start_server_multi_model, shape, is_correct):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -168,7 +171,7 @@ class TestModelReshaping:
             start_server_multi_model, request_format):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
         out_name = 'detection_out'
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'])
@@ -188,7 +191,7 @@ class TestModelReshaping:
             start_server_multi_model, shape, is_correct, request_format):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", face_detection_model_downloader)
+        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         models_names = ["face_detection_fixed_nonamed",
                         "face_detection_fixed_named"]
@@ -207,7 +210,7 @@ class TestModelReshaping:
                                 rest_url=rest_url,
                                 output_tensors=[out_name],
                                 request_format=request_format)
-            print("output shape", output[out_name].shape)
+            logger.info("Output shape: {}".format(output[out_name].shape))
             assert output[out_name].shape == out_shape, \
                 ERROR_SHAPE
         else:
@@ -225,9 +228,8 @@ class TestModelReshaping:
                            model_spec_name=model_name,
                            model_spec_version=None,
                            output_tensors=[out_name])
-            print("output shape", output[out_name].shape)
-            assert output[out_name].shape == out_shape, \
-                ERROR_SHAPE
+            logger.info("Output shape: {}".format(output[out_name].shape))
+            assert output[out_name].shape == out_shape, ERROR_SHAPE
         else:
             with pytest.raises(Exception):
                 infer(imgs, input_tensor='data', grpc_stub=stub,

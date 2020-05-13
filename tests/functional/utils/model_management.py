@@ -20,7 +20,10 @@ import time
 
 from pathlib import Path
 
+from utils.logger import get_logger
 from utils.parametrization import get_tests_suffix
+
+logger = get_logger(__name__)
 
 
 def minio_condition(container):
@@ -44,8 +47,8 @@ def wait_endpoint_setup(container, condition=serving_condition, timeout=20):
                 break
         except Exception as e:
             time.sleep(1)
-    print("Logs from container:")
-    print("\n".join(str(container.logs()).split("\\n")))
+    logger.debug("Logs from container:")
+    logger.debug("\n".join(str(container.logs()).split("\\n")))
     #  extra delay to ensure docker endpoint is ready
     time.sleep(2)
     return running
@@ -75,8 +78,8 @@ def convert_model(client,
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     input_shape_str = '[{}]'.format(','.join(str(i) for i in input_shape))
-    print("Converting {} to IR with input shape {}...".format(model,
-                                                              input_shape_str))
+    logger.info("Converting {model} to IR with input shape {input_shape}...".format(model=model,
+                                                                                    input_shape=input_shape_str))
 
     input_dir = os.path.dirname(model)
 

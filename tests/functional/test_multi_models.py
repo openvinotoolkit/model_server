@@ -19,10 +19,13 @@ from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS
 from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
+from utils.logger import get_logger
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
+
+logger = get_logger(__name__)
 
 
 class TestMultiModelInference:
@@ -31,20 +34,20 @@ class TestMultiModelInference:
                            start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
         for model in [Resnet, ResnetBS4, ResnetBS8]:
             input_data = np.ones(model.input_shape, model.dtype)
-            print("Starting inference using {} model".format(model.name))
+            logger.info("Starting inference using {} model".format(model.name))
             output = infer(input_data, input_tensor=model.input_name,
                            grpc_stub=stub,
                            model_spec_name=model.name,
                            model_spec_version=None,
                            output_tensors=[model.output_name])
-            print("output shape: {} for model {} ".format(output[model.output_name].shape, model.name))
+            logger.info("Output shape: {} for model {} ".format(output[model.output_name].shape, model.name))
             assert_msg = "{} for model {}".format(ERROR_SHAPE, model.name)
             assert output[model.output_name].shape == model.output_shape, assert_msg
 
@@ -75,20 +78,21 @@ class TestMultiModelInference:
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
                                 start_server_multi_model):
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
         for model in [Resnet, ResnetBS4, ResnetBS8]:
-            print("Getting info about {} model".format(model.name))
+            logger.info("Getting info about {} model".format(model.name))
             expected_input_metadata = {model.input_name: {'dtype': 1, 'shape': list(model.input_shape)}}
             expected_output_metadata = {model.output_name: {'dtype': 1, 'shape': list(model.output_shape)}}
             request = get_model_metadata(model_name=model.name)
             response = stub.GetModelMetadata(request, 10)
             input_metadata, output_metadata = model_metadata_response(response=response)
+            logger.info("Input metadata: {}".format(input_metadata))
+            logger.info("Output metadata: {}".format(output_metadata))
 
-            print(output_metadata)
             assert response.model_spec.name == model.name
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
@@ -97,7 +101,7 @@ class TestMultiModelInference:
                               start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
@@ -117,17 +121,17 @@ class TestMultiModelInference:
                                 start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS]:
             input_data = np.ones(model.input_shape, model.dtype)
-            print("Starting inference using {} model".format(model.name))
+            logger.info("Starting inference using {} model".format(model.name))
 
             rest_url = get_predict_url(model=model.name, port=ports["rest_port"])
             output = infer_rest(input_data, input_tensor=model.input_name, rest_url=rest_url,
                                 output_tensors=[model.output_name],
                                 request_format=model.rest_request_format)
-            print("output shape", output[model.output_name].shape)
+            logger.info("Output shape: {}".format(output[model.output_name].shape))
             assert output[model.output_name].shape == model.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -135,17 +139,18 @@ class TestMultiModelInference:
                                      start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4]:
-            print("Getting info about {} model".format(model.name))
+            logger.info("Getting info about {} model".format(model.name))
             expected_input_metadata = {model.input_name: {'dtype': 1, 'shape': list(model.input_shape)}}
             expected_output_metadata = {model.output_name: {'dtype': 1, 'shape': list(model.output_shape)}}
             rest_url = get_metadata_url(model=model.name, port=ports["rest_port"])
             response = get_model_metadata_response_rest(rest_url)
             input_metadata, output_metadata = model_metadata_response(response=response)
+            logger.info("Input metadata: {}".format(input_metadata))
+            logger.info("Output metadata: {}".format(output_metadata))
 
-            print(output_metadata)
             assert response.model_spec.name == model.name
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
@@ -155,7 +160,7 @@ class TestMultiModelInference:
                                    start_server_multi_model):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", resnet_multiple_batch_sizes)
+        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4]:
             rest_url = get_status_url(model=model.name, port=ports["rest_port"])

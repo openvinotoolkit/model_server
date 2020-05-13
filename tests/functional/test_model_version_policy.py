@@ -24,9 +24,12 @@ from constants import MODEL_SERVICE
 from model.models_information import AgeGender, PVBDetectionV1, PVBDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.logger import get_logger
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
+
+logger = get_logger(__name__)
 
 
 class TestModelVerPolicy:
@@ -41,7 +44,7 @@ class TestModelVerPolicy:
                                 model_name, throw_error):
 
         _, ports = start_server_model_ver_policy
-        print("Downloaded model files:", model_version_policy_models)
+        logger.info("Downloaded model files: {}".format(model_version_policy_models))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -60,8 +63,7 @@ class TestModelVerPolicy:
             {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
 
         for x in range(len(versions)):
-            print("Getting info about model version:".format(
-                versions[x]))
+            logger.info("Getting info about model version: {}".format(versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
             request = get_model_metadata(model_name=model_name,
@@ -71,7 +73,9 @@ class TestModelVerPolicy:
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
-                print(output_metadata)
+                logger.info("Input metadata: {}".format(input_metadata))
+                logger.info("Output metadata: {}".format(output_metadata))
+
                 assert model_name == response.model_spec.name
                 assert expected_input_metadata == input_metadata
                 assert expected_output_metadata == output_metadata
@@ -90,7 +94,7 @@ class TestModelVerPolicy:
                               model_name, throw_error):
 
         _, ports = start_server_model_ver_policy
-        print("Downloaded model files:", model_version_policy_models)
+        logger.info("Downloaded model files: {}".format(model_version_policy_models))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
@@ -157,9 +161,9 @@ class TestModelVerPolicy:
         """
 
         _, ports = start_server_model_ver_policy
-        print("Downloaded model files:", model_version_policy_models)
+        logger.info("Downloaded model files: {}".format(model_version_policy_models))
 
-        print("Getting info about model")
+        logger.info("Getting info about models")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
             {PVBDetectionV1.output_name: {'dtype': 1, 'shape': list(PVBDetectionV1.output_shape)}},
@@ -174,13 +178,12 @@ class TestModelVerPolicy:
             {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
 
         for x in range(len(versions)):
-            print("Getting info about model version:".format(
-                versions[x]))
+            logger.info("Getting info about model version: {}".format(versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
             rest_url = get_metadata_url(model=model_name, port=ports["rest_port"], version=str(versions[x]))
             result = requests.get(rest_url)
-            print(result.text)
+            logger.info("Result: {}".format(result.text))
             if not throw_error[x]:
                 output_json = result.text
                 metadata_pb = get_model_metadata_pb2. \
@@ -190,7 +193,9 @@ class TestModelVerPolicy:
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
-                print(output_metadata)
+                logger.info("Input metadata: {}".format(input_metadata))
+                logger.info("Output metadata: {}".format(output_metadata))
+
                 assert model_name == response.model_spec.name
                 assert expected_input_metadata == input_metadata
                 assert expected_output_metadata == output_metadata
@@ -208,7 +213,7 @@ class TestModelVerPolicy:
                                    model_name, throw_error):
 
         _, ports = start_server_model_ver_policy
-        print("Downloaded model files:", model_version_policy_models)
+        logger.info("Downloaded model files: {}".format(model_version_policy_models))
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
