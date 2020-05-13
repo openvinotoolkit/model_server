@@ -285,6 +285,45 @@ class TestAmsInference:
         assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
         assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
 
+def test_ageGenderRecognition(self, start_ams_service, object_classification_emotions_smile):
+        with open(object_classification_emotions_smile, mode='rb') as image_file:
+            image_bytes = image_file.read()
+        _, ports = start_ams_service
+        ams_port = ports['port']
+
+        endpoint_url = "http://localhost:{}/{}".format(ams_port, "ageGenderRecognition")
+        response = requests.post(endpoint_url,
+                                headers={'Content-Type': 'image/png',
+                                        'Content-Length': str(len(object_classification_emotions_smile))},
+                                data=image_bytes)
+        assert response.status_code == 200
+        assert response.headers.get('Content-Type') == 'application/json'
+
+        response_json = response.json()
+
+        highest_probability = 0.0
+        highest_gender = ""
+        for classification in response_json["classifications"][0]["attributes"]:
+            if classification["confidence"] > highest_probability:
+                highest_gender = classification["confidence"]
+                highest_emotion = classification["value"]
+
+        assert highest_probability > 0.915
+        assert highest_gender == "female"
+
+        value = 0.0
+        name = ""
+        confidence = 1.0
+
+        for classification in response_json["classifications"][1]["attributes"]:
+                name = classification["name"]
+                confidence = classification["confidence"]
+                value = int(classification["confidence"])
+
+        assert confidence == None
+        assert name == "age"
+        assert value == 24
+
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),
