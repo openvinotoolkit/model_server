@@ -34,11 +34,7 @@ OpenVINO Model Server
 Usage:
   ./bazel-bin/src/ovms [OPTION...]
 
-  -h, --help  show this help message and exit
-
- config options:
-      --config_path CONFIG_PATH
-                                absolute path to json configuration file
+  -h, --help                    show this help message and exit
       --port PORT               gRPC server port (default: 9178)
       --rest_port REST_PORT     REST server port, the REST server will not be
                                 started if rest_port is blank or set to 0
@@ -46,12 +42,23 @@ Usage:
       --grpc_workers GRPC_WORKERS
                                 number of gRPC servers. Recommended to be >=
                                 NIREQ. Default value calculated at runtime:
-                                NIREQ + 2
+                                NIREQ + 2 
       --rest_workers REST_WORKERS
                                 number of workers in REST server - has no
-                                effect if rest_port is not set (default: 24)
+                                effect if rest_port is not set 
+      --log_level LOG_LEVEL     serving log level - one of DEBUG, INFO, ERROR
+                                (default: INFO)
+      --log_path LOG_PATH       optional path to the log file
+      --grpc_channel_arguments GRPC_CHANNEL_ARGUMENTS
+                                A comma separated list of arguments to be
+                                passed to the grpc server. (e.g.
+                                grpc.max_connection_age_ms=2000)
 
- model options:
+ multi model options:
+      --config_path CONFIG_PATH
+                                absolute path to json configuration file
+
+ single model options:
       --model_name MODEL_NAME   name of the model
       --model_path MODEL_PATH   absolute path to model, as in tf serving
       --batch_size BATCH_SIZE   sets models batchsize, int value or auto.
@@ -70,7 +77,8 @@ Usage:
                                 CPU)
       --plugin_config PLUGIN_CONFIG
                                 a dictionary of plugin configuration keys and
-                                their values
+                                their values, eg
+                                "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_AUTO\"}"
 ```
 ## Testing
 
@@ -158,11 +166,11 @@ The default setting is INFO, which can be altered by setting environment variabl
 
 The captured logs will be displayed on the model server console. While using docker containers or kubernetes the logs can be examined using `docker logs` or `kubectl logs` commands respectively.
 
-It is also possible to save the logs to a local file system by configuring an environment variable LOG_PATH with the absolute path pointing to a log file. Please see example below for usage details.
+It is also possible to save the logs to a local file system by configuring parameter `log_path` with the absolute path pointing to a log file. Please see example below for usage details.
 
 ```bash
-docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 --env LOG_LEVEL=DEBUG --env LOG_PATH=/var/log/ie_serving.log \
- cpp-experiments:latest --config_path /opt/ml/config.json --port 9001
+docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 ovms:latest \
+--config_path /opt/ml/config.json --port 9001 --log_level=DEBUG --log_path=/var/log/ie_serving.log
  
 docker logs ie-serving 
 ```

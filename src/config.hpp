@@ -212,5 +212,38 @@ namespace ovms {
                 return result->operator[]("plugin_config").as<std::string>();
             return empty;
         }
+
+        /**
+        * @brief Get the log level
+        *
+        * @return const std::string&
+        */
+        const std::string& logLevel() {
+            if (result->count("log_level"))
+                return result->operator[]("log_level").as<std::string>();
+            return empty;
+        }
+
+        /**
+        * @brief Get the log path
+         *
+        * @return const std::string&
+        */
+        const std::string& logPath() {
+            if (result->count("log_path"))
+                return result->operator[]("log_path").as<std::string>();
+            return empty;
+        }
+
+        /**
+        * @brief Get the plugin config
+        *
+        * @return const std::string&f
+        */
+        const std::string& grpcChannelArguments() {
+            if (result->count("grpc_channel_arguments"))
+                return result->operator[]("grpc_channel_arguments").as<std::string>();
+            return empty;
+        }
     };
 }  // namespace ovms

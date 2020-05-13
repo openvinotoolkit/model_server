@@ -20,7 +20,6 @@
 #include <fstream>
 #include <utility>
 #include <vector>
-
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
@@ -37,11 +36,9 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
-
     // start manager using config file
     if (config.configPath() != "")
         return start(config.configPath());
-
     // start manager using commandline parameters
     ModelConfig modelConfig {
         config.modelName(),
@@ -51,7 +48,6 @@ Status ModelManager::start() {
         config.nireq(),
         config.modelVersionPolicy()
     };
-
     if (config.pluginConfig() != "") {
         plugin_config_t pluginConfig;
         auto status = ModelManager::parsePluginConfig(config.pluginConfig(), pluginConfig);
@@ -60,7 +56,6 @@ Status ModelManager::start() {
         }
         modelConfig.setPluginConfig(pluginConfig);
     }
-
     return loadModelWithVersions(config.modelPath(), modelConfig);
 }
 
@@ -255,7 +250,7 @@ void ModelManager::parseModelMapping(const std::string& base,
 
     rapidjson::IStreamWrapper isw(ifs);
     if (doc.ParseStream(isw).HasParseError()) {
-        spdlog::warn("Couldn't load {} from dir {}", MAPPING_CONFIG_JSON, base);
+        spdlog::error("Couldn't load {} from dir {}", MAPPING_CONFIG_JSON, base);
         return;
     }
 
@@ -273,7 +268,7 @@ void ModelManager::parseModelMapping(const std::string& base,
     // Process outputs
     const auto it = doc.FindMember("outputs");
     if (it == doc.MemberEnd() || !it->value.IsObject()) {
-        spdlog::warn("Couldn't load outputs object in file {} from dir {}", MAPPING_CONFIG_JSON, base);
+        spdlog::error("Couldn't load outputs object in file {} from dir {}", MAPPING_CONFIG_JSON, base);
     } else {
         for (const auto& key : it->value.GetObject()) {
             spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
@@ -393,7 +388,6 @@ Status ModelManager::loadModelWithVersions(const std::string& basePath, ModelCon
         parseModelMapping(config.getBasePath(), mappingInputs, mappingOutputs);
         config.setMappingInputs(mappingInputs);
         config.setMappingOutputs(mappingOutputs);
-
         auto status = models[config.getName()]->addVersion(config);
         if (status != Status::OK) {
             spdlog::info("Error while loading model: {}; version: {}; error: {}",

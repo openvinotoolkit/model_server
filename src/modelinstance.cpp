@@ -22,7 +22,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -70,7 +69,11 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
 
         networkShapes[name] = shape;
         auto tensor = std::make_shared<TensorInfo>(name, config.getMappingInputByKey(name), precision, shape, layout);
+        std::string precision_str = tensor->getPrecisionAsString();
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        spdlog::info("Input name: {} ; shape: {} ; precision: {}", name,  shape_stream.str(), precision_str);
     }
 
     // Update OV model shapes
@@ -88,7 +91,11 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto shape = output->getDims();
 
         auto tensor = std::make_shared<TensorInfo>(name, config.getMappingOutputByKey(name), precision, shape, layout);
+        std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        spdlog::info("Output name: {} ; shape: {} ; precision: {}", name,  shape_stream.str(), precision_str);
     }
 }
 
@@ -149,10 +156,12 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     this->version = config.getVersion();
     this->backend = config.getBackend();
     this->status = ModelVersionStatus(this->name, this->version);
+    spdlog::info("Loading model {}...", config.getName());
     // load network
     try {
         this->status.setLoading();
         if (!dirExists(path)) {
+            spdlog::error("Missing model directory {}", path);
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return Status::PATH_INVALID;
         }
@@ -171,14 +180,18 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         }
 
         execNetwork = engine.LoadNetwork(network, backend, pluginConfig);
+        spdlog::info("Plugin config for device {}:", backend);
+        for (const auto pair : pluginConfig) {
+            const auto key = pair.first;
+            const auto value = pair.second;
+            spdlog::info("{}: {}", key, value);
+        }
 
         int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
         inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(execNetwork, numberOfParallelInferRequests);
-
-        spdlog::info("Loaded model {}; version: {}; CPU streams: {}; No of InferRequests: {}",
+        spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
             config.getName(),
             config.getVersion(),
-            pluginConfig["CPU_THROUGHPUT_STREAMS"],
             numberOfParallelInferRequests);
 
         this->status.setAvailable();
