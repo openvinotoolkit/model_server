@@ -1,12 +1,12 @@
 {
-    "model_name": "vehicle-detection-adas-0002",
+    "model_name": "person-vehicle-bike-detection-crossroad",
     "inputs": [
         {
           "input_name": "data",
           "input_format": "NCHW",
           "color_format": "BGR",
-          "target_height": 384,
-          "target_width": 672,
+          "target_height": 1024,
+          "target_width": 1024,
           "channels": 3
         }
       ],
@@ -15,7 +15,9 @@
             "output_name": "detection_out",
             "classes": {
                 "background": 0.0,
-                "vehicle": 1.0
+                "pedestrian": 1.0,
+                "vehicle": 2.0,
+                "bike": 3.0
             },
             "value_index_mapping": {
                 "image_id": 0,
