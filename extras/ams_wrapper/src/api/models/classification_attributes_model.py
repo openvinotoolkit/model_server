@@ -31,6 +31,7 @@ class ClassificationAttributes(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         # model with output shape for each classification output_name (1,N,1,1) 
         classifications = []
+
         for output_name in self.labels.keys():
             attributes = []
             highest_prob = 0.0
@@ -41,13 +42,29 @@ class ClassificationAttributes(Model):
                 logger.exception(message)
                 raise ValidationError(message)
 
+            # get output configuration for current output_name
+            current_conf  = self.output_configs[output_name]
+
+            is_softmax = True
+            value_multiplier = 1.0
+
+            if not current_conf.is_softmax and current_conf.is_softmax is not None:
+                is_softmax = current_conf.is_softmax
+                value_multiplier = current_conf.value_multiplier
+
             for class_id in self.labels[output_name].keys():
                 class_name = self.labels[output_name][class_id]
                 probability = inference_output[output_name][0,int(float(class_id)),0,0].item()
                 if probability > highest_prob:
                     tag_name = class_name 
                     highest_prob = probability
-                attribute = Attribute(output_name, class_name, probability)
+
+                if is_softmax or is_softmax == None:
+                    attribute = Attribute(output_name, class_name, probability)
+                else:
+                    value = probability * value_multiplier
+                    attribute = Attribute(class_name, value, None)
+
                 attributes.append(attribute)
 
             classification = SingleClassification(attributes)

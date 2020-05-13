@@ -11,15 +11,16 @@
       ],
     "outputs":
      [
-            {
-                "output_name": "prob_emotion",
-                "classes": {
-                    "neutral": 0.0,
-                    "happy": 1.0,
-                    "sad": 2.0,
-                    "surprise": 3.0,
-                    "anger": 4.0
-                }
-            }
+        {
+            "output_name": "prob_emotion",
+            "classes": {
+                "neutral": 0.0,
+                "happy": 1.0,
+                "sad": 2.0,
+                "surprise": 3.0,
+                "anger": 4.0
+            },
+            "is_softmax": true
+        }
     ]
 }
