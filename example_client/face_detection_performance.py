@@ -58,6 +58,7 @@ parser.add_argument('--height', required=False, help='How the input image width 
 parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port', required=False, default=9000, help='Specify port to grpc service. default: 9000')
+parser.add_argument('--input_name', required=True, help='Specify input name.')
 
 args = vars(parser.parse_args())
 
@@ -82,10 +83,10 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     request = predict_pb2.PredictRequest()
     request.model_spec.name = model_name
     img = imgs[x:(x + batch_size)]
-    request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
+    request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
     for num in range(ITERATIONS):
         start_time = datetime.datetime.now()
-        result = stub.Predict(request, 2.0)  # result includes a dictionary with all model outputs
+        result = stub.Predict(request, 5.0)  # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times, np.array([int(duration)]))
