@@ -12,6 +12,7 @@ version
 *.swp
 .pytest_cache
 extras/ams_wrapper/tests/test_images/
+extras/ams_wrapper/.coverage
 *__pycache__/
 *.cache
 .cache
