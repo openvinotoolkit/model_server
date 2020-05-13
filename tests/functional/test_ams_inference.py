@@ -318,7 +318,7 @@ class TestAmsInference:
         for classification in response_json["classifications"][1]["attributes"]:
             name = classification["name"]
             confidence = classification["confidence"]
-            value = int(float(classification["confidence"]))
+            value = int(float(classification["value"]))
 
         assert confidence == None
         assert name == "age"
