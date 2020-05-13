@@ -90,7 +90,7 @@ def process_json_output(result_dict, output_tensors):
         keyname = "predictions"
         if type(result_dict[keyname][0]) is dict:
             for row in result_dict[keyname]:
-                print(row.keys())
+                logger.info(row.keys())
                 for output_tensor in output_tensors:
                     if output_tensor not in output:
                         output[output_tensor] = []
