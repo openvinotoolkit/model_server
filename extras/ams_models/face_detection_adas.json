@@ -1,5 +1,5 @@
 {
-    "model_name": "vehicle-detection-adas-0002",
+    "model_name": "face-detection-adas",
     "inputs": [
         {
           "input_name": "data",
@@ -15,7 +15,7 @@
             "output_name": "detection_out",
             "classes": {
                 "background": 0.0,
-                "vehicle": 1.0
+                "face": 1.0
             },
             "value_index_mapping": {
                 "image_id": 0,

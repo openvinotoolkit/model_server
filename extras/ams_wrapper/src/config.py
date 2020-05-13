@@ -16,7 +16,7 @@
 
 import os
 
-from src.api.models.vehicle_detection_adas_model import VehicleDetectionAdas
+from src.api.models.detection_model import DetectionModel
 from src.api.models.classification_attributes_model import ClassificationAttributes
 from src.api.ovms_connector import OvmsConnector
 
@@ -25,7 +25,7 @@ DEFAULT_VERSION = 0
 
 AVAILABLE_MODELS = [
     {"name": "vehicleDetection", 
-    "class": VehicleDetectionAdas, 
+    "class": DetectionModel, 
     "ovms_mapping": {
         "model_name": "vehicle_detection_adas",
         "model_version": DEFAULT_VERSION,
@@ -59,5 +59,22 @@ AVAILABLE_MODELS = [
         "input_name": "data",
         },
     "config_path": "/opt/ams_models/age_gender_recognition_model.json"
+    {"name": "personVehicleBikeDetection", 
+    "class": DetectionModel, 
+    "ovms_mapping": {
+        "model_name": "person_vehicle_bike_detection",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/person_vehicle_bike_detection.json"
+    },
+    {"name": "faceDetection", 
+    "class": DetectionModel, 
+    "ovms_mapping": {
+        "model_name": "face_detection_adas",
+        "model_version": DEFAULT_VERSION,
+        "input_name": "data",
+        },
+    "config_path": "/opt/ams_models/face_detection_adas.json"
     },
 ]

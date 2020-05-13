@@ -7,3 +7,4 @@ jsonschema==3.1.1
 falcon==2.0.0
 cheroot==8.2.1
 marshmallow==3.5.1
+tabulate==0.8.7

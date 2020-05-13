@@ -107,7 +107,7 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
                 print("y_min", y_min)
                 print("x_max", x_max)
                 print("y_max", y_max)
-
+                img_out = img_out.copy()
                 img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
                 # draw each detected box on the input image
         
