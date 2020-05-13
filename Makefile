@@ -33,6 +33,7 @@ OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
+TEST_LOG_LEVEL ?= "INFO"
 
 .PHONY: default docker_build \
 
@@ -108,6 +109,6 @@ test_throughput: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
 test_functional: venv
-	@. $(ACTIVATE); pytest --json=report.json -v \
+	@. $(ACTIVATE); pytest --json=report.json -v -s --log_level=$(TEST_LOG_LEVEL) \
 		--image=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		$(TEST_PATH)

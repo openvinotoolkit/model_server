@@ -55,6 +55,9 @@ def pytest_addoption(parser):
         "--start_container_command", action="store", default="",
         help="command to start ovms container"
     )
+    parser.addoption(
+        "--log_level", action="store", default="INFO", help="set log level"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -93,7 +96,8 @@ def create_grpc_channel():
     return _create_channel
 
 
-def pytest_configure():
+def pytest_configure(config):
+    os.environ["TEST_LOG_LEVEL"] = config.getoption("--log_level")
     clean_hanging_docker_resources()
 
 

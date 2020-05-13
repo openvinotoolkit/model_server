@@ -20,6 +20,9 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_p
     get_model_metadata_pb2, get_model_status_pb2
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 DEFAULT_GRPC_PORT = "9000"
 DEFAULT_ADDRESS = 'localhost'
@@ -41,7 +44,7 @@ def infer(img, input_tensor, grpc_stub, model_spec_name,
     request.model_spec.name = model_spec_name
     if model_spec_version is not None:
         request.model_spec.version.value = model_spec_version
-    print("input shape ", img.shape)
+    logger.info("Input shape: {}".format(img.shape))
     request.inputs[input_tensor].CopyFrom(
         make_tensor_proto(img, shape=list(img.shape)))
     result = grpc_stub.Predict(request, 10.0)

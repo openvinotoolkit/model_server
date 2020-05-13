@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import pytest
 import numpy as np
 
@@ -20,10 +21,13 @@ from constants import MODEL_SERVICE
 from model.models_information import PVBDetection, PVBDetectionV2
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
+from utils.logger import get_logger
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
+
+logger = get_logger(__name__)
 
 
 class TestModelVersionHandling:
@@ -34,7 +38,7 @@ class TestModelVersionHandling:
                            start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -46,7 +50,7 @@ class TestModelVersionHandling:
                        grpc_stub=stub, model_spec_name=self.model_name,
                        model_spec_version=version,  # face detection
                        output_tensors=[model_info.output_name])
-        print("output shape", output[model_info.output_name].shape)
+        logger.info("Output shape: {}".format(output[model_info.output_name].shape))
         assert output[model_info.output_name].shape == model_info.output_shape, \
             '{} with version 1 has invalid output'.format(self.model_name)
 
@@ -56,14 +60,14 @@ class TestModelVersionHandling:
                                 start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
-        print("Getting info about pvb_face_detection model "
-              "version:".format("no_version" if version is None else version))
+        logger.info("Getting info about pvb_face_detection model "
+              "version: {}".format("no_version" if version is None else version))
         expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
         expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
 
@@ -72,8 +76,9 @@ class TestModelVersionHandling:
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert response.model_spec.name == self.model_name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -83,7 +88,7 @@ class TestModelVersionHandling:
                               start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
@@ -108,7 +113,7 @@ class TestModelVersionHandling:
                                 start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
 
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
@@ -118,7 +123,7 @@ class TestModelVersionHandling:
                             input_tensor=model_info.input_name, rest_url=rest_url,
                             output_tensors=[model_info.output_name],
                             request_format='column_name')
-        print("output shape", output[model_info.output_name].shape)
+        logger.info("Output shape: {}".format(output[out_name].shape))
         assert output[model_info.output_name].shape == model_info.output_shape, \
             '{} with version 1 has invalid output'.format(self.model_name)
 
@@ -128,18 +133,19 @@ class TestModelVersionHandling:
                                      start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
         model_info = PVBDetectionV2 if version is None else PVBDetection[version-1]
 
         rest_url = get_metadata_url(model=self.model_name, port=ports["rest_port"], version=version)
 
         expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
         expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
-        print("Getting info about resnet model version:".format(rest_url))
+        logger.info("Getting info about resnet model version: {}".format(rest_url))
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(response=response)
+        logger.info("Input metadata: {}".format(input_metadata))
+        logger.info("Output metadata: {}".format(output_metadata))
 
-        print(output_metadata)
         assert response.model_spec.name == self.model_name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
@@ -150,7 +156,7 @@ class TestModelVersionHandling:
                                    start_server_multi_model, version):
 
         _, ports = start_server_multi_model
-        print("Downloaded model files:", download_two_model_versions)
+        logger.info("Downloaded model files: {}".format(download_two_model_versions))
 
         rest_url = get_status_url(model=self.model_name, port=ports["rest_port"], version=version)
 

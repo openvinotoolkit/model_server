@@ -19,6 +19,10 @@ import os
 import pytest
 import requests
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004"  # noqa
 age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"  # noqa
 pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078"  # noqa
@@ -34,8 +38,7 @@ def download_model(model_url_base, model_name, model_version, dir):
         os.makedirs(local_model_path)
 
     if not os.path.exists(local_bin_path) or not os.path.exists(local_xml_path):
-        print("Downloading " + model_name + " model...")
-        print(dir)
+        logger.info("Downloading {} model...".format(model_name))
         response = requests.get(model_url_base + '.bin', stream=True)
         with open(local_bin_path, 'wb') as output:
             output.write(response.content)

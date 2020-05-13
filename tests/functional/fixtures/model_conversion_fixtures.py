@@ -17,9 +17,12 @@
 import os
 import pytest
 import requests
-
 from pathlib import Path
+
+from utils.logger import get_logger
 from utils.model_management import convert_model
+
+logger = get_logger(__name__)
 
 
 def download_file(url, dir, name):
@@ -29,7 +32,7 @@ def download_file(url, dir, name):
         return target_file
 
     Path(dir).mkdir(parents=True, exist_ok=True)
-    print("Downloading " + url + " to " + target_file + "...")
+    logger.info("Downloading {url} to {target_file} ...".format(url=url, target_file=target_file))
     response = requests.get(url, stream=True)
     with open(target_file, 'wb') as output:
         output.write(response.content)
@@ -40,7 +43,7 @@ def download_file(url, dir, name):
 @pytest.fixture(autouse=True, scope="session")
 def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
     tensorflow_model = \
-        download_file('https://download.01.org/opencv/public_models/012020/resnet-50-tf/resnet_v1-50.pb', # noqa
+        download_file('https://download.01.org/opencv/public_models/012020/resnet-50-tf/resnet_v1-50.pb',
             get_test_dir + '/tensorflow_format/resnet/', 'resnet_v1-50.pb')
 
     return \

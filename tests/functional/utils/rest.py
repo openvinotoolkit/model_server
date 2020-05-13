@@ -15,13 +15,15 @@
 #
 
 import json
-
 import numpy as np
 import requests
 from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 DEFAULT_ADDRESS = 'localhost'
 DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])
@@ -98,7 +100,7 @@ def process_json_output(result_dict, output_tensors):
         else:
             output[output_tensors[0]] = np.asarray(result_dict[keyname])
     else:
-        print("Missing required response in {}".format(result_dict))
+        logger.debug("Missing required response in {}".format(result_dict))
 
     return output
 
