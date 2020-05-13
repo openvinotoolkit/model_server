@@ -285,7 +285,7 @@ class TestAmsInference:
         assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
         assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
 
-def test_ageGenderRecognition(self, start_ams_service, object_classification_emotions_smile):
+    def test_ageGenderRecognition(self, start_ams_service, object_classification_emotions_smile):
         with open(object_classification_emotions_smile, mode='rb') as image_file:
             image_bytes = image_file.read()
         _, ports = start_ams_service
@@ -316,9 +316,9 @@ def test_ageGenderRecognition(self, start_ams_service, object_classification_emo
         confidence = 1.0
 
         for classification in response_json["classifications"][1]["attributes"]:
-                name = classification["name"]
-                confidence = classification["confidence"]
-                value = int(classification["confidence"])
+            name = classification["name"]
+            confidence = classification["confidence"]
+            value = int(float(classification["confidence"]))
 
         assert confidence == None
         assert name == "age"
