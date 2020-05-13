@@ -20,7 +20,7 @@
                 "surprise": 3.0,
                 "anger": 4.0
             },
-            "is_softmax": True
+            "is_softmax": true
         }
     ]
 }
