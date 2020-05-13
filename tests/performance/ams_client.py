@@ -15,20 +15,20 @@
 #
 
 # should be run from model server directory
-
+import argparse
 import os
 import urllib.request
+from data.performance_constants import DATASET, IMAGE, ITERATIONS, AMS_PORT, AMS_ADDRESS
 
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATASET = os.path.join(ROOT_PATH, "tests", "functional", "fixtures", "test_images", "performance")
-IMAGE = "single_car_small_reshaped.png"
+parser = argparse.ArgumentParser()
 
-ITERATIONS = 1000
+parser.add_argument('--model_name', required=True, help='Name of the model to be used')
+args = parser.parse_args()
 
 for num in range(ITERATIONS):
     with open(os.path.join(DATASET, IMAGE), mode='rb') as image_file:
         image_bytes = image_file.read()
-        url = 'http://localhost:5000/vehicleDetection'
+        url = 'http://{}:{}/{}'.format(AMS_ADDRESS, AMS_PORT, args.model_name)
         headers = {'Content-Type': 'image/png'}
         req = urllib.request.Request(url, image_bytes, headers=headers)
         response = urllib.request.urlopen(req)
