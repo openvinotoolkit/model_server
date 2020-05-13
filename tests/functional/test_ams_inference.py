@@ -306,7 +306,7 @@ class TestAmsInference:
         for classification in response_json["classifications"][0]["attributes"]:
             if classification["confidence"] > highest_probability:
                 highest_probability = classification["confidence"]
-                highest_emotion = classification["value"]
+                highest_gender = classification["value"]
 
         assert highest_probability > 0.915
         assert highest_gender == "female"
