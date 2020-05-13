@@ -74,11 +74,16 @@ cc_test(
         "test/modelmanager_test.cpp",
         "test/modelconfig_test.cpp",
         "test/ovtestutils.hpp",
+        "test/ovinferrequestqueue_test.cpp",
         "test/predict_validation_test.cpp",
         "test/serialization_tests.cpp",
         "test/modelversionstatus_test.cpp",
         "test/model_service_test.cpp",
         "test/stringutils_test.cpp",
+    ],
+    data = [
+        "test/dummy.xml",
+        "test/dummy.bin",
     ],
     copts = [
         "--std=c++17"

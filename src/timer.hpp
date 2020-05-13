@@ -38,11 +38,11 @@ public:
     }
 
     double elapsed_microseconds(const std::string& name) {
-        double duration_ms = 0;
+        double duration_us = 0;
 #ifdef DEBUG
-        duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(stopTimestamps[name] - startTimestamps[name]).count();
+        duration_us = std::chrono::duration_cast<std::chrono::microseconds>(stopTimestamps[name] - startTimestamps[name]).count();
 #endif
-        return  duration_ms;
+        return  duration_us;
     }
 
     void print() {
