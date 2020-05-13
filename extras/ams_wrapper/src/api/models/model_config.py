@@ -72,14 +72,14 @@ class ModelInputConfigurationSchema(Schema):
 class ModelOutputConfiguration:
     def __init__(self, output_name: str, value_index_mapping: dict = None,
                  classes: dict = None, confidence_threshold: float = None,
-                 top_k_results: int = None, is_softmax = None, value_multiplyer = None):
+                 top_k_results: int = None, is_softmax = None, value_multiplier = None):
                  self.output_name = output_name
                  self.value_index_mapping = value_index_mapping
                  self.classes = classes
                  self.confidence_threshold = confidence_threshold
                  self.top_k_results = top_k_results
                  self.is_softmax = is_softmax
-                 self.value_multiplyer = value_multiplyer
+                 self.value_multiplier = value_multiplier
     
     def __str__(self):
         return 'ModelOutputConfiguration({})'.format(vars(self))
@@ -91,7 +91,7 @@ class ModelOutputConfiguration:
 class ModelOutputConfigurationSchema(Schema):
     output_name = fields.String(required=True)
     is_softmax = fields.String(required=False)
-    value_multiplyer = fields.Float(required=False)
+    value_multiplier = fields.Float(required=False)
     value_index_mapping = fields.Dict(keys=fields.String(), values=fields.Integer(), required=False)
     classes = fields.Dict(keys=fields.String(), values=fields.Number(), required=False)
     confidence_threshold = fields.Float(required=False, validate=validate.Range(min=0, max=1))
