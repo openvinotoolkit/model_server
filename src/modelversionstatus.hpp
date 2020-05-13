@@ -135,7 +135,7 @@ class ModelVersionStatus {
 
   private:
       void logStatus() {
-        spdlog::info("STATUS CHANGE: Version {} of model {} status change. New status: { \"state\": \"{}\", \"status\": { \"error_code\": \"{}\", \"error_message\": \"\" } }",
+        spdlog::info("STATUS CHANGE: Version {} of model {} status change. New status: ( \"state\": \"{}\", \"error_code\": \"{}\" )",
             this->version,
             this->modelName,
             ModelVersionStateToString(state),

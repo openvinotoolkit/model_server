@@ -179,6 +179,28 @@ namespace ovms {
         }
 
         /**
+        * @brief Get the Precision As String object
+        *
+        * @return const std::string
+        */
+        const std::string getPrecisionAsString() {
+            switch (precision) {
+                case InferenceEngine::Precision::FP32:  return "FP32";
+                case InferenceEngine::Precision::FP16:  return "FP16";
+                    // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
+                case InferenceEngine::Precision::I16:   return "I16";
+                case InferenceEngine::Precision::U8:    return "U8";
+                case InferenceEngine::Precision::U16:   return "U16";
+                case InferenceEngine::Precision::I32:   return "I32";
+                case InferenceEngine::Precision::I64:   return "I64";
+                    // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
+                case InferenceEngine::Precision::BOOL:  return "BOOL";
+                default:                                return "DT_INVALID";
+            }
+        }
+
+
+        /**
          * @brief Get the InferenceEngine Layout From String 
          * 
          * @param layout 

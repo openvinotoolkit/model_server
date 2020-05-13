@@ -16,7 +16,6 @@
 #include <map>
 #include <memory>
 #include <utility>
-
 #include "model.hpp"
 
 namespace ovms {
