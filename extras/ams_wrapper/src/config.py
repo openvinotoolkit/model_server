@@ -59,6 +59,7 @@ AVAILABLE_MODELS = [
         "input_name": "data",
         },
     "config_path": "/opt/ams_models/age_gender_recognition_model.json"
+    },
     {"name": "personVehicleBikeDetection", 
     "class": DetectionModel, 
     "ovms_mapping": {
