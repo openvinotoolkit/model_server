@@ -22,7 +22,7 @@
                 "blue": 5.0,
                 "black": 6.0
             },
-            "is_softmax": "yes"
+            "is_softmax": "True"
         },
         {
             "output_name": "type",
@@ -32,7 +32,7 @@
                 "truck": 2.0,
                 "bus": 3.0
             },
-            "is_softmax": "yes"
+            "is_softmax": "True"
         }
     ]
 }
