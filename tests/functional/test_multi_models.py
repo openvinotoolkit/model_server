@@ -58,7 +58,7 @@ class TestMultiModelInference:
                        model_spec_name='resnet_s3',
                        model_spec_version=None,
                        output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
+        logger.info("Output shape: {}".format(output[out_name].shape))
         assert output[out_name].shape == (1, 1001), ERROR_SHAPE
 
         in_name = 'input'
@@ -71,7 +71,7 @@ class TestMultiModelInference:
                        model_spec_name='resnet_gs',
                        model_spec_version=None,
                        output_tensors=[out_name])
-        print("output shape", output[out_name].shape)
+        logger.info("Output shape: {}".format(output[out_name].shape))
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
     """
 
