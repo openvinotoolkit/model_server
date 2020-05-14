@@ -61,6 +61,7 @@ class TestPerformance:
                str(image_height), "--input_name", input_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         output = proc.communicate()[0].decode('utf-8')
+        print("Output for latency:\n{} \nCommand: {}".format(output, " ".join(cmd)))
         metrics = [line for line in output.splitlines() if "average time" in line][0]
         average_proccessing_time = metrics.split(";")[0].split(":")[1]
         average_speed = metrics.split(";")[1].split(":")[1]
@@ -70,7 +71,7 @@ class TestPerformance:
     def return_metrics(cmd):
         ps = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = ps.communicate()[0].decode()
-        print("Output for throughput: {} \n Command: {}".format(output, cmd))
+        print("Output for throughput:\n{} \nCommand: {}".format(output, cmd))
         times = [line for line in output.splitlines() if "real" in line][0]
         time = times.split("\t")[1].split("m")
         final_time = float(time[0]) * 60 + float(time[1].replace("s", ""))
