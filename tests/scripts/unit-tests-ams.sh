@@ -5,7 +5,7 @@ set -ex
 pip install -r requirements.txt
 
 pushd .
-cd extras/ams_wrapper/tests
+cd extras/ams_wrapper/tests/unit
 ./get_test_images.sh
 popd
-py.test extras/ams_wrapper/tests
+py.test extras/ams_wrapper/tests/unit

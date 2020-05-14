@@ -74,7 +74,7 @@ ams_test: $(AMS_EXAMPLE)requirements.txt $(AMS_EXAMPLE)requirements-dev.txt
 	echo "Running ams wrapper unit tests" 
 	test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
-	@. $(ACTIVATE); pytest  $(AMS_EXAMPLE)tests/
+	@. $(ACTIVATE); pytest  $(AMS_EXAMPLE)tests/unit
 
 ams_clean: 
 	@echo "Removing ams virtual env files and test images ..."
