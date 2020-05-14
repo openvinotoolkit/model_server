@@ -61,6 +61,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--log_level", action="store", default="INFO", help="set log level"
     )
+    parser.addoption(
+        "--container_log_line", action="store", default="Server started on port", help="log line to check in container"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -84,6 +87,11 @@ def get_docker_context(request):
 @pytest.fixture(scope="session")
 def get_start_container_command(request):
     return request.config.getoption("--start_container_command")
+
+
+@pytest.fixture(scope="session")
+def get_container_log_line(request):
+    return request.config.getoption("--container_log_line")
 
 
 @pytest.fixture()

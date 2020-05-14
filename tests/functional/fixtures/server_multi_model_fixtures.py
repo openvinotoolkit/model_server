@@ -25,7 +25,7 @@ from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 @pytest.fixture(scope="session")
 def start_server_multi_model(request, get_docker_network, start_minio_server,
                              get_minio_server_s3, get_image, get_test_dir,
-                             get_docker_context):
+                             get_docker_context, get_start_container_command, get_container_log_line):
 
     shutil.copyfile('tests/functional/config.json',
                     get_test_dir + '/saved_models/config.json')
@@ -55,9 +55,9 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--config_path /opt/ml/config.json --port {} " \
+    command = "{} --config_path /opt/ml/config.json --port {} " \
               "--rest_port {} --grpc_workers 2 --rest_workers 2".\
-              format(grpc_port, rest_port)
+              format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-multi-{}'.
@@ -73,7 +73,7 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
 
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

@@ -155,6 +155,19 @@ sys	0m39.333s
 1076 FPS
 ``` 
 
+### Running tests on Python image
+
+WARNING: at this point not all tests will pass. Further changes are needed to achieve that.
+
+To run tests (test_batching, test_mapping, test_single_model) on Python image specify following parameter to pytest command:
+```
+--start_container_command="/ie-serving-py/start_server.sh ie_serving model " --container_log_line="server listens on port"
+```
+To run tests (test_model_version_policy, test_model_versions_handling, test_multi_models) on Python image specify following parameter to pytest command:
+```
+--start_container_command="/ie-serving-py/start_server.sh ie_serving config " --container_log_line="server listens on port"
+```
+
 ## Server Logging
 OpenVINO™ model server accepts 3 logging levels:
 

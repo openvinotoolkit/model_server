@@ -22,7 +22,8 @@ from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_auto_shape(request, get_image,
                                                  get_test_dir,
-                                                 get_docker_context):
+                                                 get_docker_context,
+                                                 get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -47,7 +48,7 @@ def start_server_face_detection_model_auto_shape(request, get_image,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
@@ -56,7 +57,8 @@ def start_server_face_detection_model_auto_shape(request, get_image,
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_named_shape(request, get_image,
                                                   get_test_dir,
-                                                  get_docker_context):
+                                                  get_docker_context,
+                                                  get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -83,7 +85,7 @@ def start_server_face_detection_model_named_shape(request, get_image,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
@@ -92,7 +94,8 @@ def start_server_face_detection_model_named_shape(request, get_image,
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_nonamed_shape(request, get_image,
                                                     get_test_dir,
-                                                    get_docker_context):
+                                                    get_docker_context,
+                                                    get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -118,7 +121,7 @@ def start_server_face_detection_model_nonamed_shape(request, get_image,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

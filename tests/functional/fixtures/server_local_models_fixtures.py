@@ -25,7 +25,8 @@ from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
+def start_server_single_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                              get_container_log_line):
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": Resnet.model_path,
@@ -36,15 +37,16 @@ def start_server_single_model(request, get_image, get_test_dir, get_docker_conte
     env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
 
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command, env_variables)
+                                            container_name_infix, get_start_container_command, get_container_log_line,
+                                            env_variables)
 
     request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
-def start_server_with_mapping(request, get_image, get_test_dir,
-                              get_docker_context):
+def start_server_with_mapping(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                              get_container_log_line):
     shutil.copyfile('tests/functional/mapping_config.json',
                     get_test_dir + '/saved_models/'
                                    'age-gender-recognition-retail-0013/1/'
@@ -56,9 +58,9 @@ def start_server_with_mapping(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--model_name age_gender " \
+    command = "{} --model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port {} --rest_port {}".format(grpc_port, rest_port)
+              "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-2-out-{}'.
@@ -80,7 +82,7 @@ def start_server_with_mapping(request, get_image, get_test_dir,
     request.addfinalizer(delete_mapping_file)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
