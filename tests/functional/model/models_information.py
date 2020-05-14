@@ -38,6 +38,10 @@ class PVBDetectionV1:
     rest_request_format = 'column_name'
 
 
+class FaceDetection(PVBDetectionV1):
+    name = "face_detection"
+
+
 class PVBDetectionV2(PVBDetectionV1):
     input_shape = (1, 3, 1024, 1024)
 
