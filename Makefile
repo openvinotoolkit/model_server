@@ -67,19 +67,19 @@ coverage: $(ACTIVATE)
 
 ams_coverage: $(ACTIVATE)
 	@echo "Computing unit test coverage for ams..."
-	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
-	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/ --cov-report=html --cov-fail-under=57
+	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images||($(AMS_EXAMPLE)tests/unit/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/unit)
+	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/unit --cov-report=html --cov-fail-under=62
 
-ams_test: $(AMS_EXAMPLE)requirements.txt $(AMS_EXAMPLE)requirements-dev.txt
+ams_test: $(ACTIVATE)
 	echo "Running ams wrapper unit tests" 
 	test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
+	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/unit)
 	@. $(ACTIVATE); pytest  $(AMS_EXAMPLE)tests/unit
 
 ams_clean: 
 	@echo "Removing ams virtual env files and test images ..."
 	@rm -rf $(VIRTUALENV_DIR)	
-	@rm -rf $(AMS_EXAMPLE)tests/test_images
+	@rm -rf $(AMS_EXAMPLE)tests/unit/test_images
 
 test: $(ACTIVATE)
 	@echo "Executing functional tests..."

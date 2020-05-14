@@ -8,4 +8,4 @@ pushd .
 cd extras/ams_wrapper/tests/unit
 ./get_test_images.sh
 popd
-pytest --cov-config=extras/ams_wrapper/.coveragerc --cov=src extras/ams_wrapper/tests/ --cov-report=html --cov-fail-under=57
+pytest --cov-config=extras/ams_wrapper/.coveragerc --cov=src extras/ams_wrapper/tests/ --cov-report=html --cov-fail-under=62
