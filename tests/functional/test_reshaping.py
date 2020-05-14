@@ -17,6 +17,7 @@
 import numpy as np
 import pytest
 from constants import ERROR_SHAPE
+from model.models_information import FaceDetection
 from utils.grpc import create_channel, infer
 from utils.logger import get_logger
 from utils.rest import get_predict_url, infer_rest
@@ -48,16 +49,14 @@ class TestModelReshaping:
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
-        out_name = 'detection_out'
-        model_name = 'face_detection'
         for shape in auto_shapes:
-            imgs = np.zeros(shape['in'])
-            self.run_inference_grpc(imgs, out_name, shape['out'],
-                                    True, model_name, stub)
+            imgs = np.zeros(shape['in'], FaceDetection.dtype)
+            self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'],
+                                    True, FaceDetection.name, stub)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), ((1, 3, 300, 300),
+                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
     def test_single_local_model_reshaping_fixed(
             self, face_detection_model_downloader,
@@ -70,13 +69,11 @@ class TestModelReshaping:
 
         # Connect to grpc service
         stubs = [create_channel(port=ports_named["grpc_port"]), create_channel(port=ports_nonamed["grpc_port"])]
+        imgs = np.zeros(shape, FaceDetection.dtype)
 
-        out_name = 'detection_out'
-        model_name = 'face_detection'
         for stub in stubs:
-            imgs = np.zeros(shape)
-            self.run_inference_grpc(imgs, out_name, fixed_shape['out'],
-                                    is_correct, model_name, stub)
+            self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
+                                    is_correct, FaceDetection.name, stub)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
@@ -88,16 +85,15 @@ class TestModelReshaping:
 
         _, ports = start_server_face_detection_model_auto_shape
         logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
-        out_name = 'detection_out'
         for shape in auto_shapes:
-            imgs = np.zeros(shape['in'])
+            imgs = np.zeros(shape['in'], FaceDetection.dtype)
             rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
-            self.run_inference_rest(imgs, out_name, shape['out'], True,
+            self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), ((1, 3, 300, 300),
+                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
@@ -112,18 +108,15 @@ class TestModelReshaping:
         _, ports_nonamed = start_server_face_detection_model_nonamed_shape
         logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
-        out_name = 'detection_out'
+        imgs = np.zeros(shape, FaceDetection.dtype)
         rest_ports = [ports_named["rest_port"], ports_nonamed["rest_port"]]
         for rest_port in rest_ports:
-            imgs = np.zeros(shape)
             rest_url = get_predict_url(model="face_detection", port=rest_port)
-            self.run_inference_rest(imgs, out_name, fixed_shape['out'],
+            self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_multi_local_model_reshaping_auto(
-            self, face_detection_model_downloader,
-            start_server_multi_model):
+    def test_multi_local_model_reshaping_auto(self, face_detection_model_downloader, start_server_multi_model):
 
         _, ports = start_server_multi_model
         logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
@@ -131,20 +124,17 @@ class TestModelReshaping:
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
-        out_name = 'detection_out'
-        model_name = 'face_detection_auto'
         for shape in auto_shapes:
-            imgs = np.zeros(shape['in'])
-            self.run_inference_grpc(imgs, out_name, shape['out'], True,
-                                    model_name, stub)
+            imgs = np.zeros(shape['in'], FaceDetection.dtype)
+            self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'], True,
+                                    FaceDetection.name, stub)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), ((1, 3, 300, 300),
+                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
-    def test_multi_local_model_reshaping_fixed(
-            self, face_detection_model_downloader,
-            start_server_multi_model, shape, is_correct):
+    def test_multi_local_model_reshaping_fixed(self, face_detection_model_downloader, start_server_multi_model,
+                                               shape, is_correct):
 
         _, ports = start_server_multi_model
         logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
@@ -155,33 +145,29 @@ class TestModelReshaping:
         models_names = ["face_detection_fixed_nonamed",
                         "face_detection_fixed_named"]
 
-        out_name = 'detection_out'
-
-        imgs = np.zeros(shape)
+        imgs = np.zeros(shape, FaceDetection.dtype)
         for model_name in models_names:
-            self.run_inference_grpc(imgs, out_name, fixed_shape['out'],
+            self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, model_name, stub)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_mutli_local_model_reshaping_auto_rest(
-            self, face_detection_model_downloader,
-            start_server_multi_model, request_format):
+    def test_mutli_local_model_reshaping_auto_rest(self, face_detection_model_downloader,
+                                                   start_server_multi_model, request_format):
 
         _, ports = start_server_multi_model
         logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
-        out_name = 'detection_out'
         for shape in auto_shapes:
-            imgs = np.zeros(shape['in'])
+            imgs = np.zeros(shape['in'], FaceDetection.dtype)
             rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
-            self.run_inference_rest(imgs, out_name, shape['out'], True,
+            self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), ((1, 3, 300, 300),
+                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
@@ -195,15 +181,14 @@ class TestModelReshaping:
 
         models_names = ["face_detection_fixed_nonamed",
                         "face_detection_fixed_named"]
-        out_name = 'detection_out'
-        imgs = np.zeros(shape)
+        imgs = np.zeros(shape, FaceDetection.dtype)
         for model_name in models_names:
             rest_url = get_predict_url(model=model_name, port=ports["rest_port"])
-            self.run_inference_rest(imgs, out_name, fixed_shape['out'],
+            self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
-    @pytest.mark.skip(reason="not implemented yet")
-    def run_inference_rest(self, imgs, out_name, out_shape, is_correct,
+    @staticmethod
+    def run_inference_rest(imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
         if is_correct:
             output = infer_rest(imgs, input_tensor='data',
@@ -220,11 +205,10 @@ class TestModelReshaping:
                                 request_format=request_format)
             assert not output
 
-    @pytest.mark.skip(reason="not implemented yet")
-    def run_inference_grpc(self, imgs, out_name, out_shape, is_correct,
-                           model_name, stub):
+    @staticmethod
+    def run_inference_grpc(imgs, out_name, out_shape, is_correct, model_name, stub):
         if is_correct:
-            output = infer(imgs, input_tensor='data', grpc_stub=stub,
+            output = infer(imgs, input_tensor=FaceDetection.input_name, grpc_stub=stub,
                            model_spec_name=model_name,
                            model_spec_version=None,
                            output_tensors=[out_name])
@@ -232,7 +216,7 @@ class TestModelReshaping:
             assert output[out_name].shape == out_shape, ERROR_SHAPE
         else:
             with pytest.raises(Exception):
-                infer(imgs, input_tensor='data', grpc_stub=stub,
+                infer(imgs, input_tensor=FaceDetection.input_name, grpc_stub=stub,
                       model_spec_name=model_name,
                       model_spec_version=None,
                       output_tensors=[out_name])
