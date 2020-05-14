@@ -19,7 +19,7 @@ from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
 def start_ovms_container(image, test_dir, client, command_args, container_name_infix, start_container_command,
-                         env_vars_container=None):
+                         container_log_line, env_vars_container=None):
     if env_vars_container is None:
         env_vars_container = []
     container_name_prefix = image.split(":")[0].split("/")[-1]
@@ -41,6 +41,6 @@ def start_ovms_container(image, test_dir, client, command_args, container_name_i
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command, environment=env_vars_container)
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, container_log_line)
     assert running is True, "docker container was not started successfully"
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

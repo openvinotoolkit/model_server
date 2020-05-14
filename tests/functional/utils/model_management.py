@@ -26,23 +26,23 @@ from utils.parametrization import get_tests_suffix
 logger = get_logger(__name__)
 
 
-def minio_condition(container):
-    return "created" in container.status
+def minio_condition(container, status):
+    return status in container.status
 
 
-def serving_condition(container):
+def serving_condition(container, log_line):
     logs = str(container.logs())
-    return "Server started on port" in logs
+    return log_line in logs
 
 
-def wait_endpoint_setup(container, condition=serving_condition, timeout=20):
+def wait_endpoint_setup(container, log_line, condition=serving_condition, timeout=20):
     start_time = time.time()
     tick = start_time
     running = False
     while tick - start_time < timeout:
         tick = time.time()
         try:
-            if condition(container):
+            if condition(container, log_line):
                 running = True
                 break
         except Exception as e:

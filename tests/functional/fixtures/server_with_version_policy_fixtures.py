@@ -25,7 +25,7 @@ from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request, get_image, get_test_dir,
-                                  get_docker_context):
+                                  get_docker_context, get_start_container_command, get_container_log_line):
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     get_test_dir +
                     '/saved_models/model_ver_policy_config.json')
@@ -40,8 +40,8 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--config_path /opt/ml/model_ver_policy_config.json " \
-              "--port {} --rest_port {}".format(grpc_port, rest_port)
+    command = "{} --config_path /opt/ml/model_ver_policy_config.json " \
+              "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-policy-{}'.
@@ -54,7 +54,7 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

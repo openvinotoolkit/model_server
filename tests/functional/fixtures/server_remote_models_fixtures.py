@@ -28,7 +28,7 @@ from utils.server import start_ovms_container
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_gc(request, get_image, get_test_dir, get_docker_context,
-                                      get_start_container_command):
+                                      get_start_container_command, get_container_log_line):
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": "gs://public-artifacts/intelai_public_models/resnet_50_i8/",
@@ -39,7 +39,8 @@ def start_server_single_model_from_gc(request, get_image, get_test_dir, get_dock
     container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command, envs)
+                                            container_name_infix, get_start_container_command, get_container_log_line,
+                                            envs)
     request.addfinalizer(container.kill)
     return container, ports
 
@@ -69,7 +70,7 @@ def get_docker_network(request, get_docker_context):
 
 @pytest.fixture(scope="session")
 def start_minio_server(request, get_test_dir, get_docker_network,
-                       get_docker_context):
+                       get_docker_context, get_container_log_line):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
@@ -106,7 +107,7 @@ def start_minio_server(request, get_test_dir, get_docker_network,
 
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container, minio_condition, 30)
+    running = wait_endpoint_setup(container, "created", minio_condition, 30)
     assert running is True, "minio container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
@@ -156,9 +157,8 @@ def get_minio_server_s3(request, get_image, get_test_dir, start_minio_server):
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_minio(request, get_docker_network,
-                                         get_minio_server_s3, get_image,
-                                         get_test_dir, get_docker_context):
+def start_server_single_model_from_minio(request, get_docker_network, get_minio_server_s3, get_image,
+                                         get_test_dir, get_docker_context, get_container_log_line):
 
     network = get_docker_network
 
@@ -200,7 +200,7 @@ def start_server_single_model_from_minio(request, get_docker_network,
 
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
 
     assert running is True, "docker container was not started successfully"
 

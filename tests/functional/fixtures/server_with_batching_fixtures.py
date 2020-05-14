@@ -23,20 +23,21 @@ from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
+def start_server_batch_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                             get_container_log_line):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
                                  "model_path": ResnetBS8.model_path}
     container_name_infix = "test-batch"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command)
+                                            container_name_infix, get_start_container_command, get_container_log_line)
     request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
 def start_server_batch_model_2out(request, get_image, get_test_dir,
-                                  get_docker_context):
+                                  get_docker_context, get_start_container_command, get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -44,9 +45,9 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--model_name age_gender " \
+    command = "{} --model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
-              "--port {} --rest_port {}".format(grpc_port, rest_port)
+              "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch-2out-{}'.
@@ -59,28 +60,29 @@ def start_server_batch_model_2out(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_auto(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
+def start_server_batch_model_auto(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                                  get_container_log_line):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
                                  "model_path": ResnetBS8.model_path,
                                  "batch_size": "auto"}
     container_name_infix = "test-autobatch"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command)
+                                            container_name_infix, get_start_container_command, get_container_log_line)
     request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
 def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
-                                       get_docker_context):
+                                       get_docker_context, get_start_container_command, get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -88,10 +90,10 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--model_name age_gender " \
+    command = "{} --model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --batch_size auto --rest_port {}".\
-              format(grpc_port, rest_port)
+              format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-autobatch-'
@@ -104,28 +106,29 @@ def start_server_batch_model_auto_2out(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(scope="class")
-def start_server_batch_model_bs4(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
+def start_server_batch_model_bs4(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                                 get_container_log_line):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
                                  "model_path": ResnetBS8.model_path,
                                  "batch_size": 4}
     container_name_infix = "test-batch4"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command)
+                                            container_name_infix, get_start_container_command, get_container_log_line)
     request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
 def start_server_batch_model_auto_bs4_2out(request, get_image,
-                                           get_test_dir, get_docker_context):
+                                           get_test_dir, get_docker_context, get_start_container_command, get_container_log_line):
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
     volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
@@ -133,10 +136,10 @@ def start_server_batch_model_auto_bs4_2out(request, get_image,
 
     grpc_port, rest_port = get_ports_for_fixture()
 
-    command = "--model_name age_gender " \
+    command = "{} --model_name age_gender " \
               "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
               "--port {} --batch_size 4 --rest_port {}".\
-              format(grpc_port, rest_port)
+              format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
                                       name='ie-serving-py-test-batch4-'
@@ -149,7 +152,7 @@ def start_server_batch_model_auto_bs4_2out(request, get_image,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, get_container_log_line)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

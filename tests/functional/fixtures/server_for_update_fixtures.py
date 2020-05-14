@@ -23,7 +23,8 @@ from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="function")
-def start_server_update_flow_latest(request, get_image, get_test_dir, get_docker_context, get_start_container_command):
+def start_server_update_flow_latest(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
+                                    get_container_log_line):
 
     path_to_mount = get_test_dir + '/saved_models'
     update_test_dir = path_to_mount + '/update-{}/'.format(get_tests_suffix())
@@ -37,7 +38,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir, get_docker
 
     container_name_infix = "test-update-latest"
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command)
+                                            container_name_infix, get_start_container_command, get_container_log_line)
 
     request.addfinalizer(container.kill)
     return container, ports
@@ -45,7 +46,7 @@ def start_server_update_flow_latest(request, get_image, get_test_dir, get_docker
 
 @pytest.fixture(scope="function")
 def start_server_update_flow_specific(request, get_image, get_test_dir, get_docker_context,
-                                      get_start_container_command):
+                                      get_start_container_command, get_container_log_line):
     path_to_mount = get_test_dir + '/saved_models'
     update_test_dir = path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
@@ -58,6 +59,6 @@ def start_server_update_flow_specific(request, get_image, get_test_dir, get_dock
     container_name_infix = "test-update-specific"
 
     container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command)
+                                            container_name_infix, get_start_container_command, get_container_log_line)
     request.addfinalizer(container.kill)
     return container, ports
