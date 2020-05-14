@@ -17,9 +17,7 @@
 PY_VERSION := 3
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
-AMS_VIRTUALENV_DIR := .venv_ams
 ACTIVATE := $(VIRTUALENV_DIR)/bin/activate
-AMS_ACTIVATE := $(AMS_VIRTUALENV_DIR)/bin/activate
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
 STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
 STYLE_CHECK_DIRS := tests ie_serving setup.py
@@ -64,20 +62,23 @@ unit: $(ACTIVATE)
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/unit/
 
 coverage: $(ACTIVATE)
-	@echo "Computing unit test coverage..."
+	@echo "Computing unit test coverage..." 
 	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
+
+ams_coverage: $(ACTIVATE)
+	@echo "Computing unit test coverage for ams..."
+	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
+	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/ --cov-report=html --cov-fail-under=57
 
 ams_test: $(AMS_EXAMPLE)requirements.txt $(AMS_EXAMPLE)requirements-dev.txt
 	echo "Running ams wrapper unit tests" 
-	test -d $(AMS_VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(AMS_VIRTUALENV_DIR)
-	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements.txt
-	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements-dev.txt
-	@. $(AMS_ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || (sh $(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
-	@. $(AMS_ACTIVATE); pytest  $(AMS_EXAMPLE)tests/
+	test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
+	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || ($(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
+	@. $(ACTIVATE); pytest  $(AMS_EXAMPLE)tests/
 
 ams_clean: 
 	@echo "Removing ams virtual env files and test images ..."
-	@rm -rf $(AMS_VIRTUALENV_DIR)	
+	@rm -rf $(VIRTUALENV_DIR)	
 	@rm -rf $(AMS_EXAMPLE)tests/test_images
 
 test: $(ACTIVATE)
