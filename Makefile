@@ -72,8 +72,8 @@ ams_test: $(AMS_EXAMPLE)requirements.txt $(AMS_EXAMPLE)requirements-dev.txt
 	test -d $(AMS_VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(AMS_VIRTUALENV_DIR)
 	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements.txt
 	@. $(AMS_ACTIVATE); pip install -qq -r $(AMS_EXAMPLE)requirements-dev.txt
-	@. $(AMS_ACTIVATE); test -d $(AMS_EXAMPLE)tests/test_images || (sh $(AMS_EXAMPLE)tests/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/)
-	@. $(AMS_ACTIVATE); pytest  $(AMS_EXAMPLE)tests/
+	@. $(AMS_ACTIVATE); test -d $(AMS_EXAMPLE)tests/unit/test_images || (sh $(AMS_EXAMPLE)tests/unit/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/unit/)
+	@. $(AMS_ACTIVATE); pytest  $(AMS_EXAMPLE)tests/unit/
 
 ams_clean: 
 	@echo "Removing ams virtual env files and test images ..."
