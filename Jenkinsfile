@@ -29,6 +29,7 @@ pipeline {
             steps {
                 sh './tests/scripts/coverage-ams.sh'
             }
+        }
         stage('publish coverage report') {
             steps  {
                 publishHTML target: [
