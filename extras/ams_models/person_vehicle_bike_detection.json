@@ -1,5 +1,6 @@
 {
-    "model_name": "person-vehicle-bike-detection-crossroad",
+    "model_name": "personVehicleBikeDetection",
+    "model_type": "detection",
     "inputs": [
         {
           "input_name": "data",
@@ -29,5 +30,9 @@
                 "y_max": 6
             }
         }
-    ]
+    ],
+    "ovms_mapping": {
+        "model_name": "person_vehicle_bike_detection",
+        "model_version": 0
+    }
 }

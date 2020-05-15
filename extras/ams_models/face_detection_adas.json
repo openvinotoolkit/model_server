@@ -1,5 +1,6 @@
 {
-    "model_name": "face-detection-adas",
+    "model_name": "faceDetection",
+    "model_type": "detection",
     "inputs": [
         {
           "input_name": "data",
@@ -27,5 +28,9 @@
                 "y_max": 6
             }
         }
-    ]
+    ],
+    "ovms_mapping": {
+        "model_name": "face_detection_adas",
+        "model_version": 0
+    }
 }

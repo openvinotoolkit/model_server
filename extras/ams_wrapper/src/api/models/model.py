@@ -18,7 +18,6 @@ from abc import ABC, abstractmethod
 import datetime
 import json
 import sys
-from typing import Dict
 
 import falcon
 import tensorflow as tf
@@ -28,20 +27,16 @@ import numpy as np
 from src.logger import get_logger
 from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
-from src.api.models.model_config import ModelInputConfiguration, \
-    ModelInputConfigurationSchema, ValidationError, ModelOutputConfiguration, \
-    ModelOutputConfigurationSchema
 
 logger = get_logger(__name__)
 
 
 class Model(ABC):
-    def __init__(self, model_name: str, ovms_connector: OvmsConnector,
-                 config_file_path: str = None):
-        self.ovms_connector = ovms_connector
+    def __init__(self, model_name, ovms_connector, input_configs, output_configs):
         self.model_name = model_name
-        self.input_configs = self.load_input_configs(config_file_path)
-        self.output_configs = self.load_output_configs(config_file_path) 
+        self.ovms_connector = ovms_connector
+        self.input_configs = input_configs
+        self.output_configs = output_configs
         self.labels = {output_name: {index: label for label, index in self.output_configs[output_name].classes.items()}
                        for output_name in self.output_configs.keys()}
 
@@ -88,7 +83,9 @@ class Model(ABC):
         # Send inference request to corresponding model in OVMS
         try:
             connection_start_time = datetime.datetime.now()
-            inference_output = self.ovms_connector.send(input_image)
+            # Assuming models with just one input for now
+            inference_input = {next(iter(self.input_configs)): input_image}
+            inference_output = self.ovms_connector.send(inference_input)
             duration = (datetime.datetime.now() -
                         connection_start_time).total_seconds() * 1000
             logger.debug(f"OVMS request handling time: {duration} ms")
@@ -140,73 +137,3 @@ class Model(ABC):
         resp.status = falcon.HTTP_200
         resp.body = results
         return
-
-    @staticmethod
-    def load_model_config(config_file_path: str) -> dict:
-        """
-        :raises ValueError: when loading of configuration file fails
-        """
-        try:
-            with open(config_file_path, mode='r') as config_file:
-                config = json.load(config_file)
-                return config
-        except FileNotFoundError as e:
-            # TODO: think what exactly should we do in this case
-            logger.exception('Model\'s configuration file {} was not found.'.format(config_file_path))
-            raise ValueError from e
-        except Exception as e:
-            logger.exception('Failed to load Model\'s configuration file {}.'.format(config_file_path))
-            raise ValueError from e
-
-    @staticmethod
-    def load_input_configs(config_file_path: str) -> Dict[str, ModelInputConfiguration]:
-        """
-        :raises ValueError: when loading of configuration file fails
-        :raises marshmallow.ValidationError: if input configuration has invalid schema
-        :returns: a dictionary where key is the input name and value
-                 is ModelInputConfiguration for given input
-        """
-        config = Model.load_model_config(config_file_path)
-        
-        model_input_configs = {}
-        input_config_schema = ModelInputConfigurationSchema()
-        
-        for input_config_dict in config.get('inputs', []):
-            try:
-                input_config = input_config_schema.load(input_config_dict)
-            except ValidationError:
-                logger.exception('Model input configuration is invalid: {}'.format(input_config_dict))
-                raise
-
-            model_input_configs[input_config.input_name] = input_config
-            logger.info('Loaded model input configuration: {}'.format(input_config_dict))
-        
-        return model_input_configs
-    
-    @staticmethod
-    def load_output_configs(config_file_path: str) -> Dict[str, ModelOutputConfiguration]:
-        """
-        :raises ValueError: when loading of configuration file fails
-        :raises marshmallow.ValidationError: if output configuration has invalid schema
-        :returns: a dictionary where key is the output name and value
-                 is ModelOutputConfiguration for given output
-        """
-        config = Model.load_model_config(config_file_path)
-        
-        model_output_configs = {}
-        output_config_schema = ModelOutputConfigurationSchema()
-        
-        for output_config_dict in config.get('outputs', []):
-            try:
-                output_config = output_config_schema.load(output_config_dict)
-            except ValidationError:
-                logger.exception('Model output configuration is invalid: {}'.format(output_config_dict))
-                raise
-
-            model_output_configs[output_config.output_name] = output_config
-            logger.info('Loaded model output configuration: {}'.format(output_config_dict))
-        
-        return model_output_configs
-
-
-        

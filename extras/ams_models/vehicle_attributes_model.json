@@ -1,5 +1,6 @@
 {
-    "model_name": "vehicle-attributes-recognition-barrier-0039",
+    "model_name": "vehicleClassification",
+    "model_type": "classification_attributes",
     "inputs": [
         {
           "input_name": "input",
@@ -35,5 +36,9 @@
             },
             "is_softmax": true
         }
-    ]
+    ],
+    "ovms_mapping": {
+        "model_name": "vehicle_attributes",
+        "model_version": 0
+    }
 }

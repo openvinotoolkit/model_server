@@ -38,25 +38,22 @@ class OvmsConnector():
         self.ovms_port = ovms_port
         self.model_name = ovms_model_info['model_name']
         self.model_version = ovms_model_info['model_version']
-        self.input_name = ovms_model_info['input_name']
 
         channel = grpc.insecure_channel("{}:{}".format("127.0.0.1", self.ovms_port))
         self.stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
-    def send(self, inference_input):
-        if inference_input is None:
-            raise ValueError("Invalid inference input")
-
+    def send(self, inference_input: dict):
         request = predict_pb2.PredictRequest()
         request.model_spec.name = self.model_name
         request.model_spec.version.value = int(self.model_version)
-        try:
-            tensor_proto = make_tensor_proto(inference_input, shape=(inference_input.shape))
-        except TypeError as e:
-            raise TypeError("Unsupported data type") from e
-        except ValueError as e:
-            raise ValueError("Invalid arguments") from e
-        request.inputs[self.input_name].CopyFrom(tensor_proto)
+        for input_name, data in inference_input.items():
+            try:
+                tensor_proto = make_tensor_proto(data, shape=(data.shape))
+            except TypeError as e:
+                raise TypeError("Unsupported data type") from e
+            except ValueError as e:
+                raise ValueError("Invalid arguments") from e
+            request.inputs[input_name].CopyFrom(tensor_proto)
         try:
             result = self.stub.Predict(request, 10.0)
             return_dict = {}

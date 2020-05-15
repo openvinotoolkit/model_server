@@ -1,5 +1,6 @@
 {
-    "model_name": "vehicle-detection-adas-0002",
+    "model_name": "vehicleDetection",
+    "model_type": "detection",
     "inputs": [
         {
           "input_name": "data",
@@ -27,5 +28,9 @@
                 "y_max": 6
             }
         }
-    ]
+    ],
+    "ovms_mapping": {
+        "model_name": "vehicle_detection_adas",
+        "model_version": 0
+    }
 }

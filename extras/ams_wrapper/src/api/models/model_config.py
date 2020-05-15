@@ -15,6 +15,13 @@
 #
 
 from marshmallow import Schema, fields, validates_schema, ValidationError, post_load, validate
+    
+class ModelConfigurationSchema(Schema):
+    model_name = fields.String(required=True)
+    model_type = fields.String(required=True)
+    inputs = fields.List(fields.Dict(keys=fields.String(), required=True))
+    outputs = fields.List(fields.Dict(keys=fields.String(), required=True))
+    ovms_mapping = fields.Dict(keys=fields.String(), required=True)
 
 
 class ModelInputConfiguration:
@@ -40,7 +47,6 @@ class ModelInputConfiguration:
             'scale': self.scale,
             'standardization': self.standardization,
             'reverse_input_channels': self.reverse_input_channels
-
         }
 
 

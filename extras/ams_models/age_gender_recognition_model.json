@@ -1,8 +1,9 @@
 {
-    "model_name": "age-gender-recognition-retail-0013",
+    "model_name": "ageGenderRecognition",
+    "model_type": "classification_attributes",
     "inputs": [
         {
-            "input_name": "input",
+            "input_name": "data",
             "input_format": "NCHW",
             "color_format": "BGR",
             "target_height": 62,
@@ -26,5 +27,9 @@
             "is_softmax": false,
             "value_multiplier": 100.0
         }
-    ]
+    ],
+    "ovms_mapping": {
+        "model_name": "age_gender_recognition",
+        "model_version": 0
+    }
 }
