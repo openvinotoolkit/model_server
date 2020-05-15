@@ -11,5 +11,15 @@ make DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}-clearlinux docker_build_ams_clearlinux
 
 . .venv-jenkins/bin/activate
 
-NO_PROXY=localhost py.test ${TEST_DIRS}/functional/test_ams_inference.py -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} --image ${DOCKER_IMAGE_TAG}
-NO_PROXY=localhost py.test ${TEST_DIRS}/functional/test_ams_inference.py -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} --image ${DOCKER_IMAGE_TAG}-clearlinux
+NO_PROXY=localhost py.test ${TEST_DIRS}/functional/test_single_model_vehicle.py \
+                           ${TEST_DIRS}/functional/test_single_model_vehicle_attributes.py \
+                           ${TEST_DIRS}/functional/test_ams_inference.py \
+                           -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} \
+                           --image ${DOCKER_IMAGE_TAG}
+
+NO_PROXY=localhost py.test ${TEST_DIRS}/functional/test_single_model_vehicle.py \
+                           ${TEST_DIRS}/functional/test_single_model_vehicle_attributes.py \
+                           ${TEST_DIRS}/functional/test_ams_inference.py \
+                           -v --test_dir=/var/jenkins_home/test_ovms_models-${TESTS_SUFFIX} \
+                           --image ${DOCKER_IMAGE_TAG}-clearlinux
+
