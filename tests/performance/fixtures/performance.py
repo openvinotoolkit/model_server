@@ -23,11 +23,11 @@ from data.performance_constants import DATASET, OVMS_DATASET, AMS_PORT, OVMS_POR
     AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH_OFFCIAL, CONFIG_PATH_INTERNAL, CONFIG_PATH_TEMP
 
 
-def read_and_rewrite_file(filename: str, **kwargs):
+def read_and_rewrite_file(filename: str, filename_to_save: str, **kwargs):
     with open(filename) as file:
         template = Template(file.read())
 
-    with open(CONFIG_PATH_TEMP, 'w+') as file:
+    with open(filename_to_save, 'w+') as file:
         file.write(template.render(**kwargs))
 
 
@@ -42,7 +42,7 @@ def copy_config_file_ovms(nireq, plugin_config):
 
     # adjust new config file with proper params
     kwargs = {"nireq": nireq, "plugin_config": plugin_config}
-    read_and_rewrite_file(CONFIG_PATH, **kwargs)
+    read_and_rewrite_file(CONFIG_PATH, CONFIG_PATH_TEMP, **kwargs)
 
     # copy config for ovms
     new_path = os.path.join(MODEL_PATH_FOR_OVMS, "ovms_config.json")
@@ -53,7 +53,7 @@ def copy_config_file_ovms(nireq, plugin_config):
 def copy_config_file_ams(nireq, plugin_config):
     # adjust new config file with proper params
     kwargs = {"nireq": nireq, "plugin_config": plugin_config}
-    read_and_rewrite_file(CONFIG_PATH, **kwargs)
+    read_and_rewrite_file(CONFIG_PATH, CONFIG_PATH_TEMP, **kwargs)
 
     # copy new config file
     cmd = ["cp", CONFIG_PATH_TEMP, CONF_PATH_OFFCIAL]
@@ -63,7 +63,7 @@ def copy_config_file_ams(nireq, plugin_config):
 def edit_ams_start_script(grpc_workers):
     # adjust new script file with proper params
     kwargs = {"grpc_workers": int(grpc_workers)}
-    read_and_rewrite_file(AMS_START_SCRIPT_PATH, **kwargs)
+    read_and_rewrite_file(AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH, **kwargs)
 
     # copy new script file
     cmd = ["cp", AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH_OFFCIAL]
@@ -90,6 +90,7 @@ def run_ams(param):
 def cleanup_ams(container_name_ams):
     cmd = ["docker", "rm", "-f", container_name_ams]
     subprocess.run(cmd)
+
     cmd = ["docker", "image", "rm", "-f", "ams:latest"]
     subprocess.run(cmd)
 
