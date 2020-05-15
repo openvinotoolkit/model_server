@@ -29,6 +29,18 @@ pipeline {
             steps {
                 sh './tests/scripts/coverage-ams.sh'
             }
+        stage('publish coverage report') {
+            steps  {
+                publishHTML target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: 'ams_coverage_report',
+                    reportFiles: 'index.html',
+                    reportName: 'Ams coverage'
+                    ]
+                }
+            }
         }
         stage('functional tests') {
             parallel {
