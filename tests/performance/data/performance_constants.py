@@ -37,7 +37,9 @@ AMS_ADDRESS = "localhost"
 OVMS_PORT_FOR_AMS = "9000"
 AMS_PORT = "5000"
 OVMS_PORT = "9007"
-DLDT_PACKAGE = "http://registrationcenter-download.intel.com/akdlm/irc_nas/16612/l_openvino_toolkit_p_2020.2.120_online.tgz"
+
+# ov package
+DLDT_PACKAGE = os.environ["DLDT_PACKAGE"]
 
 
 # PERFORMANCE PARAMS
