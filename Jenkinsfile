@@ -41,7 +41,6 @@ pipeline {
                     ]
                 }
             }
-        }
         stage('functional tests') {
             parallel {
                 stage('functional tests ams') {
