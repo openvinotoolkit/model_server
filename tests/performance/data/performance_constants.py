@@ -23,6 +23,7 @@ OVMS_CLIENT = os.path.join(ROOT_PATH, "example_client", "face_detection_performa
 OVMS_DATASET = os.path.join(DATASET, "test_dir")
 MODEL_PATH_FOR_OVMS = "/opt/models/models/"
 CONFIG_PATH = os.path.join(ROOT_PATH, "tests", "performance", "performance_config_ovms.json")
+CONFIG_PATH_TEMP = os.path.join(ROOT_PATH, "tests", "performance", "performance_config_ovms_tmp.json")
 CONF_PATH_OFFCIAL = os.path.join(ROOT_PATH, "extras", "ams_models", "ovms_config.json")
 CONFIG_PATH_INTERNAL = os.path.join("/", "opt", "models", "ovms_config.json")
 AMS_START_SCRIPT_PATH_OFFCIAL = os.path.join(ROOT_PATH, "extras", "ams_wrapper", "start_ams.sh")

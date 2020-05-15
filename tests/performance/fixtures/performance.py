@@ -20,14 +20,14 @@ import time
 from jinja2 import Template
 from data.performance_constants import DATASET, OVMS_DATASET, AMS_PORT, OVMS_PORT_FOR_AMS, \
     MODEL_PATH_FOR_OVMS, OVMS_PORT, CONFIG_PATH, PARAMS, DLDT_PACKAGE, CONF_PATH_OFFCIAL, \
-    AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH_OFFCIAL, CONFIG_PATH_INTERNAL
+    AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH_OFFCIAL, CONFIG_PATH_INTERNAL, CONFIG_PATH_TEMP
 
 
 def read_and_rewrite_file(filename: str, **kwargs):
     with open(filename) as file:
         template = Template(file.read())
 
-    with open(filename, 'w+') as file:
+    with open(CONFIG_PATH_TEMP, 'w+') as file:
         file.write(template.render(**kwargs))
 
 
@@ -39,19 +39,15 @@ def prepare_image_ams(nireq, plugin_config, grpc_workers):
 
 
 def copy_config_file_ovms(nireq, plugin_config):
+
     # adjust new config file with proper params
     kwargs = {"nireq": nireq, "plugin_config": plugin_config}
     read_and_rewrite_file(CONFIG_PATH, **kwargs)
 
     # copy config for ovms
     new_path = os.path.join(MODEL_PATH_FOR_OVMS, "ovms_config.json")
-    cmd = ["cp", CONFIG_PATH, new_path]
+    cmd = ["cp", CONFIG_PATH_TEMP, new_path]
     subprocess.run(cmd)
-
-    # assert proper plugin config and nireq
-    f = open(new_path, "r")
-    assert plugin_config in f.read(), "Not expected plugin config found: {}".format(f.read())
-    assert nireq in f.read(), "Not expected nireq found: {}".format(f.read())
 
 
 def copy_config_file_ams(nireq, plugin_config):
@@ -60,13 +56,8 @@ def copy_config_file_ams(nireq, plugin_config):
     read_and_rewrite_file(CONFIG_PATH, **kwargs)
 
     # copy new config file
-    cmd = ["cp", CONFIG_PATH, CONF_PATH_OFFCIAL]
+    cmd = ["cp", CONFIG_PATH_TEMP, CONF_PATH_OFFCIAL]
     subprocess.run(cmd)
-
-    # assert proper plugin config and nireq
-    f = open(CONF_PATH_OFFCIAL, "r")
-    assert plugin_config in f.read(), "Not expected plugin config found: {}".format(f.read())
-    assert nireq in f.read(), "Not expected nireq found: {}".format(f.read())
 
 
 def edit_ams_start_script(grpc_workers):
@@ -76,13 +67,6 @@ def edit_ams_start_script(grpc_workers):
 
     # copy new script file
     cmd = ["cp", AMS_START_SCRIPT_PATH, AMS_START_SCRIPT_PATH_OFFCIAL]
-    subprocess.run(cmd)
-
-
-def clean_up():
-
-    # remove adjusted config file
-    cmd = ["rm", "-rf", CONF_PATH_OFFCIAL]
     subprocess.run(cmd)
 
 
@@ -113,7 +97,13 @@ def cleanup_ams(container_name_ams):
     cmd = ["rm", "-rf", AMS_START_SCRIPT_PATH_OFFCIAL]
     subprocess.run(cmd)
 
-    clean_up()
+    # remove adjusted config file
+    cmd = ["rm", "-rf", CONF_PATH_OFFCIAL]
+    subprocess.run(cmd)
+
+    # remove tmp config file
+    cmd = ["rm", "-rf", CONFIG_PATH_TEMP]
+    subprocess.run(cmd)
 
 
 def run_ovms(param):
@@ -141,7 +131,9 @@ def cleanup_ovms(container_name_ovms):
     cmd = ["rm", "-rf", os.path.join(MODEL_PATH_FOR_OVMS, "ovms_config.json")]
     subprocess.run(cmd)
 
-    clean_up()
+    # remove adjusted config file
+    cmd = ["rm", "-rf", CONFIG_PATH_TEMP]
+    subprocess.run(cmd)
 
 
 def prepare_dataset_for_ovms(image):
