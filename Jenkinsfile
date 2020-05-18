@@ -49,12 +49,6 @@ pipeline {
                         sh './tests/scripts/functional-tests-ams.sh'
                     }
                 }
-
-                stage('functional tests model posprocessing') {
-                    steps {
-                        sh './tests/scripts/functional-tests-model-postprocessing.sh'
-                    }
-                }
                 /*
                 stage('functional tests bin') {
                     steps {
