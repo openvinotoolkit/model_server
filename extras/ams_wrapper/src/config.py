@@ -24,13 +24,3 @@ TYPE_CLASS_MAPPING = {
     "detection": DetectionModel,
     "classification_attributes": ClassificationAttributes
 }
-
-# TODO: Scan filesystem and detect available models
-AVAILABLE_MODELS = [
-    "/opt/ams_models/vehicle_detection_adas_model.json", 
-    "/opt/ams_models/vehicle_attributes_model.json",
-    "/opt/ams_models/emotions_recognition_model.json",
-    "/opt/ams_models/age_gender_recognition_model.json",
-    "/opt/ams_models/person_vehicle_bike_detection.json",
-    "/opt/ams_models/face_detection_adas.json",
-]
