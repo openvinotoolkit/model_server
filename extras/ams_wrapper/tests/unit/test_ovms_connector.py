@@ -15,6 +15,16 @@ def test_ovms_connector_prepare_input_fail(mocker, error_type, error_message):
     with pytest.raises(error_type, match=error_message):
         ovms_connector.send(inference_input)
 
+@pytest.mark.parametrize("error_type, error_message", 
+    [(ValueError, "Invalid inference input")])
+def test_ovms_connector_prepare_input_none(mocker, error_type, error_message):
+    make_tensor_proto_mock = mocker.patch("src.api.ovms_connector.make_tensor_proto")
+    make_tensor_proto_mock.side_effect = error_type
+    ovms_connector = OvmsConnector("4000", {"model_name": "test", "model_version": 1, "input_name": "input"})
+    inference_input = None
+    with pytest.raises(error_type, match=error_message):
+        ovms_connector.send(inference_input)
+
 @pytest.mark.parametrize("grpc_error_code, ams_error_type, ams_error_message", [
     (grpc.StatusCode.INVALID_ARGUMENT, RequestProcessingError, "Error during inference request*"),
     (grpc.StatusCode.NOT_FOUND, ModelNotFoundError, "Requested model not found"),

@@ -2,6 +2,6 @@
 omit =
     tests/*
     *__init__*
-    config.py
+    src/config.py
 [html]
 directory = ams_coverage_report
