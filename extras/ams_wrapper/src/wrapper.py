@@ -29,7 +29,7 @@ def get_available_models(models_path=AMS_MODELS_PATH):
     pattern = "{}/*_model.json".format(AMS_MODELS_PATH)
     available_models = glob.glob(pattern)
     if not available_models:
-        raise FileExistsError("No AMS model configuration has been found in: {}".format(AMS_MODELS_PATH))
+        raise FileNotFoundError("No AMS model configuration has been found in: {}".format(AMS_MODELS_PATH))
     return available_models
 
 def start_rest_service(port, num_threads, ovms_port):
