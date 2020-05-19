@@ -32,8 +32,8 @@ logger = get_logger(__name__)
 
 
 class Model(ABC):
-    def __init__(self, model_name, ovms_connector, input_configs, output_configs):
-        self.model_name = model_name
+    def __init__(self, endpoint, ovms_connector, input_configs, output_configs):
+        self.endpoint = endpoint
         self.ovms_connector = ovms_connector
         self.input_configs = input_configs
         self.output_configs = output_configs

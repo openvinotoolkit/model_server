@@ -1,5 +1,5 @@
 {
-    "model_name": "personVehicleBikeDetection",
+    "endpoint": "personVehicleBikeDetection",
     "model_type": "detection",
     "inputs": [
         {

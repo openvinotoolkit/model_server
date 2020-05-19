@@ -20,10 +20,10 @@ import glob
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 from src.api.dispatcher import create_dispatcher
 from src.logger import get_logger
+from src.constants import AMS_MODELS_PATH
 
 logger = get_logger(__name__)
 
-AMS_MODELS_PATH = "/opt/ams_models"
 
 def get_available_models(models_path=AMS_MODELS_PATH):
     pattern = "{}/*_model.json".format(AMS_MODELS_PATH)

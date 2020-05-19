@@ -1,5 +1,5 @@
 {
-    "model_name": "emotionsRecognition",
+    "endpoint": "emotionsRecognition",
     "model_type": "classification_attributes",
     "inputs": [
         {

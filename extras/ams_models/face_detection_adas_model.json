@@ -1,5 +1,5 @@
 {
-    "model_name": "faceDetection",
+    "endpoint": "faceDetection",
     "model_type": "detection",
     "inputs": [
         {

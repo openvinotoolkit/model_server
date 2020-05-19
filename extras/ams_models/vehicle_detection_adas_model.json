@@ -1,5 +1,5 @@
 {
-    "model_name": "vehicleDetection",
+    "endpoint": "vehicleDetection",
     "model_type": "detection",
     "inputs": [
         {

@@ -23,7 +23,7 @@ def create_dispatcher(available_models: list, ovms_port: int):
     dispatch_map = {}
     for available_model in available_models:
         model = ModelBuilder.build_model(available_model, ovms_port)
-        dispatch_map[model.model_name] = model
+        dispatch_map[model.endpoint] = model
 
     dispatcher = falcon.API()
 

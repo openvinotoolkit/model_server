@@ -17,7 +17,7 @@
 from marshmallow import Schema, fields, validates_schema, ValidationError, post_load, validate
     
 class ModelConfigurationSchema(Schema):
-    model_name = fields.String(required=True)
+    endpoint = fields.String(required=True)
     model_type = fields.String(required=True)
     inputs = fields.List(fields.Dict(keys=fields.String(), required=True))
     outputs = fields.List(fields.Dict(keys=fields.String(), required=True))

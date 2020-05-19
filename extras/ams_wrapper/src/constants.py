@@ -14,13 +14,12 @@
 # limitations under the License.
 #
 
-import os
-
 from src.api.models.detection_model import DetectionModel
 from src.api.models.classification_attributes_model import ClassificationAttributes
-from src.api.ovms_connector import OvmsConnector
 
 TYPE_CLASS_MAPPING = {
     "detection": DetectionModel,
     "classification_attributes": ClassificationAttributes
 }
+
+AMS_MODELS_PATH = "/opt/ams_models"

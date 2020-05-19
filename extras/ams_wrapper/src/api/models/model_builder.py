@@ -2,7 +2,7 @@ import json
 from typing import Dict
 
 from src.logger import get_logger
-from src.config import TYPE_CLASS_MAPPING
+from src.constants import TYPE_CLASS_MAPPING
 from src.api.ovms_connector import OvmsConnector
 from src.api.models.model_config import ModelConfigurationSchema, \
     ModelInputConfiguration, ModelInputConfigurationSchema, ValidationError, \
@@ -45,7 +45,7 @@ class ModelBuilder:
             raise
 
         model_config = {}
-        model_config['model_name'] = config['model_name']
+        model_config['endpoint'] = config['endpoint']
         model_config['model_type'] = config['model_type']
         model_config['ovms_mapping'] = config['ovms_mapping']
         model_config['input_configs'] = cls._load_input_configs(config)

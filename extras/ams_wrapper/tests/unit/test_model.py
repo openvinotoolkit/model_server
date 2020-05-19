@@ -32,7 +32,7 @@ from src.preprocessing import ImageResizeError, ImageDecodeError, ImageTransform
 @pytest.fixture()
 def test_model_config():
     config_file_content = {
-        "model_name": "some_color_model",
+        "endpoint": "some_color_model",
         "model_type": "classification_attributes",
         "outputs": [
             {

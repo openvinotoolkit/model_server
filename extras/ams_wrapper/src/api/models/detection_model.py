@@ -62,7 +62,7 @@ class DetectionModel(Model):
         if len(detections) == 0:
             response = None
         else:
-            entity = Entity(subtype_name=self.model_name, entities=detections)
+            entity = Entity(subtype_name=self.endpoint, entities=detections)
             response = json.dumps(entity.as_dict())
 
         return response
