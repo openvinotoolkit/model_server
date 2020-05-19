@@ -15,7 +15,6 @@
 #
 
 import cv2
-import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
@@ -108,13 +107,13 @@ def classification_array(output, output_names, classes):
         highest_prob = 0.0
         for class_name in classes[output_name]:
             class_id = classes[output_name][class_name]
-            probability = output[output_name][0,int(float(class_id)),0,0].item()
+            probability = output[output_name][0,
+                                              int(float(class_id)), 0, 0].item()
             if probability > highest_prob:
                 tag_name = class_name
                 highest_prob = probability
         results[output_name] = {"value": tag_name, "confidence": highest_prob}
     return results
-
 
 
 def detection_json(json_txt, img_out, height, width):
@@ -128,7 +127,8 @@ def detection_json(json_txt, img_out, height, width):
         if detection["tag"]["confidence"] > 0.5:
             img_out = cv2.rectangle(img_out, (int(box["l"]*width), int(box["t"]*height)), (int(
                 (box["l"]+box["w"])*width), int((box["t"]+box["h"])*height)), (255, 0, 0), 1)
-            results.append([confidence, box["l"], box["t"], box["w"], box["h"]])
+            results.append(
+                [confidence, box["l"], box["t"], box["w"], box["h"]])
         i = i+1
     cv2.imwrite("results_ams.jpg", img_out)
 

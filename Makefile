@@ -19,8 +19,8 @@ VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE := $(VIRTUALENV_DIR)/bin/activate
 STYLEVIRTUALENV_DIR=".styleenv$(PY_VERSION)"
-STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api
-STYLE_CHECK_DIRS := tests ie_serving setup.py
+STYLE_CHECK_OPTS := --exclude=ie_serving/tensorflow_serving_api --max-line-length 120
+STYLE_CHECK_DIRS := tests ie_serving setup.py extras
 TEST_OPTS :=
 TEST_DIRS ?= tests/
 AMS_EXAMPLE ?= extras/ams_wrapper/

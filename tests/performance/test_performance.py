@@ -24,7 +24,7 @@ import pytest
 
 from tabulate import tabulate
 from data.performance_constants import DATASET, OVMS_CLIENT, OVMS_DATASET, ITERATIONS, AMS_PORT, \
-    AMS_ADDRESS, OVMS_PORT, OVMS_CLIENT_PATH, AMS_CLIENT_PATH, MODELS, PARAMS, OVMS_DATASET
+    AMS_ADDRESS, OVMS_PORT, OVMS_CLIENT_PATH, AMS_CLIENT_PATH, MODELS, PARAMS
 
 from fixtures.performance import run_ams, cleanup_ams, run_ovms, cleanup_ovms, prepare_dataset_for_ovms, cleanup_dataset
 
@@ -123,7 +123,8 @@ class TestPerformance:
             total_speed = total_speed + round(1000/rsp["duration"], 2)
         average_proccessing_time = "{} ms".format(round(total_processing_time / len(responses), 2))
         average_speed = "{} fps".format(round(total_speed / len(responses), 2))
-        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' else "multistream"
+        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+                        else "multistream"
         ams = [model["model_name"], params["cores"],
                "ams", params["nireq"], params["grpc_workers"], plugin_config,
                average_proccessing_time, average_speed]
@@ -158,7 +159,8 @@ class TestPerformance:
         container = run_ovms(params)
 
         # measure latency for ovms
-        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' else "multistream"
+        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+                        else "multistream"
         average_proccessing_time, average_speed = self.inference_ovms(model_name=model["model_name_ovms"],
                                                                       image_width=model["width"],
                                                                       image_height=model["height"],
@@ -195,7 +197,8 @@ class TestPerformance:
         container = run_ams(params)
 
         # measure throughput for ams
-        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' else "multistream"
+        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+                        else "multistream"
 
         final_time, throughput = self.measure_throughput_ams(model_name=model["model_name"], image=model["dataset"])
         ams = [model["model_name"], params["cores"], "ams", params["nireq"],
@@ -230,9 +233,12 @@ class TestPerformance:
         container = run_ovms(params)
 
         # measure throughput for ovms
-        final_time, throughput = self.measure_throughput_ovms(model_name=model["model_name_ovms"], width=model["width"],
-                                                              height=model["height"], input_name=model["input_name"])
-        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' else "multistream"
+        final_time, throughput = self.measure_throughput_ovms(model_name=model["model_name_ovms"],
+                                                              width=model["width"],
+                                                              height=model["height"],
+                                                              input_name=model["input_name"])
+        plugin_config = "singlestream" if params["plugin_config"] == '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+                        else "multistream"
         ovms = [model["model_name"], params["cores"], "ovms", params["nireq"],
                 params["grpc_workers"], plugin_config, final_time, throughput]
         THROUGHPUT.append(ovms)

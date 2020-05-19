@@ -18,8 +18,10 @@ import pytest
 import os
 from src.logger import get_logger, get_logger_level
 
+
 def test_get_logger():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test.log")
+    path = os.path.join(os.path.dirname(
+        os.path.realpath(__file__)), "test.log")
     os.environ['LOG_PATH'] = path
     log = get_logger(__name__)
     log.info("test")
@@ -30,15 +32,17 @@ def test_get_logger():
     os.remove(path)
     assert read_data.find("test\n") > 0
 
+
 @pytest.mark.parametrize("set_env, value_env, expected_lvl", [
     (False, '', 'INFO'),
     (True, 'DEBUG', 'DEBUG'),
     (True, 'TEST', 'INFO'),
     (True, 'debug', 'DEBUG')])
 def test_get_logger_lvl(set_env, value_env, expected_lvl):
-    
+
     logger = get_logger(__name__)
     if set_env:
         os.environ['LOG_LEVEL'] = value_env
     logger_lvl = get_logger_level()
+    assert logger
     assert expected_lvl == logger_lvl

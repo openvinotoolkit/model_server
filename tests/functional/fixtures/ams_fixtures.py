@@ -15,13 +15,15 @@
 #
 
 import os
-from typing import Tuple
 
 import pytest
+
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_ports_for_fixture
 
-IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')
+IMAGES_DIR = os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), 'test_images')
+
 
 @pytest.fixture(scope="class")
 def start_ams_service(request, get_image, get_test_dir, get_docker_context):
@@ -46,9 +48,11 @@ def start_ams_service(request, get_image, get_test_dir, get_docker_context):
     assert running is True, "docker container was not started successfully"
     return container, {"port": port}
 
+
 def ams_condition(container):
     logs = str(container.logs())
     return "AMS service will start listening on port" in logs
+
 
 @pytest.fixture(scope="class")
 def start_ams_service_without_ovms(request, get_image, get_test_dir, get_docker_context):
@@ -56,7 +60,8 @@ def start_ams_service_without_ovms(request, get_image, get_test_dir, get_docker_
     client = get_docker_context
     _, port = get_ports_for_fixture(port_suffix="02")
 
-    command = "/ams_wrapper/tests/invalid_startup/start_ams_without_ovms.sh --ams_port={}".format(port)
+    command = "/ams_wrapper/tests/invalid_startup/start_ams_without_ovms.sh --ams_port={}".format(
+        port)
 
     container = \
         client.containers.run(
@@ -73,13 +78,15 @@ def start_ams_service_without_ovms(request, get_image, get_test_dir, get_docker_
     assert running is True, "docker container was not started successfully"
     return container, {"port": port}
 
+
 @pytest.fixture(scope="class")
 def start_ams_service_with_wrong_model_name(request, get_image, get_test_dir, get_docker_context):
 
     client = get_docker_context
     _, port = get_ports_for_fixture(port_suffix="03")
 
-    command = "/ams_wrapper/tests/invalid_startup/start_ams_wrong_model_name.sh --ams_port={}".format(port)
+    command = "/ams_wrapper/tests/invalid_startup/start_ams_wrong_model_name.sh --ams_port={}".format(
+        port)
 
     container = \
         client.containers.run(
@@ -95,6 +102,7 @@ def start_ams_service_with_wrong_model_name(request, get_image, get_test_dir, ge
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
     return container, {"port": port}
+
 
 @pytest.fixture(scope='session')
 def png_object_detection_image() -> str:
@@ -113,7 +121,7 @@ def bmp_object_detection_image() -> str:
 
 @pytest.fixture(scope='session')
 def small_object_detection_image() -> str:
-   return os.path.join(IMAGES_DIR, 'single_car_small.jpg')
+    return os.path.join(IMAGES_DIR, 'single_car_small.jpg')
 
 
 @pytest.fixture(scope='session')
@@ -149,4 +157,3 @@ def object_classification_red_truck() -> str:
 @pytest.fixture(scope='session')
 def object_classification_emotions_smile() -> str:
     return os.path.join(IMAGES_DIR, 'emotions_smile.jpg')
-

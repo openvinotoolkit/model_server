@@ -18,7 +18,6 @@ import grpc
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow import make_tensor_proto, make_ndarray
-import numpy as np
 
 
 class ModelNotFoundError(Exception):
@@ -39,7 +38,8 @@ class OvmsConnector():
         self.model_name = ovms_model_info['model_name']
         self.model_version = ovms_model_info['model_version']
 
-        channel = grpc.insecure_channel("{}:{}".format("127.0.0.1", self.ovms_port))
+        channel = grpc.insecure_channel(
+            "{}:{}".format("127.0.0.1", self.ovms_port))
         self.stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     def send(self, inference_input: dict):
@@ -75,4 +75,3 @@ class OvmsConnector():
             raise TypeError("Output datatype error") from e
 
         return return_dict
-

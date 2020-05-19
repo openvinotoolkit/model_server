@@ -13,23 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
-import sys
+
 import json
-import numpy as np
 
 from src.logger import get_logger
 from src.api.models.model import Model
-from src.api.types import Tag, Attribute, SingleClassification, Classification
-from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
+from src.api.types import Attribute, SingleClassification, Classification
 
 logger = get_logger(__name__)
 
 
-class ClassificationAttributes(Model):  
+class ClassificationAttributes(Model):
 
     def postprocess_inference_output(self, inference_output: dict) -> str:
-        # model with output shape for each classification output_name (1,N,1,1) 
+        # model with output shape for each classification output_name (1,N,1,1)
         classifications = []
 
         for output_name in self.labels.keys():
@@ -38,12 +35,13 @@ class ClassificationAttributes(Model):
 
             if output_name not in inference_output:
                 message = 'Output name from model config - {}'
-                ' does not match model outputs - {}'.format(output_name, inference_output)
+                ' does not match model outputs - {}'.format(
+                    output_name, inference_output)
                 logger.exception(message)
-                raise ValidationError(message)
+                raise ValueError(message)
 
             # get output configuration for current output_name
-            current_conf  = self.output_configs[output_name]
+            current_conf = self.output_configs[output_name]
 
             is_softmax = True
             value_multiplier = 1.0
@@ -54,12 +52,12 @@ class ClassificationAttributes(Model):
 
             for class_id in self.labels[output_name].keys():
                 class_name = self.labels[output_name][class_id]
-                probability = inference_output[output_name][0,int(float(class_id)),0,0].item()
+                probability = inference_output[output_name][0, int(
+                    float(class_id)), 0, 0].item()
                 if probability > highest_prob:
-                    tag_name = class_name 
                     highest_prob = probability
 
-                if is_softmax or is_softmax == None:
+                if is_softmax or is_softmax is None:
                     attribute = Attribute(output_name, class_name, probability)
                 else:
                     value = probability * value_multiplier
@@ -70,7 +68,8 @@ class ClassificationAttributes(Model):
             classification = SingleClassification(attributes)
             classifications.append(classification)
 
-        model_classification = Classification(subtype_name=self.endpoint, classifications=classifications)
+        model_classification = Classification(subtype_name=self.endpoint,
+                                              classifications=classifications)
 
         response = json.dumps(model_classification.as_dict())
 
