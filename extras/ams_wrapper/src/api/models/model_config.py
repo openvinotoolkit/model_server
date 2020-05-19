@@ -15,14 +15,10 @@
 #
 
 from marshmallow import Schema, fields, validates_schema, ValidationError, post_load, validate
-    
-class ModelConfigurationSchema(Schema):
-    endpoint = fields.String(required=True)
-    model_type = fields.String(required=True)
-    inputs = fields.List(fields.Dict(keys=fields.String(), required=True))
-    outputs = fields.List(fields.Dict(keys=fields.String(), required=True))
-    ovms_mapping = fields.Dict(keys=fields.String(), required=True)
 
+class ModelOvmsMappingSchema(Schema):
+    model_name = fields.String(required=True)
+    model_version = fields.Integer(required=True)
 
 class ModelInputConfiguration:
     def __init__(self, input_name: str, channels: int = None,
@@ -106,3 +102,10 @@ class ModelOutputConfigurationSchema(Schema):
     @post_load
     def make_model_output_configuration(self, data, **kwargs):
         return ModelOutputConfiguration(**data)
+
+class ModelConfigurationSchema(Schema):
+    endpoint = fields.String(required=True)
+    model_type = fields.String(required=True)
+    inputs = fields.List(fields.Nested(ModelInputConfigurationSchema, required=True))
+    outputs = fields.List(fields.Nested(ModelOutputConfigurationSchema, required=True))
+    ovms_mapping = fields.Nested(ModelOvmsMappingSchema, required=True)
