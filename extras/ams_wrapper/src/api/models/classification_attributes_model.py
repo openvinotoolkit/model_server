@@ -70,7 +70,7 @@ class ClassificationAttributes(Model):
             classification = SingleClassification(attributes)
             classifications.append(classification)
 
-        model_classification = Classification(subtype_name=self.model_name, classifications=classifications)
+        model_classification = Classification(subtype_name=self.endpoint, classifications=classifications)
 
         response = json.dumps(model_classification.as_dict())
 

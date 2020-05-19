@@ -217,10 +217,10 @@ class TestVehicleAttributes():
                        output_tensors=[out_color, out_type])
         
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_wrapper/')))
-        from src.api.models.classification_attributes_model import ClassificationAttributes
+        from src.api.models.model_builder import ModelBuilder
 
         config_path = os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_models/vehicle_attributes_model.json'))
-        model_attrib = ClassificationAttributes("vehicle-attributes","ovms_connector", config_path)
+        model_attrib = ModelBuilder.build_model(config_path, 4000)
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
@@ -242,7 +242,7 @@ class TestVehicleAttributes():
             assert False
 
         print("format_check:" + str(format_check))
-        assert format_check["subtype"] == "vehicle-attributes"
+        assert format_check["subtype"] == "vehicleClassification"
 
         first_color = (format_check["classifications"][0]["attributes"][0]["value"])
         print("first color:" + first_color)

@@ -14,22 +14,12 @@
 # limitations under the License.
 #
 
-import falcon
+from src.api.models.detection_model import DetectionModel
+from src.api.models.classification_attributes_model import ClassificationAttributes
 
-from src.api.ovms_connector import OvmsConnector
-from src.api.models.model_builder import ModelBuilder
+TYPE_CLASS_MAPPING = {
+    "detection": DetectionModel,
+    "classification_attributes": ClassificationAttributes
+}
 
-def create_dispatcher(available_models: list, ovms_port: int):
-    dispatch_map = {}
-    for available_model in available_models:
-        model = ModelBuilder.build_model(available_model, ovms_port)
-        dispatch_map[model.endpoint] = model
-
-    dispatcher = falcon.API()
-
-    for target_model, request_handler in dispatch_map.items():
-        dispatcher.add_route(f"/{target_model}", request_handler)
-    
-    return dispatcher
-
-
+AMS_MODELS_PATH = "/opt/ams_models"

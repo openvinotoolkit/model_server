@@ -129,7 +129,7 @@ class TestVehicleDetection():
         assert detections_sum == 19
 
 
-    def test_run_inference_posprocess(self, vehicle_adas_model_downloader,
+    def test_run_inference_postprocess(self, vehicle_adas_model_downloader,
                            vehicle_adas_data_downloader,
                            start_server_single_vehicle_model,
                            create_grpc_channel):
@@ -172,10 +172,11 @@ class TestVehicleDetection():
         assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
         
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_wrapper/')))
-        from src.api.models.detection_model import DetectionModel
+
+        from src.api.models.model_builder import ModelBuilder
 
         config_path = os.path.abspath(os.path.join(os.path.realpath(__file__), '../../../extras/ams_models/vehicle_detection_adas_model.json'))
-        model_adas = DetectionModel("vehicle-detection","ovms_connector", config_path)
+        model_adas = ModelBuilder.build_model(config_path, 4000)
 
         json_response = model_adas.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
@@ -192,7 +193,7 @@ class TestVehicleDetection():
             assert False
 
         print("format_check:" + str(format_check))
-        assert format_check["subtype"] == "vehicle-detection"
+        assert format_check["subtype"] == "vehicleDetection"
 
 """
     def test_get_model_metadata(self, resnet_multiple_batch_sizes,
