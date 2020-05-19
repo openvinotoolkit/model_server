@@ -2,7 +2,7 @@
     "model_name": "age-gender-recognition-retail-0013",
     "inputs": [
         {
-            "input_name": "input",
+            "input_name": "data",
             "input_format": "NCHW",
             "color_format": "BGR",
             "target_height": 62,

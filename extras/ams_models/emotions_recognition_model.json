@@ -2,7 +2,7 @@
     "model_name": "emotions-recognition-retail-0003",
     "inputs": [
         {
-          "input_name": "input",
+          "input_name": "data",
           "input_format": "NCHW",
           "color_format": "BGR",
           "target_height": 64,
