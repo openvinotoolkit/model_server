@@ -172,7 +172,7 @@ def test_model_load_invalid_output_config(tmpdir, test_model_config,
     with pytest.raises(ValidationError):
         config = ModelBuilder._load_output_configs(test_model_config)
 
-class TestModel(Model):
+class FakeModel(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         pass
 
