@@ -43,6 +43,9 @@ cc_library(
         "@spdlog//:spdlog",
         "@cxxopts//:cxxopts",
     ],
+    local_defines = [
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
+    ]
 )
 
 cc_binary(

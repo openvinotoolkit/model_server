@@ -208,6 +208,9 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
 const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     // Network and request must have the same amount of inputs
     if (request->inputs_size() >= 0 && getInputsInfo().size() != (size_t) request->inputs_size()) {
+        SPDLOG_DEBUG("incorrect number of inputs: expected {}; actual {}",
+            getInputsInfo().size(),
+            request->inputs_size());
         return ValidationStatusCode::INVALID_INPUT_ALIAS;
     }
 
@@ -218,6 +221,7 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
 
         // Network and request must have the same names of inputs
         if (it == request->inputs().end()) {
+            SPDLOG_DEBUG("missing input alias in request: {}", name);
             return ValidationStatusCode::INVALID_INPUT_ALIAS;
         }
 
@@ -227,12 +231,20 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         // Network and request must have the same number of shape dimensions
         if (requestInput.tensor_shape().dim_size() >= 0 &&
             shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
+            std::stringstream stream;
+            std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
+            SPDLOG_DEBUG("invalid shape: actual {}, required {}",
+                requestInput.tensor_shape().DebugString(),
+                stream.str());
             return ValidationStatusCode::INVALID_SHAPE;
         }
 
         // First shape must be equal to batch size
         if (requestInput.tensor_shape().dim_size() > 0 &&
             requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
+            SPDLOG_DEBUG("invalid batch size: actual {}, required {}",
+                requestInput.tensor_shape().dim(0).size(),
+                getBatchSize());
             return ValidationStatusCode::INCORRECT_BATCH_SIZE;
         }
 
@@ -240,8 +252,21 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         for (int i = 1; i < requestInput.tensor_shape().dim_size(); i++) {
             if (requestInput.tensor_shape().dim(i).size() >= 0 &&
                 shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
+                std::stringstream stream;
+                std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
+                SPDLOG_DEBUG("invalid shape: actual {}, required {}",
+                    requestInput.tensor_shape().DebugString(),
+                    stream.str());
                 return ValidationStatusCode::INVALID_SHAPE;
             }
+        }
+
+        // Network and request must have the same precision
+        if (requestInput.dtype() != networkInput->getPrecisionAsDataType()) {
+            SPDLOG_DEBUG("invalid precision: actual {}, required {}",
+                requestInput.dtype(),
+                networkInput->getPrecisionAsDataType());
+            return ValidationStatusCode::INVALID_PRECISION;
         }
 
         // Network expects tensor content size
@@ -254,12 +279,10 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         expectedContentSize *= networkInput->getPrecision().size();
 
         if (expectedContentSize != requestInput.tensor_content().size()) {
+            SPDLOG_DEBUG("invalid content size: actual {}B; required {}B",
+                requestInput.tensor_content().size(),
+                expectedContentSize);
             return ValidationStatusCode::INVALID_CONTENT_SIZE;
-        }
-
-        // Network and request must have the same precision
-        if (requestInput.dtype() != networkInput->getPrecisionAsDataType()) {
-            return ValidationStatusCode::INVALID_PRECISION;
         }
     }
 

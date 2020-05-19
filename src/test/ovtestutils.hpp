@@ -50,6 +50,7 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
         // case Precision::Q78:   return tensorflow::DataType::
         case Precision::I16:   return tensorflow::DataType::DT_INT16;
         case Precision::U8:    return tensorflow::DataType::DT_UINT8;
+        case Precision::I8:    return tensorflow::DataType::DT_INT8;
         case Precision::U16:   return tensorflow::DataType::DT_UINT16;
         case Precision::I32:   return tensorflow::DataType::DT_INT32;
         case Precision::I64:   return tensorflow::DataType::DT_INT64;

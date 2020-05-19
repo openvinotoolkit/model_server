@@ -169,6 +169,7 @@ namespace ovms {
                 // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
                 case InferenceEngine::Precision::I16:   return tensorflow::DataType::DT_INT16;
                 case InferenceEngine::Precision::U8:    return tensorflow::DataType::DT_UINT8;
+                case InferenceEngine::Precision::I8:    return tensorflow::DataType::DT_INT8;
                 case InferenceEngine::Precision::U16:   return tensorflow::DataType::DT_UINT16;
                 case InferenceEngine::Precision::I32:   return tensorflow::DataType::DT_INT32;
                 case InferenceEngine::Precision::I64:   return tensorflow::DataType::DT_INT64;

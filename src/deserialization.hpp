@@ -41,17 +41,17 @@ class ConcreteTensorProtoDeserializator {
             const tensorflow::TensorProto& requestInput,
             const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision()) {
-        // case InferenceEngine::Precision::FP32:   return BlobGenerator<float>::makeBlob(requestInput, tensorInfo);
-        // case InferenceEngine::Precision::I32:    return BlobGenerator<int32_t>::makeBlob(requestInput, tensorInfo);
-        // case InferenceEngine::Precision::U8:     return BlobGenerator<uint8_t>::makeBlob(requestInput, tensorInfo);
-        case InferenceEngine::Precision::FP32:   return makeBlob<float>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I32:    return makeBlob<int32_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::U8:     return makeBlob<uint8_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I64:
-        case InferenceEngine::Precision::U16:
-        case InferenceEngine::Precision::I16:
+        case InferenceEngine::Precision::FP32:  return makeBlob<float>      (requestInput, tensorInfo);
+        // case InferenceEngine::Precision::FP16:  return makeBlob<float>      (requestInput, tensorInfo);   // not tested, resnet model does not support this precision
+                                                                                                            // it will probably need conversion from uint16_t:
+                                                                                                            // https://docs.openvinotoolkit.org/latest/ie_plugin_api/group__ie__dev__api__precision.html#ga9b3a5d90bb1d3439dddf758af1035ffe
+        case InferenceEngine::Precision::U8:    return makeBlob<uint8_t>    (requestInput, tensorInfo);
+        case InferenceEngine::Precision::I8:    return makeBlob<int8_t>     (requestInput, tensorInfo);
+        // case InferenceEngine::Precision::U16:   return makeBlob<uint16_t>   (requestInput, tensorInfo);  // requestInput.tensor_content() is empty, data available in int_val(n)
+        case InferenceEngine::Precision::I16:   return makeBlob<int16_t>    (requestInput, tensorInfo);
+        case InferenceEngine::Precision::I32:   return makeBlob<int32_t>    (requestInput, tensorInfo);
+        // case InferenceEngine::Precision::I64:   return makeBlob<int64_t>    (requestInput, tensorInfo);  // 0% precision
         case InferenceEngine::Precision::MIXED:
-        case InferenceEngine::Precision::FP16:
         case InferenceEngine::Precision::Q78:
         case InferenceEngine::Precision::BIN:
         case InferenceEngine::Precision::BOOL:
