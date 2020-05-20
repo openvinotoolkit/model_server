@@ -136,19 +136,3 @@ class Entity(ResultType):
             "entities": [entity.as_dict() for entity in self.entities]
         }
         return result_dict
-
-
-class Text(ResultType):
-    # TODO: add support
-    pass
-
-
-class InferenceExtension:
-    # TODO: add support
-    pass
-
-
-class Inference:
-    def __init__(self, value: ResultType, extensions: List[InferenceExtension] = None):
-        self.value = value
-        self.extensions = extensions

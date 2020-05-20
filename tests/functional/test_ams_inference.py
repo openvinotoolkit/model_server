@@ -53,7 +53,6 @@ class TestAmsInference:
         target = "vehicleDetection"
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
         wrong_input = b'INVALIDINPUT'
-        # TODO: define User-Agent header?
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(wrong_input))},

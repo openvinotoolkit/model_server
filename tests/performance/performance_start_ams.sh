@@ -1,10 +1,5 @@
 #!/bin/bash -e
 
-# TODO:
-#   * Consider parametrizing paths
-#   * Might require providing mapping for neural network output
-
-
 export FILE_SYSTEM_POLL_WAIT_SECONDS=0
 AMS_PORT=5000
 OVMS_PORT=9000

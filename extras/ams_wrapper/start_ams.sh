@@ -1,9 +1,5 @@
 #!/bin/bash -e
 
-# TODO: 
-#   * Consider parametrizing paths
-#   * Might require providing mapping for neural network output
-
 help_message="
     This script runs OpenVINO Model Server and AMS Service in the background.
     OVMS will served models available under path /opt/models with configuration
@@ -15,6 +11,8 @@ help_message="
                                     (default: 5000)
     --ovms_port <ovms_port>         Port for OVMS to listen on
                                     (default: 9000)
+    --workers <workers>             AMS service workers (default: 20)
+    --grpc_workers <grpc_workers>   OVMS service workers (default: 10)
 
     Example:
     ./start_ams.sh --ams_port=4000 --ovms_port=8080
