@@ -9,3 +9,4 @@ bazel-out
 bazel-ovms-c
 bazel-testlogs
 __pycache__
+.workspace
