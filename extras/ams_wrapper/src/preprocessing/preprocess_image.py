@@ -134,12 +134,8 @@ if __name__ == "__main__":
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
 
-    # import pprofile
-    # prof = pprofile.Profile()
-    # with prof:
     preprocessed_image = preprocess_binary_image(
         binary_image, channels_first=False)
-    # prof.print_stats()
 
     print(preprocessed_image)
     print(preprocessed_image.shape)
