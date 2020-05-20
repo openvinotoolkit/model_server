@@ -18,18 +18,24 @@ pipeline {
 
         stage('latency test') {
             steps {
-                sh 'make test_perf'
+                lock("commit-pipeline-${env.NODE_NAME}-latency-test") {
+                    sh 'make test_perf'
+                }
             }
         }
         stage('functional tests') {
             steps {
-                sh 'make test_functional'
+                lock("commit-pipeline-${env.NODE_NAME}-functional-test") {
+                    sh 'make test_functional'
+                }
             }
         }
 
         stage('throughput test') {
             steps {
-                sh 'make test_throughput'
+                lock("commit-pipeline-${env.NODE_NAME}-throughput-test") {
+                    sh 'make test_throughput'
+                }
             }
         }
     }
