@@ -4,6 +4,7 @@ from src.api.models.model_builder import ModelBuilder
 from src.api.models.model_config import ValidationError
 from unittest.mock import mock_open
 
+
 @pytest.mark.parametrize("exception, reraised_exception", [
     (FileNotFoundError, FileNotFoundError),
     (Exception, ValueError)
@@ -13,6 +14,7 @@ def test_load_model_config_bad_file(mocker, exception, reraised_exception):
     open_mock.side_effect = exception
     with pytest.raises(reraised_exception):
         ModelBuilder.build_model("path", 4000)
+
 
 VALID_CONFIG = {
     "endpoint": "ageGenderRecognition",
@@ -50,13 +52,15 @@ VALID_CONFIG = {
     }
 }
 
+
 def modified_dict(original_dict, key, new_value):
     new_dict = dict(original_dict)
     new_dict[key] = new_value
     return new_dict
 
+
 INVALID_CONFIGS = [
-    {"random": "dict"}, 
+    {"random": "dict"},
     {key: VALID_CONFIG[key] for key in VALID_CONFIG if key != "endpoint"},
     {key: VALID_CONFIG[key] for key in VALID_CONFIG if key != "model_type"},
     {key: VALID_CONFIG[key] for key in VALID_CONFIG if key != "inputs"},
@@ -68,17 +72,20 @@ INVALID_CONFIGS = [
     modified_dict(VALID_CONFIG, "outputs", {"output_name": "output"}),
     modified_dict(VALID_CONFIG, "ovms_mapping", "model_name")
 ]
+
+
 @pytest.mark.parametrize("invalid_config", INVALID_CONFIGS)
 def test_load_model_config_invalid(mocker, invalid_config):
-    open_mock = mocker.patch("src.api.models.model_builder.open", mock_open())
+    mocker.patch("src.api.models.model_builder.open", mock_open())
     json_load_mock = mocker.patch("src.api.models.model_builder.json.load")
     json_load_mock.return_value = invalid_config
 
     with pytest.raises(ValidationError):
         ModelBuilder.build_model("path", 4000)
 
+
 INVALID_INPUTS = [
-    {key:VALID_CONFIG["inputs"][0][key] for key in VALID_CONFIG["inputs"][0] if key != "input_name"},
+    {key: VALID_CONFIG["inputs"][0][key] for key in VALID_CONFIG["inputs"][0] if key != "input_name"},
     modified_dict(VALID_CONFIG["inputs"][0], "input_name", 1),
     modified_dict(VALID_CONFIG["inputs"][0], "channels", "string"),
     modified_dict(VALID_CONFIG["inputs"][0], "target_height", "string"),
@@ -89,14 +96,17 @@ INVALID_INPUTS = [
     modified_dict(VALID_CONFIG["inputs"][0], "input_format", "NWHC"),
     modified_dict(VALID_CONFIG["inputs"][0], "additions", ["add1", "add2"])
 ]
+
+
 @pytest.mark.parametrize("invalid_inputs", INVALID_INPUTS)
 def test_load_input_configs_invalid(mocker, invalid_inputs):
     model_config = modified_dict(VALID_CONFIG, "inputs", [invalid_inputs])
     with pytest.raises(ValidationError):
         ModelBuilder._load_input_configs(model_config)
 
+
 INVALID_OUTPUTS = [
-    {key:VALID_CONFIG["outputs"][0][key] for key in VALID_CONFIG["outputs"][0] if key != "output_name"},
+    {key: VALID_CONFIG["outputs"][0][key] for key in VALID_CONFIG["outputs"][0] if key != "output_name"},
     modified_dict(VALID_CONFIG["outputs"][0], "output_name", 1),
     modified_dict(VALID_CONFIG["outputs"][0], "is_softmax", "string"),
     modified_dict(VALID_CONFIG["outputs"][0], "value_multiplier", "string"),
@@ -110,6 +120,8 @@ INVALID_OUTPUTS = [
     modified_dict(VALID_CONFIG["outputs"][0], "top_k_results", 0),
     modified_dict(VALID_CONFIG["outputs"][0], "additions", ["add1", "add2"])
 ]
+
+
 @pytest.mark.parametrize("invalid_outputs", INVALID_OUTPUTS)
 def test_load_outputs_configs_invalid(mocker, invalid_outputs):
     model_config = modified_dict(VALID_CONFIG, "outputs", [invalid_outputs])

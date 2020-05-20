@@ -48,14 +48,8 @@ class ModelBuilder:
             with open(config_file_path, mode='r') as config_file:
                 config = json.load(config_file)
         except FileNotFoundError as e:
-<<<<<<< HEAD
-            logger.exception(
-                'Model\'s configuration file {} was not found.'.format(config_file_path))
-            raise ValueError from e
-=======
             logger.exception('Model\'s configuration file {} was not found.'.format(config_file_path))
             raise FileNotFoundError from e
->>>>>>> Model builder unit tests
         except Exception as e:
             logger.exception(
                 'Failed to load Model\'s configuration file {}.'.format(config_file_path))
