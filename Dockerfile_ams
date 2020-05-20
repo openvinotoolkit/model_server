@@ -11,16 +11,18 @@ ENV TEMP_DIR $TEMP_DIR
 ARG DLDT_PACKAGE_URL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cpio \
-    libpython3.6 \
-    python3-pip \
-    python3-venv \
+    usbutils \
     virtualenv \
+    libboost-filesystem1.65.1 \
+    libboost-thread1.65.1 \
+    libjson-c3 \
+    wget \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ADD $DLDT_PACKAGE_PATH
 # Tested with OpenVINO 2020.2
 RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
     tar -zxf l_openvino_toolkit*.tgz && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
