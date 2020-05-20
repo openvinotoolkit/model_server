@@ -17,14 +17,13 @@
 from abc import ABC, abstractmethod
 import datetime
 import json
-import sys
 
 import falcon
 import numpy as np
 
 from src.logger import get_logger
 from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
-from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, OvmsConnector
+from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError
 
 logger = get_logger(__name__)
 
@@ -35,8 +34,9 @@ class Model(ABC):
         self.ovms_connector = ovms_connector
         self.input_configs = input_configs
         self.output_configs = output_configs
-        self.labels = {output_name: 
-                       {index: label for label, index in self.output_configs[output_name].classes.items()}
+        self.labels = {output_name:
+                       {index: label for label,
+                           index in self.output_configs[output_name].classes.items()}
                        for output_name in self.output_configs.keys()}
 
     def preprocess_binary_image(self, binary_image: bytes) -> np.ndarray:

@@ -25,7 +25,7 @@ from src.api.models.model_builder import ModelBuilder
 from src.api.models.model import Model
 from src.api.models.model_config import ValidationError
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, \
-    OvmsConnector, RequestProcessingError
+    RequestProcessingError
 from src.preprocessing import ImageResizeError, ImageDecodeError, ImageTransformError
 
 
@@ -59,6 +59,7 @@ def test_model_config():
         }
     }
     return config_file_content
+
 
 @pytest.fixture()
 def test_model(tmpdir, test_model_config):
@@ -170,7 +171,8 @@ def test_model_load_invalid_output_config(tmpdir, test_model_config,
         json.dump(test_model_config, config_file)
 
     with pytest.raises(ValidationError):
-        config = ModelBuilder._load_output_configs(test_model_config)
+        ModelBuilder._load_output_configs(test_model_config)
+
 
 class FakeModel(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
@@ -183,7 +185,7 @@ exc = [ValueError, TypeError, ImageDecodeError,
 
 @pytest.mark.parametrize('exceptions', exc)
 def test_model_image_preprocessing_exception(mocker, test_model, exceptions):
-    
+
     mod = test_model
     mod.preprocess_binary_image = mock.Mock(side_effect=exceptions)
     resp = falcon.Response()

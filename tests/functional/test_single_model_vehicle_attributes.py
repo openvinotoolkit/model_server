@@ -208,7 +208,7 @@ class TestVehicleAttributes():
                        model_spec_name='vehicle-attributes',
                        model_spec_version=None,
                        output_tensors=[out_color, out_type])
-        
+
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__),
                         '../../../extras/ams_wrapper/')))
         from src.api.models.model_builder import ModelBuilder

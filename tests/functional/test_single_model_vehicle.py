@@ -124,7 +124,6 @@ class TestVehicleDetection():
         print("detections_sum= " + str(detections_sum))
         assert detections_sum == 19
 
-
     def test_run_inference_postprocess(self, vehicle_adas_model_downloader,
                                        vehicle_adas_data_downloader,
                                        start_server_single_vehicle_model,
@@ -166,14 +165,14 @@ class TestVehicleDetection():
                        output_tensors=[out_name])
         print("output shape", output[out_name].shape)
         assert output[out_name].shape == (1, 1, 200, 7), ERROR_SHAPE
-        
+
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__),
-                        '../../../extras/ams_wrapper/')))
+                                                     '../../../extras/ams_wrapper/')))
 
         from src.api.models.model_builder import ModelBuilder
 
         config_path = os.path.abspath(os.path.join(os.path.realpath(__file__),
-                                      '../../../extras/ams_models/vehicle_detection_adas_model.json'))
+                                                   '../../../extras/ams_models/vehicle_detection_adas_model.json'))
         model_adas = ModelBuilder.build_model(config_path, 4000)
 
         json_response = model_adas.postprocess_inference_output(output)

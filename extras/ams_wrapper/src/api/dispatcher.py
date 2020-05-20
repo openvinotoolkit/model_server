@@ -16,7 +16,6 @@
 
 import falcon
 
-from src.api.ovms_connector import OvmsConnector
 from src.api.models.model_builder import ModelBuilder
 
 
