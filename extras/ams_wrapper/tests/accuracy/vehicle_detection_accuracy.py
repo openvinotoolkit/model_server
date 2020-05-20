@@ -27,7 +27,6 @@ import requests
 from extras.ams_wrapper.src.preprocessing.preprocess_image import preprocess_binary_image
 
 test_image = "tests/functional/fixtures/test_images/1car_fit.jpeg"
-# test_image = "tests/functional/fixtures/test_images/street.jpeg"
 
 img_out = cv2.imread(test_image)
 
@@ -51,7 +50,6 @@ def load_tf_image(file_path):
 def send_image_ovms(file_path):
     channel = grpc.insecure_channel("{}:{}".format("localhost", "9000"))
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    # img = load_tf_image(file_path).reshape(1,3,384, 672)
     # when the same preprocessing is used, results would be identical
     img = load_cv_image(file_path).reshape(1, 3, 384, 672)
     request = predict_pb2.PredictRequest()
