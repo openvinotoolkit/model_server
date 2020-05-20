@@ -15,8 +15,8 @@
 #
 
 import argparse
-import os
 import sys
+
 from models.classifier_model import ClassifierModel
 from models.detection_model import DetectionModel
 

@@ -13,26 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
+
 import json
-import numpy as np
 
 from src.logger import get_logger
 from src.api.models.model import Model
 from src.api.types import Tag, Rectangle, SingleEntity, Entity
-from src.preprocessing.preprocess_image import preprocess_binary_image as default_preprocessing
+
 
 logger = get_logger(__name__)
 
 
-class DetectionModel(Model):                                                              
+class DetectionModel(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         # Assuming single output
         output_config = next(iter(self.output_configs.values()))
         output_name = output_config.output_name
         result_array = inference_output[output_name]
 
-        # model with output shape (1,1,200,7) 
+        # model with output shape (1,1,200,7)
         # with last dimension containg detection details
         detections = []
         for detection in result_array[0][0]:
@@ -41,7 +40,7 @@ class DetectionModel(Model):
             if label == 0.0:
                 break
 
-            if not label in self.labels[output_name]:
+            if label not in self.labels[output_name]:
                 raise ValueError("label not found in labels definition")
             else:
                 label_value = self.labels[output_name][label]

@@ -29,12 +29,15 @@ def get_available_models(models_path=AMS_MODELS_PATH):
     pattern = "{}/*_model.json".format(AMS_MODELS_PATH)
     available_models = glob.glob(pattern)
     if not available_models:
-        raise FileNotFoundError("No AMS model configuration has been found in: {}".format(AMS_MODELS_PATH))
+        raise FileNotFoundError(
+            "No AMS model configuration has been found in: {}".format(AMS_MODELS_PATH))
     return available_models
+
 
 def start_rest_service(port, num_threads, ovms_port):
     available_models = get_available_models()
-    dispatcher = PathInfoDispatcher({'/': create_dispatcher(available_models, ovms_port)})
+    dispatcher = PathInfoDispatcher(
+        {'/': create_dispatcher(available_models, ovms_port)})
     server = WSGIServer(('0.0.0.0', port), dispatcher,
                         numthreads=num_threads)
     logger.info(f"AMS service will start listening on port {port}")
@@ -47,12 +50,13 @@ def start_rest_service(port, num_threads, ovms_port):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, help='AMS service listening port',
-                          required=False, default=5000)
+                        required=False, default=5000)
     parser.add_argument('--workers', type=int, help='Number of service workers',
-                          required=False, default=1)
+                        required=False, default=1)
     parser.add_argument('--ovms_port', type=int, help='OpenVINO Model Server port',
-                          required=False, default=9000)
+                        required=False, default=9000)
     args = parser.parse_args()
     start_rest_service(args.port, args.workers, args.ovms_port)
+
 
 main()

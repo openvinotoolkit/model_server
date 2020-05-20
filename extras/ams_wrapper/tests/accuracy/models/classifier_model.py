@@ -22,7 +22,8 @@ class ClassifierModel(Model):
 
     def output_postprocess(self):
         self.ams_results = classification_json(self.ams_output)
-        self.ovms_results = classification_array(self.ovms_output, self.output_names, self.classes)
+        self.ovms_results = classification_array(
+            self.ovms_output, self.output_names, self.classes)
 
     def print_results(self):
         print(self.ams_results)
@@ -32,4 +33,3 @@ class ClassifierModel(Model):
                 print("Class ID is correct")
             if abs(self.ams_results[result]["confidence"] - self.ovms_results[result]["confidence"]) < 0.02:
                 print("Confidence is correct")
-        

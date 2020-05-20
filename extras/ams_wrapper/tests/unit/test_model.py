@@ -25,7 +25,7 @@ from src.api.models.model_builder import ModelBuilder
 from src.api.models.model import Model
 from src.api.models.model_config import ValidationError
 from src.api.ovms_connector import OvmsUnavailableError, ModelNotFoundError, \
-        OvmsConnector, RequestProcessingError
+    RequestProcessingError
 from src.preprocessing import ImageResizeError, ImageDecodeError, ImageTransformError
 
 
@@ -59,6 +59,7 @@ def test_model_config():
         }
     }
     return config_file_content
+
 
 @pytest.fixture()
 def test_model(tmpdir, test_model_config):
@@ -134,11 +135,11 @@ def test_model_load_non_existing_config():
 @pytest.mark.parametrize("value_index_mapping", [None, {"male": 0.0, "female": 1.0}, {"male": 1, "female": 1}])
 @pytest.mark.parametrize("classes", [None, {"red": 0.0, "green": 1.0}])
 def test_model_load_valid_output_config(tmpdir, test_model_config,
-                                       output_name, value_index_mapping,
-                                       classes):
+                                        output_name, value_index_mapping,
+                                        classes):
     for param, param_value in [('output_name', output_name),
-                                ('value_index_mapping', value_index_mapping),
-                                ('classes', classes)]:
+                               ('value_index_mapping', value_index_mapping),
+                               ('classes', classes)]:
         if param_value is not None:
             test_model_config['outputs'][0][param] = param_value
 
@@ -148,14 +149,15 @@ def test_model_load_valid_output_config(tmpdir, test_model_config,
 
     ModelBuilder._load_output_configs(test_model_config)
 
+
 @pytest.mark.parametrize("output_name", ["prob"])
 @pytest.mark.parametrize("value_index_mapping", [{"male": '0.0', "female": '1.0'}, {}])
 @pytest.mark.parametrize("classes", [{}, {1: 'green', 0: 'red'}])
 @pytest.mark.parametrize("confidence_threshold", ['zero', 120])
 @pytest.mark.parametrize("top_k_results", ['zero', -1])
 def test_model_load_invalid_output_config(tmpdir, test_model_config,
-                                         output_name, value_index_mapping,
-                                         classes, confidence_threshold, top_k_results):
+                                          output_name, value_index_mapping,
+                                          classes, confidence_threshold, top_k_results):
     for param, param_value in [('output_name', output_name),
                                ('value_index_mapping', value_index_mapping),
                                ('classes', classes),
@@ -169,16 +171,21 @@ def test_model_load_invalid_output_config(tmpdir, test_model_config,
         json.dump(test_model_config, config_file)
 
     with pytest.raises(ValidationError):
-        config = ModelBuilder._load_output_configs(test_model_config)
+        ModelBuilder._load_output_configs(test_model_config)
 
-class TestModel(Model):
+
+class FakeModel(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         pass
 
-exc = [ValueError, TypeError, ImageDecodeError, ImageResizeError, ImageTransformError]
+
+exc = [ValueError, TypeError, ImageDecodeError,
+       ImageResizeError, ImageTransformError]
+
+
 @pytest.mark.parametrize('exceptions', exc)
 def test_model_image_preprocessing_exception(mocker, test_model, exceptions):
-    
+
     mod = test_model
     mod.preprocess_binary_image = mock.Mock(side_effect=exceptions)
     resp = falcon.Response()
@@ -188,9 +195,13 @@ def test_model_image_preprocessing_exception(mocker, test_model, exceptions):
     mod.on_post(req, resp)
     assert resp.status == falcon.HTTP_400
 
+
 exceptions_and_statuses = [(ValueError, falcon.HTTP_400),
-        (TypeError, falcon.HTTP_400), (ModelNotFoundError, falcon.HTTP_500),
-        (OvmsUnavailableError, falcon.HTTP_503), (RequestProcessingError, falcon.HTTP_500)]
+                           (TypeError, falcon.HTTP_400), (ModelNotFoundError,
+                                                          falcon.HTTP_500),
+                           (OvmsUnavailableError, falcon.HTTP_503), (RequestProcessingError, falcon.HTTP_500)]
+
+
 @pytest.mark.parametrize("exceptions", exceptions_and_statuses)
 def test_model_inference_exceptions(mocker, tmpdir, test_model, exceptions):
 
@@ -205,4 +216,3 @@ def test_model_inference_exceptions(mocker, tmpdir, test_model, exceptions):
     req.bounded_stream = io.BytesIO(b"")
     mod.on_post(req, resp)
     assert resp.status == exceptions[1]
-

@@ -16,8 +16,8 @@
 
 import falcon
 
-from src.api.ovms_connector import OvmsConnector
 from src.api.models.model_builder import ModelBuilder
+
 
 def create_dispatcher(available_models: list, ovms_port: int):
     dispatch_map = {}
@@ -29,7 +29,5 @@ def create_dispatcher(available_models: list, ovms_port: int):
 
     for target_model, request_handler in dispatch_map.items():
         dispatcher.add_route(f"/{target_model}", request_handler)
-    
+
     return dispatcher
-
-
