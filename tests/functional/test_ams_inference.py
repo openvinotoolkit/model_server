@@ -20,14 +20,14 @@ from marshmallow import ValidationError
 
 from ams_schemas import InferenceResponseSchema
 from fixtures.ams_fixtures import small_object_detection_image, \
-     medium_object_detection_image, large_object_detection_image, \
-     png_object_detection_image, jpg_object_detection_image, \
-     bmp_object_detection_image, object_detection_image_no_entities
+    medium_object_detection_image, large_object_detection_image, \
+    png_object_detection_image, jpg_object_detection_image, \
+    bmp_object_detection_image
 
 
 def validate_inference_response_schema(response: dict):
     try:
-        parsed_response = InferenceResponseSchema().validate(response)
+        InferenceResponseSchema().validate(response)
     except ValidationError as e:
         print('Response {} has invalid schema.'.format(response))
         print(e)
@@ -53,7 +53,6 @@ class TestAmsInference:
         target = "vehicleDetection"
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
         wrong_input = b'INVALIDINPUT'
-        # TODO: define User-Agent header?
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(wrong_input))},
@@ -67,7 +66,6 @@ class TestAmsInference:
         endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
         with open(jpg_object_detection_image, mode='rb') as image_file:
             image_bytes = image_file.read()
-        
         response = requests.post(endpoint_url,
                                  headers={'Content-Type': 'image/png',
                                           'Content-Length': str(len(jpg_object_detection_image))},
@@ -98,9 +96,9 @@ class TestAmsInference:
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
             response = requests.post(endpoint_url,
-                                    headers={'Content-Type': 'image/png',
-                                            'Content-Length': str(len(image))},
-                                    data=image_bytes)
+                                     headers={'Content-Type': 'image/png',
+                                              'Content-Length': str(len(image))},
+                                     data=image_bytes)
             print(response.text)
             assert response.status_code == 200
             assert response.headers.get('Content-Type') == 'application/json'
@@ -109,7 +107,8 @@ class TestAmsInference:
             validate_inference_response_schema(response_json)
 
     @pytest.mark.parametrize("image_format,image", [('image/png', png_object_detection_image()),
-                                                    ('image/jpg', jpg_object_detection_image()),
+                                                    ('image/jpg',
+                                                     jpg_object_detection_image()),
                                                     ('image/bmp', bmp_object_detection_image())])
     def test_input_image_different_formats(self, start_ams_service, image_format, image):
         with open(image, mode='rb') as image_file:
@@ -123,10 +122,10 @@ class TestAmsInference:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
 
             response = requests.post(endpoint_url,
-                                    headers={'Content-Type': image_format,
-                                            'Content-Length': str(len(image))},
-                                    data=image_bytes)
-            
+                                     headers={'Content-Type': image_format,
+                                              'Content-Length': str(len(image))},
+                                     data=image_bytes)
+
             assert response.status_code == 200
             assert response.headers.get('Content-Type') == 'application/json'
 
@@ -160,7 +159,6 @@ class TestAmsInference:
                                  data=image_bytes)
         assert response.status_code == 503
 
-    
     def test_ams_with_wrong_model_name(self, start_ams_service_with_wrong_model_name, jpg_object_detection_image):
         with open(jpg_object_detection_image, mode='rb') as image_file:
             image_bytes = image_file.read()
@@ -174,18 +172,18 @@ class TestAmsInference:
                                  data=image_bytes)
         assert response.status_code == 500
 
-
     def test_emotionsRecognition(self, start_ams_service, object_classification_emotions_smile):
         with open(object_classification_emotions_smile, mode='rb') as image_file:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "emotionsRecognition")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "emotionsRecognition")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_classification_emotions_smile))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_classification_emotions_smile))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
@@ -201,18 +199,18 @@ class TestAmsInference:
         assert highest_probability > 0.947
         assert highest_emotion == "happy"
 
-
     def test_vehicleClassification(self, start_ams_service, object_classification_red_truck):
         with open(object_classification_red_truck, mode='rb') as image_file:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleClassification")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "vehicleClassification")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_classification_red_truck))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_classification_red_truck))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
@@ -246,18 +244,18 @@ class TestAmsInference:
         assert highest_value == "truck"
         assert attribute_name == "type"
 
-
     def test_vehicleDetection(self, start_ams_service, object_detection_image_two_entities):
         with open(object_detection_image_two_entities, mode='rb') as image_file:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "vehicleDetection")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "vehicleDetection")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_detection_image_two_entities))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_detection_image_two_entities))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
@@ -280,10 +278,14 @@ class TestAmsInference:
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
         assert detections_count == 11
-        assert 0.034460186958313 - epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
-        assert 0.0431380569934845 - epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
-        assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
-        assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
+        assert 0.034460186958313 - \
+            epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
+        assert 0.0431380569934845 - \
+            epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
+        assert 0.783527314662933 - \
+            epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
+        assert 0.173053205013275 - \
+            epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
 
     def test_ageGenderRecognition(self, start_ams_service, object_classification_emotions_smile):
         with open(object_classification_emotions_smile, mode='rb') as image_file:
@@ -291,11 +293,12 @@ class TestAmsInference:
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "ageGenderRecognition")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "ageGenderRecognition")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_classification_emotions_smile))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_classification_emotions_smile))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
@@ -320,10 +323,9 @@ class TestAmsInference:
             confidence = classification["confidence"]
             value = int(float(classification["value"]))
 
-        assert confidence == None
+        assert confidence is None
         assert name == "age"
         assert value == 24
-
 
     def test_faceDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
@@ -331,27 +333,33 @@ class TestAmsInference:
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "faceDetection")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "faceDetection")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_detection_image_one_entity))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_detection_image_one_entity))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
 
-        detection = max(response_json['entities'], key=lambda entity: entity['tag']['confidence'])
+        detection = max(
+            response_json['entities'], key=lambda entity: entity['tag']['confidence'])
 
         assert detection['tag']['confidence'] >= 0.98
         assert detection['tag']['value'] == 'face'
 
         epsilon = 0.000001
 
-        assert 0.38243523240089417 - epsilon <= detection['box']['l'] <= 0.38243523240089417 + epsilon
-        assert 0.28849169611930847 - epsilon <= detection['box']['t'] <= 0.28849169611930847 + epsilon
-        assert 0.036220431327819824 - epsilon <= detection['box']['w'] <= 0.036220431327819824 + epsilon
-        assert 0.07158094644546509 - epsilon <= detection['box']['h'] <= 0.07158094644546509 + epsilon
+        assert 0.38243523240089417 - \
+            epsilon <= detection['box']['l'] <= 0.38243523240089417 + epsilon
+        assert 0.28849169611930847 - \
+            epsilon <= detection['box']['t'] <= 0.28849169611930847 + epsilon
+        assert 0.036220431327819824 - \
+            epsilon <= detection['box']['w'] <= 0.036220431327819824 + epsilon
+        assert 0.07158094644546509 - \
+            epsilon <= detection['box']['h'] <= 0.07158094644546509 + epsilon
 
     def test_personVehicleBikeDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
@@ -359,27 +367,33 @@ class TestAmsInference:
         _, ports = start_ams_service
         ams_port = ports['port']
 
-        endpoint_url = "http://localhost:{}/{}".format(ams_port, "personVehicleBikeDetection")
+        endpoint_url = "http://localhost:{}/{}".format(
+            ams_port, "personVehicleBikeDetection")
         response = requests.post(endpoint_url,
-                                headers={'Content-Type': 'image/png',
-                                        'Content-Length': str(len(object_detection_image_one_entity))},
-                                data=image_bytes)
+                                 headers={'Content-Type': 'image/png',
+                                          'Content-Length': str(len(object_detection_image_one_entity))},
+                                 data=image_bytes)
         assert response.status_code == 200
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
 
-        detection = max(response_json['entities'], key=lambda entity: entity['tag']['confidence'])
+        detection = max(
+            response_json['entities'], key=lambda entity: entity['tag']['confidence'])
 
         assert detection['tag']['confidence'] >= 0.99
         assert detection['tag']['value'] == 'pedestrian'
 
         epsilon = 0.000001
 
-        assert 0.3313550353050232 - epsilon <= detection['box']['l'] <= 0.3313550353050232 + epsilon
-        assert 0.25375649333000183 - epsilon <= detection['box']['t'] <= 0.25375649333000183 + epsilon
-        assert 0.1486881971359253 - epsilon <= detection['box']['w'] <= 0.1486881971359253 + epsilon
-        assert 0.7409175932407379 - epsilon <= detection['box']['h'] <= 0.7409175932407379 + epsilon
+        assert 0.3313550353050232 - \
+            epsilon <= detection['box']['l'] <= 0.3313550353050232 + epsilon
+        assert 0.25375649333000183 - \
+            epsilon <= detection['box']['t'] <= 0.25375649333000183 + epsilon
+        assert 0.1486881971359253 - \
+            epsilon <= detection['box']['w'] <= 0.1486881971359253 + epsilon
+        assert 0.7409175932407379 - \
+            epsilon <= detection['box']['h'] <= 0.7409175932407379 + epsilon
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),
@@ -390,10 +404,10 @@ class TestAmsInference:
     #                              headers={'Content-Type': 'image/png',
     #                                       'Content-Length': str(len(image))},
     #                              body=image)
-        
+
     #     assert response.status_code == 200
     #     assert response.headers.get('Content-Type') == 'application/json'
-    #     assert response.get('inferences') and len(response.get('inferences', {}).get('entities'))  == expected_instances
+    #     assert response.get('inferences') and \
+    #            len(response.get('inferences', {}).get('entities'))  == expected_instances
     #     for inference_response in response['inferences']:
     #         validate_ams_inference_response_schema(inference_response)
-    

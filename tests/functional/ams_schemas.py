@@ -30,7 +30,7 @@ class AttributeSchema(Schema):
 
 
 class BoxSchema(Schema):
-    l = fields.Float(required=True)
+    l = fields.Float(required=True)  # noqa: E741
     t = fields.Float(required=True)
     w = fields.Float(required=True)
     h = fields.Float(required=True)
@@ -69,7 +69,7 @@ class InferenceResponseSchema(Schema):
                                                             'entity',
                                                             'text',
                                                             'other',
-    }))
+                                                            }))
     subtype = fields.String(required=True)
     classifications = fields.List(fields.Nested(ClassificationSchema, required=False))
     motions = fields.List(fields.Nested(MotionSchema, required=False))

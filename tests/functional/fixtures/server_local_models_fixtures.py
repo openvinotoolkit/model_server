@@ -64,8 +64,8 @@ def start_server_single_model(request, get_image, get_test_dir,
 
 @pytest.fixture(scope="class")
 def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
-                              vehicle_attributes_model_downloader,
-                              get_docker_context):
+                                             vehicle_attributes_model_downloader,
+                                             get_docker_context):
 
     print("Downloaded model files:", vehicle_attributes_model_downloader)
     client = get_docker_context
@@ -107,8 +107,8 @@ def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
 
 @pytest.fixture(scope="class")
 def start_server_single_vehicle_model(request, get_image, get_test_dir,
-                              vehicle_adas_model_downloader,
-                              get_docker_context):
+                                      vehicle_adas_model_downloader,
+                                      get_docker_context):
 
     print("Downloaded model files:", vehicle_adas_model_downloader)
     client = get_docker_context

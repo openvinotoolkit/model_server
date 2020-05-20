@@ -13,3 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from src.api.models.detection_model import DetectionModel
+from src.api.models.classification_attributes_model import ClassificationAttributes
+
+TYPE_CLASS_MAPPING = {
+    "detection": DetectionModel,
+    "classification_attributes": ClassificationAttributes
+}
+
+AMS_MODELS_PATH = "/opt/ams_models"

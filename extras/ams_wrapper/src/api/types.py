@@ -18,6 +18,7 @@
 from typing import List
 from abc import ABC
 
+
 class Tag:
     def __init__(self, value: str, confidence: float):
         self.value = value
@@ -29,6 +30,7 @@ class Tag:
             "confidence": self.confidence
         }
         return result_dict
+
 
 class Attribute:
     def __init__(self, name: str, value: str, confidence: float):
@@ -44,9 +46,10 @@ class Attribute:
         }
         return result_dict
 
+
 class Rectangle:
-    def __init__ (self, l: float, t: float, w: float, h: float):
-        self.l = l
+    def __init__(self, l: float, t: float, w: float, h: float):
+        self.l = l  # noqa: E741
         self.t = t
         self.w = w
         self.h = h
@@ -60,8 +63,10 @@ class Rectangle:
         }
         return result_dict
 
+
 class ResultType(ABC):
     pass
+
 
 class Motion(ResultType):
     def __init__(self, box: Rectangle):
@@ -69,9 +74,10 @@ class Motion(ResultType):
         self.type_name = "motion"
 
     def as_dict(self):
-        result_dict = {
+        return {
             "box": self.box.as_dict()
         }
+
 
 class SingleClassification:
     def __init__(self, attributes: List[Attribute]):
@@ -80,8 +86,10 @@ class SingleClassification:
     def as_dict(self):
         result_dict = {}
         if self.attributes is not None:
-            result_dict["attributes"] = [attribute.as_dict() for attribute in self.attributes]
+            result_dict["attributes"] = [attribute.as_dict()
+                                         for attribute in self.attributes]
         return result_dict
+
 
 class Classification(ResultType):
     def __init__(self, subtype_name: str, classifications: List[SingleClassification]):
@@ -97,6 +105,7 @@ class Classification(ResultType):
         }
         return result_dict
 
+
 class SingleEntity:
     def __init__(self, tag: Tag, box: Rectangle, attributes: List[Attribute] = None):
         self.tag = tag
@@ -109,8 +118,10 @@ class SingleEntity:
             "box": self.box.as_dict()
         }
         if self.attributes is not None:
-            result_dict["attributes"] = [attribute.as_dict() for attribute in self.attributes]
+            result_dict["attributes"] = [attribute.as_dict()
+                                         for attribute in self.attributes]
         return result_dict
+
 
 class Entity(ResultType):
     def __init__(self, subtype_name: str, entities: List[SingleEntity]):
@@ -125,16 +136,3 @@ class Entity(ResultType):
             "entities": [entity.as_dict() for entity in self.entities]
         }
         return result_dict
-
-class Text(ResultType):
-    # TODO: add support
-    pass
-
-class InferenceExtension:
-    # TODO: add support
-    pass
-
-class Inference:
-    def __init__(self, value: ResultType, extensions: List[InferenceExtension] = None):
-        self.value = value
-        self.extensions = extensions

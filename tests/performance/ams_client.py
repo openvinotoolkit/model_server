@@ -15,21 +15,18 @@
 #
 
 # should be run from model server directory
-
+import sys
 import os
 import urllib.request
+from data.performance_constants import DATASET, ITERATIONS, AMS_PORT, AMS_ADDRESS
 
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATASET = os.path.join(ROOT_PATH, "tests", "functional", "fixtures", "test_images", "performance")
-IMAGE = "single_car_small_reshaped.png"
-
-ITERATIONS = 1000
+image = sys.argv[2]
 
 for num in range(ITERATIONS):
-    with open(os.path.join(DATASET, IMAGE), mode='rb') as image_file:
+    with open(os.path.join(DATASET, image), mode='rb') as image_file:
         image_bytes = image_file.read()
-        url = 'http://localhost:5000/vehicleDetection'
-        headers = {'Content-Type': 'image/png'}
+        url = 'http://{}:{}/{}'.format(AMS_ADDRESS, AMS_PORT, sys.argv[1])
+        headers = {'Content-Type': 'image/{}'.format(image.split(sep=".")[1])}
         req = urllib.request.Request(url, image_bytes, headers=headers)
         response = urllib.request.urlopen(req)
         assert response.getcode() == 200, "Not expected response code: {}".format(response.getcode)

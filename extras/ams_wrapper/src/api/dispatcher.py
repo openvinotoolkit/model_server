@@ -16,22 +16,18 @@
 
 import falcon
 
-from src.api.ovms_connector import OvmsConnector
+from src.api.models.model_builder import ModelBuilder
+
 
 def create_dispatcher(available_models: list, ovms_port: int):
     dispatch_map = {}
     for available_model in available_models:
-        ovms_connector = OvmsConnector(ovms_port, available_model['ovms_mapping'])
-        model = available_model['class'](model_name=available_model['name'], 
-                                         ovms_connector=ovms_connector,
-                                         config_file_path=available_model['config_path'])
-        dispatch_map[available_model['name']] = model
+        model = ModelBuilder.build_model(available_model, ovms_port)
+        dispatch_map[model.endpoint] = model
 
     dispatcher = falcon.API()
 
     for target_model, request_handler in dispatch_map.items():
         dispatcher.add_route(f"/{target_model}", request_handler)
-    
+
     return dispatcher
-
-

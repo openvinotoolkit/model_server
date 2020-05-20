@@ -7,13 +7,12 @@ pipeline {
                 sh './tests/scripts/prepare-virtualenv.sh'
             }
         }
-        /*
         stage('style tests') {
             steps {
                 sh './tests/scripts/style.sh'
             }
         }
-        
+        /*
         stage('unit tests') {
             steps {
                 sh './tests/scripts/unit-tests.sh'
@@ -25,17 +24,28 @@ pipeline {
                 sh './tests/scripts/unit-tests-ams.sh'
             }
         }
+        stage('coverage ams') {
+            steps {
+                sh './tests/scripts/coverage-ams.sh'
+            }
+        }
+        stage('publish coverage report') {
+            steps  {
+                publishHTML target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: 'ams_coverage_report',
+                    reportFiles: 'index.html',
+                    reportName: 'Ams coverage'
+                    ]
+                }
+            }
         stage('functional tests') {
             parallel {
                 stage('functional tests ams') {
                     steps {
                         sh './tests/scripts/functional-tests-ams.sh'
-                    }
-                }
-
-                stage('functional tests model posprocessing') {
-                    steps {
-                        sh './tests/scripts/functional-tests-model-postprocessing.sh'
                     }
                 }
                 /*

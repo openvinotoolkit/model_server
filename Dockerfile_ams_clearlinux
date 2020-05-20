@@ -1,8 +1,8 @@
 FROM sysstacks/dlrs-tensorflow2-clearlinux:v0.6.0 as dlrs
 FROM clearlinux
-#
+
 RUN swupd update && swupd bundle-add wget python3-basic --debug && swupd clean
-##RUN pip install opencv-python numpy cython progress
+
 COPY --from=dlrs /usr/local/lib/inference-engine /usr/local/lib/inference-engine
 
 WORKDIR /ie-serving-py
@@ -10,13 +10,15 @@ WORKDIR /ie-serving-py
 COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
 RUN virtualenv --system-site-packages -p python3 .venv && . .venv/bin/activate && pip3 install --no-cache-dir -r requirements_clearlinux.txt
 
-
 RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_detection_adas/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.xml && \
     mkdir -p /opt/models/vehicle_attributes/1 && cd /opt/models/vehicle_attributes/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039.xml && \
+    mkdir -p /opt/models/age_gender_recognition/1 && cd /opt/models/age_gender_recognition/1 && \
+    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin && \
+    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml && \
     mkdir -p /opt/models/emotions_recognition/1 && cd /opt/models/emotions_recognition/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml && \
@@ -33,6 +35,5 @@ COPY extras/ams_models /opt/ams_models
 
 RUN . .venv/bin/activate && pip3 --no-cache-dir install . && chmod +x /ams_wrapper/start_ams.sh
 
-
-RUN echo "export LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib" >> /.bashrc \
-    && echo "export PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine" >> /.bashrc
+ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
+ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine

@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-from .preprocess_image import *
+from .preprocess_image import *  # noqa

@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-import pytest
+from src.api.types import SingleClassification, Classification, Attribute
 
-from src.api.types import Tag, SingleClassification, Classification, Attribute
 
 def test_single_classification():
     expected_dict = {
@@ -26,33 +25,34 @@ def test_single_classification():
             "confidence": 0.97
         }]
     }
-    attribute = Attribute("type", "car", 0.97) 
+    attribute = Attribute("type", "car", 0.97)
     attribs = []
     attribs.append(attribute)
     test_classification = SingleClassification(attribs)
     assert expected_dict == test_classification.as_dict()
+
 
 def test_entity():
     expected_dict = {
         "type": "classification",
         "subtype": "animalClassification",
         "classifications": [
-           {"attributes": [{
-             "name": "animal",
+            {"attributes": [{
+                "name": "animal",
              "value": "dog",
              "confidence": 0.85
-        }]},
-           {"attributes": [{
-             "name": "animal",
-             "value": "fox",
+             }]},
+            {"attributes": [{
+                "name": "animal",
+                "value": "fox",
              "confidence": 0.11
-        }]}
+             }]}
         ]
     }
 
     classifications = [
-        SingleClassification([Attribute("animal","dog", 0.85)]),
-        SingleClassification([Attribute("animal","fox", 0.11)]),
+        SingleClassification([Attribute("animal", "dog", 0.85)]),
+        SingleClassification([Attribute("animal", "fox", 0.11)]),
     ]
     classification = Classification("animalClassification", classifications)
     assert expected_dict == classification.as_dict()

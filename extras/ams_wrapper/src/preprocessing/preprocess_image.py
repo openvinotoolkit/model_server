@@ -68,14 +68,16 @@ def preprocess_binary_image(image: bytes, channels: int = None,
 
     params_to_check = {'channels': channels,
                        'scale': scale}
-                       
+
     for param_name, value in params_to_check.items():
         try:
             if value is not None and value < 0:
-                raise ValueError('Invalid value {} for parameter {}.'.format(value, param_name))
+                raise ValueError(
+                    'Invalid value {} for parameter {}.'.format(value, param_name))
         except TypeError:
-            raise TypeError('Invalid type {} for parameter {}.'.format(type(value), param_name))
-    
+            raise TypeError('Invalid type {} for parameter {}.'.format(
+                type(value), param_name))
+
     try:
         if target_size:
             height, width = target_size
@@ -85,13 +87,15 @@ def preprocess_binary_image(image: bytes, channels: int = None,
         raise TypeError('Invalid target size type.')
 
     if not isinstance(dtype, tf.dtypes.DType):
-        raise TypeError('Invalid type {} for parameter dtype.'.format(type(dtype)))
+        raise TypeError(
+            'Invalid type {} for parameter dtype.'.format(type(dtype)))
 
     try:
         decoded_image = tf.io.decode_image(image, channels=channels)
         decoded_image = tf.dtypes.cast(decoded_image, dtype)
     except Exception as e:
-        raise ImageDecodeError('Provided image is invalid, unable to decode.') from e
+        raise ImageDecodeError(
+            'Provided image is invalid, unable to decode.') from e
 
     if target_size:
         try:
@@ -115,10 +119,9 @@ def preprocess_binary_image(image: bytes, channels: int = None,
     except Exception as e:
         log.exception(str(e))
         raise ImageTransformError('Failed to preprocess image, '
-                                   'check if provided parameters are correct.') from e
+                                  'check if provided parameters are correct.') from e
 
     return image_array
-
 
 
 if __name__ == "__main__":
@@ -131,7 +134,9 @@ if __name__ == "__main__":
     with open(img_path, mode='rb') as img_file:
         binary_image = img_file.read()
 
-    preprocessed_image = preprocess_binary_image(binary_image, channels_first=False)
+    preprocessed_image = preprocess_binary_image(
+        binary_image, channels_first=False)
+
     print(preprocessed_image)
     print(preprocessed_image.shape)
 
@@ -142,4 +147,3 @@ if __name__ == "__main__":
         plt.show()
     except ImportError:
         print('Please install matplotlib if you want to inspect preprocessed image.')
-

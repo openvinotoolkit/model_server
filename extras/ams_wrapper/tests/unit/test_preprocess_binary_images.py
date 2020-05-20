@@ -18,13 +18,12 @@ import os
 
 import pytest
 
-import sys
-import pathlib
-
-from src.preprocessing import preprocess_binary_image, ImageResizeError, ImageDecodeError
+from src.preprocessing import preprocess_binary_image, ImageDecodeError
 
 
-IMAGES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_images')
+IMAGES_DIR = os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), 'test_images')
+
 
 @pytest.fixture()
 def jpg_image():
@@ -43,7 +42,7 @@ def png_image():
 
 @pytest.fixture()
 def bmp_image():
-    with open(os.path.join( IMAGES_DIR, 'sails.bmp'), mode='rb') as img_file:
+    with open(os.path.join(IMAGES_DIR, 'sails.bmp'), mode='rb') as img_file:
         binary_image = img_file.read()
     return binary_image
 
@@ -73,7 +72,7 @@ def test_preprocess_image(image, reverse_input_channels, target_size,
             assert decoded_image.shape[1] == target_size[1]
 
 
-@pytest.mark.parametrize("target_size", [(-1, 2), (128, 0), (0,0)])
+@pytest.mark.parametrize("target_size", [(-1, 2), (128, 0), (0, 0)])
 def test_preprocess_image_wrong_target_size(png_image, target_size):
     with pytest.raises(ValueError):
         preprocess_binary_image(png_image, target_size=target_size)
@@ -82,4 +81,3 @@ def test_preprocess_image_wrong_target_size(png_image, target_size):
 def test_preprocess_image_decode_error():
     with pytest.raises(ImageDecodeError):
         preprocess_binary_image(b'not an image')
-  

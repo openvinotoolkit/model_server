@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-import pytest
-
 from src.api.types import Tag, Rectangle, SingleEntity, Entity
+
 
 def test_single_entity():
     expected_dict = {
@@ -24,7 +23,7 @@ def test_single_entity():
             "value": "car",
             "confidence": 0.97
         },
-        "box": { "l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0 }
+        "box": {"l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0}
     }
 
     tag = Tag("car", 0.97)
@@ -32,25 +31,26 @@ def test_single_entity():
     single_entity = SingleEntity(tag, box)
     assert expected_dict == single_entity.as_dict()
 
+
 def test_entity():
     expected_dict = {
         "type": "entity",
         "subtype": "vehicleDetection",
         "entities": [
-        {
-        "tag": {
-            "value": "car",
-            "confidence": 0.97
+            {
+                "tag": {
+                    "value": "car",
+                    "confidence": 0.97
+                },
+                "box": {"l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0}
             },
-        "box": { "l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0 }
-        },
-                {
-        "tag": {
-            "value": "bike",
-            "confidence": 0.94
+            {
+                "tag": {
+                    "value": "bike",
+                    "confidence": 0.94
+                },
+                "box": {"l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0}
             },
-        "box": { "l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0 }
-        },
         ]
     }
 

@@ -24,9 +24,9 @@ face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/
 age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"  # noqa
 pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078"  # noqa
 vehicle_detection_adas_bin_0001_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001"  # noqa
-vehicle_data_url = "https://download.01.org/opencv/openvino_training_extensions/datasets/crossroad/crossroad_85.tar.gz"  #noqa
-vehicle_attributes_url="https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039"  # noqa
-vehicle_attributes_data_url="https://download.01.org/opencv/openvino_training_extensions/datasets/vehicle_attributes/cars_100.tar.gz"  #noqa
+vehicle_data_url = "https://download.01.org/opencv/openvino_training_extensions/datasets/crossroad/crossroad_85.tar.gz"  # noqa
+vehicle_attributes_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039"  # noqa
+vehicle_attributes_data_url = "https://download.01.org/opencv/openvino_training_extensions/datasets/vehicle_attributes/cars_100.tar.gz"  # noqa
 
 
 def download_model(model_url_base, model_name, model_version, dir):
@@ -50,7 +50,7 @@ def download_model(model_url_base, model_name, model_version, dir):
 
 def download_data(data_url_base, model_name, model_version, dir):
     local_data_path = os.path.join(dir, model_name, model_version, "data")
-    
+
     local_tar_path = os.path.join(local_data_path,
                                   "{}.{}".format(model_name, "tar.gz"))
     if not os.path.exists(local_data_path):
@@ -60,11 +60,12 @@ def download_data(data_url_base, model_name, model_version, dir):
         response = requests.get(data_url_base, stream=True)
         with open(local_tar_path, 'wb') as output:
             output.write(response.content)
-    
+
     tar_file = tarfile.open(local_tar_path)
     tar_file.extractall(local_data_path)
 
     return local_data_path
+
 
 @pytest.fixture(autouse=True, scope="session")
 def face_detection_model_downloader(get_test_dir):
@@ -98,8 +99,8 @@ def vehicle_adas_model_downloader(get_test_dir):
 @pytest.fixture(autouse=True, scope="session")
 def vehicle_adas_data_downloader(get_test_dir):
     return download_data(vehicle_data_url,
-                        'vehicle-detection-adas-binary-0001', '1',
-                        get_test_dir + '/saved_data/')
+                         'vehicle-detection-adas-binary-0001', '1',
+                         get_test_dir + '/saved_data/')
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -112,9 +113,8 @@ def vehicle_attributes_model_downloader(get_test_dir):
 @pytest.fixture(autouse=True, scope="session")
 def vehicle_attributes_data_downloader(get_test_dir):
     return download_data(vehicle_attributes_data_url,
-                        'vehicle-attributes-recognition-barrier-0039', '1',
-                        get_test_dir + '/saved_data/')
-
+                         'vehicle-attributes-recognition-barrier-0039', '1',
+                         get_test_dir + '/saved_data/')
 
 
 """

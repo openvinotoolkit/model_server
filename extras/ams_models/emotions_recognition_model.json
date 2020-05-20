@@ -1,8 +1,9 @@
 {
-    "model_name": "emotions-recognition-retail-0003",
+    "endpoint": "emotionsRecognition",
+    "model_type": "classification_attributes",
     "inputs": [
         {
-          "input_name": "input",
+          "input_name": "data",
           "input_format": "NCHW",
           "color_format": "BGR",
           "target_height": 64,
@@ -22,5 +23,9 @@
             },
             "is_softmax": true
         }
-    ]
+    ],
+    "ovms_mapping": {
+      "model_name": "emotions_recognition",
+      "model_version": 0
+    }
 }
