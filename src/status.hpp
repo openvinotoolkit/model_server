@@ -70,6 +70,7 @@ enum class ValidationStatusCode {
     INVALID_SHAPE,          /*!< Invalid shape dimension number or dimension value */
     INVALID_PRECISION,      /*!< Invalid precision */
     INVALID_CONTENT_SIZE,   /*!< Invalid content size */
+    INVALID_VALUE_COUNT,    /*!< Invalid value count for uint16 and half float data types */
     DESERIALIZATION_ERROR,  /*!< Error occured during deserialization */
     DESERIALIZATION_ERROR_USUPPORTED_PRECISION, /*!<Unsupported deserialization precision */
     INFERENCE_ERROR,        /*!< Error occured during inference */
@@ -96,7 +97,9 @@ public:
             {ValidationStatusCode::INVALID_PRECISION,
              "Invalid input precision"},
             {ValidationStatusCode::INVALID_CONTENT_SIZE,
-             "Invalid content size"},
+             "Invalid content size of tensor proto"},
+            {ValidationStatusCode::INVALID_VALUE_COUNT,
+             "Invalid number of values in tensor proto container"},
             {ValidationStatusCode::DESERIALIZATION_ERROR,
              "Error occured during deserialization"},
             {ValidationStatusCode::DESERIALIZATION_ERROR_USUPPORTED_PRECISION,

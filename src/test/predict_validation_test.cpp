@@ -58,6 +58,11 @@ protected:
                 {1, 6, 128, 128, 16},
                 InferenceEngine::Layout::NCDHW
             }},
+            {"Input_U16_1_2_8_4_NCHW", {
+                InferenceEngine::Precision::U16,
+                {1, 2, 8, 4},
+                InferenceEngine::Layout::NCHW
+            }},
         });
 
         for (const auto& pair : tensors) {
@@ -95,6 +100,15 @@ protected:
         inputC.mutable_tensor_shape()->add_dim()->set_size(128);
         inputC.mutable_tensor_shape()->add_dim()->set_size(128);
         inputC.mutable_tensor_shape()->add_dim()->set_size(16);
+
+        // U16 uses int_val instead of tensor_content so it needs separate test
+        auto& inputD = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
+        inputD.set_dtype(tensorflow::DataType::DT_UINT16);
+        inputD.mutable_int_val()->Resize(1 * 2 * 8 * 4, 1);
+        inputD.mutable_tensor_shape()->add_dim()->set_size(1);
+        inputD.mutable_tensor_shape()->add_dim()->set_size(2);
+        inputD.mutable_tensor_shape()->add_dim()->set_size(8);
+        inputD.mutable_tensor_shape()->add_dim()->set_size(4);
     }
 };
 
@@ -167,6 +181,15 @@ TEST_F(PredictValidation, RequestIncorrectContentSize) {
 
     auto status = instance.validate(&request);
     EXPECT_EQ(ovms::ValidationStatusCode::INVALID_CONTENT_SIZE, status);
+}
+
+TEST_F(PredictValidation, RequestIncorrectValueCount) {
+    auto& input = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
+    input.mutable_int_val()->Clear();
+    input.mutable_int_val()->Resize(2, 1);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_VALUE_COUNT, status);
 }
 
 TEST_F(PredictValidation, RequestWrongPrecision) {

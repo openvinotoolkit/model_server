@@ -197,7 +197,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         this->status.setAvailable();
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
-        std::cout << e.what() << std::endl;
+        spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return Status::NETWORK_NOT_LOADED;
     }
@@ -269,20 +269,52 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
             return ValidationStatusCode::INVALID_PRECISION;
         }
 
-        // Network expects tensor content size
-        size_t expectedContentSize = std::accumulate(
+        size_t expectedValueCount = std::accumulate(
             networkInput->getShape().begin(),
             networkInput->getShape().end(),
             1,
             std::multiplies<size_t>());
 
-        expectedContentSize *= networkInput->getPrecision().size();
+/*
+        int8        data in request.tensor_content
+        uint8       data in request.tensor_content
+        int16       data in request.tensor_content
+        uint16      request.tensor_content is empty, data located in request.int_val
+        int32       data in request.tensor_content
+        uint32      data in request.tensor_content
+        int64       data in request.tensor_content
+        uint64      data in request.tensor_content
+        float16     request.tensor_content is empty, data located in request.half_val
+        float32     data in request.tensor_content
+        double      data in request.tensor_content
 
-        if (expectedContentSize != requestInput.tensor_content().size()) {
-            SPDLOG_DEBUG("invalid content size: actual {}B; required {}B",
-                requestInput.tensor_content().size(),
-                expectedContentSize);
-            return ValidationStatusCode::INVALID_CONTENT_SIZE;
+        _TENSOR_CONTENT_TYPES
+        https://github.com/tensorflow/tensorflow/blob/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
+*/
+
+        // Network expects tensor content size or value count
+        if (requestInput.dtype() == tensorflow::DataType::DT_UINT16) {
+            if (expectedValueCount != requestInput.int_val_size()) {
+                SPDLOG_DEBUG("invalid value count (DT_UINT16): actual {}; required {}",
+                    requestInput.int_val_size(),
+                    expectedValueCount);
+                return ValidationStatusCode::INVALID_VALUE_COUNT;
+            }
+        } else if (requestInput.dtype() == tensorflow::DataType::DT_HALF) {
+            if (expectedValueCount != requestInput.half_val_size()) {
+                SPDLOG_DEBUG("invalid value count (DT_FLOAT): actual {}; required {}",
+                    requestInput.half_val_size(),
+                    expectedValueCount);
+                return ValidationStatusCode::INVALID_VALUE_COUNT;
+            }
+        } else {
+            size_t expectedContentSize = expectedValueCount * networkInput->getPrecision().size();
+            if (expectedContentSize != requestInput.tensor_content().size()) {
+                SPDLOG_DEBUG("invalid content size: actual {}B; required {}B",
+                    requestInput.tensor_content().size(),
+                    expectedContentSize);
+                return ValidationStatusCode::INVALID_CONTENT_SIZE;
+            }
         }
     }
 
