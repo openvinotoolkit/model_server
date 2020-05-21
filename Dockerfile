@@ -3,6 +3,8 @@ FROM ubuntu:18.04 as base_build
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
+ARG ovms_metadata_file
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
@@ -47,8 +49,11 @@ RUN bazel build @org_tensorflow//tensorflow/core:framework
 RUN bazel build @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 COPY src/ /ovms/src/
+
 RUN bazel build //src:ovms
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
 RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
+
+ADD ${ovms_metadata_file} metadata.json
 
 ENTRYPOINT ["./bazel-bin/src/ovms"]

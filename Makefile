@@ -57,11 +57,24 @@ style: venv
 
 docker_build:
 	@echo "Building docker image"
+
+	# Provide metadata information into image if defined
+	@mkdir -p .workspace
+
+ifneq ($(OVMS_METADATA_FILE),)
+	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
+else
+	@touch .workspace/metadata.json
+endif
+	@cat .workspace/metadata.json
+
 	@echo docker build . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ovms_metadata_file=.workspace/metadata.json \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 	@docker build . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ovms_metadata_file=.workspace/metadata.json \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 
 test_perf: venv
