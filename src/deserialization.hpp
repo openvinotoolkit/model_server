@@ -42,15 +42,36 @@ class ConcreteTensorProtoDeserializator {
             const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:  return makeBlob<float>      (requestInput, tensorInfo);
-        // case InferenceEngine::Precision::FP16:  return makeBlob<float>      (requestInput, tensorInfo);   // not tested, resnet model does not support this precision
-                                                                                                            // it will probably need conversion from uint16_t:
-                                                                                                            // https://docs.openvinotoolkit.org/latest/ie_plugin_api/group__ie__dev__api__precision.html#ga9b3a5d90bb1d3439dddf758af1035ffe
+        case InferenceEngine::Precision::FP16: {  // TODO: Not tested manually for accurracy.
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L45
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
+            blob->allocate();
+            uint16_t* ptr = blob->buffer().as<uint16_t*>();
+            for (size_t i = 0; i < requestInput.half_val_size(); i++) {
+                ptr[i] = requestInput.half_val(i);
+            }
+            return blob;
+        }
         case InferenceEngine::Precision::U8:    return makeBlob<uint8_t>    (requestInput, tensorInfo);
         case InferenceEngine::Precision::I8:    return makeBlob<int8_t>     (requestInput, tensorInfo);
-        // case InferenceEngine::Precision::U16:   return makeBlob<uint16_t>   (requestInput, tensorInfo);  // requestInput.tensor_content() is empty, data available in int_val(n)
+        case InferenceEngine::Precision::U16: {
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
+            blob->allocate();
+            uint16_t* ptr = blob->buffer().as<uint16_t*>();
+            for (size_t i = 0; i < requestInput.int_val_size(); i++) {
+                ptr[i] = requestInput.int_val(i);
+            }
+            return blob;
+        }
         case InferenceEngine::Precision::I16:   return makeBlob<int16_t>    (requestInput, tensorInfo);
         case InferenceEngine::Precision::I32:   return makeBlob<int32_t>    (requestInput, tensorInfo);
-        // case InferenceEngine::Precision::I64:   return makeBlob<int64_t>    (requestInput, tensorInfo);  // 0% precision
+
+        // TODO: Unsupported yet
+        case InferenceEngine::Precision::I64:
+
         case InferenceEngine::Precision::MIXED:
         case InferenceEngine::Precision::Q78:
         case InferenceEngine::Precision::BIN:
@@ -96,11 +117,11 @@ ValidationStatusCode deserializePredictRequest(
         // OV can throw exceptions derived from std::logic_error.
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR;
-        spdlog::error("ovms::{}:{}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status));
+        spdlog::error("ovms::{}:{}: {}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status), e.what());
         return status;
     } catch (std::logic_error& e) {
         ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR;
-        spdlog::error("ovms::{}:{}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status));
+        spdlog::error("ovms::{}:{}: {}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status), e.what());
         return status;
     }
     return ValidationStatusCode::OK;

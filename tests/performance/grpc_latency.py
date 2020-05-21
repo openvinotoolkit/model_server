@@ -72,6 +72,10 @@ parser.add_argument('--report_every',
                     default=0,
                     help='Report performance every X iterations',
                     type=int)
+parser.add_argument('--precision',
+                    default=np.float32,
+                    help='input precision',
+                    type=np.dtype)
 parser.add_argument('--id',
                     default='--',
                     help='Helps identifying client')
@@ -90,6 +94,8 @@ processing_times = np.zeros((0), int)
 imgs = np.load(args.images_numpy_path, mmap_mode='r', allow_pickle=False)
 imgs = imgs - np.min(imgs)  # Normalization 0-255
 imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
+
+imgs = imgs.astype(args.precision)
 
 if accurracy_measuring_mode:
     labels = np.load(args.labels_numpy_path, mmap_mode='r', allow_pickle=False)
