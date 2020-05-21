@@ -17,7 +17,7 @@ import shutil
 import time
 import pytest
 from constants import MODEL_SERVICE
-from model.models_information import Resnet
+from model.models_information import Resnet, ResnetBS8, ResnetBS4
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.logger import get_logger
@@ -55,33 +55,28 @@ class TestSingleModelInference:
 
         # Available versions: 1, 4
 
-        logger.info("Getting info about resnet model")
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata_v1 = {in_name: {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
-        request = get_model_metadata(model_name=model_name, version=1)
+        logger.info("Getting info about {} model".format(Resnet.name))
+        expected_input_metadata_v1 = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata_v1 = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name, version=1)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
-        request_latest = get_model_metadata(model_name=model_name)
+        request_latest = get_model_metadata(model_name=Resnet.name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_latest))
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
-        request_v4 = get_model_metadata(model_name=model_name, version=4)
+        request_v4 = get_model_metadata(model_name=Resnet.name, version=4)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
@@ -93,8 +88,7 @@ class TestSingleModelInference:
         assert output_metadata_v4 == output_metadata_latest
 
         # Model status check
-        model_name = 'resnet'
-        request = get_model_status(model_name=model_name)
+        request = get_model_status(model_name=Resnet.name)
         status_response = status_stub.GetModelStatus(request, 10)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 2
@@ -112,14 +106,14 @@ class TestSingleModelInference:
 
         # Available versions: 1, 3
 
-        request_latest = get_model_metadata(model_name=model_name)
+        request_latest = get_model_metadata(model_name=Resnet.name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_latest))
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
-        request_v3 = get_model_metadata(model_name=model_name, version=3)
+        request_v3 = get_model_metadata(model_name=Resnet.name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
@@ -131,8 +125,7 @@ class TestSingleModelInference:
         assert output_metadata_v3 == output_metadata_latest
 
         # Model status check
-        model_name = 'resnet'
-        request = get_model_status(model_name=model_name)
+        request = get_model_status(model_name=Resnet.name)
         status_response = status_stub.GetModelStatus(request, 10)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
@@ -155,45 +148,40 @@ class TestSingleModelInference:
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(10)
 
-        request_v1 = get_model_metadata(model_name=model_name, version=1)
+        request_v1 = get_model_metadata(model_name=Resnet.name, version=1)
         response_v1 = stub.GetModelMetadata(request_v1, 10)
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
 
-        assert model_name == response_v1.model_spec.name
+        assert Resnet.name == response_v1.model_spec.name
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        expected_input_metadata_v3 = {in_name: {'dtype': 1,
-                                                'shape': [8, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name: {'dtype': 1,
-                                                  'shape': [8, 1001]}}
+        expected_input_metadata_v3 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
+        expected_output_metadata_v3 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
 
-        request_v3 = get_model_metadata(model_name=model_name, version=3)
+        request_v3 = get_model_metadata(model_name=Resnet.name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
 
-        assert model_name == response_v3.model_spec.name
+        assert Resnet.name == response_v3.model_spec.name
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {in_name: {'dtype': 1,
-                                                'shape': [4, 3, 224, 224]}}
-        expected_output_metadata_v4 = {out_name: {'dtype': 1,
-                                                  'shape': [4, 1001]}}
-        request_v4 = get_model_metadata(model_name=model_name)
+        expected_input_metadata_v4 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
+        expected_output_metadata_v4 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
+        request_v4 = get_model_metadata(model_name=Resnet.name)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
 
-        assert model_name == response_v4.model_spec.name
+        assert Resnet.name == response_v4.model_spec.name
         assert expected_input_metadata_v4 == input_metadata_v4
         assert expected_output_metadata_v4 == output_metadata_v4
 
         # Model status check
-        model_name = 'resnet'
-        request = get_model_status(model_name=model_name)
+        request = get_model_status(model_name=Resnet.name)
         status_response = status_stub.GetModelStatus(request, 10)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
@@ -225,28 +213,22 @@ class TestSingleModelInference:
         stub = create_channel(port=ports["grpc_port"])
         status_stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
-        logger.info("Getting info about resnet model")
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata_v1 = {in_name: {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
-        request = get_model_metadata(model_name=model_name)
+        logger.info("Getting info about {} model".format(Resnet.name))
+        expected_input_metadata_v1 = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata_v1 = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
         # Model status check before update
-        model_name = 'resnet'
-        request = get_model_status(model_name=model_name)
+        request = get_model_status(model_name=Resnet.name)
         status_response = status_stub.GetModelStatus(request, 10)
         versions_statuses = status_response.model_version_status
         version_status = versions_statuses[0]
@@ -261,24 +243,21 @@ class TestSingleModelInference:
         resnet_v2_copy_dir = copy_model(resnet_bs4, 2, directory)
         time.sleep(10)
 
-        expected_input_metadata_v2 = {in_name: {'dtype': 1,
-                                                'shape': [4, 3, 224, 224]}}
-        expected_output_metadata_v2 = {out_name: {'dtype': 1,
-                                                  'shape': [4, 1001]}}
-        request = get_model_metadata(model_name=model_name)
+        expected_input_metadata_v2 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
+        expected_output_metadata_v2 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v2 == input_metadata
         assert expected_output_metadata_v2 == output_metadata
 
         # Model status check after update
-        model_name = 'resnet'
-        request = get_model_status(model_name=model_name)
+        request = get_model_status(model_name=Resnet.name)
         status_response = status_stub.GetModelStatus(request, 10)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 2
@@ -313,18 +292,12 @@ class TestSingleModelInference:
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, directory)
         time.sleep(8)
 
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-
         # Available versions: 1, 4
 
-        logger.info("Getting info about resnet model")
-        model_name = 'resnet'
+        logger.info("Getting info about {} model".format(Resnet.name))
 
-        expected_input_metadata_v1 = {in_name: {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
+        expected_input_metadata_v1 = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata_v1 = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
 
         rest_url_latest = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="1")
         response = get_model_metadata_response_rest(rest_url_latest)
@@ -333,7 +306,7 @@ class TestSingleModelInference:
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
@@ -421,33 +394,29 @@ class TestSingleModelInference:
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
 
-        assert model_name == response_v1.model_spec.name
+        assert Resnet.name == response_v1.model_spec.name
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        expected_input_metadata_v3 = {in_name: {'dtype': 1,
-                                                'shape': [8, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name: {'dtype': 1,
-                                                  'shape': [8, 1001]}}
+        expected_input_metadata_v3 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
+        expected_output_metadata_v3 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
 
         rest_url_v3 = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="3")
         response_v3 = get_model_metadata_response_rest(rest_url_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
 
-        assert model_name == response_v3.model_spec.name
+        assert Resnet.name == response_v3.model_spec.name
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {in_name: {'dtype': 1,
-                                                'shape': [4, 3, 224, 224]}}
-        expected_output_metadata_v4 = {out_name: {'dtype': 1,
-                                                  'shape': [4, 1001]}}
+        expected_input_metadata_v4 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
+        expected_output_metadata_v4 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
 
-        assert model_name == response_v4.model_spec.name
+        assert Resnet.name == response_v4.model_spec.name
         assert expected_input_metadata_v4 == input_metadata_v4
         assert expected_output_metadata_v4 == output_metadata_v4
 
@@ -482,14 +451,9 @@ class TestSingleModelInference:
         resnet_copy_dir = copy_model(resnet, 1, directory)
         time.sleep(8)
 
-        logger.info("Getting info about resnet model")
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata_v1 = {in_name: {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
+        logger.info("Getting info about {} model".format(Resnet.name))
+        expected_input_metadata_v1 = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata_v1 = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
 
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"])
         response = get_model_metadata_response_rest(rest_url)
@@ -498,7 +462,7 @@ class TestSingleModelInference:
 
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
@@ -519,17 +483,15 @@ class TestSingleModelInference:
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 2, directory)
         time.sleep(10)
 
-        expected_input_metadata = {in_name: {'dtype': 1,
-                                             'shape': [4, 3, 224, 224]}}
-        expected_output_metadata = {out_name: {'dtype': 1,
-                                               'shape': [4, 1001]}}
+        expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
+        expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
         response = get_model_metadata_response_rest(rest_url)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
@@ -570,15 +532,10 @@ class TestSingleModelInference:
 
         # Available versions: 1, 4
 
-        logger.info("Getting info about resnet model")
-        model_name = 'resnet'
-        in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
-        out_name = 'softmax_tensor'
-        expected_input_metadata_v1 = {in_name: {'dtype': 1,
-                                                'shape': [1, 3, 224, 224]}}
-        expected_output_metadata_v1 = {out_name: {'dtype': 1,
-                                                  'shape': [1, 1001]}}
-        request = get_model_metadata(model_name=model_name, version=1)
+        logger.info("Getting info about {} model".format(Resnet.name))
+        expected_input_metadata_v1 = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
+        expected_output_metadata_v1 = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        request = get_model_metadata(model_name=Resnet.name, version=1)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
@@ -586,7 +543,7 @@ class TestSingleModelInference:
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata
         assert expected_output_metadata_v1 == output_metadata
 
@@ -598,7 +555,7 @@ class TestSingleModelInference:
         logger.info("Input metadata: {}".format(input_metadata_latest))
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
-        request_v4 = get_model_metadata(model_name=model_name, version=4)
+        request_v4 = get_model_metadata(model_name=Resnet.name, version=4)
         response_v4 = stub.GetModelMetadata(request_v4, 10)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
@@ -615,7 +572,7 @@ class TestSingleModelInference:
 
         # Available versions: 1, 3
 
-        request_latest = get_model_metadata(model_name=model_name)
+        request_latest = get_model_metadata(model_name=Resnet.name)
         response_latest = stub.GetModelMetadata(request_latest, 10)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
@@ -643,34 +600,30 @@ class TestSingleModelInference:
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v1 == input_metadata_v1
         assert expected_output_metadata_v1 == output_metadata_v1
 
-        expected_input_metadata_v3 = {in_name: {'dtype': 1,
-                                                'shape': [8, 3, 224, 224]}}
-        expected_output_metadata_v3 = {out_name: {'dtype': 1,
-                                                  'shape': [8, 1001]}}
+        expected_input_metadata_v3 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
+        expected_output_metadata_v3 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
 
-        request_v3 = get_model_metadata(model_name=model_name, version=3)
+        request_v3 = get_model_metadata(model_name=Resnet.name, version=3)
         response_v3 = stub.GetModelMetadata(request_v3, 10)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
 
-        assert model_name == response.model_spec.name
+        assert Resnet.name == response.model_spec.name
         assert expected_input_metadata_v3 == input_metadata_v3
         assert expected_output_metadata_v3 == output_metadata_v3
 
-        expected_input_metadata_v4 = {in_name: {'dtype': 1,
-                                                'shape': [4, 3, 224, 224]}}
-        expected_output_metadata_v4 = {out_name: {'dtype': 1,
-                                                  'shape': [4, 1001]}}
+        expected_input_metadata_v4 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
+        expected_output_metadata_v4 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
         rest_url = get_metadata_url(model=Resnet.name, port=ports["rest_port"], version="4")
         response_v4 = get_model_metadata_response_rest(rest_url)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
 
-        assert model_name == response_v4.model_spec.name
+        assert Resnet.name == response_v4.model_spec.name
         assert expected_input_metadata_v4 == input_metadata_v4
         assert expected_output_metadata_v4 == output_metadata_v4
 
