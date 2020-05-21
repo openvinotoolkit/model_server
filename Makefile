@@ -61,6 +61,11 @@ docker_build:
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
 
+ifeq ($(NO_DOCKER_CACHE),true)
+	$(eval NO_CACHE_OPTION:=--no-cache)
+	@echo "Docker image will be rebuilt from scratch"
+endif
+
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
 else
@@ -68,11 +73,11 @@ else
 endif
 	@cat .workspace/metadata.json
 
-	@echo docker build . \
+	@echo docker build $(NO_CACHE_OPTION) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ovms_metadata_file=.workspace/metadata.json \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
-	@docker build . \
+	@docker build $(NO_CACHE_OPTION) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ovms_metadata_file=.workspace/metadata.json \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
