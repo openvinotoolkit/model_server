@@ -3,6 +3,8 @@ FROM centos:8 as base_build
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
+ARG ovms_metadata_file
+
 RUN yum update -y && yum install -y \
             gcc \
             gcc-c++ \
@@ -64,5 +66,7 @@ COPY src/ /ovms/src/
 RUN bazel build //src:ovms
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
 RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
+
+ADD ${ovms_metadata_file} metadata.json
 
 ENTRYPOINT ["./bazel-bin/src/ovms"]

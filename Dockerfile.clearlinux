@@ -3,6 +3,8 @@ FROM clearlinux as base_build
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
+ARG ovms_metadata_file
+
 RUN swupd bundle-add \
 	c-basic \
 	curl devpkg-curl \
@@ -50,5 +52,7 @@ COPY src/ /ovms/src/
 RUN bazel build //src:ovms
 RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
 RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
+
+ADD ${ovms_metadata_file} metadata.json
 
 ENTRYPOINT ["./bazel-bin/src/ovms"]
