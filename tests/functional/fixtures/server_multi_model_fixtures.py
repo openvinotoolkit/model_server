@@ -20,8 +20,8 @@ import shutil
 import pytest
 
 import config
-from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.parametrization import get_tests_suffix
+from utils.server import start_ovms_container
 from utils.server import save_container_logs
 
 
@@ -36,11 +36,10 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
     request.addfinalizer(finalizer)
 
     shutil.copyfile('tests/functional/config.json', config.path_to_mount + '/config.json')
-    AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
-    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
-    AWS_REGION = os.getenv('AWS_REGION')
+    aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
+    aws_secret_access_key = os.getenv('MINIO_SECRET_KEY')
+    aws_region = os.getenv('AWS_REGION')
 
-    client = get_docker_context
     network = get_docker_network
 
     _, ports = start_minio_server
@@ -48,37 +47,20 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
     minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(
         get_tests_suffix(), grpc_port)
 
-    envs = ['MINIO_ACCESS_KEY=' + AWS_ACCESS_KEY_ID,
-            'MINIO_SECRET_KEY=' + AWS_SECRET_ACCESS_KEY,
-            'AWS_ACCESS_KEY_ID=' + AWS_ACCESS_KEY_ID,
-            'AWS_SECRET_ACCESS_KEY=' + AWS_SECRET_ACCESS_KEY,
-            'AWS_REGION=' + AWS_REGION,
+    envs = ['MINIO_ACCESS_KEY=' + aws_access_key_id,
+            'MINIO_SECRET_KEY=' + aws_secret_access_key,
+            'AWS_ACCESS_KEY_ID=' + aws_access_key_id,
+            'AWS_SECRET_ACCESS_KEY=' + aws_secret_access_key,
+            'AWS_REGION=' + aws_region,
             'S3_ENDPOINT=' + minio_endpoint,
             'https_proxy=' + os.getenv('https_proxy', ""),
             'no_proxy={}'.format(minio_endpoint)]
 
-    volumes_dict = {'{}'.format(config.path_to_mount):
-                    {'bind': '/opt/ml', 'mode': 'ro'}}
+    start_server_command_args = {"config_path": "/opt/ml/config.json",
+                                 "grpc_workers": 2,
+                                 "rest_workers": 2}
+    container_name_infix = "test-multi"
+    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
+                                            container_name_infix, config.start_container_command, envs, network.name)
 
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = "{} --config_path /opt/ml/config.json --port {} " \
-              "--rest_port {} --grpc_workers 2 --rest_workers 2".\
-              format(config.start_container_command, grpc_port, rest_port)
-
-    container = client.containers.run(image=config.image, detach=True,
-                                      name='ie-serving-py-test-multi-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port,
-                                             '{}/tcp'.format(rest_port):
-                                             rest_port},
-                                      remove=True, volumes=volumes_dict,
-                                      environment=envs,
-                                      command=command,
-                                      network=network.name)
-
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports

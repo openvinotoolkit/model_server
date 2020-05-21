@@ -45,6 +45,7 @@ class AgeGender:
                                            AGE_GENDER_RECOGNITION_MODEL)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
+    model_path = "/opt/ml/age_gender"
 
 
 class PVBDetection:
@@ -75,6 +76,7 @@ class FaceDetection:
                                            FACE_DETECTION_MODEL)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
+    model_path = "/opt/ml/face_detection"
 
 
 class PVBFaceDetectionV1(FaceDetection):
@@ -136,6 +138,7 @@ class ResnetS3:
     output_name = "softmax_tensor"
     output_shape = (1, 1001)
     rest_request_format = 'row_name'
+    model_path = "s3://inference/resnet_v1_50"
 
 
 class ResnetGS:
@@ -146,3 +149,4 @@ class ResnetGS:
     output_name = "resnet_v1_50/predictions/Reshape_1"
     output_shape = (1, 1000)
     rest_request_format = 'row_name'
+    model_path = "gs://public-artifacts/intelai_public_models/resnet_50_i8/"

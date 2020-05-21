@@ -19,9 +19,7 @@ import os
 import pytest
 
 import config
-from model.models_information import Resnet
-from utils.model_management import wait_endpoint_setup
-from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from model.models_information import Resnet, AgeGender
 from utils.server import start_ovms_container, save_container_logs
 
 
@@ -62,27 +60,17 @@ def start_server_with_mapping(request, get_docker_context):
 
     file_dst_path = config.path_to_mount + '/age_gender/1/mapping_config.json'
     shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
-    client = get_docker_context
-    volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
-                                                        'mode': 'ro'}}
 
-    grpc_port, rest_port = get_ports_for_fixture()
+    start_server_command_args = {"model_name": AgeGender.name,
+                                 "model_path": AgeGender.model_path}
+    container_name_infix = "test-2-out"
+    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
+                                            container_name_infix, config.start_container_command)
 
-    command = "{} --model_name age_gender " \
-              "--model_path /opt/ml/age_gender " \
-              "--port {} --rest_port {}".format(config.start_container_command, grpc_port, rest_port)
+    def delete_mapping_file():
+        if os.path.exists(file_dst_path):
+            os.remove(file_dst_path)
 
-    container = client.containers.run(image=config.image, detach=True,
-                                      name='ie-serving-py-test-2-out-{}'.
-                                      format(get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port,
-                                             '{}/tcp'.format(rest_port):
-                                             rest_port},
-                                      remove=True, volumes=volumes_dict,
-                                      command=command)
+    request.addfinalizer(delete_mapping_file)
 
-    running = wait_endpoint_setup(container)
-    assert running is True, "docker container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return container, ports
