@@ -23,13 +23,37 @@ import json
 import requests
 import os
 
+from openvino.inference_engine import IENetwork, IEPlugin
+
+
+def run_ov_request(image, input_name, model_name):
+    model_path = os.path.join(os.getcwd(), 'model', model_name)
+    model_xml = ""
+    model_bin = ""
+    for (dirpath, dirnames, filenames) in os.walk(model_path):
+        for filename in filenames:
+            _, ext = os.path.splitext(filename)
+            if ext == ".xml":
+                model_xml = model_path +'/' + filename
+            if ext == ".bin":
+                model_bin = model_path +'/' + filename
+    if model_xml == "" or model_bin == "":
+        print("unable to find proper model data")
+        return
+    target_device = 'CPU'
+    plugin = IEPlugin(device=target_device)
+    net = IENetwork(model=model_xml, weights=model_bin)
+    exec_net = plugin.load(network=net,num_requests=1)
+    res = exec_net.infer(inputs={input_name: image})
+    return res
+
 
 def load_ov_standard_image(file_path, height, width):
     # OpenVINO standard format
     image = cv2.imread(file_path)  # BGR color format, shape HWC
     if image.shape[:-1] != (height, width):
         image = cv2.resize(image, (width, height))
-    image = image.transpose(2, 0, 1)
+    image = image.transpose((2, 0, 1))
     return image
 
 
@@ -75,7 +99,7 @@ def send_image_ams(image, address, port, endpoint, content_type):
     return response.content
 
 
-def detection_array(output, img_out, height, width):
+def detection_array(output, img_out, height, width, model_name, framework):
     results = {}
     for out in output:
         results[out] = []
@@ -87,7 +111,7 @@ def detection_array(output, img_out, height, width):
             y_min = detection[4]
             x_max = detection[5]
             y_max = detection[6]
-            if detection[2] > 0.5:  # ignore detections confidence <0.5
+            if detection[2] > 0.2:  # ignore detections confidence <0.5
                 x_min_s = int(x_min*width)
                 y_min_s = int(y_min*height)
                 x_max_s = int(x_max*width)
@@ -96,7 +120,7 @@ def detection_array(output, img_out, height, width):
                     img_out, (x_min_s, y_min_s), (x_max_s, y_max_s), (0, 0, 255), 1)
                 # draw each detected box on the input image
                 results[out].append([detection[2], x_min, y_min, x_max, y_max])
-            cv2.imwrite("results_ovms.jpg", img_out)
+            cv2.imwrite("results_{}_{}.jpg".format(model_name, framework), img_out)
     return results
 
 
@@ -116,7 +140,7 @@ def classification_array(output, output_names, classes):
     return results
 
 
-def detection_json(json_txt, img_out, height, width):
+def detection_json(json_txt, img_out, height, width, model_name):
     ams_detection_json = json.loads(json_txt)
     results = []
     detections = ams_detection_json["entities"]
@@ -124,13 +148,13 @@ def detection_json(json_txt, img_out, height, width):
     for detection in detections:
         confidence = detection["tag"]["confidence"]
         box = detection["box"]
-        if detection["tag"]["confidence"] > 0.5:
+        if detection["tag"]["confidence"] > 0.2:
             img_out = cv2.rectangle(img_out, (int(box["l"]*width), int(box["t"]*height)), (int(
                 (box["l"]+box["w"])*width), int((box["t"]+box["h"])*height)), (255, 0, 0), 1)
             results.append(
                 [confidence, box["l"], box["t"], box["w"], box["h"]])
         i = i+1
-    cv2.imwrite("results_ams.jpg", img_out)
+    cv2.imwrite("results_{}_ams.jpg".format(model_name), img_out)
 
     return results
 
@@ -139,12 +163,19 @@ def classification_json(json_txt):
     ams_classification_json = json.loads(json_txt)
     classifications = ams_classification_json["classifications"]
     results = {}
+    result_added = False
     for classification in classifications:
+        result_added = False
         attributes = classification["attributes"]
         highest_probability = {"value": "", "confidence": 0.0}
         for attribute in attributes:
+            if attribute["confidence"] == None:
+                results[attribute["name"]] = attribute["value"]
+                result_added = True
+                continue
             if attribute["confidence"] > highest_probability["confidence"]:
                 highest_probability["confidence"] = attribute["confidence"]
                 highest_probability["value"] = attribute["value"]
-        results[attributes[0]["name"]] = highest_probability
+        if not result_added:
+            results[attributes[0]["name"]] = highest_probability
     return results

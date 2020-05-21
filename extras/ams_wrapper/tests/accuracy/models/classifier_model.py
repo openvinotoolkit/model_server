@@ -22,14 +22,14 @@ class ClassifierModel(Model):
 
     def output_postprocess(self):
         self.ams_results = classification_json(self.ams_output)
-        self.ovms_results = classification_array(
-            self.ovms_output, self.output_names, self.classes)
+        self.ovms_results = classification_array(self.ovms_output, self.output_names, self.classes)
+        self.ov_results = classification_array(self.ov_output, self.output_names, self.classes)
 
     def print_results(self):
+        print("AMS Result")
         print(self.ams_results)
+        print("OVMS Result")
         print(self.ovms_results)
-        for result in self.ams_results:
-            if self.ovms_results[result]["value"] == self.ams_results[result]["value"]:
-                print("Class ID is correct")
-            if abs(self.ams_results[result]["confidence"] - self.ovms_results[result]["confidence"]) < 0.02:
-                print("Confidence is correct")
+        print("OpenVINO Result")
+        print(self.ov_results)
+
