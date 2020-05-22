@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import os
 
 import grpc  # noqa
 import pytest
+from _pytest._code import ExceptionInfo, filter_traceback  # noqa
+
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from utils.cleanup import clean_hanging_docker_resources, get_docker_client
 from utils.logger import get_logger
@@ -40,7 +41,7 @@ pytest_plugins = [
     ]
 
 
-def pytest_sessionstart(session):
+def pytest_sessionstart():
     for item in os.environ.items():
         logger.debug(item)
 
@@ -114,3 +115,45 @@ def pytest_configure(config):
 
 def pytest_unconfigure():
     clean_hanging_docker_resources()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call():
+    __tracebackhide__ = True
+    try:
+        outcome = yield
+    finally:
+        pass
+    exception_catcher("call", outcome)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_setup():
+    __tracebackhide__ = True
+    try:
+        outcome = yield
+    finally:
+        pass
+    exception_catcher("setup", outcome)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown():
+    __tracebackhide__ = True
+    try:
+        outcome = yield
+    finally:
+        pass
+    exception_catcher("teardown", outcome)
+
+
+def exception_catcher(when: str, outcome):
+    if isinstance(outcome.excinfo, tuple):
+        exception_logger = get_logger("exception_logger")
+        exception_info = ExceptionInfo.from_exc_info(outcome.excinfo)
+        exception_info.traceback = exception_info.traceback.filter(filter_traceback)
+        exc_repr = exception_info.getrepr(style="short", chain=False)\
+            if exception_info.traceback\
+            else exception_info.exconly()
+        exception_logger.error('Unhandled Exception during {}: \n{}'
+                               .format(when.capitalize(), str(exc_repr)))
