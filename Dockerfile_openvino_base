@@ -1,4 +1,4 @@
-FROM openvino/ubuntu18_runtime
+FROM openvino/ubuntu18_runtime:2020.2
 USER root
 RUN apt-get update && apt-get install -y python3-dev python3-venv
 WORKDIR /ie-serving-py

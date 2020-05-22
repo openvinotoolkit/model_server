@@ -32,6 +32,7 @@ OVMS_VERSION := "2020_R1"
 DLDT_PACKAGE_URL := "$(dldt_package_url)"
 TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest
+DOCKER_AMS_TAG ?= ams:latest
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -136,16 +137,16 @@ docker_build_ams:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
-	@echo docker build -f Dockerfile_ams --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_ams --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@docker build -f Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
 
 docker_build_ams_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
-	@echo docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
 
 docker_build_clearlinux:
 	@echo "Building docker image"

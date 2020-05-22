@@ -11,9 +11,6 @@ ENV TEMP_DIR $TEMP_DIR
 ARG DLDT_PACKAGE_URL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cpio \
-    libpython3.6 \
-    python3-pip \
-    python3-venv \
     usbutils \
     virtualenv \
     libboost-filesystem1.65.1 \
@@ -23,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Tested with OpenVINO 2020.1
+# Tested with OpenVINO 2020.2
 RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     tar -zxf l_openvino_toolkit*.tgz && \
@@ -62,7 +59,6 @@ RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_dete
     mkdir -p /opt/models/face_detection_adas/1 && cd /opt/models/face_detection_adas/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-adas-0001/FP32/face-detection-adas-0001.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-adas-0001/FP32/face-detection-adas-0001.xml
- 
 COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper /ams_wrapper
 COPY extras/ams_models /opt/ams_models
