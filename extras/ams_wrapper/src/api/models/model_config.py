@@ -115,8 +115,6 @@ class ModelOutputConfigurationSchema(Schema):
 class ModelConfigurationSchema(Schema):
     endpoint = fields.String(required=True)
     model_type = fields.String(required=True)
-    inputs = fields.List(fields.Nested(
-        ModelInputConfigurationSchema, required=True))
-    outputs = fields.List(fields.Nested(
-        ModelOutputConfigurationSchema, required=True))
+    inputs = fields.List(fields.Nested(ModelInputConfigurationSchema, required=True), required=True)
+    outputs = fields.List(fields.Nested(ModelOutputConfigurationSchema, required=True), required=True)
     ovms_mapping = fields.Nested(ModelOvmsMappingSchema, required=True)

@@ -48,21 +48,19 @@ class ModelBuilder:
             with open(config_file_path, mode='r') as config_file:
                 config = json.load(config_file)
         except FileNotFoundError as e:
-            logger.exception(
-                'Model\'s configuration file {} was not found.'.format(config_file_path))
-            raise ValueError from e
+            logger.exception('Model\'s configuration file {} was not found.'.format(config_file_path))
+            raise FileNotFoundError from e
         except Exception as e:
             logger.exception(
                 'Failed to load Model\'s configuration file {}.'.format(config_file_path))
             raise ValueError from e
 
         model_config_schema = ModelConfigurationSchema()
-        try:
-            model_config_schema.validate(config)
-        except ValidationError:
-            logger.exception('Model configuration is invalid')
-            raise
-
+        errors_dict = model_config_schema.validate(config)
+        if errors_dict:
+            msg = 'Model configuration is invalid: {}'.format(errors_dict)
+            logger.exception(msg)
+            raise ValidationError(msg)
         model_config = {}
         model_config['endpoint'] = config['endpoint']
         model_config['model_type'] = config['model_type']
