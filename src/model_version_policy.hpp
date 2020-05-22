@@ -15,13 +15,13 @@
 //*****************************************************************************
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <algorithm>
-
-#include "modelconfig.hpp"
+#include <memory>
+#include <vector>
 
 namespace ovms {
+
+using model_version_t = int64_t;
 
 /**
  * @brief Base class for model version policy types
@@ -29,6 +29,7 @@ namespace ovms {
 class ModelVersionPolicy {
 protected:
     ModelVersionPolicy() {}
+    virtual ~ModelVersionPolicy() {}
 
 public:
     /**

@@ -50,6 +50,12 @@ namespace ovms {
         Model() = default;
 
         /**
+         * @brief Destroy the Model object
+         * 
+         */
+        virtual ~Model() {}
+
+        /**
          * @brief Gets the model name
          * 
          * @return model name
@@ -104,7 +110,7 @@ namespace ovms {
          *
          * @return status
          */
-        Status addVersion(const ModelConfig& config);
+        virtual Status addVersion(const ModelConfig& config);
 
         /**
          * @brief Removes model version from the list
