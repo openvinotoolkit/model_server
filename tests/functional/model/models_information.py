@@ -29,6 +29,13 @@ AGE_GENDER_RECOGNITION_MODEL = "age-gender-recognition-retail-0013"
 PERSON_VEHICLE_BIKE_DETECTION_MODEL = "person-vehicle-bike-detection-crossroad-0078"
 RESNET_50 = "resnet-50-tf"
 RESNET_V1_50 = "resnet_v1-50"
+OPEN_MODEL_ZOO_MODELS_LOCATION = "{repo}/{opencv}/{version}/{bin}/{build}".format(repo=MODEL_REPOSITORY_SERVER,
+                                                                                  opencv=OPENCV_OPENVINO_TOOLKIT,
+                                                                                  version=OPENVINO_VERSION,
+                                                                                  bin=OPEN_MODEL_ZOO_BIN,
+                                                                                  build=BUILD_DIR)
+URL_OPEN_MODEL_ZOO_FORMAT = "{model_location}/{model}/{precision}/{model}"
+URL_PUBLIC_MODEL_FORMAT = "{repo}/{opencv}/{build}/{model}/{model_version}"
 
 
 class AgeGender:
@@ -40,9 +47,8 @@ class AgeGender:
     output_shape = {'age': (1, 1, 1, 1),
                     'gender': (1, 2, 1, 1)}
     rest_request_format = 'column_name'
-    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
-                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, AGE_GENDER_RECOGNITION_MODEL, PRECISION,
-                                           AGE_GENDER_RECOGNITION_MODEL)  # noqa
+    url = URL_OPEN_MODEL_ZOO_FORMAT.format(model_location=OPEN_MODEL_ZOO_MODELS_LOCATION,
+                                           model=AGE_GENDER_RECOGNITION_MODEL, precision=PRECISION)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
     model_path = "/opt/ml/age_gender"
@@ -56,9 +62,8 @@ class PVBDetection:
     output_name = "detection_out"
     output_shape = (1, 1, 200, 7)
     rest_request_format = 'column_name'
-    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
-                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, PERSON_VEHICLE_BIKE_DETECTION_MODEL,
-                                           PRECISION, PERSON_VEHICLE_BIKE_DETECTION_MODEL)  # noqa
+    url = URL_OPEN_MODEL_ZOO_FORMAT.format(model_location=OPEN_MODEL_ZOO_MODELS_LOCATION,
+                                           model=PERSON_VEHICLE_BIKE_DETECTION_MODEL, precision=PRECISION)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
 
@@ -71,9 +76,8 @@ class FaceDetection:
     output_name = "detection_out"
     output_shape = (1, 1, 200, 7)
     rest_request_format = 'column_name'
-    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
-                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, FACE_DETECTION_MODEL, PRECISION,
-                                           FACE_DETECTION_MODEL)  # noqa
+    url = URL_OPEN_MODEL_ZOO_FORMAT.format(model_location=OPEN_MODEL_ZOO_MODELS_LOCATION,
+                                           model=FACE_DETECTION_MODEL, precision=PRECISION)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
     model_path = "/opt/ml/face_detection"
@@ -101,7 +105,8 @@ class Resnet:
     output_shape = (1, 1001)
     rest_request_format = 'column_name'
     model_path = "/opt/ml/resnet"
-    url = "{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_PUBLIC, BUILD_012020, RESNET_50, RESNET_V1_50)
+    url = URL_PUBLIC_MODEL_FORMAT.format(repo=MODEL_REPOSITORY_SERVER, opencv=OPENCV_PUBLIC, build=BUILD_012020,
+                                         model=RESNET_50, model_version=RESNET_V1_50)
     local_conversion_dir = "tensorflow_format"
     download_extensions = [".pb"]
     version = 1
