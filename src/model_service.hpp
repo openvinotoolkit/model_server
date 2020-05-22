@@ -58,7 +58,7 @@ class ModelServiceImpl final : public tensorflow::serving::ModelService::Service
                                 tensorflow::serving::GetModelStatusResponse *response) override;
   ::grpc::Status HandleReloadConfigRequest(::grpc::ServerContext *context,
                                            const tensorflow::serving::ReloadConfigRequest *request,
-                                           tensorflow::serving::ReloadConfigResponse *response);
+                                           tensorflow::serving::ReloadConfigResponse *response) override;
 };
 
 }  // namespace ovms

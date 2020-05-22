@@ -120,6 +120,11 @@ namespace ovms {
         ModelInstance() = default;
 
         /**
+         * @brief Destroy the Model Instance object
+         */
+        virtual ~ModelInstance() {}
+
+        /**
          * @brief Gets Inference Engine reference
          *
          * @return InferenceEngine::Core

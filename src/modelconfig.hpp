@@ -16,11 +16,21 @@
 #pragma once
 
 #include <algorithm>
-#include <string>
+#include <filesystem>
+#include <fstream>
 #include <map>
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <spdlog/spdlog.h>
+
+#include "model_version_policy.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 
@@ -30,8 +40,9 @@ using shape_t = std::vector<size_t>;
 using shapes_map_t = std::unordered_map<std::string, shape_t>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
-using model_version_t = int64_t;
 using plugin_config_t = std::map<std::string, std::string>;
+
+const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
     /**
      * @brief This class represents model configuration
@@ -61,7 +72,7 @@ using plugin_config_t = std::map<std::string, std::string>;
         /**
          * @brief Model version policy
          */
-        std::string modelVersionPolicy;
+        std::shared_ptr<ModelVersionPolicy> modelVersionPolicy;
 
         /**
          * @brief Nireq
@@ -132,7 +143,7 @@ using plugin_config_t = std::map<std::string, std::string>;
             basePath(""),
             backend("CPU"),
             batchSize(0),
-            modelVersionPolicy(""),
+            modelVersionPolicy({}),
             nireq(1),
             pluginConfig({}),
             shape({}),
@@ -157,13 +168,12 @@ using plugin_config_t = std::map<std::string, std::string>;
                     const std::string& basePath,
                     const std::string& backend,
                     size_t batchSize,
-                    uint64_t nireq,
-                    const std::string& modelVersionPolicy) :
+                    uint64_t nireq) :
                     name(name),
                     basePath(basePath),
                     backend(backend),
                     batchSize(batchSize),
-                    modelVersionPolicy(modelVersionPolicy),
+                    modelVersionPolicy({}),
                     nireq(nireq),
                     pluginConfig({}),
                     shape({}),
@@ -250,9 +260,9 @@ using plugin_config_t = std::map<std::string, std::string>;
         /**
          * @brief Get the model version policy
          * 
-         * @return const std::string&
+         * @return std::shared_ptr<ModelVersionPolicy>
          */
-        const std::string& getModelVersionPolicy() const {
+        std::shared_ptr<ModelVersionPolicy> getModelVersionPolicy() {
             return this->modelVersionPolicy;
         }
 
@@ -261,8 +271,74 @@ using plugin_config_t = std::map<std::string, std::string>;
          * 
          * @param modelVersionPolicy 
          */
-        void setModelVersionPolicy(const std::string& modelVersionPolicy) {
+        void setModelVersionPolicy(std::shared_ptr<ModelVersionPolicy> modelVersionPolicy) {
             this->modelVersionPolicy = modelVersionPolicy;
+        }
+
+        /**
+         * @brief Parses string for model version policy
+         * 
+         * @param string representing model version policy configuration
+
+         * @return status
+         */
+        Status parseModelVersionPolicy(std::string command) {
+            rapidjson::Document node;
+            if (command == "") {
+                modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
+                return Status::OK;
+            }
+
+            if (node.Parse(command.c_str()).HasParseError()) {
+                return Status::MODEL_VERSION_POLICY_ERROR;
+            }
+
+            if (!node.IsObject()) {
+                return Status::MODEL_VERSION_POLICY_ERROR;
+            }
+            if (node.MemberCount() != 1) {
+                return Status::MODEL_VERSION_POLICY_ERROR;
+            }
+
+            auto m = node.FindMember("all");
+            if (m != node.MemberEnd()) {
+                modelVersionPolicy = std::make_shared<AllModelVersionPolicy>();
+                return Status::OK;
+            }
+
+            m = node.FindMember("specific");
+            if (m != node.MemberEnd()) {
+                auto& specific = m->value;
+                if (specific.MemberCount() != 1) {
+                    return Status::MODEL_VERSION_POLICY_ERROR;
+                }
+                m = specific.FindMember("versions");
+                if (m == specific.MemberEnd()) {
+                    return Status::MODEL_VERSION_POLICY_ERROR;
+                }
+                std::vector<model_version_t> versions;
+                for (auto& version : m->value.GetArray()) {
+                    versions.push_back(version.GetInt64());
+                }
+                modelVersionPolicy = std::make_shared<SpecificModelVersionPolicy>(versions);
+                return Status::OK;
+            }
+
+            m = node.FindMember("latest");
+            if (m != node.MemberEnd()) {
+                auto& latest = m->value;
+                if (latest.MemberCount() != 1) {
+                    return Status::MODEL_VERSION_POLICY_ERROR;
+                }
+                m = latest.FindMember("num_versions");
+                if (m == latest.MemberEnd()) {
+                    return Status::MODEL_VERSION_POLICY_ERROR;
+                }
+                modelVersionPolicy = std::make_shared<LatestModelVersionPolicy>(m->value.GetInt64());
+                return Status::OK;
+            }
+
+            return Status::MODEL_VERSION_POLICY_ERROR;
         }
 
         /**
@@ -299,6 +375,46 @@ using plugin_config_t = std::map<std::string, std::string>;
          */
         void setPluginConfig(const plugin_config_t& pluginConfig) {
             this->pluginConfig = pluginConfig;
+        }
+
+        /**
+         * @brief Parses json node for plugin config keys and values
+         * 
+         * @param json node representing plugin_config
+         * 
+         * @return status
+         */
+        Status parsePluginConfig(const rapidjson::Value& node) {
+            if (!node.IsObject()) {
+                return Status::PLUGIN_CONFIG_ERROR;
+            }
+
+            for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+                if (!it->value.IsString()) {
+                    return Status::PLUGIN_CONFIG_ERROR;
+                }
+                pluginConfig[it->name.GetString()] = it->value.GetString();
+            }
+
+            return Status::OK;
+        }
+        /**
+         * @brief Parses string for plugin config keys and values
+         * 
+         * @param string representing plugin_config
+         * 
+         * @return status
+         */
+        Status parsePluginConfig(std::string command) {
+            rapidjson::Document node;
+            if (command.empty()) {
+                return Status::OK;
+            }
+            if (node.Parse(command.c_str()).HasParseError()) {
+                return Status::PLUGIN_CONFIG_ERROR;
+            }
+
+            return parsePluginConfig(node);
         }
 
         /**
@@ -515,6 +631,146 @@ using plugin_config_t = std::map<std::string, std::string>;
          */
         void setMappingOutputs(const mapping_config_t& mapping) {
             this->mappingOutputs = mapping;
+        }
+
+        /**
+         * @brief  Parses mapping_config.json for mapping input/outputs in the model
+         * 
+         * @return Status 
+         */
+        Status parseModelMapping() {
+            rapidjson::Document doc;
+
+            mappingInputs.clear();
+            mappingOutputs.clear();
+            std::filesystem::path path = this->getBasePath();
+            path.append(MAPPING_CONFIG_JSON);
+
+            std::ifstream ifs(path.c_str());
+            if (!ifs.good()) {
+                return Status::FILE_INVALID;
+            }
+
+            rapidjson::IStreamWrapper isw(ifs);
+            if (doc.ParseStream(isw).HasParseError()) {
+                return Status::JSON_INVALID;
+            }
+
+            // Process inputs
+            const auto itr = doc.FindMember("inputs");
+            if (itr == doc.MemberEnd() || !itr->value.IsObject()) {
+                spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
+            } else {
+                for (const auto& key : itr->value.GetObject()) {
+                    spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+                    mappingInputs[key.name.GetString()] = key.value.GetString();
+                }
+            }
+
+            // Process outputs
+            const auto it = doc.FindMember("outputs");
+            if (it == doc.MemberEnd() || !it->value.IsObject()) {
+                spdlog::warn("Couldn't load outputs object from file {}", path.c_str());
+            } else {
+                for (const auto& key : it->value.GetObject()) {
+                    spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+                    mappingOutputs[key.name.GetString()] = key.value.GetString();
+                }
+            }
+
+            return Status::OK;
+        }
+
+        /**
+         * @brief  Parses all settings from a JSON node
+         * 
+         * @return Status 
+         */
+        Status parseNode(const rapidjson::Value& v) {
+            this->setName(v["name"].GetString());
+            this->setBasePath(v["base_path"].GetString());
+
+            // Check for optional parameters
+            if (v.HasMember("batch_size")) {
+                if (v["batch_size"].IsString()) {
+                    // Although batch size is in, in legacy python version it was string
+                    this->setBatchSize(std::atoi(v["batch_size"].GetString()));
+                } else {
+                    this->setBatchSize(v["batch_size"].GetUint64());
+                }
+            }
+            if (v.HasMember("target_device"))
+                this->setBackend(v["target_device"].GetString());
+            if (v.HasMember("version"))
+                this->setVersion(v["version"].GetInt64());
+            if (v.HasMember("nireq"))
+                this->setNireq(v["nireq"].GetUint64());
+
+            if (v.HasMember("shape")) {
+                // Legacy format as string
+                if (v["shape"].IsString()) {
+                    if (this->setShape(v["shape"].GetString()) != Status::OK) {
+                        spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
+                    }
+                } else {
+                    if (v["shape"].IsArray()) {
+                        // Shape for all inputs
+                        shape_t shape;
+                        for (auto& sh : v["shape"].GetArray()) {
+                            shape.push_back(sh.GetUint64());
+                        }
+                        this->setShape(shape);
+                    } else {
+                        // Map of shapes
+                        for (auto& s : v["shape"].GetObject()) {
+                            shape_t shape;
+                            // check if legacy format is used
+                            if (s.value.IsString()) {
+                                if (ModelConfig::parseShape(shape, s.value.GetString()) != Status::OK) {
+                                    spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
+                                }
+                            } else {
+                                for (auto& sh : s.value.GetArray()) {
+                                    shape.push_back(sh.GetUint64());
+                                }
+                            }
+                            this->addShape(s.name.GetString(), shape);
+                        }
+                    }
+                }
+            }
+
+            if (v.HasMember("layout")) {
+                if (v["layout"].IsString()) {
+                    this->setLayout(v["layout"].GetString());
+                } else {
+                    for (auto& s : v["layout"].GetObject()) {
+                        this->addLayout(s.name.GetString(), s.value.GetString());
+                    }
+                }
+            }
+
+            if (v.HasMember("plugin_config")) {
+                auto status = parsePluginConfig(v["plugin_config"]);
+                if (status != Status::OK) {
+                    spdlog::error("Couldn't parse plugin config: {}", StatusDescription::getError(status));
+                }
+            }
+
+            if (v.HasMember("model_version_policy")) {
+                rapidjson::StringBuffer buffer;
+                buffer.Clear();
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                v["model_version_policy"].Accept(writer);
+                auto status = this->parseModelVersionPolicy(buffer.GetString());
+                if (status != Status::OK) {
+                    spdlog::error("Couldn't parse model version policy: {}", StatusDescription::getError(status));
+                }
+            } else {
+                modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
+            }
+
+            return Status::OK;
         }
     };
 }  // namespace ovms

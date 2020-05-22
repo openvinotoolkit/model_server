@@ -45,10 +45,6 @@ TEST(ModelConfig, getters_setters) {
     auto batchSize = config.getBatchSize();
     EXPECT_EQ(batchSize, 5);
 
-    config.setModelVersionPolicy("policy");
-    auto policy = config.getModelVersionPolicy();
-    EXPECT_EQ(policy, "policy");
-
     config.setNireq(11);
     auto nireq = config.getNireq();
     EXPECT_EQ(nireq, 11);

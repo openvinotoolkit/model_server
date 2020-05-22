@@ -22,18 +22,14 @@
 #include <thread>
 #include <vector>
 
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
-
 #include "model.hpp"
-#include "model_version_policy.hpp"
 
 namespace ovms {
     /**
      * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
      */
     class ModelManager {
-    private:
+    protected:
         /**
          * @brief A default constructor is private
          */
@@ -89,8 +85,14 @@ namespace ovms {
         static ModelManager& getInstance() {
             static ModelManager instance;
 
-        return instance;
+            return instance;
         }
+
+        /**
+         * @brief Destroy the Model Manager object
+         * 
+         */
+        virtual ~ModelManager() {}
 
         /**
          * @brief Gets config filename
@@ -154,13 +156,11 @@ namespace ovms {
         /**
          * @brief Load model versions located in base path
          * 
-         * @param string base path, where versions are located
          * @param ModelConfig config
+         * 
          * @return status
          */
-        Status loadModelWithVersions(
-            const   std::string& basePath,
-                    ModelConfig& config);
+        Status loadModelWithVersions(ModelConfig& config);
 
         /**
          * @brief Starts model manager using ovms::Config
@@ -175,49 +175,21 @@ namespace ovms {
         void join();
 
         /**
-         * @brief Parses json node for plugin config keys and values
-         * 
-         * @param json node representing plugin_config
-         * @param target config reference where parsed data will be stored
-         * @return status
-         */
-        static Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& config);
-
-        /**
-         * @brief Parses string for plugin config keys and values
-         * 
-         * @param string representing plugin_config
-         * @param target config reference where parsed data will be stored
-         * @return status
-         */
-        static Status parsePluginConfig(std::string command, plugin_config_t& config);
-
-        /**
-         * @brief Parses string for model version policy
-         * 
-         * @param string representing model version policy configuration
-         * @param ModelVersionPolicy pointer reference to target model version policy
-         * @return status
-         * 
-         */
-        static Status parseModelVersionPolicy(std::string command, std::shared_ptr<ModelVersionPolicy>& policy);
-
-        /**
          * @brief Iterates over directories in specific path and returns available model versions
          * 
          * @param string path where to look for versions
          * @param reference to container of available model version results
          * @return operation status
          */
-        static Status readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions);
+        Status readAvailableVersions(const std::string& path, std::vector<model_version_t>& versions);
 
         /**
-         * @brief  Parses mapping_config.json for mapping input/outputs in the model
+         * @brief Factory for creating a model
          * 
-         * @param base 
-         * @param mappingInputs 
-         * @param mappingOutputs 
+         * @return std::shared_ptr<Model> 
          */
-        void parseModelMapping(const std::string& base, mapping_config_t& mappingInputs, mapping_config_t& mappingOutputs);
+        virtual std::shared_ptr<Model> modelFactory() {
+            return std::make_shared<Model>();
+        }
     };
 }  // namespace ovms
