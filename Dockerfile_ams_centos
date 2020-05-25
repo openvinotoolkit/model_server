@@ -11,7 +11,8 @@ ENV TEMP_DIR $TEMP_DIR
 ARG DLDT_PACKAGE_URL
 RUN yum install -y \
     python3-pip \
-    usbutils
+    usbutils \
+    boost-devel
 
 RUN yum install -y epel-release && yum install -y ocl-icd.x86_64
 
@@ -53,5 +54,8 @@ ADD https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/mo
 COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper /ams_wrapper
 COPY extras/ams_models /opt/ams_models
+
+ENV DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
+ENV HDDL_INSTALL_DIR="$DL_INSTALL_DIR/inference_engine/external/hddl"
 
 RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.sh
