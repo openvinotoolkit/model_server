@@ -34,6 +34,8 @@ namespace ovms {
 
 const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
+const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
+const char* NIREQ = "NIREQ";
 
 
 void ModelInstance::loadInputTensors(const ModelConfig& config) {
@@ -135,7 +137,7 @@ std::string getModelFile(const std::string path) {
 }
 
 uint getOVCPUThroughputStreams() {
-    const char* environmentVariableBuffer = std::getenv("CPU_THROUGHPUT_STREAMS");
+    const char* environmentVariableBuffer = std::getenv(CPU_THROUGHPUT_STREAMS);
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
         if (result && result.value() > 0) {
@@ -147,7 +149,7 @@ uint getOVCPUThroughputStreams() {
 }
 
 uint getNumberOfParallelInferRequests() {
-    const char* environmentVariableBuffer = std::getenv("NIREQ");
+    const char* environmentVariableBuffer = std::getenv(NIREQ);
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
         if (result && result.value() > 0) {
@@ -182,9 +184,9 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         loadInputTensors(config);
         loadOutputTensors(config);
         auto pluginConfig = config.getPluginConfig();
-        if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
+        if (pluginConfig.count(CPU_THROUGHPUT_STREAMS) == 0) {
             uint ovBackendStreamsCount = getOVCPUThroughputStreams();
-            pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
+            pluginConfig[CPU_THROUGHPUT_STREAMS] = std::to_string(ovBackendStreamsCount);
         }
         execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
         spdlog::info("Plugin config for device {}:", backend);
@@ -194,7 +196,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             spdlog::info("{}: {}", key, value);
         }
         uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
-        inferRequestsQueue = std::make_shared<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
+        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
         spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
             config.getName(),
             config.getVersion(),
@@ -213,8 +215,8 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
 
 void ModelInstance::unloadModel() {
     this->status.setUnloading();
-    while (!canUnloadInferRequests()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+    while (!canUnloadInstance()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     inferRequestsQueue.reset();
     execNetwork.reset();

@@ -72,8 +72,6 @@ const std::string model_2_path = "/tmp/models/dummy2/2";
 
 const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(ovms::ModelManager::WATCHER_INTERVAL_SEC + 1);
 
-}  // namespace
-
 class MockModel : public ovms::Model {
 public:
     MockModel() : Model("MOCK_NAME") {}
@@ -81,6 +79,8 @@ public:
 };
 
 std::shared_ptr<MockModel> modelMock;
+
+}  // namespace
 
 class MockModelManager : public ovms::ModelManager {
     public:

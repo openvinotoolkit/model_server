@@ -54,6 +54,22 @@ namespace ovms {
             return defaultVersion;
         }
 
+        /**
+         * @brief Adds a new version of ModelInstance to the list of versions
+         *
+         * @param config model configuration
+         *
+         * @return status
+         */
+        virtual Status addVersion(const ModelConfig& config);
+
+        /**
+         * @brief ModelInstances factory
+         *
+         * @return modelInstance
+         */
+        virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory();
+
     public:
         /**
          * @brief Constructor
@@ -112,15 +128,6 @@ namespace ovms {
         }
 
         /**
-         * @brief Adds a new version of ModelInstance to the list of versions
-         *
-         * @param config model configuration
-         *
-         * @return status
-         */
-        virtual Status addVersion(const ModelConfig& config);
-
-        /**
          * @brief Update default version
          */
         void updateDefaultVersion() {
@@ -132,8 +139,35 @@ namespace ovms {
                     newDefaultVersion = version;
                 }
             }
-            spdlog::info("Updating default version for model:{}, to:{}", getName(), newDefaultVersion);
+            spdlog::info("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
             defaultVersion = newDefaultVersion;
         }
+
+        /**
+         * @brief Adds new versions of ModelInstance
+         *
+         * @param config model configuration
+         *
+         * @return status
+         */
+        Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
+
+        /**
+         * @brief Retires versions of ModelInstances
+         *
+         * @param config model configuration
+         *
+         * @return status
+         */
+        Status retireVersions(std::shared_ptr<model_versions_t> versions);
+
+        /**
+         * @brief Reloads retired versions of ModelInstances
+         *
+         * @param config model configuration
+         *
+         * @return status
+         */
+        Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
     };
 }  // namespace ovms
