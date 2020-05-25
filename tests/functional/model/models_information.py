@@ -16,6 +16,20 @@
 
 import numpy as np
 
+MODEL_REPOSITORY_SERVER = "https://download.01.org"
+OPENCV_OPENVINO_TOOLKIT = "opencv/2020/openvinotoolkit"
+OPENCV_PUBLIC = "opencv/public_models"
+OPENVINO_VERSION = "2020.2"
+OPEN_MODEL_ZOO_BIN = "open_model_zoo/models_bin"
+BUILD_DIR = "1"
+BUILD_012020 = "012020"
+PRECISION = "FP32"
+FACE_DETECTION_MODEL = "face-detection-retail-0004"
+AGE_GENDER_RECOGNITION_MODEL = "age-gender-recognition-retail-0013"
+PERSON_VEHICLE_BIKE_DETECTION_MODEL = "person-vehicle-bike-detection-crossroad-0078"
+RESNET_50 = "resnet-50-tf"
+RESNET_V1_50 = "resnet_v1-50"
+
 
 class AgeGender:
     name = "age_gender"
@@ -26,9 +40,14 @@ class AgeGender:
     output_shape = {'age': (1, 1, 1, 1),
                     'gender': (1, 2, 1, 1)}
     rest_request_format = 'column_name'
+    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
+                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, AGE_GENDER_RECOGNITION_MODEL, PRECISION,
+                                           AGE_GENDER_RECOGNITION_MODEL)  # noqa
+    version = 1
+    download_extensions = [".xml", ".bin"]
 
 
-class PVBDetectionV1:
+class PVBDetection:
     name = "pvb_detection"
     dtype = np.float32
     input_name = "data"
@@ -36,17 +55,39 @@ class PVBDetectionV1:
     output_name = "detection_out"
     output_shape = (1, 1, 200, 7)
     rest_request_format = 'column_name'
+    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
+                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, PERSON_VEHICLE_BIKE_DETECTION_MODEL,
+                                           PRECISION, PERSON_VEHICLE_BIKE_DETECTION_MODEL)  # noqa
+    version = 1
+    download_extensions = [".xml", ".bin"]
 
 
-class FaceDetection(PVBDetectionV1):
+class FaceDetection:
     name = "face_detection"
+    dtype = np.float32
+    input_name = "data"
+    input_shape = (1, 3, 300, 300)
+    output_name = "detection_out"
+    output_shape = (1, 1, 200, 7)
+    rest_request_format = 'column_name'
+    url = "{}/{}/{}/{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_OPENVINO_TOOLKIT, OPENVINO_VERSION,
+                                           OPEN_MODEL_ZOO_BIN, BUILD_DIR, FACE_DETECTION_MODEL, PRECISION,
+                                           FACE_DETECTION_MODEL)  # noqa
+    version = 1
+    download_extensions = [".xml", ".bin"]
 
 
-class PVBDetectionV2(PVBDetectionV1):
+class PVBFaceDetectionV1(FaceDetection):
+    name = "pvb_face_multi_version"
+
+
+class PVBFaceDetectionV2(PVBDetection):
+    name = "pvb_face_multi_version"
     input_shape = (1, 3, 1024, 1024)
+    version = 2
 
 
-PVBDetection = [PVBDetectionV1, PVBDetectionV2]
+PVBFaceDetection = [PVBFaceDetectionV1, PVBFaceDetectionV2]
 
 
 class Resnet:
@@ -57,7 +98,11 @@ class Resnet:
     output_name = "softmax_tensor"
     output_shape = (1, 1001)
     rest_request_format = 'column_name'
-    model_path = "/opt/ml/resnet_V1_50"
+    model_path = "/opt/ml/resnet"
+    url = "{}/{}/{}/{}/{}".format(MODEL_REPOSITORY_SERVER, OPENCV_PUBLIC, BUILD_012020, RESNET_50, RESNET_V1_50)
+    local_conversion_dir = "tensorflow_format"
+    download_extensions = [".pb"]
+    version = 1
 
 
 class ResnetBS4:
@@ -68,6 +113,7 @@ class ResnetBS4:
     output_name = "softmax_tensor"
     output_shape = (4, 1001)
     rest_request_format = 'row_noname'
+    version = 1
 
 
 class ResnetBS8:
@@ -78,7 +124,8 @@ class ResnetBS8:
     output_name = "softmax_tensor"
     output_shape = (8, 1001)
     rest_request_format = 'row_noname'
-    model_path = "/opt/ml/resnet_V1_50_batch8"
+    model_path = "/opt/ml/resnet_bs8"
+    version = 1
 
 
 class ResnetS3:

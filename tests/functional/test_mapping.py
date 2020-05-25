@@ -27,8 +27,7 @@ logger = get_logger(__name__)
 
 class TestSingleModelMappingInference:
 
-    def test_run_inference(self, age_gender_model_downloader,
-                           start_server_with_mapping):
+    def test_run_inference(self, start_server_with_mapping):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -47,7 +46,6 @@ class TestSingleModelMappingInference:
         """
 
         _, ports = start_server_with_mapping
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -62,11 +60,9 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
-    def test_get_model_metadata(self, age_gender_model_downloader,
-                                start_server_with_mapping):
+    def test_get_model_metadata(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         stub = create_channel(port=ports["grpc_port"])
 
@@ -89,8 +85,7 @@ class TestSingleModelMappingInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_run_inference_rest(self, age_gender_model_downloader,
-                                start_server_with_mapping, request_format):
+    def test_run_inference_rest(self, start_server_with_mapping, request_format):
         """
             <b>Description</b>
             Submit request to REST API interface serving a single resnet model
@@ -109,7 +104,6 @@ class TestSingleModelMappingInference:
         """
 
         _, ports = start_server_with_mapping
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         imgs_v1_224 = np.ones(AgeGender.input_shape, AgeGender.dtype)
         rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
@@ -123,11 +117,9 @@ class TestSingleModelMappingInference:
             assert output[output_name].shape == shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_get_model_metadata_rest(self, age_gender_model_downloader,
-                                     start_server_with_mapping):
+    def test_get_model_metadata_rest(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         expected_input_metadata = {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}
         expected_output_metadata = {}

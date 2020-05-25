@@ -116,9 +116,9 @@ def start_minio_server(request, get_test_dir, get_docker_network,
 @pytest.fixture(scope="session")
 def get_minio_server_s3(request, get_image, get_test_dir, start_minio_server):
 
-    path_to_mount = get_test_dir + '/saved_models/resnet_V1_50/1'
-    input_bin = os.path.join(path_to_mount, 'resnet_V1_50.bin')
-    input_xml = os.path.join(path_to_mount, 'resnet_V1_50.xml')
+    path_to_mount = get_test_dir + '/saved_models/{}/{}'.format(Resnet.name, Resnet.version)
+    input_bin = os.path.join(path_to_mount, '{}.bin'.format(Resnet.name))
+    input_xml = os.path.join(path_to_mount, '{}.xml'.format(Resnet.name))
 
     MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
@@ -149,9 +149,9 @@ def get_minio_server_s3(request, get_image, get_test_dir, start_minio_server):
                      CreateBucketConfiguration=bucket_conf)
 
     s3.Bucket('inference').upload_file(input_bin,
-                                       'resnet_v1_50/1/resnet_V1_50.bin')
+                                       '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
     s3.Bucket('inference').upload_file(input_xml,
-                                       'resnet_v1_50/1/resnet_V1_50.xml')
+                                       '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
 
     return s3, ports
 

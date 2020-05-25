@@ -30,11 +30,9 @@ logger = get_logger(__name__)
 
 class TestMultiModelInference:
 
-    def test_run_inference(self, resnet_multiple_batch_sizes,
-                           start_server_multi_model):
+    def test_run_inference(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -75,10 +73,8 @@ class TestMultiModelInference:
         assert output[out_name].shape == (1, 1000), ERROR_SHAPE
     """
 
-    def test_get_model_metadata(self, resnet_multiple_batch_sizes,
-                                start_server_multi_model):
+    def test_get_model_metadata(self, start_server_multi_model):
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -97,11 +93,9 @@ class TestMultiModelInference:
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
-    def test_get_model_status(self, resnet_multiple_batch_sizes,
-                              start_server_multi_model):
+    def test_get_model_status(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
@@ -117,11 +111,9 @@ class TestMultiModelInference:
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_run_inference_rest(self, resnet_multiple_batch_sizes,
-                                start_server_multi_model):
+    def test_run_inference_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS]:
             input_data = np.ones(model.input_shape, model.dtype)
@@ -135,11 +127,9 @@ class TestMultiModelInference:
             assert output[model.output_name].shape == model.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
-                                     start_server_multi_model):
+    def test_get_model_metadata_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4]:
             logger.info("Getting info about {} model".format(model.name))
@@ -156,11 +146,9 @@ class TestMultiModelInference:
             assert expected_output_metadata == output_metadata
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_get_model_status_rest(self, resnet_multiple_batch_sizes,
-                                   start_server_multi_model):
+    def test_get_model_status_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         for model in [Resnet, ResnetBS4]:
             rest_url = get_status_url(model=model.name, port=ports["rest_port"])

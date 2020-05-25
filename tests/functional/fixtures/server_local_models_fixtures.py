@@ -49,7 +49,7 @@ def start_server_with_mapping(request, get_image, get_test_dir, get_docker_conte
                               get_container_log_line):
     shutil.copyfile('tests/functional/mapping_config.json',
                     get_test_dir + '/saved_models/'
-                                   'age-gender-recognition-retail-0013/1/'
+                                   'age_gender/1/'
                                    'mapping_config.json')
     client = get_docker_context
     path_to_mount = get_test_dir + '/saved_models/'
@@ -59,7 +59,7 @@ def start_server_with_mapping(request, get_image, get_test_dir, get_docker_conte
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "{} --model_name age_gender " \
-              "--model_path /opt/ml/age-gender-recognition-retail-0013 " \
+              "--model_path /opt/ml/age_gender " \
               "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
 
     container = client.containers.run(image=get_image, detach=True,
@@ -74,7 +74,7 @@ def start_server_with_mapping(request, get_image, get_test_dir, get_docker_conte
 
     def delete_mapping_file():
         path = get_test_dir + '/saved_models/' \
-                              'age-gender-recognition-retail-0013/1/' \
+                              'age_gender/1/' \
                               'mapping_config.json'
         if os.path.exists(path):
             os.remove(path)

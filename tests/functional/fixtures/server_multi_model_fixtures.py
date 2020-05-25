@@ -18,6 +18,7 @@ import os
 import shutil
 
 import pytest
+
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 

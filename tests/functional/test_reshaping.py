@@ -39,12 +39,9 @@ fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 class TestModelReshaping:
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_single_local_model_reshaping_auto(
-            self, face_detection_model_downloader,
-            start_server_face_detection_model_auto_shape):
+    def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
         _, ports = start_server_face_detection_model_auto_shape
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -58,14 +55,11 @@ class TestModelReshaping:
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
-    def test_single_local_model_reshaping_fixed(
-            self, face_detection_model_downloader,
-            start_server_face_detection_model_named_shape,
-            start_server_face_detection_model_nonamed_shape, shape, is_correct):
+    def test_single_local_model_reshaping_fixed(self, start_server_face_detection_model_named_shape,
+                                                start_server_face_detection_model_nonamed_shape, shape, is_correct):
 
         _, ports_named = start_server_face_detection_model_named_shape
         _, ports_nonamed = start_server_face_detection_model_nonamed_shape
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stubs = [create_channel(port=ports_named["grpc_port"]), create_channel(port=ports_nonamed["grpc_port"])]
@@ -79,12 +73,10 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_single_local_model_reshaping_auto_rest(
-            self, face_detection_model_downloader,
-            start_server_face_detection_model_auto_shape, request_format):
+    def test_single_local_model_reshaping_auto_rest(self, start_server_face_detection_model_auto_shape, request_format):
 
         _, ports = start_server_face_detection_model_auto_shape
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
+
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'], FaceDetection.dtype)
             rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
@@ -98,15 +90,12 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_single_local_model_reshaping_fixed_rest(
-            self, face_detection_model_downloader,
-            start_server_face_detection_model_named_shape,
-            start_server_face_detection_model_nonamed_shape,
-            shape, is_correct, request_format):
+    def test_single_local_model_reshaping_fixed_rest(self, start_server_face_detection_model_named_shape,
+                                                     start_server_face_detection_model_nonamed_shape, shape, is_correct,
+                                                     request_format):
 
         _, ports_named = start_server_face_detection_model_named_shape
         _, ports_nonamed = start_server_face_detection_model_nonamed_shape
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         imgs = np.zeros(shape, FaceDetection.dtype)
         rest_ports = [ports_named["rest_port"], ports_nonamed["rest_port"]]
@@ -116,10 +105,9 @@ class TestModelReshaping:
                                     is_correct, request_format, rest_url)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_multi_local_model_reshaping_auto(self, face_detection_model_downloader, start_server_multi_model):
+    def test_multi_local_model_reshaping_auto(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -133,11 +121,9 @@ class TestModelReshaping:
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
-    def test_multi_local_model_reshaping_fixed(self, face_detection_model_downloader, start_server_multi_model,
-                                               shape, is_correct):
+    def test_multi_local_model_reshaping_fixed(self, start_server_multi_model, shape, is_correct):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -154,11 +140,10 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_mutli_local_model_reshaping_auto_rest(self, face_detection_model_downloader,
-                                                   start_server_multi_model, request_format):
+    def test_mutli_local_model_reshaping_auto_rest(self, start_server_multi_model, request_format):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
+
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'], FaceDetection.dtype)
             rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
@@ -172,12 +157,9 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_multi_local_model_reshaping_fixed_rest(
-            self, face_detection_model_downloader,
-            start_server_multi_model, shape, is_correct, request_format):
+    def test_multi_local_model_reshaping_fixed_rest(self, start_server_multi_model, shape, is_correct, request_format):
 
         _, ports = start_server_multi_model
-        logger.info("Downloaded model files: {}".format(face_detection_model_downloader))
 
         models_names = ["face_detection_fixed_nonamed",
                         "face_detection_fixed_named"]

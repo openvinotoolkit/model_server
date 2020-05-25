@@ -42,8 +42,7 @@ class TestBatchModelInference:
         out_names = list(json_dict["outputs"].keys())
         return in_name, out_names, json_dict["outputs"]
 
-    def test_run_inference(self, resnet_multiple_batch_sizes,
-                           start_server_batch_model):
+    def test_run_inference(self, start_server_batch_model):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -62,7 +61,6 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -75,11 +73,9 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
-    def test_run_inference_bs4(self, resnet_multiple_batch_sizes,
-                               start_server_batch_model_bs4):
+    def test_run_inference_bs4(self, start_server_batch_model_bs4):
 
         _, ports = start_server_batch_model_bs4
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -93,11 +89,9 @@ class TestBatchModelInference:
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_run_inference_auto(self, resnet_multiple_batch_sizes,
-                                start_server_batch_model_auto):
+    def test_run_inference_auto(self, start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
@@ -111,11 +105,9 @@ class TestBatchModelInference:
             logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
             assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
-    def test_get_model_metadata(self, resnet_multiple_batch_sizes,
-                                start_server_batch_model):
+    def test_get_model_metadata(self, start_server_batch_model):
 
         _, ports = start_server_batch_model
-        logger.info("Downloaded model files: {}".format(resnet_multiple_batch_sizes))
 
         stub = create_channel(port=ports["grpc_port"])
 
@@ -136,8 +128,7 @@ class TestBatchModelInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_run_inference_rest(self, age_gender_model_downloader,
-                                start_server_batch_model_2out, mapping_names, request_format):
+    def test_run_inference_rest(self, start_server_batch_model_2out, mapping_names, request_format):
         """
             <b>Description</b>
             Submit request to REST API interface serving
@@ -158,7 +149,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_2out
-        logger.info("Downloaded model files: {}", age_gender_model_downloader)
+
         in_name, out_names, out_mapping = mapping_names
 
         batch_input = np.ones(AgeGender.input_shape, AgeGender.dtype)
