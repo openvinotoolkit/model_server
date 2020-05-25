@@ -79,7 +79,7 @@ def run_ams(param):
     cmd = ["docker", "run", "--cpus={}".format(param["cores"]),
            "--name", container_name_ams,
            "-d", "-p", "{}:{}".format(AMS_PORT, AMS_PORT),
-           "-p", "{}:{}".format(OVMS_PORT_FOR_AMS, OVMS_PORT_FOR_AMS), "ams", "/ams_wrapper/start_ams.sh",
+           "-p", "{}:{}".format(OVMS_PORT_FOR_AMS, OVMS_PORT_FOR_AMS), "ams", "/ams_wrapper/start_ams.py",
            "--ams_port={}".format(AMS_PORT), "--ovms_port={}".format(OVMS_PORT_FOR_AMS)]
     subprocess.run(cmd)
     time.sleep(10)
