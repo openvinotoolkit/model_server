@@ -3,7 +3,7 @@
     {
       "config":{
         "name":"resnet",
-        "base_path":"/opt/ml/resnet_V1_50",
+        "base_path":"/opt/ml/resnet",
         "batch_size":"auto",
         "nireq": 4
       }
@@ -11,21 +11,21 @@
     {
       "config":{
         "name":"resnet_bs4",
-        "base_path":"/opt/ml/resnet_V1_50_batch4",
+        "base_path":"/opt/ml/resnet_bs4",
         "nireq": 1
       }
     },
     {
       "config":{
         "name":"resnet_bs8",
-        "base_path":"/opt/ml/resnet_V1_50_batch8",
+        "base_path":"/opt/ml/resnet_bs8",
         "nireq": 1
       }
     },
     {
       "config": {
         "name": "pvb_detection",
-        "base_path": "/opt/ml/person-vehicle-bike-detection-crossroad-0078",
+        "base_path": "/opt/ml/pvb_detection",
         "batch_size":"4"
       }
     },
@@ -53,21 +53,21 @@
     {
       "config": {
         "name": "face_detection_auto",
-        "base_path": "/opt/ml/face-detection-retail-0004",
+        "base_path": "/opt/ml/face_detection",
         "shape": "auto"
       }
     },
     {
       "config": {
         "name": "face_detection_fixed_nonamed",
-        "base_path": "/opt/ml/face-detection-retail-0004",
+        "base_path": "/opt/ml/face_detection",
         "shape": "(1, 3, 600, 600)"
       }
     },
     {
       "config": {
         "name": "face_detection_fixed_named",
-        "base_path": "/opt/ml/face-detection-retail-0004",
+        "base_path": "/opt/ml/face_detection",
         "shape": {"data":  "(1, 3, 600, 600)"}
       }
     }

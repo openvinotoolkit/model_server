@@ -19,6 +19,7 @@ import shutil
 from distutils.dir_util import copy_tree
 import pytest
 
+from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
@@ -61,30 +62,28 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
 
 
 @pytest.fixture(autouse=True, scope="session")
-def model_version_policy_models(get_test_dir,
-                                download_two_model_versions,
-                                age_gender_model_downloader):
+def model_version_policy_models(get_test_dir, models_downloader):
     model_ver_dir = os.path.join(get_test_dir, 'saved_models', 'model_ver')
-    face_detection_models = download_two_model_versions
-    face_detection_1 = os.path.dirname(face_detection_models[0][0])
-    face_detection_1_dir = os.path.join(model_ver_dir, '1')
-    face_detection_1_bin = os.path.join(face_detection_1_dir, 
-                                        os.path.basename(face_detection_models[0][0]))
-    face_detection_2 = os.path.dirname(face_detection_models[1][0])
-    face_detection_2_dir = os.path.join(model_ver_dir, '2')
-    face_detection_2_bin = os.path.join(face_detection_2_dir, 
-                                        os.path.basename(face_detection_models[1][0]))
-    age_gender = os.path.dirname(age_gender_model_downloader[0])
+
+    face_detection = os.path.join(models_downloader[FaceDetection.name], str(FaceDetection.version))
+    face_detection_dir = os.path.join(model_ver_dir, '1')
+    face_detection_bin = os.path.join(face_detection_dir, FaceDetection.name + ".bin")
+
+    pvb_detection = os.path.join(models_downloader[PVBFaceDetectionV2.name], str(PVBFaceDetectionV2.version))
+    pvb_detection_dir = os.path.join(model_ver_dir, '2')
+    pvb_detection_bin = os.path.join(pvb_detection_dir, PVBFaceDetectionV2.name + ".bin")
+
+    age_gender = os.path.join(models_downloader[AgeGender.name], str(AgeGender.version))
     age_gender_dir = os.path.join(model_ver_dir, '3')
-    age_gender_bin = os.path.join(age_gender_dir, 
-                                  os.path.basename(age_gender_model_downloader[0]))
+    age_gender_bin = os.path.join(age_gender_dir, AgeGender.name + ".bin")
+
     if not (os.path.exists(model_ver_dir)
-        and os.path.exists(face_detection_1_bin)
-        and os.path.exists(face_detection_2_bin)
+        and os.path.exists(face_detection_bin)
+        and os.path.exists(pvb_detection_bin)
         and os.path.exists(age_gender_bin)):
         os.makedirs(model_ver_dir, exist_ok=True)
-        copy_tree(face_detection_1, face_detection_1_dir)
-        copy_tree(face_detection_2, face_detection_2_dir)
+        copy_tree(face_detection, face_detection_dir)
+        copy_tree(pvb_detection, pvb_detection_dir)
         copy_tree(age_gender, age_gender_dir)
 
-    return face_detection_1_dir, face_detection_2_dir, age_gender_dir
+    return face_detection_dir, pvb_detection_dir, age_gender_dir

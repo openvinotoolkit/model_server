@@ -13,52 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import os
 import pytest
-import requests
-from pathlib import Path
 
+from fixtures.model_download_fixtures import download_file
+from model.models_information import Resnet, ResnetBS4, ResnetBS8
 from utils.logger import get_logger
 from utils.model_management import convert_model
 
 logger = get_logger(__name__)
 
 
-def download_file(url, dir, name):
-    target_file = dir + name
-
-    if os.path.exists(target_file):
-        return target_file
-
-    Path(dir).mkdir(parents=True, exist_ok=True)
-    logger.info("Downloading {url} to {target_file} ...".format(url=url, target_file=target_file))
-    response = requests.get(url, stream=True)
-    with open(target_file, 'wb') as output:
-        output.write(response.content)
-
-    return target_file
-
-
 @pytest.fixture(autouse=True, scope="session")
 def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
-    tensorflow_model = \
-        download_file('https://download.01.org/opencv/public_models/012020/resnet-50-tf/resnet_v1-50.pb',
-            get_test_dir + '/tensorflow_format/resnet/', 'resnet_v1-50.pb')
+    resnet_to_convert = [Resnet, ResnetBS4, ResnetBS8]
+    converted_models = []
+    tensorflow_model_path = download_file(model_url_base=Resnet.url, model_name=Resnet.name,
+                                          directory=os.path.join(get_test_dir, Resnet.local_conversion_dir),
+                                          extension=Resnet.download_extensions[0],
+                                          full_path=True)
 
-    return \
-        (convert_model(get_docker_context,
-                       tensorflow_model,
-                       get_test_dir + '/saved_models/resnet_V1_50/1',
-                       'resnet_V1_50',
-                       [1, 224, 224, 3]),
-         convert_model(get_docker_context,
-                       tensorflow_model,
-                       get_test_dir + '/saved_models/resnet_V1_50_batch4/1',
-                       'resnet_V1_50_batch4',
-                       [4, 224, 224, 3]),
-         convert_model(get_docker_context,
-                       tensorflow_model,
-                       get_test_dir + '/saved_models/resnet_V1_50_batch8/1',
-                       'resnet_V1_50_batch8',
-                       [8, 224, 224, 3]))
+    for resnet in resnet_to_convert:
+        logger.info("Converting model {}".format(resnet.name))
+        input_shape = list(resnet.input_shape)
+        input_shape[1], input_shape[3] = input_shape[3], input_shape[1]
+
+        converted_model = convert_model(get_docker_context, tensorflow_model_path,
+                                        get_test_dir + '/saved_models/{}/{}'.format(resnet.name, resnet.version),
+                                        resnet.name, input_shape)
+        converted_models.append(converted_model)
+    return converted_models

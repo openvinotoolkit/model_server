@@ -19,77 +19,44 @@ import os
 import pytest
 import requests
 
+from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-face_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004"  # noqa
-age_gender_recognition_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"  # noqa
-pvb_detection_model_url = "https://download.01.org/opencv/2020/openvinotoolkit/2020.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078"  # noqa
+models_to_download = [AgeGender, FaceDetection, PVBDetection, PVBFaceDetectionV1, PVBFaceDetectionV2]
 
 
-def download_model(model_url_base, model_name, model_version, dir):
-    local_model_path = os.path.join(dir, model_name, model_version)
-    local_bin_path = os.path.join(local_model_path,
-                                  "{}.{}".format(model_name, "bin"))
-    local_xml_path = os.path.join(local_model_path,
-                                  "{}.{}".format(model_name, "xml"))
+def download_file(model_url_base, model_name, directory, extension, model_version = None, full_path = False):
+    if model_version:
+        local_model_path = os.path.join(directory, model_name, model_version)
+    else:
+        local_model_path = os.path.join(directory, model_name)
+
     if not os.path.exists(local_model_path):
         os.makedirs(local_model_path)
 
-    if not os.path.exists(local_bin_path) or not os.path.exists(local_xml_path):
-        logger.info("Downloading {} model...".format(model_name))
-        response = requests.get(model_url_base + '.bin', stream=True)
-        with open(local_bin_path, 'wb') as output:
+    local_model_full_path = os.path.join(local_model_path, model_name + extension)
+
+    if not os.path.exists(local_model_full_path):
+        logger.info("Downloading {} file to directory: {}...".format(model_name + extension, local_model_path))
+        response = requests.get(model_url_base + extension, stream=True)
+        with open(local_model_full_path, 'wb') as output:
             output.write(response.content)
-        response = requests.get(model_url_base + '.xml', stream=True)
-        with open(local_xml_path, 'wb') as output:
-            output.write(response.content)
-    return local_bin_path, local_xml_path
+
+    if full_path:
+        return local_model_full_path
+
+    return os.path.join(directory, model_name)
 
 
 @pytest.fixture(autouse=True, scope="session")
-def face_detection_model_downloader(get_test_dir):
-    return download_model(face_detection_model_url,
-                          'face-detection-retail-0004',
-                          '1',
-                          get_test_dir + '/saved_models/')
+def models_downloader(get_test_dir):
+    models_paths = {}
+    for model in models_to_download:
+        models_base_path = os.path.join(get_test_dir, "saved_models")
 
-
-@pytest.fixture(autouse=True, scope="session")
-def age_gender_model_downloader(get_test_dir):
-    return download_model(age_gender_recognition_model_url,
-                          'age-gender-recognition-retail-0013', '1',
-                          get_test_dir + '/saved_models/')
-
-
-@pytest.fixture(autouse=True, scope="session")
-def pvb_model_downloader(get_test_dir):
-    return download_model(pvb_detection_model_url,
-                          'person-vehicle-bike-detection-crossroad-0078', '1',
-                          get_test_dir + '/saved_models/')
-
-
-"""
-Use converted models instead
-
-@pytest.fixture(autouse=True, scope="session")
-def download_two_models(get_test_dir):
-    model1_info = download_model(resnet_model_url, 'resnet50-binary-0001', '1',
-                                 get_test_dir + '/saved_models/')
-    model2_info = download_model(face_detection_model_url,
-                                 'face-detection-retail-0004', '1',
-                                 get_test_dir + '/saved_models/')
-    return [model1_info, model2_info]
-"""
-
-
-@pytest.fixture(autouse=True, scope="session")
-def download_two_model_versions(get_test_dir):
-    model1_info = download_model(face_detection_model_url,
-                                 'pvb_face_multi_version', '1',
-                                 get_test_dir + '/saved_models/')
-    model2_info = download_model(pvb_detection_model_url,
-                                 'pvb_face_multi_version', '2',
-                                 get_test_dir + '/saved_models/')
-    return [model1_info, model2_info]
+        for extension in model.download_extensions:
+            models_paths[model.name] = download_file(model.url, model.name, models_base_path, extension,
+                                                     str(model.version))
+    return models_paths

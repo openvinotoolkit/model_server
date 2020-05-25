@@ -21,7 +21,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
 from constants import MODEL_SERVICE
-from model.models_information import AgeGender, PVBDetectionV1, PVBDetectionV2
+from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.logger import get_logger
@@ -51,15 +51,15 @@ class TestModelVerPolicy:
 
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {PVBDetectionV1.output_name: {'dtype': 1, 'shape': list(PVBDetectionV1.output_shape)}},
-            {PVBDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBDetectionV2.output_shape)}}]
+            {PVBDetection.output_name: {'dtype': 1, 'shape': list(PVBDetection.output_shape)}},
+            {PVBFaceDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBFaceDetectionV2.output_shape)}}]
         expected_output_metadata = {}
         for output_name, shape in AgeGender.output_shape.items():
             expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
             expected_outputs_metadata.append(expected_output_metadata)
         expected_inputs_metadata = [
-            {PVBDetectionV1.input_name: {'dtype': 1, 'shape': list(PVBDetectionV1.input_shape)}},
-            {PVBDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBDetectionV2.input_shape)}},
+            {PVBDetection.input_name: {'dtype': 1, 'shape': list(PVBDetection.input_shape)}},
+            {PVBFaceDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBFaceDetectionV2.input_shape)}},
             {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
 
         for x in range(len(versions)):
@@ -166,15 +166,15 @@ class TestModelVerPolicy:
         logger.info("Getting info about models")
         versions = [1, 2, 3]
         expected_outputs_metadata = [
-            {PVBDetectionV1.output_name: {'dtype': 1, 'shape': list(PVBDetectionV1.output_shape)}},
-            {PVBDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBDetectionV2.output_shape)}}]
+            {PVBDetection.output_name: {'dtype': 1, 'shape': list(PVBDetection.output_shape)}},
+            {PVBFaceDetectionV2.output_name: {'dtype': 1, 'shape': list(PVBFaceDetectionV2.output_shape)}}]
         expected_output_metadata = {}
         for output_name, shape in AgeGender.output_shape.items():
             expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
             expected_outputs_metadata.append(expected_output_metadata)
         expected_inputs_metadata = [
-            {PVBDetectionV1.input_name: {'dtype': 1, 'shape': list(PVBDetectionV1.input_shape)}},
-            {PVBDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBDetectionV2.input_shape)}},
+            {PVBDetection.input_name: {'dtype': 1, 'shape': list(PVBDetection.input_shape)}},
+            {PVBFaceDetectionV2.input_name: {'dtype': 1, 'shape': list(PVBFaceDetectionV2.input_shape)}},
             {AgeGender.input_name: {'dtype': 1, 'shape': list(AgeGender.input_shape)}}]
 
         for x in range(len(versions)):
