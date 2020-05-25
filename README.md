@@ -20,8 +20,11 @@ Build the docker image using command:
 ```bash
 ~/ovms-c$ make docker_build
 ```
-It will generate the image, tagged as `ovms:latest`.
+It will generate the image, tagged as `ovms:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
+The release package should work on a any linux machine with glibc >= one used by the build image.
+
+For debugging, an image with a suffix `-build` is also generated (i.e. `ovms-build:latest`).
 
 ## Running the serving component as a docker container:
 Docker container is using the serving application as the entrypoint, so you just need to pass its parameters in the docker command:
@@ -32,7 +35,7 @@ All parameters are documented below:
 ```bash
 OpenVINO Model Server
 Usage:
-  ./bazel-bin/src/ovms [OPTION...]
+  /ovms/bin/ovms [OPTION...]
 
   -h, --help                    show this help message and exit
       --port PORT               gRPC server port (default: 9178)
@@ -240,4 +243,16 @@ Run build on shared machine with extra makefile flags:
 
 ```bash
 OVMS_CPP_DOCKER_IMAGE=rr_ovms OVMS_CPP_CONTAINTER_PORT=9278 make docker_build
+```
+
+Build using a non-default OS docker image:
+
+```bash
+make BASE_OS=clearlinux OVMS_CPP_DOCKER_IMAGE=my-ovms-clearlinux-image
+```
+
+Build, without using a docker cache:
+
+```bash
+make NO_DOCKER_CACHE=true
 ```

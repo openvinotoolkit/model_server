@@ -11,3 +11,4 @@ bazel-testlogs
 __pycache__
 .workspace
 *user_config*
+dist/
