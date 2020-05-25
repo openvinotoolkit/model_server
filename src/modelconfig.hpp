@@ -204,6 +204,15 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
         }
 
         /**
+         * @brief Get model path
+         * 
+         * @return std::string
+         * */
+        const std::string getPath() const {
+            return getBasePath() + "/" + std::to_string(version);
+        }
+
+        /**
          * @brief Get the base path
          * 
          * @return const std::string& 
@@ -640,10 +649,10 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
          */
         Status parseModelMapping() {
             rapidjson::Document doc;
-
+            SPDLOG_DEBUG("Parsing model:{} mapping from path:{}", getName(), getPath());
             mappingInputs.clear();
             mappingOutputs.clear();
-            std::filesystem::path path = this->getBasePath();
+            std::filesystem::path path = this->getPath();
             path.append(MAPPING_CONFIG_JSON);
 
             std::ifstream ifs(path.c_str());
@@ -662,7 +671,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                 spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
             } else {
                 for (const auto& key : itr->value.GetObject()) {
-                    spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+                    SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
                     mappingInputs[key.name.GetString()] = key.value.GetString();
                 }
             }
@@ -673,7 +682,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                 spdlog::warn("Couldn't load outputs object from file {}", path.c_str());
             } else {
                 for (const auto& key : it->value.GetObject()) {
-                    spdlog::debug("Loaded mapping {} => {}", key.name.GetString(), key.value.GetString());
+                    SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
                     mappingOutputs[key.name.GetString()] = key.value.GetString();
                 }
             }

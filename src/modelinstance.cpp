@@ -21,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <spdlog/spdlog.h>
 
@@ -32,11 +33,13 @@ using namespace InferenceEngine;
 namespace ovms {
 
 const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
+const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
+
 
 void ModelInstance::loadInputTensors(const ModelConfig& config) {
-    auto networkShapes = network.getInputShapes();
+    auto networkShapes = network->getInputShapes();
 
-    for (const auto& pair : network.getInputsInfo()) {
+    for (const auto& pair : network->getInputsInfo()) {
         const auto& name = pair.first;
         auto input = pair.second;
 
@@ -68,20 +71,21 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
         }
 
         networkShapes[name] = shape;
-        auto tensor = std::make_shared<TensorInfo>(name, config.getMappingInputByKey(name), precision, shape, layout);
+        auto mappingName = config.getMappingInputByKey(name);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        spdlog::info("Input name: {} ; shape: {} ; precision: {}", name,  shape_stream.str(), precision_str);
+        spdlog::info("Input name: {}; mapping_name: {}; shape: {} ; precision: {}", name, mappingName, shape_stream.str(), precision_str);
     }
 
     // Update OV model shapes
-    network.reshape(networkShapes);
+    network->reshape(networkShapes);
 }
 
 void ModelInstance::loadOutputTensors(const ModelConfig& config) {
-    for (const auto& pair : network.getOutputsInfo()) {
+    for (const auto& pair : network->getOutputsInfo()) {
         const auto& name = pair.first;
         auto output = pair.second;
 
@@ -89,13 +93,13 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto precision = output->getPrecision();
         auto layout = output->getLayout();
         auto shape = output->getDims();
-
-        auto tensor = std::make_shared<TensorInfo>(name, config.getMappingOutputByKey(name), precision, shape, layout);
+        auto mappingName = config.getMappingOutputByKey(name);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        spdlog::info("Output name: {} ; shape: {} ; precision: {}", name,  shape_stream.str(), precision_str);
+        spdlog::info("Output name: {} ; mapping name: {}; shape: {} ; precision: {}", name, mappingName, shape_stream.str(), precision_str);
     }
 }
 
@@ -144,7 +148,6 @@ uint getNumberOfParallelInferRequests() {
     if (environmentVariableBuffer) {
         return std::atoi(environmentVariableBuffer);
     }
-
     auto& config = ovms::Config::instance();
     uint configGRPCServersCount = config.nireq();
     return configGRPCServersCount;
@@ -152,11 +155,12 @@ uint getNumberOfParallelInferRequests() {
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
     this->name = config.getName();
-    this->path = config.getBasePath();
+    this->path = config.getPath();
     this->version = config.getVersion();
     this->backend = config.getBackend();
     this->status = ModelVersionStatus(this->name, this->version);
-    spdlog::info("Loading model {}...", config.getName());
+    spdlog::info("Loading model:{}, version:{}, from path:{}, with backend:{} ...",
+        config.getName(), config.getVersion(), config.getPath(), config.getBackend());
     // load network
     try {
         this->status.setLoading();
@@ -165,30 +169,27 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return Status::PATH_INVALID;
         }
-        network = engine.ReadNetwork(getModelFile(path));
-        this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network.getBatchSize();
+        engine = std::make_unique<InferenceEngine::Core>();
+        network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(getModelFile(path)));
+        this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
 
-        network.setBatchSize(this->batchSize);
-
+        network->setBatchSize(this->batchSize);
         loadInputTensors(config);
         loadOutputTensors(config);
-
         auto pluginConfig = config.getPluginConfig();
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
             int ovBackendStreamsCount = getOVCPUThroughputStreams();
             pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
         }
-
-        execNetwork = engine.LoadNetwork(network, backend, pluginConfig);
+        execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
         spdlog::info("Plugin config for device {}:", backend);
         for (const auto pair : pluginConfig) {
             const auto key = pair.first;
             const auto value = pair.second;
             spdlog::info("{}: {}", key, value);
         }
-
         int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
-        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(execNetwork, numberOfParallelInferRequests);
+        inferRequestsQueue = std::make_shared<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
         spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
             config.getName(),
             config.getVersion(),
@@ -203,6 +204,20 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     }
 
     return Status::OK;
+}
+
+void ModelInstance::unloadModel() {
+    this->status.setUnloading();
+    while (!canUnloadInferRequests()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+    }
+    inferRequestsQueue.reset();
+    execNetwork.reset();
+    network.reset();
+    engine.reset();
+    this->outputsInfo.clear();
+    this->inputsInfo.clear();
+    this->status.setEnd();
 }
 
 const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {

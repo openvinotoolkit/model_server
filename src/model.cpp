@@ -26,22 +26,10 @@ Status Model::addVersion(const ModelConfig& config) {
     if (status != Status::OK) {
         return status;
     }
-    this->name = config.getName();
-    if (this->defaultVersion < config.getVersion())
-        this->defaultVersion = config.getVersion();
-    modelVersions[config.getVersion()] = std::move(modelInstance);
 
-    return Status::OK;
-}
-
-// TODO: at the callee side, call setUnloading on modelversionstatus before dropping it.
-Status Model::dropVersion(const model_version_t& version) {
-    std::map<model_version_t, std::shared_ptr<ModelInstance>>::iterator it = modelVersions.find(version);
-    if (it != modelVersions.end()) {
-        return Status::MODELINSTANCE_NOT_FOUND;
-    }
-    modelVersions.erase(version);
-
+    const auto& version = config.getVersion();
+    modelVersions[version] = std::move(modelInstance);
+    updateDefaultVersion();
     return Status::OK;
 }
 

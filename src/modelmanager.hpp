@@ -19,12 +19,16 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
+#include <thread>
 
+#include <spdlog/spdlog.h>
+
+#include "directoryversionreader.hpp"
 #include "model.hpp"
 
 namespace ovms {
+    class IVersionReader;
     /**
      * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
      */
@@ -35,6 +39,12 @@ namespace ovms {
          */
         ModelManager() = default;
 
+        Status addVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
+        Status retireVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
+        Status reloadVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
+        std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
+
+    private:
         /**
          * @brief Private copying constructor
          */
@@ -52,11 +62,6 @@ namespace ovms {
          * @brief Watcher thread for monitor changes in config
          */
         void watcher(std::future<void> exit);
-
-        /**
-         * @brief Watcher interval for checking changes in config
-         */
-        static const uint watcherIntervalSec;
 
         /**
          * @brief A JSON configuration filename
@@ -154,13 +159,13 @@ namespace ovms {
         Status start(const std::string& jsonFilename);
 
         /**
-         * @brief Load model versions located in base path
+         * @brief Reload model versions located in base path
          * 
          * @param ModelConfig config
          * 
          * @return status
          */
-        Status loadModelWithVersions(ModelConfig& config);
+        Status reloadModelWithVersions(ModelConfig& config);
 
         /**
          * @brief Starts model manager using ovms::Config
@@ -188,8 +193,37 @@ namespace ovms {
          * 
          * @return std::shared_ptr<Model> 
          */
-        virtual std::shared_ptr<Model> modelFactory() {
-            return std::make_shared<Model>();
+        virtual std::shared_ptr<Model> modelFactory(const std::string& name) {
+            return std::make_shared<Model>(name);
         }
+
+        /**
+         * @brief Returns Version reader
+         *
+         * @param path to where read versions from
+         * @return Version Reader
+         */
+        static std::shared_ptr<IVersionReader> getVersionReader(const std::string& path);
+
+        /**
+         * @brief Checks what versions needs to be started, reloaded, retired based on currently served ones
+         *
+         * @param modelVersionsInstances map with currently served versions
+         * @param requestedVersions container with requested versions
+         * @param versionsToRetireIn cointainer for versions to retire
+         * @param versionsToReloadIn cointainer for versions to reload
+         * @param versionsToStartIn cointainer for versions to start
+         */
+        static void getVersionsToChange(
+                        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+                        std::vector<model_version_t> requestedVersions,
+                        std::shared_ptr<model_versions_t>& versionsToRetireIn,
+                        std::shared_ptr<model_versions_t>& versionsToReloadIn,
+                        std::shared_ptr<model_versions_t>& versionsToStartIn);
+
+        /**
+         * @brief Watcher interval for checking changes in config
+         */
+        static const uint WATCHER_INTERVAL_SEC;
     };
 }  // namespace ovms

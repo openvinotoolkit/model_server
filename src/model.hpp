@@ -34,20 +34,31 @@ namespace ovms {
         std::string name;
 
         /**
-         * @brief Default version of the model
-         */
-        model_version_t defaultVersion;
-
-        /**
          * @brief Holds different versions of model
          */
         std::map<model_version_t, std::shared_ptr<ModelInstance>> modelVersions;
 
+        /**
+         * @brief Model default version
+         *
+         */
+        model_version_t defaultVersion = 0;
+
+        /**
+         * @brief Get default version
+         *
+         * @return default version
+         */
+        const model_version_t getDefaultVersion() const {
+            spdlog::debug("Getting default version for model:{}, {}", getName(), defaultVersion);
+            return defaultVersion;
+        }
+
     public:
         /**
-         * @brief A default constructor
+         * @brief Constructor
          */
-        Model() = default;
+        Model(const std::string& name) : name(name), defaultVersion(0) {}
 
         /**
          * @brief Destroy the Model object
@@ -60,17 +71,8 @@ namespace ovms {
          * 
          * @return model name
          */
-        const std::string& getName() {
+        const std::string& getName() const {
             return name;
-        }
-
-        /**
-         * @brief Gets model default version
-         * 
-         * @return default model version
-         */
-        const model_version_t& getDefaultVersion() {
-            return defaultVersion;
         }
 
         /**
@@ -78,7 +80,13 @@ namespace ovms {
          *
          * @return ModelInstance
          */
-        const std::shared_ptr<ModelInstance>& getDefaultModelInstance() const {
+        const std::shared_ptr<ModelInstance> getDefaultModelInstance() const {
+            auto defaultVersion = getDefaultVersion();
+            const auto modelInstanceIt = modelVersions.find(defaultVersion);
+
+            if (modelVersions.end() == modelInstanceIt) {
+                return nullptr;
+            }
             return modelVersions.at(defaultVersion);
         }
 
@@ -113,12 +121,19 @@ namespace ovms {
         virtual Status addVersion(const ModelConfig& config);
 
         /**
-         * @brief Removes model version from the list
-         *
-         * @param model version
-         *
-         * @return status
+         * @brief Update default version
          */
-        Status dropVersion(const model_version_t& version);
+        void updateDefaultVersion() {
+            model_version_t newDefaultVersion = 0;
+            spdlog::info("Updating default version for model:{}, from:{}", getName(), getDefaultVersion());
+            for (const auto& [version, versionInstance] : getModelVersions()) {
+                if (version > newDefaultVersion &&
+                    ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
+                    newDefaultVersion = version;
+                }
+            }
+            spdlog::info("Updating default version for model:{}, to:{}", getName(), newDefaultVersion);
+            defaultVersion = newDefaultVersion;
+        }
     };
 }  // namespace ovms

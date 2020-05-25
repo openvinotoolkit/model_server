@@ -86,7 +86,11 @@ class ModelVersionStatus {
   public:
     ModelVersionStatus() = default;
 
-    ModelVersionStatus(const std::string& model_name,  model_version_t version) : modelName(model_name), version(version), state(ModelVersionState::START), errorCode(ModelVersionStatusErrorCode::OK) {
+    ModelVersionStatus(const std::string& model_name,  model_version_t version, ModelVersionState state = ModelVersionState::START) :
+      modelName(model_name),
+      version(version),
+      state(state),
+      errorCode(ModelVersionStatusErrorCode::OK) {
       logStatus();
     }
 
@@ -103,6 +107,15 @@ class ModelVersionStatus {
 
     const std::string& getErrorMsg() const {
       return ModelVersionStatusErrorCodeToString(this->errorCode);
+    }
+
+    /**
+     * @brief Check if current state is state that is either transforming to END or already in that state.
+     *
+     * @return
+     */
+    bool willEndUnloaded() const {
+        return ovms::ModelVersionState::UNLOADING <= this->state;
     }
 
     void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
