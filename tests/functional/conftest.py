@@ -46,53 +46,11 @@ def pytest_sessionstart():
         logger.debug(item)
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--image", action="store", default="ovms:latest",
-        help="docker image name which should be used to run tests"
-    )
-    parser.addoption(
-        "--test_dir", action="store", default="/tmp/ovms_models",
-        help="location where models and test data should be downloaded"
-    )
-    parser.addoption(
-        "--start_container_command", action="store", default="",
-        help="command to start ovms container"
-    )
-    parser.addoption(
-        "--log_level", action="store", default="INFO", help="set log level"
-    )
-    parser.addoption(
-        "--container_log_line", action="store", default="Server started on port", help="log line to check in container"
-    )
-
-
-@pytest.fixture(scope="session")
-def get_image(request):
-    return request.config.getoption("--image")
-
-
-@pytest.fixture(scope="session")
-def get_test_dir(request):
-    os.makedirs(request.config.getoption("--test_dir"), exist_ok=True)
-    return request.config.getoption("--test_dir")
-
-
 @pytest.fixture(scope="session")
 def get_docker_context(request):
     client = get_docker_client()
     request.addfinalizer(client.close)
     return client
-
-
-@pytest.fixture(scope="session")
-def get_start_container_command(request):
-    return request.config.getoption("--start_container_command")
-
-
-@pytest.fixture(scope="session")
-def get_container_log_line(request):
-    return request.config.getoption("--container_log_line")
 
 
 @pytest.fixture()
@@ -108,8 +66,7 @@ def create_grpc_channel():
     return _create_channel
 
 
-def pytest_configure(config):
-    os.environ["TEST_LOG_LEVEL"] = config.getoption("--log_level")
+def pytest_configure():
     clean_hanging_docker_resources()
 
 

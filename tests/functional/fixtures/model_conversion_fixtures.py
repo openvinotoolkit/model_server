@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import os
 import pytest
 
+import config
 from fixtures.model_download_fixtures import download_file
 from model.models_information import Resnet, ResnetBS4, ResnetBS8
 from utils.logger import get_logger
@@ -25,11 +27,11 @@ logger = get_logger(__name__)
 
 
 @pytest.fixture(autouse=True, scope="session")
-def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
+def resnet_multiple_batch_sizes(get_docker_context):
     resnet_to_convert = [Resnet, ResnetBS4, ResnetBS8]
     converted_models = []
     tensorflow_model_path = download_file(model_url_base=Resnet.url, model_name=Resnet.name,
-                                          directory=os.path.join(get_test_dir, Resnet.local_conversion_dir),
+                                          directory=os.path.join(config.test_dir, Resnet.local_conversion_dir),
                                           extension=Resnet.download_extensions[0],
                                           full_path=True)
 
@@ -39,7 +41,7 @@ def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
         input_shape[1], input_shape[3] = input_shape[3], input_shape[1]
 
         converted_model = convert_model(get_docker_context, tensorflow_model_path,
-                                        get_test_dir + '/saved_models/{}/{}'.format(resnet.name, resnet.version),
+                                        config.path_to_mount + '/{}/{}'.format(resnet.name, resnet.version),
                                         resnet.name, input_shape)
         converted_models.append(converted_model)
     return converted_models

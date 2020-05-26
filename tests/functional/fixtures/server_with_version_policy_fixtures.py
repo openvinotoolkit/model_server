@@ -19,32 +19,30 @@ import shutil
 from distutils.dir_util import copy_tree
 import pytest
 
+import config
 from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 
 @pytest.fixture(scope="class")
-def start_server_model_ver_policy(request, get_image, get_test_dir,
-                                  get_docker_context, get_start_container_command, get_container_log_line):
+def start_server_model_ver_policy(request, get_docker_context):
     shutil.copyfile('tests/functional/model_version_policy_config.json',
-                    get_test_dir +
-                    '/saved_models/model_ver_policy_config.json')
+                    config.path_to_mount + '/model_ver_policy_config.json')
 
     shutil.copyfile('tests/functional/mapping_config.json',
-                    get_test_dir + '/saved_models/model_ver/3/'
-                                   'mapping_config.json')
+                    config.path_to_mount + '/model_ver/3/'
+                                      'mapping_config.json')
 
     client = get_docker_context
-    volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
-                    {'bind': '/opt/ml', 'mode': 'ro'}}
+    volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml', 'mode': 'ro'}}
 
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "{} --config_path /opt/ml/model_ver_policy_config.json " \
-              "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
+              "--port {} --rest_port {}".format(config.start_container_command, grpc_port, rest_port)
 
-    container = client.containers.run(image=get_image, detach=True,
+    container = client.containers.run(image=config.image, detach=True,
                                       name='ie-serving-py-test-policy-{}'.
                                       format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
@@ -55,15 +53,15 @@ def start_server_model_ver_policy(request, get_image, get_test_dir,
                                       command=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container, get_container_log_line)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
 
 
 @pytest.fixture(autouse=True, scope="session")
-def model_version_policy_models(get_test_dir, models_downloader):
-    model_ver_dir = os.path.join(get_test_dir, 'saved_models', 'model_ver')
+def model_version_policy_models(models_downloader):
+    model_ver_dir = os.path.join(config.path_to_mount, 'model_ver')
 
     face_detection = os.path.join(models_downloader[FaceDetection.name], str(FaceDetection.version))
     face_detection_dir = os.path.join(model_ver_dir, '1')

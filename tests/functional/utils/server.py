@@ -13,19 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import config
 from command_wrappers.server import start_ovms_container_command
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 
 
-def start_ovms_container(image, test_dir, client, command_args, container_name_infix, start_container_command,
-                         container_log_line, env_vars_container=None):
+def start_ovms_container(client, command_args, container_name_infix, start_container_command, env_vars_container=None):
     if env_vars_container is None:
         env_vars_container = []
-    container_name_prefix = image.split(":")[0].split("/")[-1]
-    path_to_mount = test_dir + '/saved_models/'
-    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
-                                                 'mode': 'ro'}}
+    container_name_prefix = config.image.split(":")[0].split("/")[-1]
+    volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
+                                                        'mode': 'ro'}}
 
     grpc_port, rest_port = get_ports_for_fixture()
     command_args["port"] = grpc_port
@@ -33,7 +32,7 @@ def start_ovms_container(image, test_dir, client, command_args, container_name_i
     command = start_ovms_container_command(start_container_command, command_args)
     container_name = "{}-{}-{}".format(container_name_prefix, container_name_infix, get_tests_suffix())
 
-    container = client.containers.run(image=image, detach=True,
+    container = client.containers.run(image=config.image, detach=True,
                                       name=container_name,
                                       ports={'{}/tcp'.format(grpc_port):
                                              grpc_port,
@@ -41,6 +40,6 @@ def start_ovms_container(image, test_dir, client, command_args, container_name_i
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command, environment=env_vars_container)
-    running = wait_endpoint_setup(container, container_log_line)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
