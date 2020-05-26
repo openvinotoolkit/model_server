@@ -215,18 +215,18 @@ namespace ovms {
             switch (getStatus().getState()) {
                 case ModelVersionState::AVAILABLE: {
                     inferRequestsQueueIn = inferRequestsQueue;
-                    return Status::OK;
+                    return StatusCode::OK;
                 }
                 case ModelVersionState::START:
                 case ModelVersionState::LOADING: {
-                    return Status::MODEL_LOADING;
+                    return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
                 }
                 case ModelVersionState::UNLOADING:
                 case ModelVersionState::END: {
-                    return Status::MODEL_RETIRED;
+                    return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
                 }
                 default: {
-                    return Status::UNKNOWN_ERROR;
+                    return StatusCode::UNKNOWN_ERROR;
                 }
             }
         }
@@ -246,8 +246,6 @@ namespace ovms {
          */
         void unloadModel();
 
-        const ValidationStatusCode validate(const tensorflow::serving::PredictRequest* request);
-        // const ValidationStatusCode validate(const kf::serving::PredictRequest* request);
-        // const ValidationStatusCode validate(const trt::PredictRequest* request);
+        const Status validate(const tensorflow::serving::PredictRequest* request);
     };
 }  // namespace ovms

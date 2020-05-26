@@ -117,9 +117,9 @@ int server_main(int argc, char** argv) {
     configure_logger(config.logLevel(), config.logPath());
     logConfig(config);
     auto& manager = ModelManager::getInstance();
-    Status status = manager.start();
-    if (status != Status::OK) {
-        spdlog::error("ovms::ModelManager::Start() Error: {}", StatusDescription::getError(status));
+    auto status = manager.start();
+    if (!status.ok()) {
+        spdlog::error("ovms::ModelManager::Start() Error: {}", status.string());
         return 1;
     }
 

@@ -76,36 +76,36 @@ class GetInferRequestQueueForState : public ::testing::Test {};
 TEST_F(GetInferRequestQueueForState, SuccessForAvailable) {
    MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::AVAILABLE);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::Status::OK);
+   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
+   EXPECT_TRUE(status.ok());
 }
 
 TEST_F(GetInferRequestQueueForState, NotReadyYetForStart) {
    MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::START);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::Status::MODEL_LOADING);
+   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
+   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(GetInferRequestQueueForState, NotReadyYetForLoading) {
    MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::LOADING);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::Status::MODEL_LOADING);
+   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
+   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(GetInferRequestQueueForState, ModelRetiredForUnloading) {
    MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::UNLOADING);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::Status::MODEL_RETIRED);
+   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
+   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(GetInferRequestQueueForState, ModelRetiredForEnd) {
    MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::END);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::Status::MODEL_RETIRED);
+   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
+   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 class TestUnloadModel : public ::testing::Test {};
@@ -116,8 +116,8 @@ TEST_F(TestUnloadModel, CantUnloadModelWhileHoldingInferRequestsQueueReference) 
    setenv("NIREQ", "1", 1);
    modelInstance.loadModel(DUMMY_MODEL_CONFIG);
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
-   ASSERT_EQ(ovms::Status::OK, status);
+   auto status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
+   ASSERT_TRUE(status.ok());
    ASSERT_EQ(2, inferRequestsQueue.use_count()) << "We expect to have ownership here & in modelInstance";
    EXPECT_FALSE(modelInstance.canUnloadInferRequests());
 }
@@ -129,8 +129,8 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingInferRequestsQueueReference) {
    modelInstance.loadModel(DUMMY_MODEL_CONFIG);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   ovms::Status status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
-   ASSERT_EQ(ovms::Status::OK, status);
+   auto status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
+   ASSERT_TRUE(status.ok());
    ASSERT_EQ(2, inferRequestsQueue.use_count()) << "We expect to have ownership here & in modelInstance";
    EXPECT_FALSE(modelInstance.canUnloadInferRequests());
    inferRequestsQueue.reset();

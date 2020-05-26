@@ -167,7 +167,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         if (!dirExists(path)) {
             spdlog::error("Missing model directory {}", path);
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-            return Status::PATH_INVALID;
+            return StatusCode::PATH_INVALID;
         }
         engine = std::make_unique<InferenceEngine::Core>();
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(getModelFile(path)));
@@ -200,10 +200,10 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-        return Status::NETWORK_NOT_LOADED;
+        return StatusCode::NETWORK_NOT_LOADED;
     }
 
-    return Status::OK;
+    return StatusCode::OK;
 }
 
 void ModelInstance::unloadModel() {
@@ -220,13 +220,11 @@ void ModelInstance::unloadModel() {
     this->status.setEnd();
 }
 
-const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     // Network and request must have the same amount of inputs
     if (request->inputs_size() >= 0 && getInputsInfo().size() != (size_t) request->inputs_size()) {
-        SPDLOG_DEBUG("incorrect number of inputs: expected {}; actual {}",
-            getInputsInfo().size(),
-            request->inputs_size());
-        return ValidationStatusCode::INVALID_INPUT_ALIAS;
+        SPDLOG_DEBUG("invalid number of inputs: expected {}; actual {}", getInputsInfo().size(), request->inputs_size());
+        return StatusCode::INVALID_NO_OF_INPUTS;
     }
 
     for (const auto& pair : getInputsInfo()) {
@@ -236,8 +234,8 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
 
         // Network and request must have the same names of inputs
         if (it == request->inputs().end()) {
-            SPDLOG_DEBUG("missing input alias in request: {}", name);
-            return ValidationStatusCode::INVALID_INPUT_ALIAS;
+            SPDLOG_DEBUG("missing input with specific name: {}", name);
+            return StatusCode::INVALID_MISSING_INPUT;
         }
 
         auto& requestInput = it->second;
@@ -248,19 +246,16 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
             shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
             std::stringstream stream;
             std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
-            SPDLOG_DEBUG("invalid shape: actual {}, required {}",
-                requestInput.tensor_shape().DebugString(),
-                stream.str());
-            return ValidationStatusCode::INVALID_SHAPE;
+
+            SPDLOG_DEBUG("invalid number of shape dimensions: expected {}; actual {}", stream.str(), requestInput.tensor_shape().DebugString());
+            return StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS;
         }
 
         // First shape must be equal to batch size
         if (requestInput.tensor_shape().dim_size() > 0 &&
             requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
-            SPDLOG_DEBUG("invalid batch size: actual {}, required {}",
-                requestInput.tensor_shape().dim(0).size(),
-                getBatchSize());
-            return ValidationStatusCode::INCORRECT_BATCH_SIZE;
+            SPDLOG_DEBUG("invalid batch size: expected {}; actual {}", getBatchSize(), requestInput.tensor_shape().dim(0).size());
+            return StatusCode::INVALID_BATCH_SIZE;
         }
 
         // Network and request must have the same shape
@@ -269,19 +264,16 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
                 shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
                 std::stringstream stream;
                 std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
-                SPDLOG_DEBUG("invalid shape: actual {}, required {}",
-                    requestInput.tensor_shape().DebugString(),
-                    stream.str());
-                return ValidationStatusCode::INVALID_SHAPE;
+
+                SPDLOG_DEBUG("invalid shape: expected {}; actual {}", stream.str(), requestInput.tensor_shape().DebugString());
+                return StatusCode::INVALID_SHAPE;
             }
         }
 
         // Network and request must have the same precision
         if (requestInput.dtype() != networkInput->getPrecisionAsDataType()) {
-            SPDLOG_DEBUG("invalid precision: actual {}, required {}",
-                requestInput.dtype(),
-                networkInput->getPrecisionAsDataType());
-            return ValidationStatusCode::INVALID_PRECISION;
+            SPDLOG_DEBUG("invalid precision: expected {}; actual {}", networkInput->getPrecisionAsDataType(), requestInput.dtype());
+            return StatusCode::INVALID_PRECISION;
         }
 
         size_t expectedValueCount = std::accumulate(
@@ -310,30 +302,24 @@ const ValidationStatusCode ModelInstance::validate(const tensorflow::serving::Pr
         // Network expects tensor content size or value count
         if (requestInput.dtype() == tensorflow::DataType::DT_UINT16) {
             if (expectedValueCount != requestInput.int_val_size()) {
-                SPDLOG_DEBUG("invalid value count (DT_UINT16): actual {}; required {}",
-                    requestInput.int_val_size(),
-                    expectedValueCount);
-                return ValidationStatusCode::INVALID_VALUE_COUNT;
+                SPDLOG_DEBUG("invalid number of values in tensor proto container: expected {}; actual {}", expectedValueCount, requestInput.int_val_size());
+                return StatusCode::INVALID_VALUE_COUNT;
             }
         } else if (requestInput.dtype() == tensorflow::DataType::DT_HALF) {
             if (expectedValueCount != requestInput.half_val_size()) {
-                SPDLOG_DEBUG("invalid value count (DT_FLOAT): actual {}; required {}",
-                    requestInput.half_val_size(),
-                    expectedValueCount);
-                return ValidationStatusCode::INVALID_VALUE_COUNT;
+                SPDLOG_DEBUG("invalid number of values in tensor proto container: expected {}; actual {}", expectedValueCount, requestInput.int_val_size());
+                return StatusCode::INVALID_VALUE_COUNT;
             }
         } else {
             size_t expectedContentSize = expectedValueCount * networkInput->getPrecision().size();
             if (expectedContentSize != requestInput.tensor_content().size()) {
-                SPDLOG_DEBUG("invalid content size: actual {}B; required {}B",
-                    requestInput.tensor_content().size(),
-                    expectedContentSize);
-                return ValidationStatusCode::INVALID_CONTENT_SIZE;
+                SPDLOG_DEBUG("invalid content size of tensor proto: expected {}B; actual {}B", expectedContentSize, requestInput.tensor_content().size());
+                return StatusCode::INVALID_CONTENT_SIZE;
             }
         }
     }
 
-    return ValidationStatusCode::OK;
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

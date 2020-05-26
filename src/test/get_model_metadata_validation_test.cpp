@@ -31,29 +31,29 @@ protected:
 
 TEST_F(GetModelMetadataValidation, ValidRequestWithNoVersionSpecified) {
     auto status = ovms::GetModelMetadataImpl::validate(&request);
-    EXPECT_EQ(status, ovms::GetModelMetadataStatusCode::OK);
+    EXPECT_TRUE(status.ok());
 }
 
 TEST_F(GetModelMetadataValidation, ValidRequestWithVersionSpecified) {
     request.mutable_model_spec()->mutable_version()->set_value(170);
     auto status = ovms::GetModelMetadataImpl::validate(&request);
-    EXPECT_EQ(status, ovms::GetModelMetadataStatusCode::OK);
+    EXPECT_TRUE(status.ok());
 }
 
 TEST_F(GetModelMetadataValidation, RequestMissingModelSpec) {
     request.release_model_spec();
     auto status = ovms::GetModelMetadataImpl::validate(&request);
-    EXPECT_EQ(status, ovms::GetModelMetadataStatusCode::REQUEST_MODEL_SPEC_MISSING);
+    EXPECT_EQ(status, ovms::StatusCode::MODEL_SPEC_MISSING);
 }
 
 TEST_F(GetModelMetadataValidation, RequestMissingMetadataField) {
     request.mutable_metadata_field()->RemoveLast();
     auto status = ovms::GetModelMetadataImpl::validate(&request);
-    EXPECT_EQ(status, ovms::GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SIGNATURE_DEF);
 }
 
 TEST_F(GetModelMetadataValidation, RequestMetadataInvalidSignatureName) {
     request.mutable_metadata_field()->at(0) = "wrong_signature_name";
     auto status = ovms::GetModelMetadataImpl::validate(&request);
-    EXPECT_EQ(status, ovms::GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SIGNATURE_DEF);
 }

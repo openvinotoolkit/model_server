@@ -24,6 +24,7 @@
 
 using testing::_;
 using testing::Return;
+using testing::ReturnRef;
 using testing::ContainerEq;
 
 namespace {
@@ -91,36 +92,36 @@ class MockModelManager : public ovms::ModelManager {
 TEST(ModelManager, ConfigParseNoModels) {
     std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    ovms::Status status = manager.start(configFile);
-    EXPECT_EQ(status, ovms::Status::OK);
+    auto status = manager.start(configFile);
+    EXPECT_TRUE(status.ok());
 }
 
 TEST(ModelManager, WrongConfigFile) {
     std::string configFile = "123/tmp/not_a_valid_file_name";
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    ovms::Status status = manager.start(configFile);
-    EXPECT_EQ(status, ovms::Status::FILE_INVALID);
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
 TEST(ModelManager, ConfigParseEmpty) {
     std::string configFile = createConfigFileWithContent("\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    ovms::Status status = manager.start(configFile);
-    EXPECT_EQ(status, ovms::Status::JSON_INVALID);
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST(ModelManager, ConfigNotAJson) {
     std::string configFile = createConfigFileWithContent("abcdfgh");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    ovms::Status status = manager.start(configFile);
-    EXPECT_EQ(status, ovms::Status::JSON_INVALID);
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST(ModelManager, ConfigParseEmptyJson) {
     std::string configFile = createConfigFileWithContent("{}\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    ovms::Status status = manager.start(configFile);
-    EXPECT_EQ(status, ovms::Status::JSON_INVALID);
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST(ModelManager, ReadsVersionsFromDisk) {
@@ -136,7 +137,7 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
     std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getVersionReader(path);
     auto status = versionReader->readAvailableVersions(versions);
 
-    EXPECT_EQ(status, ovms::Status::OK);
+    EXPECT_TRUE(status.ok());
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
@@ -151,7 +152,7 @@ TEST(ModelManager, ReadVersionsInvalidPath) {
     std::vector<ovms::model_version_t> versions;
     std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getVersionReader(path);
     auto status = versionReader->readAvailableVersions(versions);
-    EXPECT_EQ(status, ovms::Status::PATH_INVALID);
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
 TEST(ModelManager, StartFromFile) {
@@ -164,9 +165,9 @@ TEST(ModelManager, StartFromFile) {
 
     EXPECT_CALL(*modelMock, addVersion(_))
         .Times(1)
-        .WillRepeatedly(Return(ovms::Status::OK));
-    ovms::Status status = manager.start(fileToReload);
-    EXPECT_EQ(status, ovms::Status::OK);
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.start(fileToReload);
+    EXPECT_TRUE(status.ok());
     manager.join();
     modelMock.reset();
 }
@@ -179,12 +180,12 @@ TEST(ModelManager, ConfigReloading) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
     EXPECT_CALL(*modelMock, addVersion(_))
-        .WillRepeatedly(Return(ovms::Status::OK));
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
-    ovms::Status status = manager.start(fileToReload);
+    auto status = manager.start(fileToReload);
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
-    EXPECT_EQ(status, ovms::Status::OK);
+    EXPECT_TRUE(status.ok());
     std::thread t([](){
         std::this_thread::sleep_for(SLEEP_TIME_S);
     });

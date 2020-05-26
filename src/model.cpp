@@ -23,14 +23,14 @@ namespace ovms {
 Status Model::addVersion(const ModelConfig& config) {
     std::shared_ptr<ModelInstance> modelInstance = std::make_shared<ModelInstance>();
     auto status = modelInstance->loadModel(config);
-    if (status != Status::OK) {
+    if (!status.ok()) {
         return status;
     }
 
     const auto& version = config.getVersion();
     modelVersions[version] = std::move(modelInstance);
     updateDefaultVersion();
-    return Status::OK;
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

@@ -17,6 +17,7 @@ cc_library(
         "modelmanager.hpp",
         "modelinstance.cpp",
         "modelinstance.hpp",
+        "modelversionstatus.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "ovinferrequestsqueue.cpp",
@@ -25,11 +26,11 @@ cc_library(
         "prediction_service.hpp",
         "serialization.hpp",
         "server.cpp",
+        "status.cpp",
         "status.hpp",
         "stringutils.hpp",
         "tensorinfo.hpp",
         "timer.hpp",
-        "modelversionstatus.hpp",
     ],
     copts = [
          "--std=c++17"

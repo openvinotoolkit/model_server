@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
@@ -91,7 +92,7 @@ InferenceEngine::Blob::Ptr deserializeTensorProto(
 }
 
 template <class TensorProtoDeserializator>
-ValidationStatusCode deserializePredictRequest(
+Status deserializePredictRequest(
                     const tensorflow::serving::PredictRequest& request,
                     const tensor_map_t& inputMap,
                     InferenceEngine::InferRequest& inferRequest) {
@@ -106,8 +107,8 @@ ValidationStatusCode deserializePredictRequest(
                     requestInput, tensorInfo);
 
             if (blob == nullptr) {
-                ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR_USUPPORTED_PRECISION;
-                spdlog::error("ovms::{}:{}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status));
+                Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                SPDLOG_ERROR(status.string());
                 return status;
             }
             inferRequest.SetBlob(tensorInfo->getName(), blob);
@@ -116,14 +117,15 @@ ValidationStatusCode deserializePredictRequest(
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR;
-        spdlog::error("ovms::{}:{}: {}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status), e.what());
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
         return status;
     } catch (std::logic_error& e) {
-        ValidationStatusCode status = ValidationStatusCode::DESERIALIZATION_ERROR;
-        spdlog::error("ovms::{}:{}: {}: {}", __FUNCTION__, __LINE__, ValidationStatus::getError(status), e.what());
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
         return status;
     }
-    return ValidationStatusCode::OK;
+
+    return StatusCode::OK;
 }
 }  // namespace ovms
