@@ -19,17 +19,16 @@ import shutil
 
 import pytest
 
+import config
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 
 @pytest.fixture(scope="session")
 def start_server_multi_model(request, get_docker_network, start_minio_server,
-                             get_minio_server_s3, get_image, get_test_dir,
-                             get_docker_context, get_start_container_command, get_container_log_line):
+                             get_minio_server_s3, get_docker_context):
 
-    shutil.copyfile('tests/functional/config.json',
-                    get_test_dir + '/saved_models/config.json')
+    shutil.copyfile('tests/functional/config.json', config.path_to_mount + '/config.json')
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
     AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY')
     AWS_REGION = os.getenv('AWS_REGION')
@@ -51,16 +50,16 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
             'https_proxy=' + os.getenv('https_proxy', ""),
             'no_proxy={}'.format(minio_endpoint)]
 
-    volumes_dict = {'{}'.format(get_test_dir + '/saved_models/'):
+    volumes_dict = {'{}'.format(config.path_to_mount):
                     {'bind': '/opt/ml', 'mode': 'ro'}}
 
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "{} --config_path /opt/ml/config.json --port {} " \
               "--rest_port {} --grpc_workers 2 --rest_workers 2".\
-              format(get_start_container_command, grpc_port, rest_port)
+              format(config.start_container_command, grpc_port, rest_port)
 
-    container = client.containers.run(image=get_image, detach=True,
+    container = client.containers.run(image=config.image, detach=True,
                                       name='ie-serving-py-test-multi-{}'.
                                       format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
@@ -74,7 +73,7 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
 
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container, get_container_log_line)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

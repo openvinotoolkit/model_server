@@ -10,3 +10,4 @@ bazel-ovms-c
 bazel-testlogs
 __pycache__
 .workspace
+*user_config*

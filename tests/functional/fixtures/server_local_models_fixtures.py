@@ -18,6 +18,7 @@ import shutil
 import os
 import pytest
 
+import config
 from model.models_information import Resnet
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
@@ -25,8 +26,7 @@ from utils.server import start_ovms_container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
-                              get_container_log_line):
+def start_server_single_model(request, get_docker_context):
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": Resnet.model_path,
@@ -36,33 +36,28 @@ def start_server_single_model(request, get_image, get_test_dir, get_docker_conte
     # In this case, slower, non-default serialization method is used
     env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
 
-    container, ports = start_ovms_container(get_image, get_test_dir, get_docker_context, start_server_command_args,
-                                            container_name_infix, get_start_container_command, get_container_log_line,
-                                            env_variables)
+    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
+                                            container_name_infix, config.start_container_command, env_variables)
 
     request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
-def start_server_with_mapping(request, get_image, get_test_dir, get_docker_context, get_start_container_command,
-                              get_container_log_line):
-    shutil.copyfile('tests/functional/mapping_config.json',
-                    get_test_dir + '/saved_models/'
-                                   'age_gender/1/'
-                                   'mapping_config.json')
+def start_server_with_mapping(request, get_docker_context):
+    file_dst_path = config.path_to_mount + '/age_gender/1/mapping_config.json'
+    shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
     client = get_docker_context
-    path_to_mount = get_test_dir + '/saved_models/'
-    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
-                                                 'mode': 'ro'}}
+    volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
+                                                        'mode': 'ro'}}
 
     grpc_port, rest_port = get_ports_for_fixture()
 
     command = "{} --model_name age_gender " \
               "--model_path /opt/ml/age_gender " \
-              "--port {} --rest_port {}".format(get_start_container_command, grpc_port, rest_port)
+              "--port {} --rest_port {}".format(config.start_container_command, grpc_port, rest_port)
 
-    container = client.containers.run(image=get_image, detach=True,
+    container = client.containers.run(image=config.image, detach=True,
                                       name='ie-serving-py-test-2-out-{}'.
                                       format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
@@ -73,16 +68,13 @@ def start_server_with_mapping(request, get_image, get_test_dir, get_docker_conte
                                       command=command)
 
     def delete_mapping_file():
-        path = get_test_dir + '/saved_models/' \
-                              'age_gender/1/' \
-                              'mapping_config.json'
-        if os.path.exists(path):
-            os.remove(path)
+        if os.path.exists(file_dst_path):
+            os.remove(file_dst_path)
 
     request.addfinalizer(delete_mapping_file)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container, get_container_log_line)
+    running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

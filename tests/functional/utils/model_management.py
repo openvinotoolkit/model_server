@@ -20,6 +20,7 @@ import time
 
 from pathlib import Path
 
+import config
 from utils.logger import get_logger
 from utils.parametrization import get_tests_suffix
 
@@ -35,7 +36,8 @@ def serving_condition(container, log_line):
     return log_line in logs
 
 
-def wait_endpoint_setup(container, log_line, condition=serving_condition, timeout=20):
+def wait_endpoint_setup(container, condition=serving_condition, timeout=20, container_log_line=None):
+    log_line = container_log_line if container_log_line else config.container_log_line
     start_time = time.time()
     tick = start_time
     running = False

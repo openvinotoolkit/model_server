@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import shutil
 import time
 import pytest
+
+import config
 from constants import MODEL_SERVICE
 from model.models_information import Resnet, ResnetBS8, ResnetBS4
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
@@ -35,13 +38,16 @@ logger = get_logger(__name__)
 
 class TestSingleModelInference:
 
+    @staticmethod
+    def get_update_directory():
+        return os.path.join(config.path_to_mount, "update-{}".format(get_tests_suffix()))
+
     @pytest.mark.skip(reason="not implemented yet")
-    def test_specific_version(self, resnet_multiple_batch_sizes, get_test_dir,
-                              start_server_update_flow_specific):
+    def test_specific_version(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
-                get_tests_suffix())
+        directory = self.get_update_directory()
+
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
         stub = create_channel(port=ports["grpc_port"])
@@ -199,13 +205,12 @@ class TestSingleModelInference:
         time.sleep(10)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_latest_version(self, resnet_multiple_batch_sizes, get_test_dir,
+    def test_latest_version(self, resnet_multiple_batch_sizes,
                             start_server_update_flow_latest):
 
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
-                get_tests_suffix())
+        directory = self.get_update_directory()
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
         resnet_v1_copy_dir = copy_model(resnet, 1, directory)
@@ -279,13 +284,11 @@ class TestSingleModelInference:
         time.sleep(10)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_specific_version_rest(self, resnet_multiple_batch_sizes,
-                                   get_test_dir,
-                                   start_server_update_flow_specific):
+    def test_specific_version_rest(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
-                get_tests_suffix())
+        directory = self.get_update_directory()
+
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, directory)
@@ -439,13 +442,11 @@ class TestSingleModelInference:
         time.sleep(10)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_latest_version_rest(self, resnet_multiple_batch_sizes,
-                                 get_test_dir,
-                                 start_server_update_flow_latest):
+    def test_latest_version_rest(self, resnet_multiple_batch_sizes, start_server_update_flow_latest):
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
-                get_tests_suffix())
+        directory = self.get_update_directory()
+
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, directory)
@@ -517,12 +518,11 @@ class TestSingleModelInference:
         time.sleep(10)
 
     @pytest.mark.skip(reason="not implemented yet")
-    def test_update_rest_grpc(self, resnet_multiple_batch_sizes, get_test_dir,
-                              start_server_update_flow_specific):
+    def test_update_rest_grpc(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
-        directory = get_test_dir + '/saved_models/' + 'update-{}/'.format(
-                get_tests_suffix())
+        directory = self.get_update_directory()
+
         # ensure model directory is empty at the beginning
         shutil.rmtree(directory, ignore_errors=True)
         stub = create_channel(port=ports["grpc_port"])

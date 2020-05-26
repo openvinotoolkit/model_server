@@ -114,6 +114,30 @@ python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/
 ```bash
 make test_functional
 ``` 
+Default tests configuration can be changed by usage of environment variables. 
+To store them in a file, create `user_config.py` in the main directory of the project.
+The following variables are available for customization:
+
+`IMAGE` - docker image name which should be used to run tests.
+
+`TEST_DIR` -  location where models and test data should be downloaded.
+
+`LOG_LEVEL` - set log level.
+
+`START_CONTAINER_COMMAND` - command to start ovms container.
+
+`CONTAINER_LOG_LINE` - log line to check in container to confirm that it has started properly.
+
+Example usage:
+
+```bash
+os.environ["IMAGE"] = "ie-serving-py:latest"
+```
+
+There's also an option to specify these variables in environment via command line by using export, e.g.:
+```bash
+export IMAGE="ie-serving-py:latest"
+```
 
 ### Running basic performance tests
 
@@ -159,13 +183,16 @@ sys	0m39.333s
 
 WARNING: at this point not all tests will pass. Further changes are needed to achieve that.
 
-To run tests (test_batching, test_mapping, test_single_model) on Python image specify following parameter to pytest command:
+To run tests (test_batching, test_mapping, test_single_model) on Python image specify following variables in user_config.py or in environment by using export:
 ```
---start_container_command="/ie-serving-py/start_server.sh ie_serving model " --container_log_line="server listens on port"
+os.environ["START_CONTAINER_COMMAND"] = "/ie-serving-py/start_server.sh ie_serving model "
+os.environ["CONTAINER_LOG_LINE"] = "server listens on port"
 ```
-To run tests (test_model_version_policy, test_model_versions_handling, test_multi_models) on Python image specify following parameter to pytest command:
+
+To run tests (test_model_version_policy, test_model_versions_handling, test_multi_models) on Python image specify following variables in user_config.py or in environment by using export:
 ```
---start_container_command="/ie-serving-py/start_server.sh ie_serving config " --container_log_line="server listens on port"
+os.environ["START_CONTAINER_COMMAND"] = "/ie-serving-py/start_server.sh ie_serving config "
+os.environ["CONTAINER_LOG_LINE"] = "server listens on port"
 ```
 
 ## Server Logging

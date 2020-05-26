@@ -19,6 +19,7 @@ import os
 import pytest
 import requests
 
+import config
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1
 from utils.logger import get_logger
 
@@ -51,12 +52,10 @@ def download_file(model_url_base, model_name, directory, extension, model_versio
 
 
 @pytest.fixture(autouse=True, scope="session")
-def models_downloader(get_test_dir):
+def models_downloader():
     models_paths = {}
     for model in models_to_download:
-        models_base_path = os.path.join(get_test_dir, "saved_models")
-
         for extension in model.download_extensions:
-            models_paths[model.name] = download_file(model.url, model.name, models_base_path, extension,
+            models_paths[model.name] = download_file(model.url, model.name, config.path_to_mount, extension,
                                                      str(model.version))
     return models_paths
