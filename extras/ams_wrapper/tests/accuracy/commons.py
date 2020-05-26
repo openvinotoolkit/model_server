@@ -34,16 +34,16 @@ def run_ov_request(image, input_name, model_name):
         for filename in filenames:
             _, ext = os.path.splitext(filename)
             if ext == ".xml":
-                model_xml = model_path +'/' + filename
+                model_xml = model_path + '/' + filename
             if ext == ".bin":
-                model_bin = model_path +'/' + filename
+                model_bin = model_path + '/' + filename
     if model_xml == "" or model_bin == "":
         print("unable to find proper model data")
         return
     target_device = 'CPU'
     plugin = IEPlugin(device=target_device)
     net = IENetwork(model=model_xml, weights=model_bin)
-    exec_net = plugin.load(network=net,num_requests=1)
+    exec_net = plugin.load(network=net, num_requests=1)
     res = exec_net.infer(inputs={input_name: image})
     return res
 
@@ -169,7 +169,7 @@ def classification_json(json_txt):
         attributes = classification["attributes"]
         highest_probability = {"value": "", "confidence": 0.0}
         for attribute in attributes:
-            if attribute["confidence"] == None:
+            if attribute["confidence"] is None:
                 results[attribute["name"]] = attribute["value"]
                 result_added = True
                 continue

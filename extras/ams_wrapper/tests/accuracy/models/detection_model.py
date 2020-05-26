@@ -25,7 +25,8 @@ class DetectionModel(Model):
                                           self.target_height, self.target_width, self.ovms_model_name)
         self.ovms_results = detection_array(self.ovms_output, self.ovms_img_out,
                                             self.target_height, self.target_width, self.ovms_model_name, "ovms")
-        self.ov_results = detection_array(self.ov_output, self.ov_img_out, self.target_height, self.target_width, self.ovms_model_name, "ov")
+        self.ov_results = detection_array(self.ov_output, self.ov_img_out, self.target_height, self.target_width,
+                                          self.ovms_model_name, "ov")
 
     def print_results(self):
         print("AMS detections: \n")

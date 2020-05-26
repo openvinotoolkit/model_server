@@ -32,4 +32,3 @@ class ClassifierModel(Model):
         print(self.ovms_results)
         print("OpenVINO Result")
         print(self.ov_results)
-
