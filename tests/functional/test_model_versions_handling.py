@@ -52,7 +52,6 @@ class TestModelVersionHandling:
         assert output[model_info.output_name].shape == model_info.output_shape, \
             '{} with version 1 has invalid output'.format(self.model_name)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_metadata(self, start_server_multi_model, version):
 
