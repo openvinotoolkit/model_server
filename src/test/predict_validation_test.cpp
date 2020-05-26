@@ -114,21 +114,21 @@ protected:
 
 TEST_F(PredictValidation, ValidRequest) {
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::OK, status);
+    EXPECT_TRUE(status.ok());
 }
 
 TEST_F(PredictValidation, RequestNotEnoughInputs) {
     request.mutable_inputs()->erase("Input_U8_1_3_62_62_NCHW");
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS);
 }
 
 TEST_F(PredictValidation, RequestTooManyInputs) {
     auto& inputD = (*request.mutable_inputs())["input_d"];
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS);
 }
 
 TEST_F(PredictValidation, RequestWrongInputName) {
@@ -137,7 +137,7 @@ TEST_F(PredictValidation, RequestWrongInputName) {
     (*request.mutable_inputs())["Some_Input"] = input;
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_INPUT_ALIAS, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_MISSING_INPUT);
 }
 
 TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
@@ -145,7 +145,7 @@ TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
     input.mutable_tensor_shape()->add_dim()->set_size(16);
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
@@ -153,7 +153,7 @@ TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
     input.mutable_tensor_shape()->clear_dim();
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 TEST_F(PredictValidation, RequestWrongBatchSize) {
@@ -161,7 +161,7 @@ TEST_F(PredictValidation, RequestWrongBatchSize) {
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(10);  // dim(0) is batch size
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INCORRECT_BATCH_SIZE, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(PredictValidation, RequestWrongShapeValues) {
@@ -172,7 +172,7 @@ TEST_F(PredictValidation, RequestWrongShapeValues) {
     input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_SHAPE, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(PredictValidation, RequestIncorrectContentSize) {
@@ -180,7 +180,7 @@ TEST_F(PredictValidation, RequestIncorrectContentSize) {
     *input.mutable_tensor_content() = std::string(1 * 6, '1');
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_CONTENT_SIZE, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
 TEST_F(PredictValidation, RequestIncorrectValueCount) {
@@ -189,7 +189,7 @@ TEST_F(PredictValidation, RequestIncorrectValueCount) {
     input.mutable_int_val()->Resize(2, 1);
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_VALUE_COUNT, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 TEST_F(PredictValidation, RequestWrongPrecision) {
@@ -197,5 +197,5 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
     input.set_dtype(tensorflow::DataType::DT_UINT8);
 
     auto status = instance.validate(&request);
-    EXPECT_EQ(ovms::ValidationStatusCode::INVALID_PRECISION, status);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
 }

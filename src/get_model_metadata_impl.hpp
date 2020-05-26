@@ -22,35 +22,15 @@
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
 
 #include "modelmanager.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
-enum class GetModelMetadataStatusCode {
-    OK,
-    REQUEST_MODEL_SPEC_MISSING,     /*!< Request lacks model_spec */
-    INVALID_SIGNATURE_DEF,          /*!< Requested signature is not supported */
-    MODEL_MISSING,             /*!< Model with such name and/or version does not exist */
-};
-
-class GetModelMetadataStatus {
-public:
-    static const std::string& getError(const GetModelMetadataStatusCode code) {
-        static const std::map<GetModelMetadataStatusCode, std::string> errors = {
-            { GetModelMetadataStatusCode::OK,                               ""                                  },
-            { GetModelMetadataStatusCode::REQUEST_MODEL_SPEC_MISSING,       "model_spec missing in request"     },
-            { GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF,            "Invalid signature name"            },
-            { GetModelMetadataStatusCode::MODEL_MISSING,                    "Servable not found for request"    },
-        };
-
-        return errors.find(code)->second;
-    }
-};
-
 class GetModelMetadataImpl {
 public:
-    static GetModelMetadataStatusCode validate(
+    static Status validate(
         const   tensorflow::serving::GetModelMetadataRequest*   request);
 
     static void convert(
@@ -61,7 +41,7 @@ public:
         std::shared_ptr<ModelInstance>                  instance,
         tensorflow::serving::GetModelMetadataResponse*  response);
 
-    static GetModelMetadataStatusCode getModelStatus(
+    static Status getModelStatus(
         const   tensorflow::serving::GetModelMetadataRequest*   request,
                 tensorflow::serving::GetModelMetadataResponse*  response);
 };

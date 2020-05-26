@@ -46,7 +46,7 @@ public:
         try {
             it = std::filesystem::directory_iterator(path);
         } catch (const std::filesystem::filesystem_error&) {
-            return Status::PATH_INVALID;
+            return StatusCode::PATH_INVALID;
         }
         for (const auto& entry : it) {
             if (!entry.is_directory()) {
@@ -65,9 +65,9 @@ public:
         }
         if (0 == versions.size()) {
             spdlog::error("No version found for model in path:{}", path);
-        return Status::NO_MODEL_VERSION_AVAILABLE;
+            return StatusCode::NO_MODEL_VERSION_AVAILABLE;
         }
-    return Status::OK;
+        return StatusCode::OK;
     }
 
 private:

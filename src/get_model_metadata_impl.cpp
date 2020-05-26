@@ -17,11 +17,11 @@
 
 namespace ovms {
 
-GetModelMetadataStatusCode GetModelMetadataImpl::getModelStatus(
+Status GetModelMetadataImpl::getModelStatus(
     const   tensorflow::serving::GetModelMetadataRequest*   request,
             tensorflow::serving::GetModelMetadataResponse*  response) {
     auto status = validate(request);
-    if (status != GetModelMetadataStatusCode::OK) {
+    if (!status.ok()) {
         return status;
     }
 
@@ -36,35 +36,36 @@ GetModelMetadataStatusCode GetModelMetadataImpl::getModelStatus(
 
     auto instance = manager.findModelInstance(name, version);
     if (instance == nullptr) {
-        return GetModelMetadataStatusCode::MODEL_MISSING;
+        return StatusCode::MODEL_MISSING;
     }
+
     if (ModelVersionState::AVAILABLE != instance->getStatus().getState()) {
-        return GetModelMetadataStatusCode::MODEL_MISSING;
+        return StatusCode::MODEL_MISSING;
     }
 
     buildResponse(instance, response);
 
-    return GetModelMetadataStatusCode::OK;
+    return StatusCode::OK;
 }
 
-GetModelMetadataStatusCode GetModelMetadataImpl::validate(
+Status GetModelMetadataImpl::validate(
     const   tensorflow::serving::GetModelMetadataRequest*   request) {
 
     if (!request->has_model_spec()) {
-        return GetModelMetadataStatusCode::REQUEST_MODEL_SPEC_MISSING;
+        return StatusCode::MODEL_SPEC_MISSING;
     }
 
     if (request->metadata_field_size() != 1) {
-        return GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF;
+        return StatusCode::INVALID_SIGNATURE_DEF;
     }
 
     const auto& signature = request->metadata_field().at(0);
 
     if (signature != "signature_def") {
-        return GetModelMetadataStatusCode::INVALID_SIGNATURE_DEF;
+        return StatusCode::INVALID_SIGNATURE_DEF;
     }
 
-    return GetModelMetadataStatusCode::OK;
+    return StatusCode::OK;
 }
 
 void GetModelMetadataImpl::convert(

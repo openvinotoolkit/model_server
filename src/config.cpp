@@ -35,27 +35,27 @@ Config& Config::parse(int argc, char** argv) {
                 "gRPC server port",
                 cxxopts::value<uint16_t>()->default_value("9178"),
                 "PORT")
-                ("rest_port",
-                 "REST server port, the REST server will not be started if rest_port is blank or set to 0",
-                 cxxopts::value<uint16_t>()->default_value("0"),
-                 "REST_PORT")
-                ("grpc_workers",
-                 "number of gRPC servers. Recommended to be >= NIREQ. Default value calculated at runtime: NIREQ + 2",
-                 cxxopts::value<uint>()->default_value(DEFAULT_GRPC_SERVERS.c_str()),
-                 "GRPC_WORKERS")
-                ("rest_workers",
-                 "number of workers in REST server - has no effect if rest_port is not set",
-                 cxxopts::value<uint>()->default_value("24"),
-                 "REST_WORKERS")
-                ("log_level",
-                 "serving log level - one of DEBUG, INFO, ERROR",
-                 cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
-                ("log_path",
-                 "optional path to the log file",
-                 cxxopts::value<std::string>(), "LOG_PATH")
-                ("grpc_channel_arguments",
-                 "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
-                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS");
+            ("rest_port",
+                "REST server port, the REST server will not be started if rest_port is blank or set to 0",
+                cxxopts::value<uint16_t>()->default_value("0"),
+                "REST_PORT")
+            ("grpc_workers",
+                "number of gRPC servers. Recommended to be >= NIREQ. Default value calculated at runtime: NIREQ + 2",
+                cxxopts::value<uint>()->default_value(DEFAULT_GRPC_SERVERS.c_str()),
+                "GRPC_WORKERS")
+            ("rest_workers",
+                "number of workers in REST server - has no effect if rest_port is not set",
+                cxxopts::value<uint>()->default_value("24"),
+                "REST_WORKERS")
+            ("log_level",
+                "serving log level - one of DEBUG, INFO, ERROR",
+                cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
+            ("log_path",
+                "optional path to the log file",
+                cxxopts::value<std::string>(), "LOG_PATH")
+            ("grpc_channel_arguments",
+                "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
+                cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS");
         options->add_options("multi model")
             ("config_path",
                 "absolute path to json configuration file",

@@ -16,114 +16,117 @@
 #pragma once
 
 #include <map>
-#include <memory>
 #include <string>
 #include <utility>
 
+#include <grpcpp/server_context.h>
+
 namespace ovms {
 
-/**
- * @enum Status
- * @brief This enum contains status codes for ovms functions
- */
-enum class Status {
-    OK,                             /*!< Success */
-    PATH_INVALID,                   /*!< The provided path is invalid or doesn't exists */
-    FILE_INVALID,                   /*!< File not found or cannot open */
+enum class StatusCode {
+    OK,                                 /*!< Success */
+
+    PATH_INVALID,                       /*!< The provided path is invalid or doesn't exists */
+    FILE_INVALID,                       /*!< File not found or cannot open */
     NETWORK_NOT_LOADED,
-    JSON_INVALID,                   /*!< The file is not valid json */
+    JSON_INVALID,                       /*!< The file/content is not valid json */
     MODELINSTANCE_NOT_FOUND,
-    SHAPE_WRONG_FORMAT,             /*!< The provided shape is in wrong format */
-    PLUGIN_CONFIG_ERROR,            /*!< Plugin config is in wrong format */
-    MODEL_VERSION_POLICY_ERROR,     /*!< Model version policy is in wrong format */
-    NO_MODEL_VERSION_AVAILABLE, /*!< No model version found in path */
-    MODEL_LOADING, /*!<  */
-    MODEL_RETIRED, /*!<  */
-    UNKNOWN_ERROR /*!<  */
+    SHAPE_WRONG_FORMAT,                 /*!< The provided shape param is in wrong format */
+    PLUGIN_CONFIG_WRONG_FORMAT,         /*!< Plugin config is in wrong format */
+    MODEL_VERSION_POLICY_WRONG_FORMAT,  /*!< Model version policy is in wrong format */
+    NO_MODEL_VERSION_AVAILABLE,         /*!< No model version found in path */
+
+    // Model management
+    MODEL_MISSING,                      /*!< Model with such name and/or version does not exist */
+    MODEL_NAME_MISSING,                 /*!< Model with requested name is not found */
+    MODEL_VERSION_MISSING,              /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE,   /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET,       /*!< Model with requested version is not loaded yet */
+
+
+    // Predict request validation
+    INVALID_NO_OF_INPUTS,               /*!< Invalid number of inputs */
+    INVALID_MISSING_INPUT,              /*!< Missing one or more of inputs */
+    INVALID_NO_OF_SHAPE_DIMENSIONS,     /*!< Invalid number of shape dimensions */
+    INVALID_BATCH_SIZE,                 /*!< Input batch size other than required */
+    INVALID_SHAPE,                      /*!< Invalid shape dimension number or dimension value */
+    INVALID_PRECISION,                  /*!< Invalid precision */
+    INVALID_VALUE_COUNT,                /*!< Invalid value count error status for uint16 and half float data types */
+    INVALID_CONTENT_SIZE,               /*!< Invalid content size error status for types using tensor_content() */
+
+    // Deserialization
+    OV_UNSUPPORTED_DESERIALIZATION_PRECISION,   /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against network precision */
+    OV_INTERNAL_DESERIALIZATION_ERROR,          /*!< Error occured during deserialization */
+
+    // Inference
+    OV_INTERNAL_INFERENCE_ERROR,                /*!< Error occured during inference */
+
+    // Serialization
+    OV_UNSUPPORTED_SERIALIZATION_PRECISION,     /*!< Unsupported serializaton precision */
+    OV_INTERNAL_SERIALIZATION_ERROR,            /*!< Error occurred during serialization */
+
+    // GetModelStatus
+    INVALID_SIGNATURE_DEF,  /*!< Requested signature is not supported */
+
+    // Common request validation errors
+    MODEL_SPEC_MISSING,     /*!< Request lacks model_spec */
+
+    INTERNAL_ERROR,
+
+    UNKNOWN_ERROR,
 };
 
-class StatusDescription {
+class Status {
+    StatusCode code;
+
+    static const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::string>> grpcMessages;
+
 public:
-    static const std::string& getError(const Status code) {
-        static const std::map<Status, std::string> errors = {
-            { Status::OK,                           "OK"                                                    },
-            { Status::PATH_INVALID,                 "The provided base path is invalid or doesn't exists"   },
-            { Status::FILE_INVALID,                 "File not found or cannot open"                         },
-            { Status::NETWORK_NOT_LOADED,           "Error while loading a network"                         },
-            { Status::JSON_INVALID,                 "The file is not valid json"                            },
-            { Status::MODELINSTANCE_NOT_FOUND,      "ModelInstance not found"                               },
-            { Status::SHAPE_WRONG_FORMAT,           "The provided shape is in wrong format"                 },
-            { Status::PLUGIN_CONFIG_ERROR,          "Plugin config is in wrong format"                      },
-            { Status::MODEL_VERSION_POLICY_ERROR,   "Model version policy is in wrong format"               },
-            { Status::MODEL_LOADING,                "Model with requested version is not loaded yet"        },
-            { Status::MODEL_RETIRED,                "Model with requested version is retired"               },
-            { Status::UNKNOWN_ERROR,                "Unknown error occured"                                 }
-        };
-        return errors.find(code)->second;
+    Status(StatusCode code = StatusCode::OK) :
+        code(code) {}
+
+    bool ok() const {
+        return code == StatusCode::OK;
     }
-};
 
-/**
- * @enum ValidationStatusCode
- * @brief This enum contains status codes for ovms request validation
- */
-enum class ValidationStatusCode {
-    OK,                     /*!< Success */
-    MODEL_NAME_MISSING,     /*!< Model with requested name is not found */
-    MODEL_VERSION_MISSING,  /*!< Model with requested version is not found */
-    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET, /*!< Model with requested version is not loaded yet */
-    INCORRECT_BATCH_SIZE,   /*!< Input batch size other than required */
-    INVALID_INPUT_ALIAS,    /*!< Invalid number of inputs or name mismatch */
-    INVALID_SHAPE,          /*!< Invalid shape dimension number or dimension value */
-    INVALID_PRECISION,      /*!< Invalid precision */
-    INVALID_CONTENT_SIZE,   /*!< Invalid content size */
-    INVALID_VALUE_COUNT,    /*!< Invalid value count for uint16 and half float data types */
-    DESERIALIZATION_ERROR,  /*!< Error occured during deserialization */
-    DESERIALIZATION_ERROR_USUPPORTED_PRECISION, /*!<Unsupported deserialization precision */
-    INFERENCE_ERROR,        /*!< Error occured during inference */
-    SERIALIZATION_ERROR_INCORRECT_TYPE, /*!< Unsupported serializaton precision */
-    SERIALIZATION_ERROR    /*!< Error occurred during serialization */
-};
+    bool operator==(const Status& status) const {
+        return this->code == status.code;
+    }
 
-class ValidationStatus {
-public:
-    static const std::string& getError(const ValidationStatusCode code) {
-        static const std::map<ValidationStatusCode, std::string> errors = {
-            {ValidationStatusCode::OK,
-             ""},
-            {ValidationStatusCode::MODEL_NAME_MISSING,
-             "Model with requested name is not found"},
-            {ValidationStatusCode::MODEL_VERSION_MISSING,
-             "Model with requested version is not found"},
-            {ValidationStatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
-             "Model with requested version is retired"},
-            {ValidationStatusCode::MODEL_VERSION_NOT_LOADED_YET,
-             "Model with requested version is not loaded yet"},
-            {ValidationStatusCode::INCORRECT_BATCH_SIZE,
-             "Incorrect batch size"},
-            {ValidationStatusCode::INVALID_INPUT_ALIAS,
-             "Unexpected input tensor alias"},
-            {ValidationStatusCode::INVALID_SHAPE,
-             "Invalid input shape"},
-            {ValidationStatusCode::INVALID_PRECISION,
-             "Invalid input precision"},
-            {ValidationStatusCode::INVALID_CONTENT_SIZE,
-             "Invalid content size of tensor proto"},
-            {ValidationStatusCode::INVALID_VALUE_COUNT,
-             "Invalid number of values in tensor proto container"},
-            {ValidationStatusCode::DESERIALIZATION_ERROR,
-             "Error occured during deserialization"},
-            {ValidationStatusCode::DESERIALIZATION_ERROR_USUPPORTED_PRECISION,
-             "Unsupported deserialization precision"},
-            {ValidationStatusCode::INFERENCE_ERROR,
-             "Error occured during inference"},
-            {ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE,
-             "Unsupported serializaton precision"},
-            {ValidationStatusCode::SERIALIZATION_ERROR,
-             "Error occured during serialization"}
-        };
-        return errors.find(code)->second;
+    bool operator!=(const Status& status) const {
+        return this->code != status.code;
+    }
+
+    const grpc::Status grpc() const {
+        static const grpc::Status defaultStatus = grpc::Status(
+            grpc::StatusCode::UNKNOWN,
+            "Unknown error");
+
+        auto it = grpcMessages.find(code);
+        if (it != grpcMessages.end()) {
+            return grpc::Status(it->second.first, it->second.second);
+        } else {
+            return defaultStatus;
+        }
+    }
+
+    operator grpc::Status() const {
+        return this->grpc();
+    }
+
+    const std::string& string() const {
+        static const std::string defaultString = "Unknown error";
+
+        auto it = grpcMessages.find(code);
+        if (it != grpcMessages.end()) {
+            return it->second.second;
+        } else {
+            return defaultString;
+        }
+    }
+
+    operator const std::string&() const {
+        return this->string();
     }
 };
 

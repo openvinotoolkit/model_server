@@ -151,10 +151,10 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     TensorProto responseOutput;
     std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
     EXPECT_CALL(*mockBlob, element_size());
-    ValidationStatusCode status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
                                             std::get<0>(inputs),
                                             std::get<1>(inputs));
-    EXPECT_EQ(ValidationStatusCode::OK, status)
+    EXPECT_TRUE(status.ok())
         << "Supported OV serialization precision"
         << testedPrecision
         << "should succeed";
@@ -166,10 +166,10 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    ValidationStatusCode status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
                                             std::get<0>(inputs),
                                             std::get<1>(inputs));
-    EXPECT_EQ(ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE, status)
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
         << "Unsupported OV serialization precision"
         << testedPrecision
         << "should fail";
@@ -203,11 +203,8 @@ TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     MockIInferRequestProperGetBlob* mInferRequest = static_cast<MockIInferRequestProperGetBlob*>(mInferRequestPtr.get());
     EXPECT_CALL(*mInferRequest, GetBlob_mocked(_, _, _));
     PredictResponse response;
-    ValidationStatusCode status = serializePredictResponse(
-        std::get<0>(inputs),
-        std::get<1>(inputs),
-         &response);
-    EXPECT_EQ(ValidationStatusCode::OK, status);
+    auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
+    EXPECT_TRUE(status.ok());
 }
 
 class SerializeTFGRPCPredictResponseNegative : public SerializeTFGRPCPredictResponse {};
@@ -221,11 +218,8 @@ TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision
     MockIInferRequestProperGetBlob* mInferRequest = static_cast<MockIInferRequestProperGetBlob*>(mInferRequestPtr.get());
     EXPECT_CALL(*mInferRequest, GetBlob_mocked(_, _, _));
     PredictResponse response;
-    ValidationStatusCode status = serializePredictResponse(
-        std::get<0>(inputs),
-        std::get<1>(inputs),
-        &response);
-    EXPECT_EQ(ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE, status);
+    auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
 }
 
 TEST_F(SerializeTFGRPCPredictResponseNegative, OutputNameNotCreatedInInferenceShouldFail) {
@@ -235,11 +229,8 @@ TEST_F(SerializeTFGRPCPredictResponseNegative, OutputNameNotCreatedInInferenceSh
     InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
     EXPECT_CALL(*mInferRequestPtr, GetBlob(_, _, _));
     PredictResponse response;
-    ValidationStatusCode status = serializePredictResponse(
-        inferRequest,
-        std::get<1>(inputs),
-         &response);
-    EXPECT_EQ(ValidationStatusCode::SERIALIZATION_ERROR, status);
+    auto status = serializePredictResponse(inferRequest, std::get<1>(inputs), &response);
+    EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_SERIALIZATION_ERROR);
 }
 
 INSTANTIATE_TEST_SUITE_P(

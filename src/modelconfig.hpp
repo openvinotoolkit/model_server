@@ -295,59 +295,59 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             rapidjson::Document node;
             if (command == "") {
                 modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
-                return Status::OK;
+                return StatusCode::OK;
             }
 
             if (node.Parse(command.c_str()).HasParseError()) {
-                return Status::MODEL_VERSION_POLICY_ERROR;
+                return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
             }
 
             if (!node.IsObject()) {
-                return Status::MODEL_VERSION_POLICY_ERROR;
+                return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
             }
             if (node.MemberCount() != 1) {
-                return Status::MODEL_VERSION_POLICY_ERROR;
+                return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
             }
 
             auto m = node.FindMember("all");
             if (m != node.MemberEnd()) {
                 modelVersionPolicy = std::make_shared<AllModelVersionPolicy>();
-                return Status::OK;
+                return StatusCode::OK;
             }
 
             m = node.FindMember("specific");
             if (m != node.MemberEnd()) {
                 auto& specific = m->value;
                 if (specific.MemberCount() != 1) {
-                    return Status::MODEL_VERSION_POLICY_ERROR;
+                    return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
                 }
                 m = specific.FindMember("versions");
                 if (m == specific.MemberEnd()) {
-                    return Status::MODEL_VERSION_POLICY_ERROR;
+                    return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
                 }
                 std::vector<model_version_t> versions;
                 for (auto& version : m->value.GetArray()) {
                     versions.push_back(version.GetInt64());
                 }
                 modelVersionPolicy = std::make_shared<SpecificModelVersionPolicy>(versions);
-                return Status::OK;
+                return StatusCode::OK;
             }
 
             m = node.FindMember("latest");
             if (m != node.MemberEnd()) {
                 auto& latest = m->value;
                 if (latest.MemberCount() != 1) {
-                    return Status::MODEL_VERSION_POLICY_ERROR;
+                    return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
                 }
                 m = latest.FindMember("num_versions");
                 if (m == latest.MemberEnd()) {
-                    return Status::MODEL_VERSION_POLICY_ERROR;
+                    return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
                 }
                 modelVersionPolicy = std::make_shared<LatestModelVersionPolicy>(m->value.GetInt64());
-                return Status::OK;
+                return StatusCode::OK;
             }
 
-            return Status::MODEL_VERSION_POLICY_ERROR;
+            return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
 
         /**
@@ -395,17 +395,17 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
          */
         Status parsePluginConfig(const rapidjson::Value& node) {
             if (!node.IsObject()) {
-                return Status::PLUGIN_CONFIG_ERROR;
+                return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
             }
 
             for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
                 if (!it->value.IsString()) {
-                    return Status::PLUGIN_CONFIG_ERROR;
+                    return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
                 }
                 pluginConfig[it->name.GetString()] = it->value.GetString();
             }
 
-            return Status::OK;
+            return StatusCode::OK;
         }
         /**
          * @brief Parses string for plugin config keys and values
@@ -417,10 +417,10 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
         Status parsePluginConfig(std::string command) {
             rapidjson::Document node;
             if (command.empty()) {
-                return Status::OK;
+                return StatusCode::OK;
             }
             if (node.Parse(command.c_str()).HasParseError()) {
-                return Status::PLUGIN_CONFIG_ERROR;
+                return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
             }
 
             return parsePluginConfig(node);
@@ -490,10 +490,10 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
             // quick validation of valid characters
             if (s.find_first_not_of("0123456789(),") != std::string::npos)
-                return Status::SHAPE_WRONG_FORMAT;
+                return StatusCode::SHAPE_WRONG_FORMAT;
 
             if (s.front() != shapeLeft || s.back() != shapeRight)
-                return Status::SHAPE_WRONG_FORMAT;
+                return StatusCode::SHAPE_WRONG_FORMAT;
 
             s.pop_back();
             s.erase(s.begin());
@@ -503,7 +503,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
                [](const std::string& str) { return std::stoi(str); });
 
-            return Status::OK;
+            return StatusCode::OK;
         }
 
         /**
@@ -657,12 +657,12 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
             std::ifstream ifs(path.c_str());
             if (!ifs.good()) {
-                return Status::FILE_INVALID;
+                return StatusCode::FILE_INVALID;
             }
 
             rapidjson::IStreamWrapper isw(ifs);
             if (doc.ParseStream(isw).HasParseError()) {
-                return Status::JSON_INVALID;
+                return StatusCode::JSON_INVALID;
             }
 
             // Process inputs
@@ -687,7 +687,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                 }
             }
 
-            return Status::OK;
+            return StatusCode::OK;
         }
 
         /**
@@ -718,7 +718,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             if (v.HasMember("shape")) {
                 // Legacy format as string
                 if (v["shape"].IsString()) {
-                    if (this->setShape(v["shape"].GetString()) != Status::OK) {
+                    if (!this->setShape(v["shape"].GetString()).ok()) {
                         spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                     }
                 } else {
@@ -735,7 +735,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                             shape_t shape;
                             // check if legacy format is used
                             if (s.value.IsString()) {
-                                if (ModelConfig::parseShape(shape, s.value.GetString()) != Status::OK) {
+                                if (!ModelConfig::parseShape(shape, s.value.GetString()).ok()) {
                                     spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                                 }
                             } else {
@@ -760,9 +760,8 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             }
 
             if (v.HasMember("plugin_config")) {
-                auto status = parsePluginConfig(v["plugin_config"]);
-                if (status != Status::OK) {
-                    spdlog::error("Couldn't parse plugin config: {}", StatusDescription::getError(status));
+                if (!parsePluginConfig(v["plugin_config"]).ok()) {
+                    spdlog::error("Couldn't parse plugin config");
                 }
             }
 
@@ -771,15 +770,14 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                 buffer.Clear();
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 v["model_version_policy"].Accept(writer);
-                auto status = this->parseModelVersionPolicy(buffer.GetString());
-                if (status != Status::OK) {
-                    spdlog::error("Couldn't parse model version policy: {}", StatusDescription::getError(status));
+                if (!this->parseModelVersionPolicy(buffer.GetString()).ok()) {
+                    spdlog::error("Couldn't parse model version policy");
                 }
             } else {
                 modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
             }
 
-            return Status::OK;
+            return StatusCode::OK;
         }
     };
 }  // namespace ovms

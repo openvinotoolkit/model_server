@@ -1,0 +1,96 @@
+//*****************************************************************************
+// Copyright 2020 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+#include "status.hpp"
+
+namespace ovms {
+
+const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::string>> Status::grpcMessages = {
+    {StatusCode::OK,
+        {grpc::StatusCode::OK, ""}},
+
+    {StatusCode::PATH_INVALID,
+        {grpc::StatusCode::INTERNAL, "The provided base path is invalid or doesn't exists"}},
+    {StatusCode::FILE_INVALID,
+        {grpc::StatusCode::INTERNAL, "File not found or cannot open"}},
+    {StatusCode::NETWORK_NOT_LOADED,
+        {grpc::StatusCode::INTERNAL, "Error while loading a network"}},
+    {StatusCode::JSON_INVALID,
+        {grpc::StatusCode::INTERNAL, "The file is not valid json"}},
+    {StatusCode::MODELINSTANCE_NOT_FOUND,
+        {grpc::StatusCode::INTERNAL, "ModelInstance not found"}},
+    {StatusCode::SHAPE_WRONG_FORMAT,
+        {grpc::StatusCode::INTERNAL, "The provided shape is in wrong format"}},
+    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT,
+        {grpc::StatusCode::INTERNAL, "Plugin config is in wrong format"}},
+    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT,
+        {grpc::StatusCode::INTERNAL, "Model version policy is in wrong format"}},
+
+    {StatusCode::MODEL_MISSING,
+        {grpc::StatusCode::NOT_FOUND, "Servable not found for request"}},
+    {StatusCode::MODEL_NAME_MISSING,
+        {grpc::StatusCode::NOT_FOUND, "Servable not found for request"}},
+    {StatusCode::MODEL_VERSION_MISSING,
+        {grpc::StatusCode::NOT_FOUND, "Servable not found for request"}},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
+        {grpc::StatusCode::NOT_FOUND, "Model with requested version is retired"}},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_YET,
+        {grpc::StatusCode::NOT_FOUND, "Model with requested version is not loaded yet"}},
+    {StatusCode::MODEL_SPEC_MISSING,
+        {grpc::StatusCode::INVALID_ARGUMENT, "model_spec missing in request"}},
+    {StatusCode::INVALID_SIGNATURE_DEF,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid signature name"}},
+
+    // Predict request validation
+    {StatusCode::INVALID_NO_OF_INPUTS,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of inputs"}},
+    {StatusCode::INVALID_MISSING_INPUT,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Missing input with specific name"}},
+    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of shape dimensions"}},
+    {StatusCode::INVALID_BATCH_SIZE,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid batch size"}},
+    {StatusCode::INVALID_SHAPE,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid shape"}},
+    {StatusCode::INVALID_PRECISION,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid precision"}},
+    {StatusCode::INVALID_VALUE_COUNT,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of values in tensor proto container"}},
+    {StatusCode::INVALID_CONTENT_SIZE,
+        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid content size of tensor proto"}},
+
+    // Deserialization
+    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION,  // Should never occur - ModelInstance::validate takes care of that
+        {grpc::StatusCode::INTERNAL, "Unsupported deserialization precision"}},
+    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR,
+        {grpc::StatusCode::INTERNAL, "Internal deserialization error"}},
+
+    // Inference
+    {StatusCode::OV_INTERNAL_INFERENCE_ERROR,
+        {grpc::StatusCode::INTERNAL, "Internal inference error"}},
+
+    // Serialization
+    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION,  // Should never occur - it should be validated during model loading
+        {grpc::StatusCode::INTERNAL, "Unsupported serialization precision"}},
+    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR,
+        {grpc::StatusCode::INTERNAL, "Internal serialization error"}},
+
+    // GetModelStatus
+    {StatusCode::INTERNAL_ERROR,
+        {grpc::StatusCode::INTERNAL, "Internal server error"}},
+};
+
+}  // namespace ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <condition_variable>
 #include <memory>
+#include <string>
 
 #include <inference_engine.hpp>
 #include "tensorflow/core/framework/tensor.h"
@@ -26,6 +27,7 @@
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service.hpp"
 #include "serialization.hpp"
+#include "status.hpp"
 
 #define DEBUG
 #include "timer.hpp"
@@ -42,20 +44,7 @@ using tensorflow::serving::PredictionService;
 
 namespace ovms {
 
-void infer(InferRequest& inferRequest) {
-    std::condition_variable cv;
-    std::mutex mx;
-    std::unique_lock<std::mutex> lock(mx);
-
-    inferRequest.SetCompletionCallback([&]{
-        cv.notify_one();
-    });
-
-    inferRequest.StartAsync();
-    cv.wait(lock);
-}
-
-ValidationStatusCode getModelInstance(const PredictRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance) {
+Status getModelInstance(const PredictRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance) {
     ModelManager& manager = ModelManager::getInstance();
 
     auto& modelName = request->model_spec().name();
@@ -64,37 +53,27 @@ ValidationStatusCode getModelInstance(const PredictRequest* request, std::shared
 
     auto model = manager.findModelByName(modelName);
     if (model == nullptr) {
-        return ValidationStatusCode::MODEL_NAME_MISSING;
+        return StatusCode::MODEL_NAME_MISSING;
     }
     if (modelVersionId != 0) {
         modelInstance = model->getModelInstanceByVersion(modelVersionId);
         if (modelInstance == nullptr) {
-            return ValidationStatusCode::MODEL_VERSION_MISSING;
+            return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
         modelInstance = model->getDefaultModelInstance();
         if (modelInstance == nullptr) {
-            return ValidationStatusCode::MODEL_VERSION_MISSING;
+            return StatusCode::MODEL_VERSION_MISSING;
         }
     }
     ModelVersionState modelVersionState = modelInstance->getStatus().getState();
     if (ModelVersionState::AVAILABLE > modelVersionState) {
-        return ValidationStatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
     }
     if (ModelVersionState::AVAILABLE < modelVersionState) {
-        return ValidationStatusCode::MODEL_VERSION_NOT_LOADED_YET;
+        return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
     }
-    return ValidationStatusCode::OK;
-}
-
-grpc::Status validateRequest(const PredictRequest* request, ovms::ModelInstance& modelInstance) {
-    auto result = modelInstance.validate(request);
-    if (result != ValidationStatusCode::OK) {
-        return grpc::Status(
-            grpc::StatusCode::INVALID_ARGUMENT,
-            ValidationStatus::getError(result));
-    }
-    return grpc::Status::OK;
+    return StatusCode::OK;
 }
 
 struct ExecutingStreamIdGuard {
@@ -110,7 +89,7 @@ private:
     const int id_;
 };
 
-ValidationStatusCode performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
+Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
     try {
         inferRequest.SetCompletionCallback([&inferRequestsQueue, executingInferId]() {
             inferRequestsQueue.signalCompletedInference(executingInferId);
@@ -118,39 +97,12 @@ ValidationStatusCode performInference(ovms::OVInferRequestsQueue& inferRequestsQ
         inferRequest.StartAsync();
         inferRequestsQueue.waitForAsync(executingInferId);
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        std::cout << e.what() << std::endl;
-        return ValidationStatusCode::INFERENCE_ERROR;
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        return status;
     }
-    return ValidationStatusCode::OK;
-}
 
-inline grpc::Status convertStatus(ValidationStatusCode& validationStatusCode) {
-    grpc::StatusCode grpcStatusCode;
-    switch (validationStatusCode) {
-    case ValidationStatusCode::DESERIALIZATION_ERROR:
-    case ValidationStatusCode::DESERIALIZATION_ERROR_USUPPORTED_PRECISION:
-    case ValidationStatusCode::INCORRECT_BATCH_SIZE:
-    case ValidationStatusCode::INFERENCE_ERROR:
-    case ValidationStatusCode::INVALID_CONTENT_SIZE:
-    case ValidationStatusCode::INVALID_INPUT_ALIAS:
-    case ValidationStatusCode::INVALID_PRECISION:
-    case ValidationStatusCode::INVALID_SHAPE:
-        grpcStatusCode = grpc::StatusCode::INVALID_ARGUMENT;
-        break;
-    case ValidationStatusCode::MODEL_NAME_MISSING:
-    case ValidationStatusCode::MODEL_VERSION_MISSING:
-    case ValidationStatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE:
-    case ValidationStatusCode::MODEL_VERSION_NOT_LOADED_YET:
-        grpcStatusCode = grpc::StatusCode::NOT_FOUND;
-        break;
-    case ValidationStatusCode::OK:
-        return grpc::Status::OK;
-    case ValidationStatusCode::SERIALIZATION_ERROR_INCORRECT_TYPE:
-    case ValidationStatusCode::SERIALIZATION_ERROR:
-    default:
-        grpcStatusCode = grpc::StatusCode::UNKNOWN;
-    }
-    return grpc::Status(grpcStatusCode, ValidationStatus::getError(validationStatusCode));
+    return StatusCode::OK;
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
@@ -164,24 +116,24 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
 
     std::shared_ptr<ovms::ModelInstance> modelVersion;
 
-    ValidationStatusCode status = getModelInstance(request, modelVersion);
-    if (ValidationStatusCode::OK != status) {
-        spdlog::info("Getting modelInstance failed. {}", ValidationStatus::getError(status));
-        return convertStatus(status);
+    auto status = getModelInstance(request, modelVersion);
+    if (!status.ok()) {
+        SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
+        return status.grpc();
     }
+
     status = modelVersion->validate(request);
-    if (ValidationStatusCode::OK != status) {
-        spdlog::info("Validation of inferRequest failed. {}", ValidationStatus::getError(status));
-        return convertStatus(status);
+    if (!status.ok()) {
+        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
+        return status.grpc();
     }
 
     timer.start("get infer request");
     std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-    ovms::Status status2 = modelVersion->getInferRequestsQueue(inferRequestsQueue);
-    if (ovms::Status::OK != status2) {
-        spdlog::info("Getting infer req failed. {}", ovms::StatusDescription::getError(status2));
-        return grpc::Status(grpc::StatusCode::NOT_FOUND,
-                            ovms::StatusDescription::getError(status2));
+    status = modelVersion->getInferRequestsQueue(inferRequestsQueue);
+    if (!status.ok()) {
+        SPDLOG_INFO("Getting infer req failed: {}", status.string());
+        return status.grpc();
     }
 
     ExecutingStreamIdGuard executingStreamIdGuard(*inferRequestsQueue);
@@ -194,9 +146,8 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, modelVersion->getInputsInfo(), inferRequest);
     timer.stop("deserialize");
-    if (ValidationStatusCode::OK != status) {
-        return convertStatus(status);
-    }
+    if (!status.ok())
+        return status.grpc();
     spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("deserialize") / 1000);
 
@@ -205,16 +156,16 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     timer.stop("prediction");
     // TODO - current return code below is the same as in Python, but INVALID_ARGUMENT does not neccesarily mean
     // that the problem may be input
-    if (ValidationStatusCode::OK != status)
-        return convertStatus(status);
+    if (!status.ok())
+        return status.grpc();
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
             request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("prediction") / 1000);
 
     timer.start("serialize");
     status = serializePredictResponse(inferRequest, modelVersion->getOutputsInfo(), response);
     timer.stop("serialize");
-    if (ValidationStatusCode::OK != status)
-        return convertStatus(status);
+    if (!status.ok())
+        return status.grpc();
     spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
             request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("serialize") / 1000);
 
@@ -225,15 +176,7 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
             grpc::ServerContext*                            context,
     const   tensorflow::serving::GetModelMetadataRequest*   request,
             tensorflow::serving::GetModelMetadataResponse*  response) {
-    auto status = GetModelMetadataImpl::getModelStatus(request, response);
-    if (status == GetModelMetadataStatusCode::OK) {
-        return grpc::Status::OK;
-    }
-
-    return grpc::Status(
-        status == GetModelMetadataStatusCode::MODEL_MISSING ? grpc::StatusCode::NOT_FOUND
-                                                            : grpc::StatusCode::INVALID_ARGUMENT,
-        GetModelMetadataStatus::getError(status));
+    return GetModelMetadataImpl::getModelStatus(request, response).grpc();
 }
 
 }  // namespace ovms
