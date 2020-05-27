@@ -1,5 +1,5 @@
 FROM clearlinux as base_build
-
+# Stage for building TF serving API for Python 3.8
 RUN swupd bundle-add \
     c-basic \
     curl \
@@ -47,7 +47,7 @@ COPY --from=dlrs /usr/local/lib/inference-engine /usr/local/lib/inference-engine
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
-COPY --from=base_build /tmp/pip .
+COPY --from=base_build /tmp/pip/tensorflow_serving_api-*.whl .
 RUN virtualenv --system-site-packages -p python3 .venv && \
     . .venv/bin/activate && \
     pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
