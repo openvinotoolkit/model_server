@@ -43,7 +43,7 @@ RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Cle
 
 WORKDIR /openvino/build
 RUN pip3 install --no-cache-dir -r /openvino/inference-engine/ie_bridges/python/requirements.txt
-RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_LIBRARY=/usr/lib64/libpython3.8.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.8  -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
+RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_LIBRARY=/usr/lib64/libpython3.8.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.8  -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
 
 RUN make --jobs=$(nproc --all)
 
