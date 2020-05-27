@@ -11,7 +11,8 @@ ENV TEMP_DIR $TEMP_DIR
 ARG DLDT_PACKAGE_URL
 RUN yum install -y \
     python3-pip \
-    usbutils
+    usbutils \
+    boost-devel
 
 RUN yum install -y epel-release && yum install -y ocl-icd.x86_64
 
