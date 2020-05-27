@@ -1,14 +1,58 @@
+FROM clearlinux as base_build
+# Stage for building TF serving API for Python 3.8
+RUN swupd bundle-add \
+    c-basic \
+    curl \
+    devpkg-curl \
+    git \
+    devpkg-libusb \
+    deprecated-python2 \
+    python3-basic \
+    wget \
+    patch  \
+    diffutils \
+    dev-utils \
+    unzip \
+    which
+# Set up Bazel
+ENV BAZEL_VERSION 0.24.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    cd / && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+RUN git clone -b 2.0.0 https://github.com/tensorflow/serving
+WORKDIR serving
+RUN pip3 install wheel
+RUN mkdir -vp /.cache/bazel/
+RUN bazel build --color=yes --curses=yes \
+    --verbose_failures \
+    tensorflow_serving/tools/pip_package:build_pip_package
+RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
+
 FROM sysstacks/dlrs-tensorflow2-clearlinux:v0.6.0 as dlrs
 FROM clearlinux
 
-RUN swupd update && swupd bundle-add wget python3-basic --debug && swupd clean
+RUN swupd update && \
+    swupd bundle-add \
+    wget \
+    python3-basic \
+    machine-learning-tensorflow --debug && \
+    swupd clean
 
 COPY --from=dlrs /usr/local/lib/inference-engine /usr/local/lib/inference-engine
 
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
-RUN virtualenv --system-site-packages -p python3 .venv && . .venv/bin/activate && pip3 install --no-cache-dir -r requirements_clearlinux.txt
+COPY --from=base_build /tmp/pip/tensorflow_serving_api-*.whl .
+RUN virtualenv --system-site-packages -p python3 .venv && \
+    . .venv/bin/activate && \
+    pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
+    pip3 install --no-cache-dir -r requirements_clearlinux.txt
+RUN rm tensorflow_serving_api-*.whl
 
 RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_detection_adas/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.bin && \
@@ -30,3 +74,4 @@ RUN . .venv/bin/activate && pip3 --no-cache-dir install . && chmod +x /ams_wrapp
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine
+
