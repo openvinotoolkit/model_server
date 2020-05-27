@@ -47,12 +47,6 @@ RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_dete
     mkdir -p /opt/models/vehicle_attributes/1 && cd /opt/models/vehicle_attributes/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-attributes-recognition-barrier-0039/FP32/vehicle-attributes-recognition-barrier-0039.xml && \
-    mkdir -p /opt/models/age_gender_recognition/1 && cd /opt/models/age_gender_recognition/1 && \
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin && \
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml && \
-    mkdir -p /opt/models/emotions_recognition/1 && cd /opt/models/emotions_recognition/1 && \
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin && \
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml && \
     mkdir -p /opt/models/person_vehicle_bike_detection/1 && cd /opt/models/person_vehicle_bike_detection/1 && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml && \

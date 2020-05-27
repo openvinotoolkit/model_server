@@ -91,7 +91,7 @@ class TestAmsInference:
             image_bytes = image_file.read()
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["ageGenderRecognition", "vehicleDetection", "vehicleClassification", "emotionsRecognition",
+        targets = ["vehicleDetection", "vehicleClassification",
                    "personVehicleBikeDetection", "faceDetection"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
@@ -116,7 +116,7 @@ class TestAmsInference:
 
         _, ports = start_ams_service
         ams_port = ports['port']
-        targets = ["ageGenderRecognition", "vehicleDetection", "vehicleClassification", "emotionsRecognition",
+        targets = ["vehicleDetection", "vehicleClassification",
                    "personVehicleBikeDetection", "faceDetection"]
         for target in targets:
             endpoint_url = "http://localhost:{}/{}".format(ams_port, target)
@@ -171,33 +171,6 @@ class TestAmsInference:
                                           'Content-Length': str(len(image_bytes))},
                                  data=image_bytes)
         assert response.status_code == 500
-
-    def test_emotionsRecognition(self, start_ams_service, object_classification_emotions_smile):
-        with open(object_classification_emotions_smile, mode='rb') as image_file:
-            image_bytes = image_file.read()
-        _, ports = start_ams_service
-        ams_port = ports['port']
-
-        endpoint_url = "http://localhost:{}/{}".format(
-            ams_port, "emotionsRecognition")
-        response = requests.post(endpoint_url,
-                                 headers={'Content-Type': 'image/png',
-                                          'Content-Length': str(len(object_classification_emotions_smile))},
-                                 data=image_bytes)
-        assert response.status_code == 200
-        assert response.headers.get('Content-Type') == 'application/json'
-
-        response_json = response.json()
-
-        highest_probability = 0.0
-        highest_emotion = ""
-        for classification in response_json["classifications"][0]["attributes"]:
-            if classification["confidence"] > highest_probability:
-                highest_probability = classification["confidence"]
-                highest_emotion = classification["value"]
-
-        assert highest_probability > 0.947
-        assert highest_emotion == "happy"
 
     def test_vehicleClassification(self, start_ams_service, object_classification_red_truck):
         with open(object_classification_red_truck, mode='rb') as image_file:
@@ -286,46 +259,6 @@ class TestAmsInference:
             epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
         assert 0.173053205013275 - \
             epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
-
-    def test_ageGenderRecognition(self, start_ams_service, object_classification_emotions_smile):
-        with open(object_classification_emotions_smile, mode='rb') as image_file:
-            image_bytes = image_file.read()
-        _, ports = start_ams_service
-        ams_port = ports['port']
-
-        endpoint_url = "http://localhost:{}/{}".format(
-            ams_port, "ageGenderRecognition")
-        response = requests.post(endpoint_url,
-                                 headers={'Content-Type': 'image/png',
-                                          'Content-Length': str(len(object_classification_emotions_smile))},
-                                 data=image_bytes)
-        assert response.status_code == 200
-        assert response.headers.get('Content-Type') == 'application/json'
-
-        response_json = response.json()
-
-        highest_probability = 0.0
-        highest_gender = ""
-        for classification in response_json["classifications"][0]["attributes"]:
-            if classification["confidence"] > highest_probability:
-                highest_probability = classification["confidence"]
-                highest_gender = classification["value"]
-
-        assert highest_probability > 0.915
-        assert highest_gender == "female"
-
-        value = 0.0
-        name = ""
-        confidence = 1.0
-
-        for classification in response_json["classifications"][1]["attributes"]:
-            name = classification["name"]
-            confidence = classification["confidence"]
-            value = int(float(classification["value"]))
-
-        assert confidence is None
-        assert name == "age"
-        assert value == 24
 
     def test_faceDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
