@@ -33,6 +33,7 @@ RUN bazel build --color=yes --curses=yes \
     tensorflow_serving/tools/pip_package:build_pip_package
 RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
 
+RUN swupd repair -V 32750 --force
 
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
 RUN git clone --recurse-submodules -j4 https://github.com/opencv/dldt --branch 2020.2 --single-branch --depth 1 /openvino
