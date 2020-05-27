@@ -9,18 +9,6 @@
     },
     {
       "config": {
-        "name": "emotions_recognition",
-        "base_path": "/opt/models/emotions_recognition"
-      }
-    },
-    {
-      "config": {
-        "name": "age_gender_recognition",
-        "base_path": "/opt/models/age_gender_recognition"
-      }
-    },
-    {
-      "config": {
         "name": "vehicle_attributes",
         "base_path": "/opt/models/vehicle_attributes"
       }
