@@ -38,7 +38,8 @@ def run_ov_request(image, input_name, model_name):
             if ext == ".bin":
                 model_bin = model_path + '/' + filename
     if model_xml == "" or model_bin == "":
-        print("unable to find proper model data")
+        print("Unable to find proper model data")
+
         return
     target_device = 'CPU'
     plugin = IEPlugin(device=target_device)
