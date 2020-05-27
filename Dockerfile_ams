@@ -63,4 +63,4 @@ COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper /ams_wrapper
 COPY extras/ams_models /opt/ams_models
 
-RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.sh
+RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.py

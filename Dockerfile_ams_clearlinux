@@ -32,7 +32,7 @@ COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper /ams_wrapper
 COPY extras/ams_models /opt/ams_models
 
-RUN . .venv/bin/activate && pip3 --no-cache-dir install . && chmod +x /ams_wrapper/start_ams.sh
+RUN . .venv/bin/activate && pip3 --no-cache-dir install . && chmod +x /ams_wrapper/start_ams.py
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine

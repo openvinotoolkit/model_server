@@ -31,7 +31,7 @@ def start_ams_service(request, get_image, get_test_dir, get_docker_context):
     client = get_docker_context
     _, port = get_ports_for_fixture(port_suffix="01")
 
-    command = "/ams_wrapper/start_ams.sh --ams_port={}".format(port)
+    command = "/ams_wrapper/start_ams.py --ams_port={}".format(port)
 
     container = \
         client.containers.run(

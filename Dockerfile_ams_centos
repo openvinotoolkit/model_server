@@ -58,4 +58,4 @@ COPY extras/ams_models /opt/ams_models
 ENV DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ENV HDDL_INSTALL_DIR="$DL_INSTALL_DIR/inference_engine/external/hddl"
 
-RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.sh
+RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.py

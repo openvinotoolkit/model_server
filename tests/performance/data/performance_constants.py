@@ -33,7 +33,7 @@ CONF_PATH_OFFCIAL = os.path.join(
     ROOT_PATH, "extras", "ams_models", "ovms_config.json")
 CONFIG_PATH_INTERNAL = os.path.join("/", "opt", "models", "ovms_config.json")
 AMS_START_SCRIPT_PATH_OFFCIAL = os.path.join(
-    ROOT_PATH, "extras", "ams_wrapper", "start_ams.sh")
+    ROOT_PATH, "extras", "ams_wrapper", "start_ams.py")
 AMS_START_SCRIPT_PATH = os.path.join(
     ROOT_PATH, "tests", "performance", "performance_start_ams.sh")
 AMS_CLIENT_PATH = os.path.join(
