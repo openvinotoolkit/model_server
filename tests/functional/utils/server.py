@@ -17,6 +17,7 @@ import config
 from command_wrappers.server import start_ovms_container_command
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_ports_for_fixture, get_tests_suffix
+from utils.files_operation import save_container_logs_to_file
 
 
 def start_ovms_container(client, command_args, container_name_infix, start_container_command, env_vars_container=None):
@@ -43,3 +44,9 @@ def start_ovms_container(client, command_args, container_name_infix, start_conta
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+
+
+def save_container_logs(container):
+    if config.log_level == "DEBUG" and config.artifacts_dir != "":
+        logs = container.logs().decode()
+        save_container_logs_to_file(container=container, logs=logs)

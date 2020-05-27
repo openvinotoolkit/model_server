@@ -22,11 +22,18 @@ import pytest
 import config
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.server import save_container_logs
 
 
 @pytest.fixture(scope="session")
 def start_server_multi_model(request, get_docker_network, start_minio_server,
                              get_minio_server_s3, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     shutil.copyfile('tests/functional/config.json', config.path_to_mount + '/config.json')
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
@@ -70,8 +77,6 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
                                       environment=envs,
                                       command=command,
                                       network=network.name)
-
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"

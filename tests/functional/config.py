@@ -28,6 +28,9 @@ image = os.environ.get("IMAGE", "ovms:latest")
 """TEST_DIR -  location where models and test data should be downloaded"""
 test_dir = os.environ.get("TEST_DIR", "/tmp/ovms_models")
 
+"""BUILD_LOGS -  path to dir where artifacts should be stored"""
+artifacts_dir = os.environ.get("BUILD_LOGS", "")
+
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 

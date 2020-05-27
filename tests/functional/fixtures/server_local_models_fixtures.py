@@ -22,11 +22,17 @@ import config
 from model.models_information import Resnet
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
-from utils.server import start_ovms_container
+from utils.server import start_ovms_container, save_container_logs
 
 
 @pytest.fixture(scope="class")
 def start_server_single_model(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": Resnet.model_path,
@@ -39,12 +45,21 @@ def start_server_single_model(request, get_docker_context):
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command, env_variables)
 
-    request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="class")
 def start_server_with_mapping(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+        if os.path.exists(file_dst_path):
+            os.remove(file_dst_path)
+
+    request.addfinalizer(finalizer)
+
     file_dst_path = config.path_to_mount + '/age_gender/1/mapping_config.json'
     shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
     client = get_docker_context
@@ -66,13 +81,6 @@ def start_server_with_mapping(request, get_docker_context):
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
-
-    def delete_mapping_file():
-        if os.path.exists(file_dst_path):
-            os.remove(file_dst_path)
-
-    request.addfinalizer(delete_mapping_file)
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"

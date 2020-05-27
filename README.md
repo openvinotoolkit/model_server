@@ -124,6 +124,8 @@ The following variables are available for customization:
 
 `LOG_LEVEL` - set log level.
 
+`BUILD_LOGS` - path to dir where artifacts should be stored.
+
 `START_CONTAINER_COMMAND` - command to start ovms container.
 
 `CONTAINER_LOG_LINE` - log line to check in container to confirm that it has started properly.
