@@ -24,11 +24,17 @@ import config
 from model.models_information import Resnet
 from utils.model_management import wait_endpoint_setup, minio_condition
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
-from utils.server import start_ovms_container
+from utils.server import start_ovms_container, save_container_logs
 
 
 @pytest.fixture(scope="class")
 def start_server_single_model_from_gc(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": "gs://public-artifacts/intelai_public_models/resnet_50_i8/",
@@ -40,7 +46,6 @@ def start_server_single_model_from_gc(request, get_docker_context):
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command, envs)
-    request.addfinalizer(container.kill)
     return container, ports
 
 
@@ -69,6 +74,12 @@ def get_docker_network(request, get_docker_context):
 
 @pytest.fixture(scope="session")
 def start_minio_server(request, get_docker_network, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
@@ -102,8 +113,6 @@ def start_minio_server(request, get_docker_network, get_docker_context):
                                       environment=envs,
                                       command=command,
                                       network=network.name)
-
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container, minio_condition, 30, "created")
     assert running is True, "minio container was not started successfully"
@@ -157,6 +166,12 @@ def get_minio_server_s3(request, start_minio_server):
 @pytest.fixture(scope="class")
 def start_server_single_model_from_minio(request, get_docker_network, get_minio_server_s3, get_docker_context):
 
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
+
     network = get_docker_network
 
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY')
@@ -195,7 +210,6 @@ def start_server_single_model_from_minio(request, get_docker_network, get_minio_
                                       command=command,
                                       network=network.name)
 
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
 

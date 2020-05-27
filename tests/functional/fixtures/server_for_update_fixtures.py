@@ -20,11 +20,17 @@ import shutil
 import config
 from model.models_information import Resnet
 from utils.parametrization import get_tests_suffix
-from utils.server import start_ovms_container
+from utils.server import start_ovms_container, save_container_logs
 
 
 @pytest.fixture(scope="function")
 def start_server_update_flow_latest(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
@@ -39,12 +45,17 @@ def start_server_update_flow_latest(request, get_docker_context):
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command)
 
-    request.addfinalizer(container.kill)
     return container, ports
 
 
 @pytest.fixture(scope="function")
 def start_server_update_flow_specific(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
@@ -58,5 +69,4 @@ def start_server_update_flow_specific(request, get_docker_context):
 
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command)
-    request.addfinalizer(container.kill)
     return container, ports

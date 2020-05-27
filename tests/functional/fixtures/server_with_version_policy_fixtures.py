@@ -23,10 +23,18 @@ import config
 from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.server import save_container_logs
 
 
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
+
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     config.path_to_mount + '/model_ver_policy_config.json')
 
@@ -51,7 +59,6 @@ def start_server_model_ver_policy(request, get_docker_context):
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"

@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-import pytest
-
 import config
+import pytest
 from utils.model_management import wait_endpoint_setup
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
+from utils.server import save_container_logs
 
 
 @pytest.fixture(scope="class")
@@ -26,25 +26,28 @@ def start_server_face_detection_model_auto_shape(request, get_docker_context):
     client = get_docker_context
     volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                         'mode': 'ro'}}
-
     grpc_port, rest_port = get_ports_for_fixture()
-
     command = "/ie-serving-py/start_server.sh ie_serving model " \
               "--model_name face_detection --model_path " \
               "/opt/ml/face_detection " \
               "--port {} --rest_port {} --shape auto " \
               "--grpc_workers 4 --nireq 4".format(grpc_port, rest_port)
 
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
+
     container = client.containers.run(image=config.image, detach=True,
                                       name='ie-serving-py-test-auto-shape-{}'.
                                       format(get_tests_suffix()),
                                       ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port,
+                                                 grpc_port,
                                              '{}/tcp'.format(rest_port):
-                                             rest_port},
+                                                 rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
@@ -54,6 +57,13 @@ def start_server_face_detection_model_auto_shape(request, get_docker_context):
 
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_named_shape(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
+
     client = get_docker_context
     volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                         'mode': 'ro'}}
@@ -77,7 +87,6 @@ def start_server_face_detection_model_named_shape(request, get_docker_context):
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
@@ -87,6 +96,13 @@ def start_server_face_detection_model_named_shape(request, get_docker_context):
 
 @pytest.fixture(scope="class")
 def start_server_face_detection_model_nonamed_shape(request, get_docker_context):
+
+    def finalizer():
+        save_container_logs(container=container)
+        container.stop()
+
+    request.addfinalizer(finalizer)
+
     client = get_docker_context
     volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                         'mode': 'ro'}}
@@ -109,7 +125,6 @@ def start_server_face_detection_model_nonamed_shape(request, get_docker_context)
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
                                       command=command)
-    request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
