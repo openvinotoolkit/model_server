@@ -18,6 +18,7 @@ import os
 import grpc  # noqa
 import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
+from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from utils.cleanup import clean_hanging_docker_resources, get_docker_client
@@ -106,6 +107,8 @@ def pytest_runtest_teardown():
 
 def exception_catcher(when: str, outcome):
     if isinstance(outcome.excinfo, tuple):
+        if len(outcome.excinfo) > 1 and isinstance(outcome.excinfo[1], OutcomeException):
+            return
         exception_logger = get_logger("exception_logger")
         exception_info = ExceptionInfo.from_exc_info(outcome.excinfo)
         exception_info.traceback = exception_info.traceback.filter(filter_traceback)
