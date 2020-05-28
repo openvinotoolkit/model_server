@@ -50,6 +50,7 @@ ADD https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/mo
 COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper/start_ams.py /ams_wrapper/start_ams.py
 COPY extras/ams_wrapper/src /ams_wrapper/src
+COPY extras/ams_wrapper/tests/invalid_startup /ams_wrapper/tests/invalid_startup
 COPY extras/ams_models /opt/ams_models
 
 ENV DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools

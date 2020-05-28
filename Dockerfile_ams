@@ -56,6 +56,7 @@ RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_dete
 COPY ie_serving /ie-serving-py/ie_serving
 COPY extras/ams_wrapper/start_ams.py /ams_wrapper/start_ams.py
 COPY extras/ams_wrapper/src /ams_wrapper/src
+COPY extras/ams_wrapper/tests/invalid_startup /ams_wrapper/tests/invalid_startup
 COPY extras/ams_models /opt/ams_models
 
 RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.py
