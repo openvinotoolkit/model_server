@@ -247,4 +247,4 @@ class TestVehicleAttributes():
         first_type = (format_check["classifications"]
                       [1]["attributes"][0]["value"])
         print("first type:" + first_type)
-        assert first_type == "car"
+        assert first_type == "truck"
