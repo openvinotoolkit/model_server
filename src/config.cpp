@@ -76,7 +76,7 @@ Config& Config::parse(int argc, char** argv) {
                 "BATCH_SIZE")
             ("shape",
                 "sets models shape (model must support reshaping). If set, batch_size parameter is ignored",
-                cxxopts::value<std::vector<size_t>>(),
+                cxxopts::value<std::string>(),
                 "SHAPE")
             ("model_version_policy",
                 "model version policy",

@@ -52,11 +52,6 @@ namespace ovms {
          */
         const std::string empty;
 
-        /**
-         * @brief 
-         */
-        const std::vector<size_t> emptyShape;
-
     public:
         /**
          * @brief Gets the instance of the config
@@ -167,10 +162,10 @@ namespace ovms {
          * 
          * @return const std::vector<size_t>&
          */
-        const std::vector<size_t> shape() {
+        const std::string& shape() {
             if (result->count("shape"))
-                return result->operator[]("shape").as<std::vector<size_t>>();
-            return emptyShape;
+                return result->operator[]("shape").as<std::string>();
+            return empty;
         }
 
         /**

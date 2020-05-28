@@ -49,6 +49,7 @@ Status ModelManager::start() {
         config.batchSize(),
         config.nireq()
     };
+
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         spdlog::error("Couldn't parse plugin config");
@@ -60,7 +61,15 @@ Status ModelManager::start() {
         spdlog::error("Couldn't parse model version policy");
         return status;
     }
+
+    status = modelConfig.parseShapeParameter(config.shape());
+    if (!status.ok()) {
+        spdlog::error("Couldn't parse shape parameter");
+        return status;
+    }
+
     modelConfig.setBasePath(config.modelPath());
+
     return reloadModelWithVersions(modelConfig);
 }
 

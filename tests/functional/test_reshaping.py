@@ -51,7 +51,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'],
                                     True, FaceDetection.name, stub)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -117,7 +116,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'], True,
                                     FaceDetection.name, stub)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
