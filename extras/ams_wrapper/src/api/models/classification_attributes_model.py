@@ -18,6 +18,7 @@ import json
 
 from src.logger import get_logger
 from src.api.models.model import Model
+from src.api.models.model_config import ModelOutputConfiguration
 from src.api.types import Attribute, SingleClassification, Classification
 
 logger = get_logger(__name__)
@@ -34,14 +35,13 @@ class ClassificationAttributes(Model):
             highest_prob = 0.0
 
             if output_name not in inference_output:
-                message = 'Output name from model config - {}'
-                ' does not match model outputs - {}'.format(
+                message = 'Output name from model config - {} does not match model outputs - {}'.format(
                     output_name, inference_output)
                 logger.exception(message)
                 raise ValueError(message)
 
             # get output configuration for current output_name
-            current_conf = self.output_configs[output_name]
+            current_conf: ModelOutputConfiguration = self.output_configs[output_name]
 
             is_softmax = True
             value_multiplier = 1.0
@@ -65,6 +65,12 @@ class ClassificationAttributes(Model):
 
                 attributes.append(attribute)
 
+            attributes.sort(key=lambda attr: attr.confidence, reverse=True)
+            if current_conf.top_k_results:
+                attributes = attributes[:current_conf.top_k_results]
+            if current_conf.confidence_threshold:
+                attributes = [attr for attr in attributes
+                              if attr.confidence >= current_conf.confidence_threshold]
             classification = SingleClassification(attributes)
             classifications.append(classification)
 

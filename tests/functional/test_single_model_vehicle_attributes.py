@@ -242,9 +242,9 @@ class TestVehicleAttributes():
         first_color = (format_check["classifications"]
                        [0]["attributes"][0]["value"])
         print("first color:" + first_color)
-        assert first_color == "white"
+        assert first_color == "red"
 
         first_type = (format_check["classifications"]
                       [1]["attributes"][0]["value"])
         print("first type:" + first_type)
-        assert first_type == "car"
+        assert first_type == "truck"
