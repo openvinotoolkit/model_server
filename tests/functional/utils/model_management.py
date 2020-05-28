@@ -36,7 +36,7 @@ def serving_condition(container, log_line):
     return log_line in logs
 
 
-def wait_endpoint_setup(container, condition=serving_condition, timeout=20, container_log_line=None):
+def wait_endpoint_setup(container, condition=serving_condition, timeout=60, container_log_line=None):
     log_line = container_log_line if container_log_line else config.container_log_line
     start_time = time.time()
     tick = start_time

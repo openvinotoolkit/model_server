@@ -20,7 +20,8 @@ from utils.parametrization import get_ports_for_fixture, get_tests_suffix
 from utils.files_operation import save_container_logs_to_file
 
 
-def start_ovms_container(client, command_args, container_name_infix, start_container_command, env_vars_container=None):
+def start_ovms_container(client, command_args, container_name_infix, start_container_command, env_vars_container=None,
+                         network=""):
     if env_vars_container is None:
         env_vars_container = []
     container_name_prefix = config.image.split(":")[0].split("/")[-1]
@@ -40,7 +41,7 @@ def start_ovms_container(client, command_args, container_name_infix, start_conta
                                              '{}/tcp'.format(rest_port):
                                              rest_port},
                                       remove=True, volumes=volumes_dict,
-                                      command=command, environment=env_vars_container)
+                                      command=command, environment=env_vars_container, network=network)
     running = wait_endpoint_setup(container)
     assert running is True, "docker container was not started successfully"
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

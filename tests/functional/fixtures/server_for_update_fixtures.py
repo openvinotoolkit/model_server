@@ -40,7 +40,6 @@ def start_server_update_flow_latest(request, get_docker_context):
                                  "model_path": "/opt/ml/update-{}".format(get_tests_suffix()),
                                  "grpc_workers": 1,
                                  "nireq": 1}
-
     container_name_infix = "test-update-latest"
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command)
@@ -64,9 +63,8 @@ def start_server_update_flow_specific(request, get_docker_context):
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": "/opt/ml/update-{}".format(get_tests_suffix()),
                                  "model_version_policy": '\'{"specific": { "versions":[1, 3, 4] }}\''}
-
     container_name_infix = "test-update-specific"
-
     container, ports = start_ovms_container(get_docker_context, start_server_command_args,
                                             container_name_infix, config.start_container_command)
+
     return container, ports
