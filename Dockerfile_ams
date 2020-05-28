@@ -54,7 +54,8 @@ RUN mkdir -p /opt/models/vehicle_detection_adas/1 && cd /opt/models/vehicle_dete
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-adas-0001/FP32/face-detection-adas-0001.bin && \
     wget https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-adas-0001/FP32/face-detection-adas-0001.xml
 COPY ie_serving /ie-serving-py/ie_serving
-COPY extras/ams_wrapper /ams_wrapper
+COPY extras/ams_wrapper/start_ams.py /ams_wrapper/start_ams.py
+COPY extras/ams_wrapper/src /ams_wrapper/src
 COPY extras/ams_models /opt/ams_models
 
 RUN . .venv/bin/activate && pip3 install . && chmod +x /ams_wrapper/start_ams.py
