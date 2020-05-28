@@ -18,6 +18,7 @@ import json
 
 from src.logger import get_logger
 from src.api.models.model import Model
+from src.api.models.model_config import ModelOutputConfiguration
 from src.api.types import Tag, Rectangle, SingleEntity, Entity
 
 
@@ -27,7 +28,7 @@ logger = get_logger(__name__)
 class DetectionModel(Model):
     def postprocess_inference_output(self, inference_output: dict) -> str:
         # Assuming single output
-        output_config = next(iter(self.output_configs.values()))
+        output_config: ModelOutputConfiguration = next(iter(self.output_configs.values()))
         output_name = output_config.output_name
         result_array = inference_output[output_name]
 
@@ -57,6 +58,13 @@ class DetectionModel(Model):
 
             detection = SingleEntity(tag, box)
             detections.append(detection)
+
+        detections.sort(key=lambda entity: entity.tag.confidence, reverse=True)
+        if output_config.confidence_threshold:
+            detections = [entity for entity in detections 
+                          if entity.tag.confidence >= output_config.confidence_threshold]
+        if output_config.top_k_results:
+            detections = detections[:output_config.top_k_results]
 
         if len(detections) == 0:
             response = None
