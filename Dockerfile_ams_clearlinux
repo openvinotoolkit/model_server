@@ -1,4 +1,4 @@
-FROM clearlinux as base_build
+FROM clearlinux as build
 # Stage for building TF serving API for Python 3.8
 RUN swupd bundle-add \
     c-basic \
@@ -23,6 +23,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
 RUN git clone -b 2.0.0 https://github.com/tensorflow/serving
 WORKDIR serving
 RUN pip3 install wheel
@@ -32,22 +33,38 @@ RUN bazel build --color=yes --curses=yes \
     tensorflow_serving/tools/pip_package:build_pip_package
 RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
 
-FROM sysstacks/dlrs-tensorflow2-clearlinux:v0.6.0 as dlrs
+RUN swupd repair -V 32750 --force
+
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
+RUN git clone --recurse-submodules -j4 https://github.com/opencv/dldt --branch 2020.2 --single-branch --depth 1 /openvino
+
+# Use package for centos7 on clearlinux - seems to be working just fine.
+RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
+
+WORKDIR /openvino/build
+RUN pip3 install --no-cache-dir -r /openvino/inference-engine/ie_bridges/python/requirements.txt
+RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_LIBRARY=/usr/lib64/libpython3.8.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.8  -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
+
+RUN make --jobs=$(nproc --all)
+
+
 FROM clearlinux
 
 RUN swupd update && \
     swupd bundle-add \
     wget \
     python3-basic \
+    devpkg-libusb \
     machine-learning-tensorflow --debug && \
     swupd clean
 
-COPY --from=dlrs /usr/local/lib/inference-engine /usr/local/lib/inference-engine
+COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
+COPY --from=build /openvino/bin/intel64/Release/lib /usr/local/lib/inference-engine
 
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
-COPY --from=base_build /tmp/pip/tensorflow_serving_api-*.whl .
+COPY --from=build /tmp/pip/tensorflow_serving_api-*.whl .
 RUN virtualenv --system-site-packages -p python3 .venv && \
     . .venv/bin/activate && \
     pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
