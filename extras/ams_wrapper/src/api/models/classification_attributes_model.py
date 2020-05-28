@@ -69,7 +69,7 @@ class ClassificationAttributes(Model):
             if current_conf.top_k_results:
                 attributes = attributes[:current_conf.top_k_results]
             if current_conf.confidence_threshold:
-                attributes = [attr for attr in attributes 
+                attributes = [attr for attr in attributes
                               if attr.confidence >= current_conf.confidence_threshold]
             classification = SingleClassification(attributes)
             classifications.append(classification)

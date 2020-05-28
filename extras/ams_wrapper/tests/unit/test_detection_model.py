@@ -24,83 +24,86 @@ from src.api.models.detection_model import DetectionModel
 from src.api.models.model_config import ModelOutputConfiguration
 
 MOCK_INFERENCE_OUTPUT = {
-    'result': 
+    'result':
     np.array([
-    [
         [
-            #id, label, confidence, x_min, y_min, x_max, y_max
-            [0, 1.0, 0.97, 0.17, 0.15, 0.5, 0.7],
-            [1, 1.0, 0.46, 0.12, 0.11, 0.6, 0.5],
+            [
+                # id, label, confidence, x_min, y_min, x_max, y_max
+                [0, 1.0, 0.97, 0.17, 0.15, 0.5, 0.7],
+                [1, 1.0, 0.46, 0.12, 0.11, 0.6, 0.5],
+            ]
         ]
-    ]
-])
+    ])
 }
 
 
 @pytest.fixture
 def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
     return {
-    'result': ModelOutputConfiguration(output_name='result',
-                                       value_index_mapping={
-                                            "image_id": 0,
-                                            "value": 1,
-                                            "confidence": 2,
-                                            "x_min": 3,
-                                            "y_min": 4,
-                                            "x_max": 5,
-                                            "y_max": 6
-                                        },
-                                       classes={
-                                            "background": 0.0,
-                                            "vehicle": 1.0
-                                        }
-                                    )
+        'result': ModelOutputConfiguration(output_name='result',
+                                           value_index_mapping={
+                                               "image_id": 0,
+                                               "value": 1,
+                                               "confidence": 2,
+                                               "x_min": 3,
+                                               "y_min": 4,
+                                               "x_max": 5,
+                                               "y_max": 6
+                                           },
+                                           classes={
+                                               "background": 0.0,
+                                               "vehicle": 1.0
+                                           }
+                                           )
     }
 
 
 @pytest.mark.parametrize("inference_output,expected_response", [
                         (MOCK_INFERENCE_OUTPUT,
-                        {"type": "entity", "subtype": None,
-                         "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
-                                      "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}},
-                                      {"tag": {"value": "vehicle", "confidence": 0.46},
-                                       "box": {"l": 0.12, "t": 0.11, "w": abs(0.6-0.12), "h": abs(0.5-0.11)}}]}
-)])
+                         {"type": "entity", "subtype": None,
+                          "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
+                                        "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}},
+                                       {"tag": {"value": "vehicle", "confidence": 0.46},
+                                        "box": {"l": 0.12, "t": 0.11, "w": abs(0.6-0.12), "h": abs(0.5-0.11)}}]}
+                         )])
 def test_postprocess_inference_output(inference_output, expected_response, fake_output_config):
     model = DetectionModel(endpoint=None, ovms_connector=None, input_configs=None,
                            output_configs=fake_output_config)
 
-    assert model.postprocess_inference_output(inference_output) == json.dumps(expected_response)
+    assert model.postprocess_inference_output(
+        inference_output) == json.dumps(expected_response)
 
 
 @pytest.mark.parametrize("inference_output,expected_response,top_k", [
                         (MOCK_INFERENCE_OUTPUT,
-                        {"type": "entity", "subtype": None,
-                         "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
-                                      "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}}]
-                        },
-                        1
-)])
+                         {"type": "entity", "subtype": None,
+                          "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
+                                        "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}}]
+                          },
+                         1
+                         )])
 def test_postprocess_inference_output_top_k(inference_output, expected_response, top_k, fake_output_config):
     fake_output_config['result'].top_k_results = top_k
     model = DetectionModel(endpoint=None, ovms_connector=None, input_configs=None,
                            output_configs=fake_output_config)
 
-    assert model.postprocess_inference_output(inference_output) == json.dumps(expected_response)
+    assert model.postprocess_inference_output(
+        inference_output) == json.dumps(expected_response)
 
 
 @pytest.mark.parametrize("inference_output,expected_response,confidence_threshold", [
                         (MOCK_INFERENCE_OUTPUT,
-                        {"type": "entity", "subtype": None,
-                         "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
-                                      "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}}]
-                        },
-                        0.5
-)])
+                         {"type": "entity", "subtype": None,
+                          "entities": [{"tag": {"value": "vehicle", "confidence": 0.97},
+                                        "box": {"l": 0.17, "t": 0.15, "w": abs(0.5-0.17), "h": abs(0.7-0.15)}}]
+                          },
+                         0.5
+                         )])
 def test_postprocess_inference_output_confidence_threshold(inference_output, expected_response,
                                                            confidence_threshold, fake_output_config):
     fake_output_config['result'].confidence_threshold = confidence_threshold
     model = DetectionModel(endpoint=None, ovms_connector=None, input_configs=None,
                            output_configs=fake_output_config)
 
-    assert model.postprocess_inference_output(inference_output) == json.dumps(expected_response)
+    assert model.postprocess_inference_output(
+        inference_output) == json.dumps(expected_response)

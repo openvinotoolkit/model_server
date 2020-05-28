@@ -61,7 +61,7 @@ class DetectionModel(Model):
 
         detections.sort(key=lambda entity: entity.tag.confidence, reverse=True)
         if output_config.confidence_threshold:
-            detections = [entity for entity in detections 
+            detections = [entity for entity in detections
                           if entity.tag.confidence >= output_config.confidence_threshold]
         if output_config.top_k_results:
             detections = detections[:output_config.top_k_results]
