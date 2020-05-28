@@ -41,3 +41,9 @@ container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on por
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 
 path_to_mount = os.path.join(test_dir, "saved_models")
+
+minio_image = "minio/minio:latest"
+
+start_minio_container_command = 'server --address ":{}" /data'
+
+container_minio_log_line = "created"

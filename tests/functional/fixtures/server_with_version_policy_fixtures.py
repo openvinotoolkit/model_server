@@ -21,17 +21,11 @@ from distutils.dir_util import copy_tree
 
 import config
 from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
-from utils.server import start_ovms_container, save_container_logs
+from object_model.server import Server
 
 
 @pytest.fixture(scope="class")
-def start_server_model_ver_policy(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_model_ver_policy(request):
 
     shutil.copyfile('tests/functional/model_version_policy_config.json',
                     config.path_to_mount + '/model_ver_policy_config.json')
@@ -42,9 +36,9 @@ def start_server_model_ver_policy(request, get_docker_context):
     start_server_command_args = {"config_path": "/opt/ml/model_ver_policy_config.json"}
     container_name_infix = "test-batch4-2out"
 
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()
 
 
 @pytest.fixture(autouse=True, scope="session")
