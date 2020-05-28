@@ -21,16 +21,25 @@ from commons import detection_array, detection_json
 class DetectionModel(Model):
 
     def output_postprocess(self):
-        self.ams_results = detection_json(self.ams_output, self.img_out,
-                                          self.target_height, self.target_width)
-        self.ovms_results = detection_array(self.ovms_output, self.img_out,
-                                            self.target_height, self.target_width)
+        self.ams_results = detection_json(self.ams_output, self.ams_img_out,
+                                          self.target_height, self.target_width, self.ovms_model_name)
+        self.ovms_results = detection_array(self.ovms_output, self.ovms_img_out,
+                                            self.target_height, self.target_width, self.ovms_model_name, "ovms")
+        self.ov_results = detection_array(self.ov_output, self.ov_img_out, self.target_height, self.target_width,
+                                          self.ovms_model_name, "ov")
 
     def print_results(self):
-        print(self.ams_results)
-        print(self.ovms_results)
-        if len(self.ams_results) == len(self.ovms_results):
-            print("The same count of object has been found")
-        else:
-            print("Failed to find the same objects")
-            return
+        print("AMS detections: \n")
+        for result in self.ams_results:
+            print("confidence: {}".format(result[0]))
+            print("box coordinates: {} {} {} {}\n".format(result[1], result[2], result[3], result[4]))
+        print("OVMS detections: \n")
+        for _, result in self.ovms_results.items():
+            for res in result:
+                print("confidence: {}".format(res[0]))
+                print("box coordinates: {} {} {} {}\n".format(res[1], res[2], res[3], res[4]))
+        print("OpenVINO detections: \n")
+        for _, result in self.ov_results.items():
+            for res in result:
+                print("confidence: {}".format(res[0]))
+                print("box coordinates: {} {} {} {}\n".format(res[1], res[2], res[3], res[4]))

@@ -20,7 +20,8 @@ import cv2
 from abc import ABC, abstractmethod
 
 from commons import load_ov_standard_image, load_ams_image, \
-    extract_content_type, send_image_ams, send_image_ovms
+    extract_content_type, send_image_ams, send_image_ovms, \
+    run_ov_request
 
 
 class Model(ABC):
@@ -34,7 +35,9 @@ class Model(ABC):
         self.ovms_port = ovms_port
         self.ovms_model_name = ovms_model_name
         self.parse_model_properties(model_json)
-        self.img_out = cv2.imread(image_path)
+        self.ams_img_out = cv2.imread(image_path)
+        self.ov_img_out = cv2.imread(image_path)
+        self.ovms_img_out = cv2.imread(image_path)
 
     def parse_model_properties(self, model_json):
         try:
@@ -55,6 +58,7 @@ class Model(ABC):
             self.channels = 3
         self.output_names = []
         self.classes = {}
+        self.not_softmax_outputs = []
         for out in model_cfg['outputs']:
             self.output_names.append(out['output_name'])
             if "classes" in out:
@@ -69,6 +73,7 @@ class Model(ABC):
         self.ams_image = load_ams_image(self.image_path)
 
     def send_data(self):
+        self.ov_output = run_ov_request(self.ovms_image, self.input_name, self.ovms_model_name)
         self.ovms_output = send_image_ovms(self.ovms_address, self.ovms_port,
                                            self.ovms_image, self.ovms_model_name, self.input_name, self.output_names,
                                            self.channels, self.target_height, self.target_width)
