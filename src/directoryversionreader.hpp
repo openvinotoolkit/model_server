@@ -46,6 +46,7 @@ public:
         try {
             it = std::filesystem::directory_iterator(path);
         } catch (const std::filesystem::filesystem_error&) {
+            spdlog::error("Specified model directory does not exist:{}", path);
             return StatusCode::PATH_INVALID;
         }
         for (const auto& entry : it) {

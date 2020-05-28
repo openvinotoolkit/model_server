@@ -426,6 +426,59 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             return parsePluginConfig(node);
         }
 
+        Status parseShapeParameter(const rapidjson::Value& node) {
+            if (!node.IsObject()) {
+                return StatusCode::SHAPE_WRONG_FORMAT;
+            }
+
+            shapes_map_t shapes;
+            for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+                if (!it->value.IsString()) {
+                    return StatusCode::SHAPE_WRONG_FORMAT;
+                }
+                shape_t shape;
+                auto status = parseShape(shape, it->value.GetString());
+                if (!status.ok()) {
+                    return status;
+                }
+                shapes[it->name.GetString()] = shape;
+            }
+            setShapes(shapes);
+
+            return StatusCode::OK;
+        }
+
+        Status parseShapeParameter(const std::string& command) {
+            this->shape.clear();
+            this->shapes.clear();
+
+            if (command.empty()) {
+                return StatusCode::OK;
+            }
+
+            // parse as string
+            if (command.front() == shapeLeft) {
+                shape_t shape;
+                auto status = parseShape(shape, command);
+                if (!status.ok()) {
+                    return status;
+                }
+                setShape(shape);
+                return StatusCode::OK;
+            }
+
+            // parse as json
+            rapidjson::Document node;
+            if (command.empty()) {
+                return StatusCode::OK;
+            }
+            if (node.Parse(command.c_str()).HasParseError()) {
+                return StatusCode::SHAPE_WRONG_FORMAT;
+            }
+
+            return parseShapeParameter(node);
+        }
+
         /**
          * @brief Get the shape
          * 

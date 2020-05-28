@@ -93,9 +93,7 @@ void logConfig(Config& config) {
         spdlog::debug("model_path: {}", config.modelPath());
         spdlog::debug("model_name: {}", config.modelName());
         spdlog::debug("batch_size: {}", config.batchSize());
-        std::stringstream shape_t;
-        std::copy(config.shape().begin(), config.shape().end(), std::ostream_iterator<size_t>(shape_t, " "));
-        spdlog::debug("shape: {}", shape_t.str());
+        spdlog::debug("shape: {}", config.shape());
         spdlog::debug("model_version_policy: {}", config.modelVersionPolicy());
         spdlog::debug("nireq: {}", config.nireq());
         spdlog::debug("target_device: {}", config.targetDevice());
