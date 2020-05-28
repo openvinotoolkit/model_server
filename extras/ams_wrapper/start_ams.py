@@ -62,7 +62,7 @@ def parse_args():
                         help='OVMS service workers')
     parser.add_argument('--ovms_model_devices', type=str,
                         help='Colon delimited list of model devices, '
-                        'in following format: \'<model_1_name>=<device_name>;<model_2_name>=<device_name>;\'',
+                        'in following format: \'<model_1_name>=<device_name>;<model_2_name>=<device_name>\'',
                         default=os.environ.get('OVMS_MODEL_DEVICES', ''))
     args = parser.parse_args()
     args.ovms_model_devices = parse_ovms_model_devices_config(
