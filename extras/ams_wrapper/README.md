@@ -20,7 +20,7 @@ HTTP contract is defined as follows:
 * LVA acts as the HTTP client
 
 
-| POST        | http://hostname/<model_name> |
+| POST        | http://hostname/<endpoint_name> |
 | ------------- |-------------|
 | Accept      | application/json, */* |
 | Authorization     | None |
@@ -57,7 +57,7 @@ Response:
 
 ## Supported models categories
 
-Models configured in Inference Server need to belong to one of defined categories. 
+Models configured in OpenVINO Model Server for LVA need to belong to one of defined categories. 
 The category defines what kind of data is in the model response and in what format. 
 See the category characteristics below to learn more about their requirements. 
 Each model needs to have an associated config file, which describes the included classes, 
@@ -216,8 +216,8 @@ OpenVINO Model server requires file `/opt/ams_models/ovms_config.json` which is 
 to use [4 exemplary models](../ams_models/ovms_config.json).
 
 LVA REST API wrapper requires model configuration files describing all enabled models.
-Models config files should be present in `/opt/ams_models/` folder and their name should have the name 
-matched with the model name configured in `ovms_config.json`.
+Models config files should be present in `/opt/ams_models/` folder. Model configuration files should have _model.json suffix.
+They include the mapping between ovms models from `ovms_config.json` and LVA REST API endpoint name.
 
 Model files in OpenVINO Intermediate Representation format should be stored in the folders structure
 like defined on [OVMS documentation](../../docs/docker_container.md#preparing-the-models).
@@ -228,8 +228,8 @@ It is, however, not officially supported.
 
 ## Target device selection for models: 
 
-By default, the OpenVINO Inference Server for LVA is started, serving included models, using CPU as the target device executing the inference requests. 
-Besides CPU, Inference Server is currently supporting 
+By default, the OpenVINO Model Server for LVA is started, serving included models, using CPU as the target device executing the inference requests. 
+Besides CPU, OVMS for LVA is currently supporting 
 [Myriad Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MYRIAD.html) 
 and [Heterogeneous Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HETERO.html). 
 
@@ -237,6 +237,41 @@ It is possible to set the target device for each individual model by setting add
 OVMS_MODEL_DEVICES, or passing –ovms_model_devices parameter to OVMS for LVA, with a semicolon separated list of models with assigned target devices. 
 Below is an example: 
 OVMS_MODEL_DEVICES='vehicle_detection_adas=CPU;vehicle_attributes=MYRIAD' 
+
+## Starting docker container
+
+# OpenVINO Inference Server for LVA parameters
+ 
+
+OpenVINO Model Server for LVA is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
+
+```
+
+  --ams_port AMS_PORT   Port for AMS Service to listen on (default: 5000)
+
+  --ovms_port OVMS_PORT
+
+                        Port for OVMS to listen on (default: 9000)
+
+  --workers WORKERS     AMS service workers (default: 20)
+
+  --grpc_workers GRPC_WORKERS
+
+                        OVMS service workers (default: 10)
+
+  --ovms_model_devices OVMS_MODEL_DEVICES
+
+                        Colon delimited list of model devices, in following
+
+                        format: '<model_1_name>=<device_name>;<model_2_name>=<
+
+                        device_name>'
+
+```
+Docker container can be initiated via a command:
+```bash
+docker run <image_name> /ams_wrapper/start_ams.py
+```
 
 ## Performance tuning
 OVMS component is configured for most generic manner to work well in low and high spec resources. 
