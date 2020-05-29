@@ -36,7 +36,7 @@ Status GetModelMetadataImpl::getModelStatus(
 
     auto instance = manager.findModelInstance(name, version);
     if (instance == nullptr) {
-        return StatusCode::MODEL_MISSING;
+        return version == 0 ? StatusCode::MODEL_NAME_MISSING : StatusCode::MODEL_VERSION_MISSING;
     }
 
     if (ModelVersionState::AVAILABLE != instance->getStatus().getState()) {
