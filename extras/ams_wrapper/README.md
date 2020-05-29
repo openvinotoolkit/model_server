@@ -139,44 +139,44 @@ Below is a sample of such model:
    "subtype" : "vehicleClassification",
    "type" : "classification",
    "classifications" : [
-      {
-         "attributes" : [
-            {
-               "name" : "color",
-               "confidence" : 0.289313167333603,
-               "value" : "white"
-            },
-            {
-               "confidence" : 0.0435199774801731,
-               "value" : "gray",
-               "name" : "color"
-            },
-            {
-               "confidence" : 0.00365369999781251,
-               "value" : "yellow",
-               "name" : "color"
-            },
-            {
-               "name" : "color",
-               "confidence" : 0.589816808700562,
-               "value" : "red"
-            },
-            {
-               "confidence" : 0.00414687860757113,
-               "value" : "green",
-               "name" : "color"
-            },
-            {
-               "value" : "blue",
-               "confidence" : 0.0417489744722843,
-               "name" : "color"
-            },
-            {
-               "name" : "color",
-               "value" : "black",
-               "confidence" : 0.0278004333376884
-            }
-         ]
+{
+        "attributes" : [
+	{
+		"confidence": 0.589816808700562, 
+		"name": "color",
+		 "value": "red"
+	},
+ 	{
+		"confidence": 0.289313167333603,
+		 "name": "color",
+		 "value": "white"
+	},
+ 	{
+		"confidence": 0.0435199774801731, 
+		"name": "color", 
+		"value": "gray"
+	},
+ 	{
+		"confidence": 0.0417489744722843, 
+		"name": "color", 
+		"value": "blue"
+	},
+ 	{
+		"confidence": 0.0278004333376884, 
+		"name": "color", 
+		"value": "black"
+	},
+ 	{
+		"confidence": 0.00414687860757113,
+		 "name": "color", 
+		"value": "green"
+	},
+ 	{
+		"confidence": 0.00365369999781251,
+		 "name": "color",
+		 "value": "yellow"
+	}
+]
       },
       {
          "attributes" : [
@@ -268,4 +268,3 @@ Test response from the deployed component:
  
 
 `curl -X POST -H "Content-Type: image/jpg" --data-binary @test_image.jpg localhost:5000/vehicleDetection | jq `
-
