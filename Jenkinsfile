@@ -48,7 +48,6 @@ pipeline {
                         sh './tests/scripts/functional-tests-ams.sh'
                     }
                 }
-                /*
                 stage('functional tests bin') {
                     steps {
                         sh './tests/scripts/functional-tests-bin.sh'
@@ -64,7 +63,6 @@ pipeline {
                         sh './tests/scripts/functional-tests-ov-base.sh'
                     }
                 }
-                */
             }
         }
     }
