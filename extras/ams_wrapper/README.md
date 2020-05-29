@@ -337,7 +337,10 @@ classes: dictionary containing mapping of classes to values returned by the mode
 confidence_threshold: if set, only inference results with confidence higher or equal to confidence_threshold will be returned [OPTIONAL]
 top_k_results: if set, only top k predicitons, sorted by confidence, will be returned (where k is the value of this parameter) [OPTIONAL]
 is_softmax: defines if this output should be considered as Softmax, valid values: true/false, default: true [OPTIONAL]
-value_multiplier: if set, inference results will be multiplied by this value [OPTIONAL]
+value_multiplier:must be set if is_softmax is set to False, inference results for this specific output will be multiplied by this value [OPTIONAL]
+for example if age value is returned in the inference output (0.2456777) we need to multiply it by 100 to get the human readable age format. 
+is_softmax should be then set to False and value_multiplier must be set to 100.
+
 ```
 
 Model configuration example:
