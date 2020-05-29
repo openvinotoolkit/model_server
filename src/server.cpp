@@ -61,17 +61,20 @@ struct GrpcChannelArgument {
 
 // Parses a comma separated list of gRPC channel arguments into list of
 // ChannelArgument.
-std::vector<GrpcChannelArgument> parseGrpcChannelArgs(
-        const std::string channel_arguments_str) {
-    const std::vector<std::string> channel_arguments =
-            tokenize(channel_arguments_str, ',');
-    std::vector<GrpcChannelArgument> result;
-    for (const std::string channel_argument : channel_arguments) {
-        const std::vector<std::string> key_val =
-                tokenize(channel_argument, '=');
+Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
+    const std::vector<std::string> channel_arguments = tokenize(channel_arguments_str, ',');
+
+    for (const std::string& channel_argument : channel_arguments) {
+        std::vector<std::string> key_val = tokenize(channel_argument, '=');
+        if (key_val.size() != 2) {
+            return StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT;
+        }
+        erase_spaces(key_val[0]);
+        erase_spaces(key_val[1]);
         result.push_back({key_val[0], key_val[1]});
     }
-    return result;
+
+    return StatusCode::OK;
 }
 
 void configure_logger(const std::string log_level, const std::string log_path) {
@@ -143,9 +146,16 @@ int server_main(int argc, char** argv) {
     sigTermHandler.sa_flags = 0;
     sigaction(SIGTERM, &sigTermHandler, NULL);
 
+    std::vector<GrpcChannelArgument> channel_arguments;
+    auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
+    if (!status.ok()) {
+        spdlog::error("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
+        return 1;
+    }
+
     logConfig(config);
     auto& manager = ModelManager::getInstance();
-    auto status = manager.start();
+    status = manager.start();
     if (!status.ok()) {
         spdlog::error("ovms::ModelManager::Start() Error: {}", status.string());
         return 1;
@@ -159,13 +169,11 @@ int server_main(int argc, char** argv) {
     builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     builder.RegisterService(&model_service);
-    const std::vector<GrpcChannelArgument> channel_arguments =
-            parseGrpcChannelArgs(config.grpcChannelArguments());
     for (const GrpcChannelArgument& channel_argument : channel_arguments) {
         // gRPC accept arguments of two types, int and string. We will attempt to
         // parse each arg as int and pass it on as such if successful. Otherwise we
         // will pass it as a string. gRPC will log arguments that were not accepted.
-        spdlog::debug("channel {}: {}", channel_argument.key, channel_argument.value);
+        spdlog::debug("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
         try {
             int i = std::stoi(channel_argument.value);
             builder.AddChannelArgument(channel_argument.key, i);

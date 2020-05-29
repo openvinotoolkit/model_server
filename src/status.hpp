@@ -34,6 +34,7 @@ enum class StatusCode {
     SHAPE_WRONG_FORMAT,                 /*!< The provided shape param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,         /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT,  /*!< Model version policy is in wrong format */
+    GRPC_CHANNEL_ARG_WRONG_FORMAT,
     NO_MODEL_VERSION_AVAILABLE,         /*!< No model version found in path */
 
     // Model management
