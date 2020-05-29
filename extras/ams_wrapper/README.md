@@ -10,7 +10,7 @@ OpenVINO Model Server is running as a docker container and exposes an LVA REST A
 the pipeline applications. This interface supports a range of model categories and returns json response 
 including model metadata like attribute, labels or classes names. 
 
-Beside LVA REST API, the Inference Server expose also the complete OpenVINO Model Server REST and gRPC API,
+Beside LVA REST API, the OVMS for LVA exposes also the complete OpenVINO Model Server REST and gRPC API,
  which could be used with arbitrary OpenVINO model. 
 
 ## LVA REST API
