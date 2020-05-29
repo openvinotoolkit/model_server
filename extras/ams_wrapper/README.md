@@ -303,3 +303,81 @@ Test response from the deployed component:
  
 
 `curl -X POST -H "Content-Type: image/jpg" --data-binary @test_image.jpg localhost:5000/vehicleDetection | jq `
+
+
+## Models configuration
+
+Model configuration json file has the following fields:
+
+```
+endpoint: name for the endpoint under which model will be exposed [REQUIRED]
+model_type: type of the model, currently supported types are: detection, classification_attributes
+ [REQUIRED]
+inputs: list of model's input configurations, refer to input configuration schema below [REQUIRED]
+outputs: list of model's outputs configurations, refer to output configuration schema below [REQUIRED]
+```
+
+Model's input configuration schema:
+
+```
+input_name: name of the input [REQUIRED]
+channels: number of channels in input image, default: 3 [OPTIONAL]
+target_height: image's height expected by model, images with different height will be resized to match target height [OPTIONAL]
+target_width: image's width expected by model, images with different width will be resized to match target width [OPTIONAL]
+color_format: color format expected by model, supported formats: RGB, BGR, default: BGR [OPTIONAL]
+scale: scaling factor for image pixel values, each pixel value will be multiplied by this value if specified [OPTIONAL]
+standardization: If set to true, images will be linearly scaled to have mean 0 and variance 1, valid values: true/false, default: false [OPTIONAL]
+input_format: image input format, supported formats: NHWC, NCHW, default: NCHW [OPTIONAL]
+```
+Model's output configuration schema:
+```
+output_name: name of the output [REQUIRED]
+value_index_mapping: dictionary containing description of fields in model's inference output [OPTIONAL]
+classes: dictionary containing mapping of classes to values returned by the model [OPTIONAL]
+confidence_threshold: if set, only inference results with confidence higher or equal to confidence_threshold will be returned [OPTIONAL]
+top_k_results: if set, only top k predicitons, sorted by confidence, will be returned (where k is the value of this parameter) [OPTIONAL]
+is_softmax: defines if this output should be considered as Softmax, valid values: true/false, default: true [OPTIONAL]
+value_multiplier: if set, inference results will be multiplied by this value [OPTIONAL]
+```
+
+Model configuration example:
+
+```json
+{
+    "endpoint": "vehicleDetection",
+    "model_type": "detection",
+    "inputs": [
+        {
+          "input_name": "data",
+          "input_format": "NCHW",
+          "color_format": "BGR",
+          "target_height": 384,
+          "target_width": 672,
+          "channels": 3,
+          "standardization": false
+        }
+      ],
+    "outputs": [
+        {
+            "output_name": "detection_out",
+            "classes": {
+                "background": 0.0,
+                "vehicle": 1.0
+            },
+            "value_index_mapping": {
+                "image_id": 0,
+                "value": 1,
+                "confidence": 2,
+                "x_min": 3,
+                "y_min": 4,
+                "x_max": 5,
+                "y_max": 6
+            }
+        }
+    ],
+    "ovms_mapping": {
+        "model_name": "vehicle_detection_adas",
+        "model_version": 0
+    }
+}
+```
