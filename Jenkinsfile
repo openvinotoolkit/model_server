@@ -43,11 +43,6 @@ pipeline {
             }
         stage('functional tests') {
             parallel {
-                stage('functional tests ams') {
-                    steps {
-                        sh './tests/scripts/functional-tests-ams.sh'
-                    }
-                }
                 stage('functional tests bin') {
                     steps {
                         sh './tests/scripts/functional-tests-bin.sh'
@@ -63,6 +58,11 @@ pipeline {
                         sh './tests/scripts/functional-tests-ov-base.sh'
                     }
                 }
+            }
+        }
+        stage('functional tests ams') {
+            steps {
+                sh './tests/scripts/functional-tests-ams.sh'
             }
         }
     }
