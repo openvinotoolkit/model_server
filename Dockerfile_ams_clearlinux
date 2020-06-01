@@ -80,8 +80,7 @@ RUN swupd update && \
     swupd bundle-add \
     wget \
     python3-basic \
-    devpkg-libusb \
-    machine-learning-tensorflow --debug && \
+    devpkg-libusb && \
     swupd clean
 
 COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
