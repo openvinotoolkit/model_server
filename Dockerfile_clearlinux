@@ -47,35 +47,52 @@ RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_L
 
 RUN make --jobs=$(nproc --all)
 
+FROM clearlinux:latest as opencl
+
+RUN swupd update --no-boot-update \
+    && swupd bundle-add wget unzip lftp package-utils cpio \
+    && rm -rf /var/lib/swupd
+
+RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -s /usr/lib64/haswell/libzstd.so.1.4.5 /usr/lib64/libzstd.so.1 ; fi
+
+WORKDIR /pkg
+
+RUN mkdir -p rpms/runtime && pwd && source /etc/os-release \
+    && cd rpms/runtime \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget clinfo-bin*.rpm intel-compute-runtime-data*.rpm intel-compute-runtime-lib*.rpm intel-gmmlib-lib*.rpm intel-graphics-compiler-lib*.rpm libva-lib*.rpm ocl-icd-lib*.rpm opencl-clang-lib*.rpm"
+
+RUN mkdir -p out/runtime \
+    && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
+    && (cd out/runtime ; echo "Runtime files:" ; find . -type f -or -type l)
 
 FROM clearlinux
 
 RUN swupd update && \
     swupd bundle-add \
-    wget \
     python3-basic \
     devpkg-libusb \
-    machine-learning-tensorflow && \
-    swupd clean
+    machine-learning-tensorflow \
+    && rm -rf /var/lib/swupd
 
 COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
 COPY --from=build /openvino/bin/intel64/Release/lib /usr/local/lib/inference-engine
+COPY --from=opencl /pkg/out/runtime/ /
 
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
 COPY --from=build /tmp/pip/tensorflow_serving_api-*.whl .
-RUN virtualenv --system-site-packages -p python3 .venv && \
-    . .venv/bin/activate && \
-    pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
-    pip3 install --no-cache-dir -r requirements_clearlinux.txt
-RUN rm tensorflow_serving_api-*.whl
+
+RUN pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
+    pip3 --no-cache-dir install -r requirements_clearlinux.txt && \
+    rm tensorflow_serving_api-*.whl
 
 COPY ie_serving /ie-serving-py/ie_serving
 
-RUN . .venv/bin/activate && pip3 --no-cache-dir install .
+RUN pip3 --no-cache-dir install .
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine
 
 RUN sed -i '/activate/d' start_server.sh
+
