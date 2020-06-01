@@ -82,7 +82,7 @@ class TestModelVerPolicy:
             else:
                 with pytest.raises(Exception) as e:
                     stub.GetModelMetadata(request, 10)
-                assert "Servable not found for request" in str(e.value)
+                assert "Model with requested version is not found" in str(e.value)
 
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
@@ -115,7 +115,7 @@ class TestModelVerPolicy:
             else:
                 with pytest.raises(Exception) as e:
                     stub.GetModelStatus(request, 10)
-                assert "Servable not found for request" in str(e.value)
+                assert "Model with requested version is not found" in str(e.value)
 
         #   aggregated results check
         if model_name == 'all':
