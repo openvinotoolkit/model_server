@@ -17,6 +17,10 @@ RUN swupd bundle-add \
 	unzip \
 	which
 
+# FIXME: clearlinux migrated recently to GCC 10.x -> not supported by openvino 2020.2.
+# Workaround: rollback to clearlinux version with GCC 9.x.
+RUN swupd repair -V 32750 --force
+
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
 WORKDIR /bazel

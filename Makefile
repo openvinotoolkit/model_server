@@ -27,8 +27,35 @@ HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 
+# Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
+# Currently supported BASE_OS values are: ubuntu centos clearlinux
+BASE_OS ?= ubuntu
+
+# do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
+BASE_OS_TAG ?= latest
+
+BASE_OS_TAG_UBUNTU ?= 18.04
+BASE_OS_TAG_CENTOS ?= 8
+BASE_OS_TAG_CLEARLINUX ?= latest
+
+ifeq ($(BASE_OS),ubuntu)
+  BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+endif
+ifeq ($(BASE_OS),centos)
+  BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
+endif
+ifeq ($(BASE_OS),clearlinux)
+  BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
+endif
+
+# Option to Override release image.
+# Release image OS *must have* glibc version >= glibc version on BASE_OS:
+DIST_OS ?= $(BASE_OS)
+DIST_OS_TAG ?= $(BASE_OS_TAG)
+
 OVMS_CPP_DOCKER_IMAGE ?= ovms
 OVMS_CPP_IMAGE_TAG ?= latest
+
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
@@ -55,14 +82,8 @@ style: venv
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
 .PHONY: docker_build
-docker_build: docker_build_ubuntu
-
-.PHONY: docker_build_all
-docker_build_all: docker_build_ubuntu docker_build_centos docker_build_clearlinux
-
-.PHONY: docker_build_ubuntu
-docker_build_ubuntu:
-	@echo "Building docker image - Ubuntu"
+docker_build:
+	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
 ifeq ($(NO_DOCKER_CACHE),true)
@@ -75,62 +96,23 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	@echo docker build $(NO_CACHE_OPTION) -f Dockerfile.ubuntu . \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
-	@docker build $(NO_CACHE_OPTION) -f Dockerfile.ubuntu . \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
+	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
-
-.PHONY: docker_build_centos
-docker_build_centos:
-	@echo "Building docker image - Centos"
-	# Provide metadata information into image if defined
-	@mkdir -p .workspace
-ifeq ($(NO_DOCKER_CACHE),true)
-	$(eval NO_CACHE_OPTION:=--no-cache)
-	@echo "Docker image will be rebuilt from scratch"
-endif
-ifneq ($(OVMS_METADATA_FILE),)
-	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
-else
-	@touch .workspace/metadata.json
-endif
-	@cat .workspace/metadata.json
-	@echo docker build $(NO_CACHE_OPTION) -f Dockerfile.centos . \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
+	docker build $(NO_CACHE_OPTION) -f DockerfileRelease . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-centos:$(OVMS_CPP_IMAGE_TAG)
-	@docker build  $(NO_CACHE_OPTION) -f Dockerfile.centos . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-centos:$(OVMS_CPP_IMAGE_TAG)
-
-.PHONY: docker_build_clearlinux
-docker_build_clearlinux:
-	@echo "Building docker image - Clearlinux"
-	# Provide metadata information into image if defined
-	@mkdir -p .workspace
-ifeq ($(NO_DOCKER_CACHE),true)
-	$(eval NO_CACHE_OPTION:=--no-cache)
-	@echo "Docker image will be rebuilt from scratch"
-endif
-ifneq ($(OVMS_METADATA_FILE),)
-	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
-else
-	@touch .workspace/metadata.json
-endif
-	@cat .workspace/metadata.json
-	@echo docker build $(NO_CACHE_OPTION) -f Dockerfile.clearlinux . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-clearlinux:$(OVMS_CPP_IMAGE_TAG)
-	@docker build $(NO_CACHE_OPTION) -f Dockerfile.clearlinux . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-clearlinux:$(OVMS_CPP_IMAGE_TAG)
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg DIST_IMAGE=$(DIST_OS):$(DIST_OS_TAG)
+	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
+		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
+			"tar -c -C / ovms.tar.gz* ; sleep 2" | tar -x
+	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 
 test_perf: venv
 	@echo "Dropping test container if exist"

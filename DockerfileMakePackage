@@ -1,0 +1,30 @@
+ARG BUILD_IMAGE=ovms-centos:latest
+FROM $BUILD_IMAGE
+
+RUN mkdir /patchelf && cd /patchelf && \
+	wget https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+	tar -xf 0.10.tar.gz && ls -lah && cd */ && \
+	./bootstrap.sh && ./configure && make && make install
+
+RUN mkdir -vp /ovms_release/bin
+RUN mkdir -vp /ovms_release/lib
+RUN cp /ovms/metadata.json /ovms_release/
+RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
+RUN find /ovms/bazel-out/k8-opt/bin -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
+RUN find /openvino/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
+RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
+RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libgcc' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+
+RUN ls -lahR /ovms_release/
+
+RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --remove-rpath  {}  \;
+RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
+
+WORKDIR /ovms_release/bin
+#RUN patchelf --remove-rpath ./ovms && patchelf --force-rpath --set-rpath '$ORIGIN/../lib/' ./ovms
+RUN patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
+WORKDIR /
+RUN tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/ && sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && cp /ovms_release/metadata.json /ovms.tar.gz.metadata.json
+
+ENTRYPOINT [ ]

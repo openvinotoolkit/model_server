@@ -29,8 +29,16 @@ RUN yum update -y && yum install -y \
             python3-virtualenv \
             wget \
             which \
+            boost-devel boost-filesystem boost-thread \
             unzip && \
             yum clean all
+
+
+# GPU support:
+RUN yum install -y yum-plugin-copr
+RUN yum -y copr enable jdanecki/intel-opencl
+RUN yum install -y intel-opencl
+RUN yum install -y epel-release && yum install -y ocl-icd.x86_64
 
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
