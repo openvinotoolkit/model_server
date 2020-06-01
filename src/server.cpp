@@ -13,6 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -109,10 +114,35 @@ void logConfig(Config& config) {
     spdlog::debug("log path: {}", config.logPath());
 }
 
+void onInterrupt(int status) {
+    spdlog::info("Program interrupted with signal: {}", status);
+    spdlog::default_logger()->flush();
+    exit(0);
+}
+
+void onTerminate(int status) {
+    spdlog::info("Program terminated with signal: {}", status);
+    spdlog::default_logger()->flush();
+    exit(0);
+}
+
 int server_main(int argc, char** argv) {
     const int GIGABYTE = 1024 * 1024 * 1024;
     auto& config = ovms::Config::instance().parse(argc, argv);
     configure_logger(config.logLevel(), config.logPath());
+
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = onInterrupt;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
+    struct sigaction sigTermHandler;
+    sigTermHandler.sa_handler = onTerminate;
+    sigemptyset(&sigTermHandler.sa_mask);
+    sigTermHandler.sa_flags = 0;
+    sigaction(SIGTERM, &sigTermHandler, NULL);
+
     logConfig(config);
     auto& manager = ModelManager::getInstance();
     auto status = manager.start();
