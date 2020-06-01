@@ -82,7 +82,7 @@ The Inference Server Docker image comes pre-built with the following Object Dete
 * face-detection - [face-detection-adas-0001](https://github.com/opencv/open_model_zoo/tree/master/models/intel/face-detection-adas-binary-0001)
 * person-vehicle-bike-detection-crossroad - [person-vehicle-bike-detection-crossroad-0078](http://•%09https:/github.com/opencv/open_model_zoo/tree/master/models/intel/person-vehicle-bike-detection-crossroad-0078)
 
-Each model should include also a configuration file in json format. Example of such
+Each model should also include a configuration file in json format. Example of such
 configuration file is [here](ams_models/vehicle_detection_adas_model.json)
 
 Below is a sample of the model output:
@@ -121,14 +121,14 @@ Below is a sample of the model output:
 
 ### Classification models
 
-Classification models, in this category, give the results in softmax layer. This include a set
+Classification models, in this category, give the results in softmax layer. This includes a set
 of probabilities in classes defined for the model.
-Each output of the model should have the shape `[1, C , ...]`. First dimension represent the batch size,
-which should be set to 1. `C` represent all classes defined in the model. Remaining dimensions 
+Each output of the model should have the shape `[1, C , ...]`. First dimension represents the batch size,
+which should be set to 1. `C` represents all classes defined in the model. Remaining dimensions 
 are ignored (if present, first index is used).
 
 Examples of such models are available in the [OpenVINO Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
-In OVMS docker image for LVA is included the following classification model: 
+The following classification model is included in the OVMS docker image for LVA: 
 * vehicle-attributes-recognition - [vehicle-attributes-recognition-barrier-0039](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-attributes-recognition-barrier-0039)
 
 Model includes a configuration file in json format. See an example configuration file [here](../ams_models/vehicle_attributes_model.json)
