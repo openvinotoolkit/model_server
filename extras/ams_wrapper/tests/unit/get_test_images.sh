@@ -28,5 +28,5 @@ wget https://upload.wikimedia.org/wikipedia/commons/e/e0/Khao_Manee_cat_in_Tamra
 fi
 
 if [[ ! -f test_images/sails.bmp ]]; then
-wget https://homepages.cae.wisc.edu/~ece533/images/sails.bmp && mv sails.bmp test_images/ 
+wget --no-check-certificate https://homepages.cae.wisc.edu/~ece533/images/sails.bmp && mv sails.bmp test_images/ 
 fi
