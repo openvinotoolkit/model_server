@@ -58,9 +58,13 @@ RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -sf /usr/lib64/haswell/libzs
 
 WORKDIR /pkg
 
-RUN mkdir -p out/runtime &&  source /etc/os-release \
+RUN mkdir -p rpms/runtime &&  source /etc/os-release \
+    && cd rpms/runtime \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget clinfo-bin*.rpm intel-compute-runtime-data*.rpm intel-compute-runtime-lib*.rpm intel-gmmlib-lib*.rpm intel-graphics-compiler-lib*.rpm libva-lib*.rpm ocl-icd-lib*.rpm opencl-clang-lib*.rpm"
+
+RUN mkdir -p out/runtime \
     && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
-    && (cd out/runtime ; echo "OpenCL Runtime files:" ; find . -type f -or -type l)	    
+    && (cd out/runtime ; echo "OpenCL Runtime files:" ; find . -type f -or -type l)
 
 RUN mkdir -p rpms/tf && pwd && source /etc/os-release \
     && cd rpms/tf \
