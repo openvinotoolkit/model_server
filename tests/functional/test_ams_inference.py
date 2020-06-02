@@ -100,7 +100,7 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
             print(response.text)
-            assert response.status_code == 200
+            assert response.status_code == 200 or response.status_code == 204
             assert response.headers.get('Content-Type') == 'application/json'
 
             response_json = response.json()
@@ -126,7 +126,7 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
 
-            assert response.status_code == 200
+            assert response.status_code == 200 or response.status_code == 204
             assert response.headers.get('Content-Type') == 'application/json'
 
             response_json = response.json()
@@ -250,7 +250,7 @@ class TestAmsInference:
         epsilon = 0.000001
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
-        assert detections_count == 11
+        assert detections_count == 1
         assert 0.034460186958313 - \
             epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
         assert 0.0431380569934845 - \

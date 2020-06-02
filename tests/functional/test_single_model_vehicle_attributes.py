@@ -223,12 +223,12 @@ class TestVehicleAttributes():
         class_count = str(json_response).count("color")
 
         print("detected types:" + str(class_count))
-        assert class_count == 7
+        assert class_count == 1
 
         class_count = str(json_response).count('"name": "type"')
 
         print("detected types:" + str(class_count))
-        assert class_count == 4
+        assert class_count == 1
 
         try:
             format_check = json.loads(json_response)
