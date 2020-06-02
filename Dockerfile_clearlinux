@@ -53,7 +53,7 @@ RUN swupd update --no-boot-update \
     && swupd bundle-add wget unzip lftp package-utils cpio \
     && rm -rf /var/lib/swupd
 
-RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -s /usr/lib64/haswell/libzstd.so.1.4.5 /usr/lib64/libzstd.so.1 ; fi
+RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -sf /usr/lib64/haswell/libzstd.so.1.4.5 /usr/lib64/libzstd.so.1 ; fi
 
 WORKDIR /pkg
 
@@ -69,7 +69,7 @@ FROM clearlinux:latest as clear-pkg
 
 RUN swupd update --no-boot-update \	RUN swupd update --no-boot-update \
     && swupd bundle-add wget unzip lftp package-utils cpio \	    && swupd bundle-add wget unzip lftp package-utils cpio \
-@@ -65,20 +65,28 @@ RUN mkdir -p out/runtime \
+RUN mkdir -p out/runtime \
     && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \	    && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
     && (cd out/runtime ; echo "OpenCL Runtime files:" ; find . -type f -or -type l)	    && (cd out/runtime ; echo "Runtime files:" ; find . -type f -or -type l)
 
