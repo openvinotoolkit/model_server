@@ -100,8 +100,8 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
             print(response.text)
-            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') \
-                   or (response.status_code == 204 and response.headers.get('Content-Type') == None)
+            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
+                   (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
             response_json = response.json()
             validate_inference_response_schema(response_json)
@@ -126,8 +126,8 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
 
-            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') \
-                   or (response.status_code == 204 and response.headers.get('Content-Type') == None)
+            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
+                   (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
             response_json = response.json()
             validate_inference_response_schema(response_json)
