@@ -29,14 +29,28 @@ Status GetModelMetadataImpl::getModelStatus(
 
     auto& manager = ovms::ModelManager::getInstance();
 
-    ovms::model_version_t version = 0;
-    if (request->model_spec().has_version()) {
-        version = request->model_spec().version().value();
+    auto model = manager.findModelByName(name);
+    if (model == nullptr) {
+        SPDLOG_INFO("model {} is  missing", name);
+        return StatusCode::MODEL_NAME_MISSING;
     }
 
-    auto instance = manager.findModelInstance(name, version);
-    if (instance == nullptr) {
-        return version == 0 ? StatusCode::MODEL_NAME_MISSING : StatusCode::MODEL_VERSION_MISSING;
+    std::shared_ptr<ModelInstance> instance = nullptr;
+    if (request->model_spec().has_version()) {
+        ovms::model_version_t version = request->model_spec().version().value();
+        SPDLOG_DEBUG("requested: name {}; version {}", name, version);
+        instance = model->getModelInstanceByVersion(version);
+        if (instance == nullptr) {
+            SPDLOG_INFO("model {}; version {} is missing", name, version);
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    } else {
+        SPDLOG_DEBUG("requested: name {}; default version", name);
+        instance = model->getDefaultModelInstance();
+        if (instance == nullptr) {
+            SPDLOG_INFO("model {}; default version is missing", name);
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
     }
 
     if (ModelVersionState::AVAILABLE != instance->getStatus().getState()) {
