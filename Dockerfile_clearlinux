@@ -47,6 +47,23 @@ RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_L
 
 RUN make --jobs=$(nproc --all)
 
+FROM clearlinux:latest as opencl
+
+RUN swupd update --no-boot-update \
+    && swupd bundle-add wget unzip lftp package-utils cpio \
+    && rm -rf /var/lib/swupd
+
+RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -s /usr/lib64/haswell/libzstd.so.1.4.5 /usr/lib64/libzstd.so.1 ; fi
+
+WORKDIR /pkg
+
+RUN mkdir -p rpms/runtime && pwd && source /etc/os-release \
+    && cd rpms/runtime \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget clinfo-bin*.rpm intel-compute-runtime-data*.rpm intel-compute-runtime-lib*.rpm intel-gmmlib-lib*.rpm intel-graphics-compiler-lib*.rpm libva-lib*.rpm ocl-icd-lib*.rpm opencl-clang-lib*.rpm"
+
+RUN mkdir -p out/runtime \
+    && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
+    && (cd out/runtime ; echo "Runtime files:" ; find . -type f -or -type l)
 
 FROM clearlinux:latest as clear-pkg
 
@@ -66,14 +83,13 @@ RUN mkdir -p out/tf \
     && du -shc out/*
 
 
-
 FROM clearlinux
 
 RUN swupd update && \
     swupd bundle-add \
     python3-basic \
-    devpkg-libusb && \
-    swupd clean
+    devpkg-libusb \
+    && rm -rf /var/lib/swupd
 
 COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
 COPY --from=build /openvino/bin/intel64/Release/lib /usr/local/lib/inference-engine
@@ -97,3 +113,4 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine
 
 RUN sed -i '/activate/d' start_server.sh
+
