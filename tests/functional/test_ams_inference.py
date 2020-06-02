@@ -103,8 +103,9 @@ class TestAmsInference:
             assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
                    (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
-            response_json = response.json()
-            validate_inference_response_schema(response_json)
+            if response.status_code == 200:
+                response_json = response.json()
+                validate_inference_response_schema(response_json)
 
     @pytest.mark.parametrize("image_format,image", [('image/png', png_object_detection_image()),
                                                     ('image/jpg',
@@ -129,8 +130,9 @@ class TestAmsInference:
             assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
                    (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
-            response_json = response.json()
-            validate_inference_response_schema(response_json)
+            if response.status_code == 200:
+                response_json = response.json()
+                validate_inference_response_schema(response_json)
 
     def test_input_blank_image(self, start_ams_service, object_detection_image_no_entities):
         with open(object_detection_image_no_entities, mode='rb') as image_file:
