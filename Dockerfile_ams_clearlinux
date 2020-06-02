@@ -47,7 +47,7 @@ RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_L
 
 RUN make --jobs=$(nproc --all)
 
-FROM clearlinux:latest as opencl
+FROM clearlinux:latest as clear-pkg
 
 RUN swupd update --no-boot-update \
     && swupd bundle-add wget unzip lftp package-utils cpio \
@@ -65,6 +65,14 @@ RUN mkdir -p out/runtime \
     && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
     && (cd out/runtime ; echo "Runtime files:" ; find . -type f -or -type l)
 
+RUN mkdir -p rpms/tf && pwd && source /etc/os-release \
+    && cd rpms/tf \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget tensorflow-2.0.1-98.x86_64.rpm numpy-*  openblas-* Werkzeug* protobuf*  absl-py* wrapt* gast* astor* termcolor* Keras_Applications* Keras_Preprocessing*"
+
+RUN mkdir -p out/tf \
+    && for p in `ls rpms/tf/*.rpm`; do rpm2cpio $p | (cd out/tf/; cpio -i -d -u --quiet); done \
+    && (cd out/tf ; echo "TensorFlow files:" ; find . -type f -or -type l) \
+    && du -shc out/*
 
 FROM clearlinux
 
@@ -72,13 +80,13 @@ RUN swupd update && \
     swupd bundle-add \
     wget \
     python3-basic \
-    devpkg-libusb \
-    machine-learning-tensorflow --debug && \
+    devpkg-libusb && \
     swupd clean
 
 COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
 COPY --from=build /openvino/bin/intel64/Release/lib /usr/local/lib/inference-engine
-COPY --from=opencl /pkg/out/runtime/ /
+COPY --from=clear-pkg /pkg/out/runtime/ /
+COPY --from=clear-pkg /pkg/out/tf/ /
 
 WORKDIR /ie-serving-py
 
