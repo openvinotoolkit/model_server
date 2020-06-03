@@ -4,7 +4,6 @@ LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
 ARG ovms_metadata_file
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
@@ -12,6 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc-8 \
         g++-8 \
         git \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        uuid-dev \
+        zlib1g-dev \
+        libpulse-dev \
         libusb-1.0-0-dev \
         python-dev \
         python3-distutils \
@@ -50,6 +54,12 @@ WORKDIR /openvino/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses -Wno-error=deprecated-declarations -D_GLIBCXX_USE_CXX11_ABI=0 "  ..
 RUN make --jobs=$(nproc --all)
 
+# Build AWS S3 SDK
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 " ..
+RUN make --jobs=$(nproc --all)
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
@@ -59,7 +69,7 @@ RUN bazel build @tensorflow_serving//tensorflow_serving/apis:prediction_service_
 COPY src/ /ovms/src/
 
 RUN bazel build //src:ovms
-RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
+RUN cp -r /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
 RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
 
 ADD ${ovms_metadata_file} metadata.json

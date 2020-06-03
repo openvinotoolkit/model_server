@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -28,7 +29,10 @@
 
 #include "config.hpp"
 #include "directoryversionreader.hpp"
+#include "filesystem.hpp"
+#include "localfilesystem.hpp"
 #include "modelmanager.hpp"
+#include "s3filesystem.hpp"
 
 namespace ovms {
 
@@ -67,8 +71,6 @@ Status ModelManager::start() {
         spdlog::error("Couldn't parse shape parameter");
         return status;
     }
-
-    modelConfig.setBasePath(config.modelPath());
 
     return reloadModelWithVersions(modelConfig);
 }
@@ -289,9 +291,31 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
     return models[modelName];
 }
 
+std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
+    if (basePath.rfind("s3://", 0) == 0) {
+        Aws::SDKOptions options;
+        Aws::InitAPI(options);
+        return std::make_shared<S3FileSystem>(options, basePath);
+    }
+    if (basePath.rfind("gs://", 0) == 0) {
+        // return GSFilesystem
+    }
+
+    return std::make_shared<LocalFileSystem>();
+}
+
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    auto fs = getFilesystem(config.getBasePath());
+    std::string localPath;
+    spdlog::info("Getting model from {}", config.getBasePath());
+    auto sc = fs->downloadFileFolder(config.getBasePath(), &localPath);
+    if (sc != StatusCode::OK) {
+        spdlog::error("Couldn't download model from {}", config.getBasePath());
+        return sc;
+    }
+    config.setBasePath(localPath);
     std::vector<model_version_t> requestedVersions;
-    std::shared_ptr<IVersionReader> versionReader = getVersionReader(config.getBasePath());
+    std::shared_ptr<IVersionReader> versionReader = getVersionReader(localPath);
     auto status = versionReader->readAvailableVersions(requestedVersions);
     if (!status.ok()) {
         return status;

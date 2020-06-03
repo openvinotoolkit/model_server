@@ -37,7 +37,7 @@ class TestMultiModelInference:
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
-        for model in [Resnet, ResnetBS4, ResnetBS8]:
+        for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             input_data = np.ones(model.input_shape, model.dtype)
             logger.info("Starting inference using {} model".format(model.name))
             output = infer(input_data, input_tensor=model.input_name,
@@ -50,15 +50,7 @@ class TestMultiModelInference:
             assert output[model.output_name].shape == model.output_shape, assert_msg
 
     """
-    No s3,gs support yet
-
-        output = infer(img, input_tensor=in_name, grpc_stub=stub,
-                       model_spec_name='resnet_s3',
-                       model_spec_version=None,
-                       output_tensors=[out_name])
-        logger.info("Output shape: {}".format(output[out_name].shape))
-        assert output[out_name].shape == (1, 1001), ERROR_SHAPE
-
+    No gs support yet
         in_name = 'input'
         out_name = 'resnet_v1_50/predictions/Reshape_1'
 
@@ -79,7 +71,7 @@ class TestMultiModelInference:
         # Connect to grpc service
         stub = create_channel(port=ports["grpc_port"])
 
-        for model in [Resnet, ResnetBS4, ResnetBS8]:
+        for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             logger.info("Getting info about {} model".format(model.name))
             expected_input_metadata = {model.input_name: {'dtype': 1, 'shape': list(model.input_shape)}}
             expected_output_metadata = {model.output_name: {'dtype': 1, 'shape': list(model.output_shape)}}
@@ -99,7 +91,7 @@ class TestMultiModelInference:
 
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
 
-        for model in [Resnet, ResnetBS4, ResnetBS8]:
+        for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             request = get_model_status(model_name=model.name, version=1)
             response = stub.GetModelStatus(request, 10)
             versions_statuses = response.model_version_status
