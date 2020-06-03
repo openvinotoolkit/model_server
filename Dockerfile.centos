@@ -5,7 +5,7 @@ LABEL description="OpenVINO Model Server"
 
 ARG ovms_metadata_file
 
-RUN yum update -y && yum install -y \
+RUN yum install -y epel-release && yum update -y && yum install -y \
             gcc \
             gcc-c++ \
             cmake3 \
@@ -17,6 +17,11 @@ RUN yum update -y && yum install -y \
             curl \
             git \
             libusb libusbx-devel \
+            libcurl-devel \
+            openssl-devel \
+            libuuid-devel \
+            patch \
+            pulseaudio-libs-devel \
             python2 \
             python2-pip \
             python2-devel \
@@ -62,17 +67,23 @@ WORKDIR /openvino/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses " -DCMAKE_C_FLAGTS=" -Wno-error=parentheses " ..
 RUN make --jobs=$(nproc --all)
 
+# Build AWS S3 SDK
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 " ..
+RUN make --jobs=$(nproc --all)
+RUN mv .deps/install/lib64 .deps/install/lib
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
-RUN yum install -y patch
 
 RUN bazel build @org_tensorflow//tensorflow/core:framework
 RUN bazel build @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 COPY src/ /ovms/src/
 RUN bazel build //src:ovms
-RUN cp /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
+RUN cp -r /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
 RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
 
 ADD ${ovms_metadata_file} metadata.json

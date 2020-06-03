@@ -47,7 +47,7 @@
     {
       "config": {
         "name": "resnet_s3",
-        "base_path": "s3://inference/resnet_v1_50"
+        "base_path": "s3://inference/resnet"
       }
     },
     {

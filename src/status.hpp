@@ -75,6 +75,16 @@ enum class StatusCode {
     INTERNAL_ERROR,
 
     UNKNOWN_ERROR,
+
+    // S3
+    S3_BUCKET_NOT_FOUND,            /*!< S3 Bucket not found  */
+    S3_METADATA_FAIL,
+    S3_FAILED_LIST_OBJECTS,
+    S3_FAILED_GET_TIME,
+    S3_INVALID_ACCESS,
+    S3_FILE_NOT_FOUND,
+    S3_FILE_INVALID,
+    S3_FAILED_GET_OBJECT
 };
 
 class Status {

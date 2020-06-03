@@ -143,7 +143,7 @@ class ResnetS3:
     output_name = "softmax_tensor"
     output_shape = (1, 1001)
     rest_request_format = 'row_name'
-    model_path = "s3://inference/resnet_v1_50"
+    model_path = "s3://inference/resnet"
 
 
 class ResnetGS:

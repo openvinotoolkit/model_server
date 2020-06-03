@@ -98,6 +98,72 @@ cc_library(
     path = "/openvino",
 )
 
+# AWS S3 SDK
+new_local_repository(
+    name = "awssdk",
+    build_file_content = """
+cc_library(
+    name = "core",
+    srcs = ["build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a"],
+    hdrs = glob([
+        "aws-cpp-sdk-core/include/**/*.h",
+    ]),
+    strip_include_prefix = "aws-cpp-sdk-core/include",
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "s3",
+    srcs = ["build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a"],
+    hdrs = glob([
+        "aws-cpp-sdk-s3/include/**/*.h",
+    ]),
+    strip_include_prefix = "aws-cpp-sdk-s3/include",
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "deps",
+    srcs = [
+        "build/.deps/install/lib/libaws-c-event-stream.a",
+        "build/.deps/install/lib/libaws-checksums.a",
+        "build/.deps/install/lib/libaws-c-common.a"
+    ],
+    hdrs = glob([
+        "build/.deps/install/include/**/*.*",
+    ]),
+    strip_include_prefix = "build/.deps/install/include",
+    visibility = ["//visibility:public"],
+)
+""",
+    path = "/awssdk",
+)
+
+# Google Cloud SDK
+http_archive(
+    name = "com_github_googleapis_google_cloud_cpp",
+    sha256 = "a370bcf2913717c674a7250c4a310250448ffeb751b930be559a6f1887155f3b",
+    strip_prefix = "google-cloud-cpp-0.21.0",
+    url = "https://github.com/googleapis/google-cloud-cpp/archive/v0.21.0.tar.gz",
+)
+
+load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
+google_cloud_cpp_deps()
+
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,  # C++ support is only "Partially implemented", roll our own.
+    grpc = True,
+)
+
+load("@com_github_googleapis_google_cloud_cpp_common//bazel:google_cloud_cpp_common_deps.bzl", "google_cloud_cpp_common_deps")
+google_cloud_cpp_common_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+grpc_extra_deps()
+
 # cxxopts
 http_archive(
     name="cxxopts",

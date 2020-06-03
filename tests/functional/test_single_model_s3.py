@@ -28,7 +28,6 @@ logger = get_logger(__name__)
 
 class TestSingleModelInferenceS3:
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, start_server_single_model_from_minio):
         """
         <b>Description</b>
@@ -61,7 +60,6 @@ class TestSingleModelInferenceS3:
         logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, start_server_single_model_from_minio):
 
         _, ports = start_server_single_model_from_minio
@@ -79,7 +77,6 @@ class TestSingleModelInferenceS3:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_status(self, start_server_single_model_from_minio):
 
         _, ports = start_server_single_model_from_minio

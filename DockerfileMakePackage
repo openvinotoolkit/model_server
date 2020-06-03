@@ -15,6 +15,8 @@ RUN find /openvino/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libgcc' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libssl' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libcrypto' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
 
 RUN ls -lahR /ovms_release/
 
