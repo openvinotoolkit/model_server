@@ -100,11 +100,12 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
             print(response.text)
-            assert response.status_code == 200
-            assert response.headers.get('Content-Type') == 'application/json'
+            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
+                   (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
-            response_json = response.json()
-            validate_inference_response_schema(response_json)
+            if response.status_code == 200:
+                response_json = response.json()
+                validate_inference_response_schema(response_json)
 
     @pytest.mark.parametrize("image_format,image", [('image/png', png_object_detection_image()),
                                                     ('image/jpg',
@@ -126,11 +127,12 @@ class TestAmsInference:
                                               'Content-Length': str(len(image))},
                                      data=image_bytes)
 
-            assert response.status_code == 200
-            assert response.headers.get('Content-Type') == 'application/json'
+            assert (response.status_code == 200 and response.headers.get('Content-Type') == 'application/json') or \
+                   (response.status_code == 204 and response.headers.get('Content-Type') is None)
 
-            response_json = response.json()
-            validate_inference_response_schema(response_json)
+            if response.status_code == 200:
+                response_json = response.json()
+                validate_inference_response_schema(response_json)
 
     def test_input_blank_image(self, start_ams_service, object_detection_image_no_entities):
         with open(object_detection_image_no_entities, mode='rb') as image_file:
@@ -250,7 +252,7 @@ class TestAmsInference:
         epsilon = 0.000001
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
-        assert detections_count == 11
+        assert detections_count == 1
         assert 0.034460186958313 - \
             epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
         assert 0.0431380569934845 - \
