@@ -18,18 +18,11 @@ import pytest
 
 import config
 from model.models_information import FaceDetection
-from utils.server import save_container_logs
-from utils.server import start_ovms_container
+from object_model.server import Server
 
 
 @pytest.fixture(scope="class")
-def start_server_face_detection_model_auto_shape(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_face_detection_model_auto_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,
                                  "model_path": FaceDetection.model_path,
@@ -37,19 +30,13 @@ def start_server_face_detection_model_auto_shape(request, get_docker_context):
                                  "grpc_workers": 4,
                                  "nireq": 4}
     container_name_infix = "test-auto-shape"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()
 
 
 @pytest.fixture(scope="class")
-def start_server_face_detection_model_named_shape(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_face_detection_model_named_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,
                                  "model_path": FaceDetection.model_path,
@@ -58,20 +45,13 @@ def start_server_face_detection_model_named_shape(request, get_docker_context):
                                  "rest_workers": 2,
                                  "nireq": 2}
     container_name_infix = "test-named-shape"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()
 
 
 @pytest.fixture(scope="class")
-def start_server_face_detection_model_nonamed_shape(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_face_detection_model_nonamed_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,
                                  "model_path": FaceDetection.model_path,
@@ -79,7 +59,6 @@ def start_server_face_detection_model_nonamed_shape(request, get_docker_context)
                                  "rest_workers": 4,
                                  "nireq": 2}
     container_name_infix = "test-nonamed-shape"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()

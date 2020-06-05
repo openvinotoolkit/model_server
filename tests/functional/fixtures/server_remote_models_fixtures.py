@@ -22,19 +22,13 @@ from botocore.client import Config
 
 import config
 from model.models_information import Resnet, ResnetS3, ResnetGS
-from utils.model_management import wait_endpoint_setup, minio_condition
-from utils.parametrization import get_tests_suffix, get_ports_for_fixture
-from utils.server import start_ovms_container, save_container_logs
+from object_model.minio_docker import MinioDocker
+from object_model.server import Server
+from utils.parametrization import get_tests_suffix
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_gc(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_single_model_from_gc(request):
 
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": ResnetGS.model_path,
@@ -44,9 +38,9 @@ def start_server_single_model_from_gc(request, get_docker_context):
                                                   "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""}
     container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command, envs)
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command, envs)
+    return server.start()
 
 
 @pytest.fixture(scope="session")
@@ -75,22 +69,11 @@ def get_docker_network(request, get_docker_context):
 @pytest.fixture(scope="session")
 def start_minio_server(request, get_docker_network, get_docker_context):
 
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
-
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
-
-    grpc_port, rest_port = get_ports_for_fixture()
-
-    command = 'server --address ":{}" /data'.format(grpc_port)
-
-    client.images.pull('minio/minio:latest')
-
+    client.images.pull(config.minio_image)
     network = get_docker_network
+    container_name = "minio.locals3-{}.com".format(get_tests_suffix()),
 
     minio_access_key = os.getenv('MINIO_ACCESS_KEY')
     minio_secret_key = os.getenv('MINIO_SECRET_KEY')
@@ -104,20 +87,10 @@ def start_minio_server(request, get_docker_network, get_docker_context):
     envs = ['MINIO_ACCESS_KEY=' + minio_access_key,
             'MINIO_SECRET_KEY=' + minio_secret_key]
 
-    container = client.containers.run(image='minio/minio:latest', detach=True,
-                                      name='minio.locals3-{}.com'.format(
-                                          get_tests_suffix()),
-                                      ports={'{}/tcp'.format(grpc_port):
-                                             grpc_port},
-                                      remove=True,
-                                      environment=envs,
-                                      command=command,
-                                      network=network.name)
+    minio_docker = MinioDocker(request, container_name, config.start_minio_container_command,
+                               envs, network.name)
 
-    running = wait_endpoint_setup(container, minio_condition, 30, "created")
-    assert running is True, "minio container was not started successfully"
-
-    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+    return minio_docker.start()
 
 
 @pytest.fixture(scope="session")
@@ -164,13 +137,7 @@ def get_minio_server_s3(start_minio_server):
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_minio(request, get_docker_network, get_minio_server_s3, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_single_model_from_minio(request, get_docker_network, get_minio_server_s3):
 
     network = get_docker_network
 
@@ -193,7 +160,6 @@ def start_server_single_model_from_minio(request, get_docker_network, get_minio_
     start_server_command_args = {"model_name": Resnet.name,
                                  "model_path": ResnetS3.model_path}
     container_name_infix = "test-single-minio"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command, envs, network.name)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command, envs, network.name)
+    return server.start()

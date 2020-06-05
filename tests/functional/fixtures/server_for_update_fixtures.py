@@ -20,17 +20,11 @@ import shutil
 import config
 from model.models_information import Resnet
 from utils.parametrization import get_tests_suffix
-from utils.server import start_ovms_container, save_container_logs
+from object_model.server import Server
 
 
 @pytest.fixture(scope="function")
-def start_server_update_flow_latest(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_update_flow_latest(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
@@ -41,20 +35,13 @@ def start_server_update_flow_latest(request, get_docker_context):
                                  "grpc_workers": 1,
                                  "nireq": 1}
     container_name_infix = "test-update-latest"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()
 
 
 @pytest.fixture(scope="function")
-def start_server_update_flow_specific(request, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_update_flow_specific(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
     # ensure model dir is empty before starting OVMS
@@ -64,7 +51,6 @@ def start_server_update_flow_specific(request, get_docker_context):
                                  "model_path": "/opt/ml/update-{}".format(get_tests_suffix()),
                                  "model_version_policy": '\'{"specific": { "versions":[1, 3, 4] }}\''}
     container_name_infix = "test-update-specific"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command)
+    return server.start()

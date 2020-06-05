@@ -21,19 +21,11 @@ import pytest
 
 import config
 from utils.parametrization import get_tests_suffix
-from utils.server import start_ovms_container
-from utils.server import save_container_logs
+from object_model.server import Server
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_docker_network, start_minio_server,
-                             get_minio_server_s3, get_docker_context):
-
-    def finalizer():
-        save_container_logs(container=container)
-        container.stop()
-
-    request.addfinalizer(finalizer)
+def start_server_multi_model(request, get_docker_network, start_minio_server, get_minio_server_s3):
 
     shutil.copyfile('tests/functional/config.json', config.path_to_mount + '/config.json')
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
@@ -60,7 +52,6 @@ def start_server_multi_model(request, get_docker_network, start_minio_server,
                                  "grpc_workers": 2,
                                  "rest_workers": 2}
     container_name_infix = "test-multi"
-    container, ports = start_ovms_container(get_docker_context, start_server_command_args,
-                                            container_name_infix, config.start_container_command, envs, network.name)
-
-    return container, ports
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command, envs, network.name)
+    return server.start()

@@ -16,11 +16,8 @@
 
 import os
 import shutil
-import time
-
 from pathlib import Path
 
-import config
 from utils.logger import get_logger
 from utils.parametrization import get_tests_suffix
 
@@ -34,26 +31,6 @@ def minio_condition(container, status):
 def serving_condition(container, log_line):
     logs = str(container.logs())
     return log_line in logs
-
-
-def wait_endpoint_setup(container, condition=serving_condition, timeout=60, container_log_line=None):
-    log_line = container_log_line if container_log_line else config.container_log_line
-    start_time = time.time()
-    tick = start_time
-    running = False
-    while tick - start_time < timeout:
-        tick = time.time()
-        try:
-            if condition(container, log_line):
-                running = True
-                break
-        except Exception as e:
-            time.sleep(1)
-    logger.debug("Logs from container:")
-    logger.debug("\n".join(str(container.logs()).split("\\n")))
-    #  extra delay to ensure docker endpoint is ready
-    time.sleep(2)
-    return running
 
 
 def copy_model(model, version, destination_path):
