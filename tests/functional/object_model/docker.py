@@ -14,23 +14,26 @@
 # limitations under the License.
 #
 
-import time
-
 import docker
+from retry.api import retry_call
 
 import config
-from utils.model_management import serving_condition
 from utils.parametrization import get_ports_for_fixture
 from utils.files_operation import save_container_logs_to_file
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+CONTAINER_STATUS_RUNNING = "running"
 
 
 class Docker:
+    
+    COMMON_RETRY = {"tries": 30, "delay": 2}
+    GETTING_LOGS_RETRY = COMMON_RETRY
+    GETTING_STATUS_RETRY = COMMON_RETRY
 
     def __init__(self, request, container_name, start_container_command,
-                 env_vars_container=None, network="", image=config.image):
+                 env_vars_container=None, network="", image=config.image, container_log_line=config.container_log_line):
         self.client = docker.from_env()
         self.grpc_port, self.rest_port = get_ports_for_fixture()
         self.image = image
@@ -40,6 +43,7 @@ class Docker:
         self.start_container_command = start_container_command
         self.env_vars_container = env_vars_container if env_vars_container else []
         self.network = network
+        self.container_log_line = container_log_line
 
     def start(self):
 
@@ -62,8 +66,9 @@ class Docker:
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
                                                     network=self.network)
-        running = self.wait_endpoint_setup()
-        assert running is True, "docker container was not started successfully"
+
+        self.ensure_container_status(status=CONTAINER_STATUS_RUNNING)
+        self.ensure_logs_contains()
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def save_container_logs(self):
@@ -71,21 +76,25 @@ class Docker:
             logs = self.container.logs().decode()
             save_container_logs_to_file(container=self.container, logs=logs)
 
-    def wait_endpoint_setup(self, condition=serving_condition, timeout=60,
-                            container_log_line=config.container_log_line):
-        start_time = time.time()
-        tick = start_time
-        running = False
-        while tick - start_time < timeout:
-            tick = time.time()
-            try:
-                if condition(self.container, container_log_line):
-                    running = True
-                    break
-            except Exception as e:
-                time.sleep(1)
-        logger.debug("Logs from container:")
-        logger.debug("\n".join(str(self.container.logs()).split("\\n")))
-        #  extra delay to ensure docker endpoint is ready
-        time.sleep(2)
-        return running
+    def ensure_logs(self):
+        logs = str(self.container.logs())
+        assert self.container_log_line in logs
+
+    def ensure_logs_contains(self):
+        return retry_call(self.ensure_logs, exceptions=AssertionError, **Docker.GETTING_LOGS_RETRY)
+
+    def get_container_status(self):
+        container = self.client.containers.get(self.container.id)
+        return container.status
+
+    def ensure_status(self, status):
+        current_status = self.get_container_status()
+        assert current_status == status, \
+            "Not expected status for container {} found. \n " \
+            "Expected: {}, \n " \
+            "received: {}".format(self.container.name, status, self.container.status)
+
+    def ensure_container_status(self, status: str = CONTAINER_STATUS_RUNNING):
+        container_status = {"status": status}
+        return retry_call(self.ensure_status, fkwargs=container_status,
+                          exceptions=AssertionError, **Docker.GETTING_STATUS_RETRY)

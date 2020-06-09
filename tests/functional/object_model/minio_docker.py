@@ -16,21 +16,17 @@
 
 import config
 from object_model.docker import Docker
-from utils.model_management import minio_condition
 
 
 class MinioDocker(Docker):
 
     def __init__(self, request, container_name, start_container_command=config.start_minio_container_command,
-                 env_vars_container=None, network="", image=config.minio_image):
+                 env_vars_container=None, network="", image=config.minio_image,
+                 container_log_line=config.container_minio_log_line):
         super().__init__(request, container_name, start_container_command,
-                         env_vars_container, network, image)
+                         env_vars_container, network, image, container_log_line)
         self.start_container_command = start_container_command.format(self.grpc_port)
 
     def start(self):
         self.start_container_command = self.start_container_command.format(self.grpc_port)
         return super().start()
-
-    def wait_endpoint_setup(self, condition=minio_condition, timeout=60,
-                            container_log_line=config.container_minio_log_line):
-        return super().wait_endpoint_setup(condition, timeout, container_log_line)
