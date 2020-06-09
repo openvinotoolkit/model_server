@@ -24,15 +24,6 @@ from utils.parametrization import get_tests_suffix
 logger = get_logger(__name__)
 
 
-def minio_condition(container, status):
-    return status in container.status
-
-
-def serving_condition(container, log_line):
-    logs = str(container.logs())
-    return log_line in logs
-
-
 def copy_model(model, version, destination_path):
     dir_to_cpy = destination_path + str(version)
     if not os.path.exists(dir_to_cpy):

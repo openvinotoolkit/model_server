@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import config
 from object_model.ovms_docker import OvmsDocker
 from utils.logger import get_logger
 
@@ -22,15 +23,18 @@ logger = get_logger(__name__)
 class Server:
 
     def __init__(self, request, command_args, container_name_infix, start_container_command,
-                 env_vars=None, network=""):
+                 env_vars=None, network="", image=config.image, container_log_line=config.container_log_line):
         self.request = request
         self.command_args = command_args
         self.container_name_infix = container_name_infix
         self.start_container_command = start_container_command
         self.env_vars = env_vars
         self.network = network
+        self.image = image
+        self.container_log_line = container_log_line
 
     def start(self):
         ovms_docker = OvmsDocker(self.request, self.command_args, self.container_name_infix,
-                                 self.start_container_command, self.env_vars, self.network)
+                                 self.start_container_command, self.env_vars, self.network,
+                                 self.image, self.container_log_line)
         return ovms_docker.start()

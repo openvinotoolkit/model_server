@@ -46,4 +46,4 @@ minio_image = "minio/minio:latest"
 
 start_minio_container_command = 'server --address ":{}" /data'
 
-container_minio_log_line = "created"
+container_minio_log_line = "Endpoint:"
