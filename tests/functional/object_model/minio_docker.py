@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from docker import DockerClient
 
 import config
 from object_model.docker import Docker
@@ -21,12 +22,16 @@ from object_model.docker import Docker
 class MinioDocker(Docker):
 
     def __init__(self, request, container_name, start_container_command=config.start_minio_container_command,
-                 env_vars_container=None, network="", image=config.minio_image,
+                 env_vars_container=None, image=config.minio_image,
                  container_log_line=config.container_minio_log_line):
         super().__init__(request, container_name, start_container_command,
-                         env_vars_container, network, image, container_log_line)
+                         env_vars_container, image, container_log_line)
         self.start_container_command = start_container_command.format(self.grpc_port)
 
     def start(self):
         self.start_container_command = self.start_container_command.format(self.grpc_port)
         return super().start()
+
+    @staticmethod
+    def get_ip(container):
+        return DockerClient().containers.get(container.id).attrs["NetworkSettings"]["IPAddress"]

@@ -3,21 +3,21 @@
     {
       "config":{
         "name":"latest",
-        "base_path":"/opt/ml/model_ver",
+        "base_path":"{path}/model_ver",
         "model_version_policy": {"latest": { "num_versions":2 }}
       }
     },
     {
       "config": {
         "name": "specific",
-        "base_path": "/opt/ml/model_ver",
+        "base_path": "{path}/model_ver",
         "model_version_policy": {"specific": { "versions":[1, 3] }}
       }
     },
     {
       "config": {
         "name": "all",
-        "base_path": "/opt/ml/model_ver",
+        "base_path": "{path}/model_ver",
         "model_version_policy": {"all": {}}
       }
     }

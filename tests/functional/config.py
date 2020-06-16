@@ -37,10 +37,15 @@ start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 """CONTAINER_LOG_LINE - log line to check in container"""
 container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port")
 
+"""OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
+ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
+
 """LOG_LEVEL - set log level """
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 
 path_to_mount = os.path.join(test_dir, "saved_models")
+
+models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 
 minio_image = "minio/minio:latest"
 

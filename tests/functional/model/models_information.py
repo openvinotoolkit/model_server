@@ -14,7 +14,11 @@
 # limitations under the License.
 #
 
+
+import os
 import numpy as np
+
+import config
 
 MODEL_REPOSITORY_SERVER = "https://download.01.org"
 OPENCV_OPENVINO_TOOLKIT = "opencv/2020/openvinotoolkit"
@@ -51,7 +55,7 @@ class AgeGender:
                                            model=AGE_GENDER_RECOGNITION_MODEL, precision=PRECISION)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
-    model_path = "/opt/ml/age_gender"
+    model_path = os.path.join(config.models_path, name)
 
 
 class PVBDetection:
@@ -80,7 +84,7 @@ class FaceDetection:
                                            model=FACE_DETECTION_MODEL, precision=PRECISION)  # noqa
     version = 1
     download_extensions = [".xml", ".bin"]
-    model_path = "/opt/ml/face_detection"
+    model_path = os.path.join(config.models_path, name)
 
 
 class PVBFaceDetectionV1(FaceDetection):
@@ -104,7 +108,7 @@ class Resnet:
     output_name = "softmax_tensor"
     output_shape = (1, 1001)
     rest_request_format = 'column_name'
-    model_path = "/opt/ml/resnet"
+    model_path = os.path.join(config.models_path, name)
     url = URL_PUBLIC_MODEL_FORMAT.format(repo=MODEL_REPOSITORY_SERVER, opencv=OPENCV_PUBLIC, build=BUILD_012020,
                                          model=RESNET_50, model_version=RESNET_V1_50)
     local_conversion_dir = "tensorflow_format"
@@ -131,7 +135,7 @@ class ResnetBS8:
     output_name = "softmax_tensor"
     output_shape = (8, 1001)
     rest_request_format = 'row_noname'
-    model_path = "/opt/ml/resnet_bs8"
+    model_path = os.path.join(config.models_path, name)
     version = 1
 
 

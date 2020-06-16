@@ -39,6 +39,7 @@ pytest_plugins = [
     'fixtures.server_remote_models_fixtures',
     'fixtures.server_with_batching_fixtures',
     'fixtures.server_with_version_policy_fixtures',
+    'fixtures.test_files_fixtures',
     ]
 
 

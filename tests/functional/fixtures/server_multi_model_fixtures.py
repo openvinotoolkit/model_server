@@ -15,29 +15,27 @@
 #
 
 import os
-import shutil
-
 import pytest
 
 import config
-from utils.parametrization import get_tests_suffix
+from object_model.minio_docker import MinioDocker
 from object_model.server import Server
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, get_docker_network, start_minio_server, get_minio_server_s3):
+def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
 
-    shutil.copyfile('tests/functional/config.json', config.path_to_mount + '/config.json')
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
     aws_secret_access_key = os.getenv('MINIO_SECRET_KEY')
     aws_region = os.getenv('AWS_REGION')
 
-    network = get_docker_network
-
-    _, ports = start_minio_server
+    minio_container, ports = start_minio_server
     grpc_port, rest_port = ports["grpc_port"], ports["rest_port"]
-    minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(
-        get_tests_suffix(), grpc_port)
+
+    if config.ovms_binary_path:
+        minio_endpoint = "http://localhost:{}".format(grpc_port)
+    else:
+        minio_endpoint = "{}:{}".format(MinioDocker.get_ip(minio_container), grpc_port)
 
     envs = ['MINIO_ACCESS_KEY=' + aws_access_key_id,
             'MINIO_SECRET_KEY=' + aws_secret_access_key,
@@ -48,10 +46,10 @@ def start_server_multi_model(request, get_docker_network, start_minio_server, ge
             'https_proxy=' + os.getenv('https_proxy', ""),
             'no_proxy={}'.format(minio_endpoint)]
 
-    start_server_command_args = {"config_path": "/opt/ml/config.json",
+    start_server_command_args = {"config_path": "{}/config.json".format(config.models_path),
                                  "grpc_workers": 2,
                                  "rest_workers": 2}
     container_name_infix = "test-multi"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs, network.name)
+                    container_name_infix, config.start_container_command, envs)
     return server.start()

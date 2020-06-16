@@ -22,7 +22,7 @@ from utils.parametrization import get_tests_suffix
 
 class OvmsDocker(Docker):
     def __init__(self, request, command_args, container_name_infix, start_container_command,
-                 env_vars=None, network="", image=config.image, container_log_line=config.container_log_line,
+                 env_vars=None, image=config.image, container_log_line=config.container_log_line,
                  server_log_level=config.log_level):
         self.command_args = command_args
         self.container_name_infix = container_name_infix
@@ -30,7 +30,7 @@ class OvmsDocker(Docker):
         container_name_prefix = image.split(":")[0].split("/")[-1]
         container_name = "{}-{}-{}".format(container_name_prefix, container_name_infix, get_tests_suffix())
         super().__init__(request, container_name, start_container_command,
-                         env_vars, network, image, container_log_line)
+                         env_vars, image, container_log_line)
         self.command_args["port"] = self.grpc_port
         self.command_args["rest_port"] = self.rest_port
         self.command_args["log_level"] = self.server_log_level
