@@ -34,15 +34,20 @@ Status serializeBlobToTensorProto(
     InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
     switch (networkOutput->getPrecision()) {
-        case InferenceEngine::Precision::FP32: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
-        case InferenceEngine::Precision::I32:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value); break;
-        // case Precision::DOUBLE?: responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); // unsupported by OV?
-        case InferenceEngine::Precision::I64:
-        case InferenceEngine::Precision::I8:
-        case InferenceEngine::Precision::U8:
-        case InferenceEngine::Precision::U16:
+        case InferenceEngine::Precision::FP32:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
+        case InferenceEngine::Precision::I32:   responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value); break;
+        case InferenceEngine::Precision::I16:   responseOutput.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value); break;
+        case InferenceEngine::Precision::U8:    responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value); break;
+        case InferenceEngine::Precision::I8:    responseOutput.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value); break;
+
+        // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
+        case InferenceEngine::Precision::U16:   responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value); break;
+        case InferenceEngine::Precision::FP16:  responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value); break;
+
+        case InferenceEngine::Precision::I64:   responseOutput.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value); break;
+
+        // TODO: Unsupported yet
         case InferenceEngine::Precision::Q78:
-        case InferenceEngine::Precision::FP16:
         case InferenceEngine::Precision::BIN:
         case InferenceEngine::Precision::BOOL:
         case InferenceEngine::Precision::MIXED:
