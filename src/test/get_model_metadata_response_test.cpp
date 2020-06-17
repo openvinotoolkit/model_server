@@ -19,6 +19,7 @@
 
 #include "../get_model_metadata_impl.hpp"
 
+using ::testing::Return;
 using ::testing::ReturnRef;
 using ::testing::NiceMock;
 
@@ -36,7 +37,7 @@ class GetModelMetadataResponse : public ::testing::Test {
         MOCK_METHOD(const ovms::tensor_map_t&,      getInputsInfo,  ());
         MOCK_METHOD(const ovms::tensor_map_t&,      getOutputsInfo, ());
         MOCK_METHOD(const std::string&,             getName,        ());
-        MOCK_METHOD(const ovms::model_version_t&,   getVersion,     ());
+        MOCK_METHOD(ovms::model_version_t,          getVersion,     ());
     };
 
     tensor_desc_map_t  inputTensors;
@@ -96,7 +97,7 @@ protected:
         ON_CALL(*instance, getName())
             .WillByDefault(ReturnRef(modelName));
         ON_CALL(*instance, getVersion())
-            .WillByDefault(ReturnRef(modelVersion));
+            .WillByDefault(Return(modelVersion));
     }
 };
 

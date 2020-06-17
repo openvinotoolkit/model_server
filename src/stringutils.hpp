@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <utility>
+#include <limits>
 
 namespace ovms {
 
@@ -102,6 +104,49 @@ bool endsWith(const std::string& str, const std::string& match) {
         std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char & c){
             return ::tolower(c) == ::tolower(*(it++));
         });
+}
+
+/**
+ * @brief Converts string to uint32, returns 0 or specified default value if conversion failed, fails if negative number is provided
+ *
+ * @param string input
+ * @param default value
+ * @return converted value and result indicating if conversion succeeded
+ */
+static inline
+std::optional<uint32_t> stou32(const std::string& input) {
+    std::string str = input;
+    ovms::erase_spaces(str);
+
+    if (str.size() > 0 && str[0] == '-') {
+        return std::nullopt;
+    }
+
+    try {
+        uint64_t val = std::stoul(str);
+        if (val > std::numeric_limits<uint32_t>::max())  {
+            return std::nullopt;
+        }
+        return {static_cast<uint32_t>(val)};
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+/**
+ * @brief Converts string to int32, returns 0 or specified default value if conversion failed
+ *
+ * @param string input
+ * @param default value
+ * @return converted value and result indicating if conversion succeeded
+ */
+static inline
+std::optional<int32_t> stoi32(const std::string& str) {
+    try {
+        return {static_cast<int32_t>(std::stoi(str))};
+    } catch (...) {
+        return std::nullopt;
+    }
 }
 
 }  // namespace ovms

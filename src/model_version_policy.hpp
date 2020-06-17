@@ -101,7 +101,7 @@ public:
  * @brief Model version policy for serving only X latest versions
  */
 class LatestModelVersionPolicy : public ModelVersionPolicy {
-    model_version_t numVersions;
+    size_t numVersions;
 
 public:
     /**
@@ -109,7 +109,7 @@ public:
      * 
      * @param numVersions number of latest versions to be served
      */
-    LatestModelVersionPolicy(model_version_t numVersions = 1) :
+    LatestModelVersionPolicy(size_t numVersions = 1) :
         numVersions(numVersions) {}
 
     /**

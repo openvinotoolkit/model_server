@@ -118,3 +118,35 @@ TEST(StringUtils, endsWith) {
     EXPECT_EQ(b5, true);
     EXPECT_EQ(b6, false);
 }
+
+TEST(StringUtils, stou32) {
+    auto result = ovms::stou32("-100");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou32("4294967296");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou32("4294967295");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 4294967295);
+}
+
+TEST(StringUtils, stoi32) {
+    auto result = ovms::stoi32("-100");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), -100);
+
+    result = ovms::stoi32("2147483648");
+    EXPECT_FALSE(result);
+
+    result = ovms::stoi32("2147483647");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 2147483647);
+
+    result = ovms::stoi32("-2147483649");
+    EXPECT_FALSE(result);
+
+    result = ovms::stoi32("-2147483648");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), -2147483648);
+}

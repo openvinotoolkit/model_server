@@ -46,12 +46,13 @@ using namespace ovms;
 uint getGRPCServersCount() {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
-        return std::atoi(environmentVariableBuffer);
+        auto result = stou32(environmentVariableBuffer);
+        if (result && result.value() > 0) {
+            return result.value();
+        }
     }
 
-    auto& config = ovms::Config::instance();
-    uint configGRPCServersCount = config.grpcWorkers();
-    return configGRPCServersCount;
+    return std::max<uint>(1, ovms::Config::instance().grpcWorkers());
 }
 
 struct GrpcChannelArgument {
@@ -111,6 +112,7 @@ void logConfig(Config& config) {
     }
     spdlog::debug("gRPC port: {}", config.port());
     spdlog::debug("REST port: {}", config.restPort());
+    spdlog::debug("REST workers: {}", config.restWorkers());
     spdlog::debug("gRPC servers: {}", config.grpcWorkers());
     spdlog::debug("gRPC channel arguments: {}", config.grpcChannelArguments());
     spdlog::debug("log level: {}", config.logLevel());

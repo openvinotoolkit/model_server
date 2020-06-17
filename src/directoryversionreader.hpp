@@ -72,6 +72,6 @@ public:
     }
 
 private:
-    const std::string& path;
+    const std::string path;
 };
 }  // namespace ovms
