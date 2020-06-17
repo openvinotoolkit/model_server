@@ -44,7 +44,7 @@ void createTmpFiles() {
 
 TEST(LocalFileSystem, FileExists) {
     ovms::LocalFileSystem lfs;
-    bool exists;
+    bool exists = false;
     createTmpFiles();
 
     auto status = lfs.fileExists("/tmp/structure/file.txt", &exists);
@@ -59,7 +59,7 @@ TEST(LocalFileSystem, FileExists) {
 
 TEST(LocalFileSystem, IsDirectory) {
     ovms::LocalFileSystem lfs;
-    bool isDir;
+    bool isDir = false;
     createTmpFiles();
 
     auto status = lfs.isDirectory("/tmp/structure/file.txt", &isDir);

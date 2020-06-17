@@ -137,7 +137,10 @@ std::string getModelFile(const std::string path) {
 uint getOVCPUThroughputStreams() {
     const char* environmentVariableBuffer = std::getenv("CPU_THROUGHPUT_STREAMS");
     if (environmentVariableBuffer) {
-        return std::atoi(environmentVariableBuffer);
+        auto result = stou32(environmentVariableBuffer);
+        if (result && result.value() > 0) {
+            return result.value();
+        }
     }
 
     return std::max(std::thread::hardware_concurrency() / 8, 1u);
@@ -146,11 +149,13 @@ uint getOVCPUThroughputStreams() {
 uint getNumberOfParallelInferRequests() {
     const char* environmentVariableBuffer = std::getenv("NIREQ");
     if (environmentVariableBuffer) {
-        return std::atoi(environmentVariableBuffer);
+        auto result = stou32(environmentVariableBuffer);
+        if (result && result.value() > 0) {
+            return result.value();
+        }
     }
     auto& config = ovms::Config::instance();
-    uint configGRPCServersCount = config.nireq();
-    return configGRPCServersCount;
+    return std::max(config.nireq(), 1u);
 }
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
@@ -178,7 +183,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         loadOutputTensors(config);
         auto pluginConfig = config.getPluginConfig();
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
-            int ovBackendStreamsCount = getOVCPUThroughputStreams();
+            uint ovBackendStreamsCount = getOVCPUThroughputStreams();
             pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
         }
         execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
@@ -188,7 +193,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             const auto value = pair.second;
             spdlog::info("{}: {}", key, value);
         }
-        int numberOfParallelInferRequests = getNumberOfParallelInferRequests();
+        uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
         inferRequestsQueue = std::make_shared<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
         spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
             config.getName(),
@@ -222,7 +227,7 @@ void ModelInstance::unloadModel() {
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     // Network and request must have the same amount of inputs
-    if (request->inputs_size() >= 0 && getInputsInfo().size() != (size_t) request->inputs_size()) {
+    if (request->inputs_size() < 0 || getInputsInfo().size() != static_cast<size_t>(request->inputs_size())) {
         SPDLOG_DEBUG("invalid number of inputs: expected {}; actual {}", getInputsInfo().size(), request->inputs_size());
         return StatusCode::INVALID_NO_OF_INPUTS;
     }
@@ -241,9 +246,9 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         auto& requestInput = it->second;
         auto& shape = networkInput->getShape();
 
-        // Network and request must have the same number of shape dimensions
-        if (requestInput.tensor_shape().dim_size() >= 0 &&
-            shape.size() != (size_t) requestInput.tensor_shape().dim_size()) {
+        // Network and request must have the same number of shape dimensions, higher than 0
+        if (requestInput.tensor_shape().dim_size() <= 0 ||
+            shape.size() != static_cast<size_t>(requestInput.tensor_shape().dim_size())) {
             std::stringstream stream;
             std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
 
@@ -252,16 +257,15 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         }
 
         // First shape must be equal to batch size
-        if (requestInput.tensor_shape().dim_size() > 0 &&
-            requestInput.tensor_shape().dim(0).size() != getBatchSize()) {
+        if (static_cast<size_t>(requestInput.tensor_shape().dim(0).size()) != getBatchSize()) {
             SPDLOG_DEBUG("invalid batch size: expected {}; actual {}", getBatchSize(), requestInput.tensor_shape().dim(0).size());
             return StatusCode::INVALID_BATCH_SIZE;
         }
 
         // Network and request must have the same shape
         for (int i = 1; i < requestInput.tensor_shape().dim_size(); i++) {
-            if (requestInput.tensor_shape().dim(i).size() >= 0 &&
-                shape[i] != (size_t) requestInput.tensor_shape().dim(i).size()) {
+            if (requestInput.tensor_shape().dim(i).size() < 0 ||
+                shape[i] != static_cast<size_t>(requestInput.tensor_shape().dim(i).size())) {
                 std::stringstream stream;
                 std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(stream, " "));
 
@@ -301,12 +305,14 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
 
         // Network expects tensor content size or value count
         if (requestInput.dtype() == tensorflow::DataType::DT_UINT16) {
-            if (expectedValueCount != requestInput.int_val_size()) {
+            if (requestInput.int_val_size() < 0 ||
+                expectedValueCount != static_cast<size_t>(requestInput.int_val_size())) {
                 SPDLOG_DEBUG("invalid number of values in tensor proto container: expected {}; actual {}", expectedValueCount, requestInput.int_val_size());
                 return StatusCode::INVALID_VALUE_COUNT;
             }
         } else if (requestInput.dtype() == tensorflow::DataType::DT_HALF) {
-            if (expectedValueCount != requestInput.half_val_size()) {
+            if (requestInput.half_val_size() < 0 ||
+                expectedValueCount != static_cast<size_t>(requestInput.half_val_size())) {
                 SPDLOG_DEBUG("invalid number of values in tensor proto container: expected {}; actual {}", expectedValueCount, requestInput.int_val_size());
                 return StatusCode::INVALID_VALUE_COUNT;
             }

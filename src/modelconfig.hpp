@@ -756,7 +756,8 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
             if (v.HasMember("batch_size")) {
                 if (v["batch_size"].IsString()) {
                     // Although batch size is in, in legacy python version it was string
-                    this->setBatchSize(std::atoi(v["batch_size"].GetString()));
+                    // Temporary, until validated with JSON schema
+                    this->setBatchSize(std::max<uint32_t>(stou32(v["batch_size"].GetString()).value_or(1), 1));
                 } else {
                     this->setBatchSize(v["batch_size"].GetUint64());
                 }

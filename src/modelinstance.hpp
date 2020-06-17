@@ -67,7 +67,7 @@ namespace ovms {
         /**
          * @brief A model version
          */
-        model_version_t version;
+        model_version_t version = -1;
 
         /**
          * @brief A model status
@@ -82,7 +82,7 @@ namespace ovms {
         /**
          * @brief Model batch size
          */
-        size_t batchSize;
+        size_t batchSize = 0;
 
     private:
         /**
@@ -148,7 +148,7 @@ namespace ovms {
          *
          * @return version
          */
-        virtual const model_version_t& getVersion() {
+        virtual model_version_t getVersion() {
             return version;
         }
 
@@ -162,7 +162,7 @@ namespace ovms {
         }
 
         /**
-         * @brief Gets executing backend enma
+         * @brief Gets executing backend name
          *
          * @return backend name
          */

@@ -49,7 +49,8 @@ class ConcreteTensorProtoDeserializator {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
             uint16_t* ptr = blob->buffer().as<uint16_t*>();
-            for (size_t i = 0; i < requestInput.half_val_size(); i++) {
+            auto size = static_cast<size_t>(requestInput.half_val_size());
+            for (size_t i = 0; i < size; i++) {
                 ptr[i] = requestInput.half_val(i);
             }
             return blob;
@@ -62,7 +63,8 @@ class ConcreteTensorProtoDeserializator {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
             uint16_t* ptr = blob->buffer().as<uint16_t*>();
-            for (size_t i = 0; i < requestInput.int_val_size(); i++) {
+            auto size = static_cast<size_t>(requestInput.int_val_size());
+            for (size_t i = 0; i < size; i++) {
                 ptr[i] = requestInput.int_val(i);
             }
             return blob;

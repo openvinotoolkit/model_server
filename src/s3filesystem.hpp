@@ -145,6 +145,8 @@ public:
      */
     Aws::S3::S3Client client_;
     std::regex s3_regex_;
+
+    static const std::string S3_URL_PREFIX;
 };
 
 }  // namespace ovms
