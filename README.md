@@ -7,252 +7,172 @@ by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit).
 
 The server implements gRPC interface and REST API framework with data serialization and deserialization using TensorFlow Serving API,
  and OpenVINO&trade; as the inference execution provider. Model repositories may reside on a locally accessible file system (e.g. NFS),
-  Google Cloud Storage (GCS), Amazon S3 or MinIO.
+  Google Cloud Storage (GCS), Amazon S3 or Minio.
   
 OVMS is now implemented in C++ and provides much higher scalability compared to its predecessor in Python version.
 You can take advantage of all the power of Xeon CPU capabilities or AI accelerators and expose it over the network interface.
+Read [release notes](docs/release_notes.md) to find out about changes from the Python implementation.
 
+Review the [Architecture concept](docs/architecture.md) document for more details.
+
+A few key features: 
+- Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
+- Deploy new [model versions](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-version-policy) without changing client code.
+- Support for AI accelerators including [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj), 
+[GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
+- The server can be enabled both on [Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or in
+[Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
+- [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
+- [Model reshaping](docs/docker_container.md#model-reshaping). The server supports reshaphing models in runtime. 
 
 ## Building
-
 Build the docker image using command:
- 
 ```bash
 ~/ovms-c$ make docker_build
 ```
 It will generate the image, tagged as `ovms:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
-
 The release package should work on a any linux machine with glibc >= one used by the build image.
+For debugging, an image with a suffix -build is also generated (i.e. ovms-build:latest).
 
-For debugging, an image with a suffix `-build` is also generated (i.e. `ovms-build:latest`).
+*Note:* Images include OpenVINO 2020.2 release. <br>
 
-## Running the serving component as a docker container:
-Docker container is using the serving application as the entrypoint, so you just need to pass its parameters in the docker command:
-```bash
-docker run -d -v /models/model_folder:/opt/ml:ro -p 9178:9178 ovms --model_name <model_name> --model_path /opt/ml --port 9178
-```
-All parameters are documented below:
-```bash
-OpenVINO Model Server
-Usage:
-  /ovms/bin/ovms [OPTION...]
 
-  -h, --help                    show this help message and exit
-      --port PORT               gRPC server port (default: 9178)
-      --rest_port REST_PORT     REST server port, the REST server will not be
-                                started if rest_port is blank or set to 0
-                                (default: 0)
-      --grpc_workers GRPC_WORKERS
-                                number of gRPC servers. Recommended to be >=
-                                NIREQ. Default value calculated at runtime:
-                                NIREQ + 2 
-      --rest_workers REST_WORKERS
-                                number of workers in REST server - has no
-                                effect if rest_port is not set 
-      --log_level LOG_LEVEL     serving log level - one of DEBUG, INFO, ERROR
-                                (default: INFO)
-      --log_path LOG_PATH       optional path to the log file
-      --grpc_channel_arguments GRPC_CHANNEL_ARGUMENTS
-                                A comma separated list of arguments to be
-                                passed to the grpc server. (e.g.
-                                grpc.max_connection_age_ms=2000)
+## Running the Server
 
- multi model options:
-      --config_path CONFIG_PATH
-                                absolute path to json configuration file
-
- single model options:
-      --model_name MODEL_NAME   name of the model
-      --model_path MODEL_PATH   absolute path to model, as in tf serving
-      --batch_size BATCH_SIZE   sets models batchsize, int value or auto.
-                                This parameter will be ignored if shape is set
-                                (default: 0)
-      --shape SHAPE             sets models shape (model must support
-                                reshaping). If set, batch_size parameter is ignored
-      --model_version_policy MODEL_VERSION_POLICY
-                                model version policy
-      --nireq NIREQ             Number of parallel inference request
-                                executions for model. Recommended to be >=
-                                CPU_THROUGHPUT_STREAMS. Default value calculated at
-                                runtime: CPU cores / 8
-      --target_device TARGET_DEVICE
-                                Target device to run the inference (default:
-                                CPU)
-      --plugin_config PLUGIN_CONFIG
-                                a dictionary of plugin configuration keys and
-                                their values, eg
-                                "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_AUTO\"}"
-```
-## Testing
-
-### Python prerequisites
-
-To use Makefile targets which operate on Python it is required to have:
-* Python >= 3.6
-* `virtualenv` package installed system-wide:
-```
-pip3 install virtualenv
-```
-
-### Testing inference with an arbitrary model
-
-You can download an exemplary model using script `tests/performance/download_model.sh`. It is ResNet50 quantized to INT8 precision.
-The script stores the model in the user home folder. You can use any other model from OpenVINO model zoo.
-
-When the docker container is started like in the example above, use and adjust the following grpc client:
+Start using OpenVINO Model Server in 5 Minutes or less:
 
 ```bash
-make venv
-source .venv/bin/activate
-python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
- --iteration 1000 --batchsize 1 --report_every 100 --input_name data
+
+# Download model into a separate directory
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
+
+# Start the container serving gRPC on port 9000
+docker run -d -v $(pwd)/model:/models/face-detection/1 -p 9000:9000 ger-registry-pre.caas.intel.com/ovms/model_server:latest --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG
+
+# Download the example client script
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+
+# Download an image to be analyzed
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
+
+# Install client dependencies
+pip install -r client_requirements.txt
+
+# Create a folder for results
+mkdir results
+
+# Run inference and store results in the newly created folder
+python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results
 ```
+A more detailed description of the steps above can be found [here](docs/ovms_quickstart.md).
 
-`images_numpy_path` parameter should include numpy array with a batch of input data.
+More complete guides to using Model Server in various scenarios can be found here:
 
-`labels_numpy_path` includes a numpy array with image classification results for the test dataset to measure accuracy.
+* [Models reposiotry configuration](docs/models_repository.md)
 
-### Running functional tests
+* [Using a docker container](docs/docker_container.md)
 
-```bash
-make test_functional
-``` 
-Default tests configuration can be changed by usage of environment variables. 
-To store them in a file, create `user_config.py` in the main directory of the project.
-The following variables are available for customization:
+* [Landing on bare metal or virtual machine](docs/host.md)
 
-`IMAGE` - docker image name which should be used to run tests.
 
-`TEST_DIR` -  location where models and test data should be downloaded.
+## Advanced Configuration
 
-`LOG_LEVEL` - set log level.
+[Performance tuning](docs/performance_tuning.md)
 
-`BUILD_LOGS` - path to dir where artifacts should be stored.
 
-`START_CONTAINER_COMMAND` - command to start ovms container.
+## gRPC API Documentation
 
-`CONTAINER_LOG_LINE` - log line to check in container to confirm that it has started properly.
+OpenVINO&trade; Model Server gRPC API is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.2/tensorflow_serving/apis). **Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
+These are the most generic function calls and should address most of the usage scenarios.
 
-Example usage:
-
-```bash
-os.environ["IMAGE"] = "ie-serving-py:latest"
-```
-
-There's also an option to specify these variables in environment via command line by using export, e.g.:
-```bash
-export IMAGE="ie-serving-py:latest"
-```
-
-### Running basic performance tests
-
-Automated tests are configure to use ResNet50 model quantized to INT8 precision.    
-
-```bash
-make test_perf
-Running latency test
-[--] Starting iterations
-[--] Iteration   100/ 1000; Current latency: 10.52ms; Average latency: 11.35ms
-[--] Iteration   200/ 1000; Current latency: 10.99ms; Average latency: 11.03ms
-[--] Iteration   300/ 1000; Current latency: 9.60ms; Average latency: 11.02ms
-[--] Iteration   400/ 1000; Current latency: 10.20ms; Average latency: 10.93ms
-[--] Iteration   500/ 1000; Current latency: 10.45ms; Average latency: 10.84ms
-[--] Iteration   600/ 1000; Current latency: 10.70ms; Average latency: 10.82ms
-[--] Iteration   700/ 1000; Current latency: 9.47ms; Average latency: 10.88ms
-[--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
-[--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
-[--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
-``` 
-
-```bash
-make test_throughput
-Running throughput test
-[25] Starting iterations
-[23] Starting iterations
-.....
-[11] Starting iterations
-[24] Iterations:   500; Final average latency: 20.50ms; Classification accuracy: 100.0%
-[25] Iterations:   500; Final average latency: 20.81ms; Classification accuracy: 100.0%
-[6 ] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-[26] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-...
-[11] Iterations:   500; Final average latency: 20.84ms; Classification accuracy: 100.0%
-
-real	0m13.397s
-user	1m22.277s
-sys	0m39.333s
-1076 FPS
-``` 
-
-### Running tests on Python image
-
-WARNING: at this point not all tests will pass. Further changes are needed to achieve that.
-
-To run tests (test_batching, test_mapping, test_single_model) on Python image specify following variables in user_config.py or in environment by using export:
-```
-os.environ["START_CONTAINER_COMMAND"] = "/ie-serving-py/start_server.sh ie_serving model "
-os.environ["CONTAINER_LOG_LINE"] = "server listens on port"
-```
-
-To run tests (test_model_version_policy, test_model_versions_handling, test_multi_models) on Python image specify following variables in user_config.py or in environment by using export:
-```
-os.environ["START_CONTAINER_COMMAND"] = "/ie-serving-py/start_server.sh ie_serving config "
-os.environ["CONTAINER_LOG_LINE"] = "server listens on port"
-```
-
-## Server Logging
-OpenVINO™ model server accepts 3 logging levels:
-
-* ERROR: Logs information about inference processing errors and server initialization issues.
-* INFO: Presents information about server startup procedure.
-* DEBUG: Stores information about client requests.
-
-The default setting is INFO, which can be altered by setting environment variable LOG_LEVEL.
-
-The captured logs will be displayed on the model server console. While using docker containers or kubernetes the logs can be examined using `docker logs` or `kubectl logs` commands respectively.
-
-It is also possible to save the logs to a local file system by configuring parameter `log_path` with the absolute path pointing to a log file. Please see example below for usage details.
-
-```bash
-docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 ovms:latest \
---config_path /opt/ml/config.json --port 9001 --log_level=DEBUG --log_path=/var/log/ie_serving.log
+[predict function spec](https://github.com/tensorflow/serving/blob/r2.2/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
+* *PredictRequest* specifies information about the model spec, a map of input data serialized via 
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/core/framework/tensor.proto) to a string format.
+* *PredictResponse* includes a map of outputs serialized by 
+[TensorProto](https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/core/framework/tensor.proto) and information about the used model spec.
  
-docker logs ie-serving 
-```
+[get_model_metadata function spec](https://github.com/tensorflow/serving/blob/r2.2/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions:
+ *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
+ A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
 
-## Developer guide
+[get model status function spec](https://github.com/tensorflow/serving/blob/r2.2/tensorflow_serving/apis/get_model_status.proto) can be used to report
+all exposed versions including their state in their lifecycle. 
 
-Mount the source code inside the docker container
-```bash
-docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 ovms:latest 
-```
+Refer to the [example client code](example_client) to learn how to use this API and submit the requests using the gRPC interface.
 
-Compile code using command:
+Using the gRPC interface is recommended for optimal performace due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
 
-```bash
-bazel build //src:ovms
-```
+## RESTful API Documentation 
 
-Run single unit test with flag "--test_filter", e.g.:
+OpenVINO&trade; Model Server RESTful API follows the documentation from [tensorflow serving rest api](https://www.tensorflow.org/tfx/serving/api_rest).
 
-```bash
-bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
-```
+Both row and column format of the requests are implemented. 
+**Note:** Just like with gRPC, only the implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 
-Run build on shared machine with extra makefile flags:
+Only the numerical data types are supported. 
 
-```bash
-OVMS_CPP_DOCKER_IMAGE=rr_ovms OVMS_CPP_CONTAINTER_PORT=9278 make docker_build
-```
+Review the exemplary clients below to find out more how to connect and run inference requests.
 
-Build using a non-default OS docker image:
+REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
 
-```bash
-make BASE_OS=clearlinux OVMS_CPP_DOCKER_IMAGE=my-ovms-clearlinux-image
-```
 
-Build, without using a docker cache:
+## Usage Examples
 
-```bash
-make NO_DOCKER_CACHE=true
-```
+- Using *Predict* function over [gRPC](example_client/#submitting-grpc-requests-based-on-a-dataset-from-numpy-files) 
+and [RESTful API](example_client/#rest-api-client-to-predict-function) with numpy data input
+- [Using *GetModelMetadata* function  over gRPC and RESTful API](example_client/#getting-info-about-served-models)
+- [Using *GetModelStatus* function  over gRPC and RESTful API](example_client/#getting-model-serving-status)
+- [Example script submitting jpeg images for image classification](example_client/#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
+- [Deploy with Kubernetes](deploy)
+- [Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
+
+### Testing
+
+Learn more about tests in the [developer guide](docs/developer_guide.md)
+
+
+## Known Limitations and Plans
+
+* Currently, *Predict*, *GetModelMetadata* and *GetModelStatus* calls are implemented using Tensorflow Serving API. 
+* Classify*, *Regress* and *MultiInference* are not included.
+* Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
+
+
+## Contribution
+
+### Contribution Rules
+
+All contributed code must be compatible with the [Apache 2](https://www.apache.org/licenses/LICENSE-2.0) license.
+
+All changes needs to have passed style, unit and functional tests.
+
+All new features need to be covered by tests.
+
+Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/developer_guide.md)
+
+
+## References
+
+[OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
+
+[TensorFlow Serving](https://github.com/tensorflow/serving)
+
+[gRPC](https://grpc.io/)
+
+[RESTful API](https://restfulapi.net/)
+
+[Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
+
+[OpenVINO Model Server boosts AI](https://www.intel.ai/openvino-model-server-boosts-ai-inference-operations/)
+
+
+## Contact
+
+Submit Github issue to ask question, request a feature or report a bug.
+
+
+---
+\* Other names and brands may be claimed as the property of others.
+
+
+
