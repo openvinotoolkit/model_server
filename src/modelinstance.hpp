@@ -84,6 +84,56 @@ namespace ovms {
          */
         size_t batchSize = 0;
 
+        /**
+         * @brief Load OV CNNNetwork ptr
+         *
+         * @return CNNNetwork ptr
+         */
+        virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
+
+        /**
+         * @brief Load OV Engine
+         */
+        void loadOVEngine();
+
+        /**
+         * @brief Loads OV CNNNetwork
+         *
+         * @return Status
+         */
+        Status loadOVCNNNetwork();
+
+        /**
+         * @brief Sets OV ExecutableNetworkPtr
+         */
+        virtual void loadExecutableNetworkPtr(const plugin_config_t& pluginConfig);
+
+        /**
+         * @brief Loads OV ExecutableNetwork
+         *
+         * @return Status
+         */
+        Status loadOVExecutableNetwork(plugin_config_t pluginConfig);
+
+        /**
+         * @brief Fetch model file paths
+         *
+         * @return Status
+         */
+        Status fetchModelFilepaths();
+
+        /**
+         * @brief Find file path with extension in model path
+         *
+         * @return Returns filename with desired extension if exists otherwise empty string
+         */
+        std::string findModelFilePathWithExtension(const std::string& extension) const;
+
+        /**
+         * @brief Stores required model files extensions to be able to load model
+         */
+        static constexpr std::array<const char*, 2> REQUIRED_MODEL_FILES_EXTENSIONS {".bin", ".xml"};
+
     private:
         /**
          * @brief Holds the information about inputs and it's parameters
@@ -94,6 +144,11 @@ namespace ovms {
          * @brief Holds the information about outputs and it's parameters
          */
         tensor_map_t outputsInfo;
+
+        /**
+         * @brief Holds model required file names
+         */
+        std::map<std::string, std::string> modelFiles;
 
         /**
          * @brief OpenVINO inference execution stream pool

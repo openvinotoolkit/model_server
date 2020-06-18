@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
+#include <cstdio>
 #include <fstream>
 #include <filesystem>
 
@@ -42,6 +42,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG {
    "CPU",  // backend
    1,  // batchsize
    1,  // NIREQ
+   0  // model_version
 };
 
 namespace {
@@ -55,21 +56,7 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-   // MOCK_METHOD(void, loadInputTensors, (const ovms::ModelConfig& config), ());
-   // MOCK_METHOD(void, loadOutputTensors, (const ovms::ModelConfig& config), ());
-   // MOCK_METHOD(const std::string&, getName, (), ());
-   // MOCK_METHOD(const std::string&, getPath, (), ());
-   // MOCK_METHOD(const ovms::model_version_t&, getVersion, (), ());
-   // MOCK_METHOD(ovms::ModelVersionStatus&, getStatus, (), (const));
-   // MOCK_METHOD(const std::string&, getBackend, (), ());
-   // MOCK_METHOD(size_t, getBatchSize, (), ());
-   // MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), ());
-   // MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), ());
    MOCK_METHOD(bool, canUnloadInstance, (), (const));
-   // MOCK_METHOD(ovms::OVInferRequestsQueue&, getInferRequestsQueue, (), ());
-   // MOCK_METHOD(ovms::Status, loadModel, (const ovms::ModelConfig& config), ());
-   // MOCK_METHOD(void, unloadModel, (), ());
-   // MOCK_METHOD(const ovms::ValidationStatusCode, validate, (const tensorflow::serving::PredictRequest* request), ());
 };
 
 }  // namespace
@@ -130,4 +117,114 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
    mockModelInstance.unloadModel();
    EXPECT_EQ(ovms::ModelVersionState::END, mockModelInstance.getStatus().getState());
+}
+
+class TestLoadModel : public ::testing::Test {};
+
+class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
+   protected:
+   std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile) override {
+      throw std::runtime_error("File was not found");
+      return nullptr;
+   }
+};
+
+TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
+   // Check if handling file removal after file existence was checked
+   MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance;
+   // dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+   // TODO we do validation before passing file to OV need to test that too. Hence INTERNAL_ERROR not FILE_INVALID
+   EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
+}
+
+class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
+   protected:
+   void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
+      throw std::runtime_error("File was not found");
+   }
+};
+
+TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
+   // Check if handling file removal after file existence was checked
+   MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance;
+   // dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+   EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
+}
+
+TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
+   ovms::ModelInstance mockModelInstance;
+
+   const std::string modelPath = "/tmp/test_load_model";
+   std::filesystem::create_directories(modelPath);
+   ovms::model_version_t version = 1;
+   const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+   if (!std::filesystem::exists(versionDirectoryPath)) {
+      ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+   }
+   {
+      std::ofstream binFile{versionDirectoryPath + "/NOT_USED_NAME.bin"};
+      binFile << "NOT_NEEDED_CONTENT" << std::endl;
+   }
+   auto xmlFilename = (versionDirectoryPath + "/NOT_USED_NAME.xml");
+   if (std::filesystem::exists(xmlFilename)) {
+      ASSERT_EQ(0, std::remove(xmlFilename.c_str()));
+   }
+   const ovms::ModelConfig config {
+      "NOT_USED_NAME",
+      modelPath,
+      "CPU",  // backend
+      1,  // batchsize
+      1,  // NIREQ
+      version,  // version
+   };
+   // dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   auto status = mockModelInstance.loadModel(config);
+   EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
+}
+
+TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
+   ovms::ModelInstance mockModelInstance;
+
+   const std::string modelPath = "/tmp/test_load_model";
+   std::filesystem::create_directories(modelPath);
+   ovms::model_version_t version = 1;
+   const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+   if (!std::filesystem::exists(versionDirectoryPath)) {
+      ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+   }
+   {
+      std::ofstream xmlFile{versionDirectoryPath + "/NOT_USED_NAME.xml"};
+      xmlFile << "NOT_NEEDED_CONTENT" << std::endl;
+   }
+   auto binFilename = (versionDirectoryPath + "/NOT_USED_NAME.bin");
+   if (std::filesystem::exists(binFilename)) {
+      ASSERT_EQ(0, std::remove(binFilename.c_str()));
+   }
+   const ovms::ModelConfig config {
+      "NOT_USED_NAME",
+      modelPath,
+      "CPU",  // backend
+      1,  // batchsize
+      1,  // NIREQ
+      version,  // version
+   };
+   // dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   auto status = mockModelInstance.loadModel(config);
+   EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
+}
+
+TEST_F(TestLoadModel, SuccesfullLoad) {
+   std::filesystem::path dir = std::filesystem::current_path();
+   std::string dummy_model = dir.u8string() + "/src/test/dummy";
+   ovms::ModelInstance modelInstance;
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   EXPECT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+   EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
