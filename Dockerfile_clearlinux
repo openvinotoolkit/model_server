@@ -1,6 +1,6 @@
 FROM clearlinux as build
 
-ARG OV_SOURCE_BRANCH
+ARG ov_source_branch
 
 # Stage for building TF serving API for Python 3.8
 RUN swupd bundle-add \
@@ -39,7 +39,7 @@ RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
 RUN swupd repair -V 32750 --force
 
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
-RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $OV_SOURCE_BRANCH --single-branch --depth 1 /openvino
+RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 
 # Use package for centos7 on clearlinux - seems to be working just fine.
 RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
@@ -48,7 +48,7 @@ WORKDIR /openvino/build
 RUN pip3 install --no-cache-dir -r /openvino/inference-engine/ie_bridges/python/requirements.txt
 RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_LIBRARY=/usr/lib64/libpython3.8.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.8  -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
 
-RUN make --jobs=$(nproc --all)
+RUN make --jobs=8
 
 
 FROM clearlinux:latest as clear-pkg

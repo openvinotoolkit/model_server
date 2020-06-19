@@ -126,12 +126,9 @@ docker_build_clearlinux:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
-	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg OV_SOURCE_BRANCH="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg OV_SOURCE_BRANCH="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
+	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
 	@docker run --rm -d --name ie-serving-py-test-multi -v /tmp/test_models/saved_models/:/opt/ml:ro -p 9001:9001 -t $(DOCKER_OVMS_TAG) /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
-
-branch:
-	@echo $(OV_SOURCE_BRANCH)
