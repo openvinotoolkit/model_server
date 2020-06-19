@@ -11,6 +11,8 @@ cc_library(
         "get_model_metadata_impl.hpp",
         "localfilesystem.cpp",
         "localfilesystem.hpp",
+        "gcsfilesystem.cpp",
+        "gcsfilesystem.hpp",
         "model.cpp",
         "model.hpp",
         "model_version_policy.cpp",
@@ -55,7 +57,7 @@ cc_library(
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client"
     ],
     local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
     ]
 )
 
@@ -92,6 +94,7 @@ cc_test(
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/localfilesystem_test.cpp",
+        "test/gcsfilesystem_test.cpp",
         "test/ovtestutils.hpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/predict_validation_test.cpp",

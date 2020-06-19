@@ -31,11 +31,12 @@ from utils.parametrization import get_tests_suffix
 def start_server_single_model_from_gc(request):
 
     start_server_command_args = {"model_name": Resnet.name,
-                                 "model_path": ResnetGS.model_path,
-                                 "target_device": "CPU",
-                                 "nireq": 4,
-                                 "plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", "
-                                                  "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""}
+                                 "model_path": ResnetGS.model_path #,
+                                 #"target_device": "CPU",
+                                 #"nireq": 4,
+                                 #"plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"2\\\", "
+                                 #                 "\\\"CPU_THREADS_NUM\\\": \\\"4\\\"}\""
+                                 }
     container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     server = Server(request, start_server_command_args,

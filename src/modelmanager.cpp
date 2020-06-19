@@ -33,6 +33,7 @@
 #include "localfilesystem.hpp"
 #include "modelmanager.hpp"
 #include "s3filesystem.hpp"
+#include "gcsfilesystem.hpp"
 
 namespace ovms {
 
@@ -298,7 +299,7 @@ std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
         return std::make_shared<S3FileSystem>(options, basePath);
     }
     if (basePath.rfind("gs://", 0) == 0) {
-        // return GSFilesystem
+        return std::make_shared<ovms::GCSFileSystem>();
     }
 
     return std::make_shared<LocalFileSystem>();

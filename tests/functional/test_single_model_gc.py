@@ -18,7 +18,7 @@ import pytest
 import numpy as np
 
 from constants import MODEL_SERVICE, ERROR_SHAPE
-from model.models_information import Resnet
+from model.models_information import Resnet, ResnetGS
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
 from utils.logger import get_logger
@@ -29,7 +29,6 @@ logger = get_logger(__name__)
 
 class TestSingleModelInferenceGc:
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference(self, start_server_single_model_from_gc):
         """
         <b>Description</b>
@@ -54,24 +53,23 @@ class TestSingleModelInferenceGc:
         _, ports = start_server_single_model_from_gc
         stub = create_channel(port=ports["grpc_port"])
 
-        imgs_v1_224 = np.ones(Resnet.input_shape, Resnet.dtype)
+        imgs_v1_224 = np.ones(ResnetGS.input_shape, ResnetGS.dtype)
         out_name = 'prob'
         output = infer(imgs_v1_224, input_tensor='data', grpc_stub=stub,
                        model_spec_name=Resnet.name,
                        model_spec_version=None,
                        output_tensors=[out_name])
         logger.info("Output shape: ".format(output[out_name].shape))
-        assert output[out_name].shape == Resnet.output_shape, ERROR_SHAPE
+        assert output[out_name].shape == ResnetGS.output_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata(self, start_server_single_model_from_gc):
 
         _, ports = start_server_single_model_from_gc
         stub = create_channel(port=ports["grpc_port"])
 
         out_name = 'prob'
-        expected_input_metadata = {'data': {'dtype': 1, 'shape': list(Resnet.input_shape)}}
-        expected_output_metadata = {out_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
+        expected_input_metadata = {'data': {'dtype': 1, 'shape': list(ResnetGS.input_shape)}}
+        expected_output_metadata = {out_name: {'dtype': 1, 'shape': list(ResnetGS.output_shape)}}
         request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)
         input_metadata, output_metadata = model_metadata_response(
@@ -83,7 +81,6 @@ class TestSingleModelInferenceGc:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_status(self, start_server_single_model_from_gc):
 
         _, ports = start_server_single_model_from_gc
