@@ -6,6 +6,8 @@ RUN ls -lahR /ovms
 
 FROM $DIST_IMAGE
 
+RUN yum install -y curl openssl ca-certificates && yum clean all && cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+
 RUN mkdir /ovms/
 COPY --from=prepare_pkg ovms.tar.gz /
 RUN tar -xf ovms.tar.gz && rm ovms.tar.gz

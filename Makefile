@@ -29,7 +29,7 @@ NO_PROXY := "$(no_proxy)"
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
-BASE_OS ?= ubuntu
+BASE_OS ?= centos
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
