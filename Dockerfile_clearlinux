@@ -1,4 +1,7 @@
 FROM clearlinux as build
+
+ARG OV_SOURCE_BRANCH
+
 # Stage for building TF serving API for Python 3.8
 RUN swupd bundle-add \
     c-basic \
@@ -36,7 +39,7 @@ RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
 RUN swupd repair -V 32750 --force
 
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
-RUN git clone --recurse-submodules -j4 https://github.com/opencv/dldt --branch 2020.3.0 --single-branch --depth 1 /openvino
+RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $OV_SOURCE_BRANCH --single-branch --depth 1 /openvino
 
 # Use package for centos7 on clearlinux - seems to be working just fine.
 RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
