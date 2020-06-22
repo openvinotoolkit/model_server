@@ -136,26 +136,6 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
     public:
         /**
-         * @brief Construct a new ModelConfig with default values
-         */
-        ModelConfig() :
-            name(""),
-            basePath(""),
-            backend("CPU"),
-            batchSize(0),
-            modelVersionPolicy({}),
-            nireq(1),
-            pluginConfig({}),
-            shape({}),
-            layout(""),
-            shapes({}),
-            layouts({}),
-            version(0),
-            mappingInputs({}),
-            mappingOutputs({})
-            {}
-
-        /**
          * @brief Construct a new Model Config object
          * 
          * @param name 
@@ -164,11 +144,12 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
          * @param batchSize 
          * @param nireq 
          */
-        ModelConfig(const std::string& name,
-                    const std::string& basePath,
-                    const std::string& backend,
-                    size_t batchSize,
-                    uint64_t nireq) :
+        ModelConfig(const std::string& name = "",
+                    const std::string& basePath = "",
+                    const std::string& backend = "CPU",
+                    size_t batchSize = 0,
+                    uint64_t nireq = 1,
+                    model_version_t version = 0) :
                     name(name),
                     basePath(basePath),
                     backend(backend),
@@ -180,7 +161,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                     layout(""),
                     shapes({}),
                     layouts({}),
-                    version(0),
+                    version(version),
                     mappingInputs({}),
                     mappingOutputs({})
                     {}

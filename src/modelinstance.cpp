@@ -116,24 +116,28 @@ bool dirExists(const std::string& path) {
     return false;
 }
 
-std::string getModelFile(const std::string path) {
+std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent *entry;
     DIR *dir = opendir(path.c_str());
 
     while ((entry = readdir(dir)) != nullptr) {
         auto name = std::string(entry->d_name);
-        if (endsWith(name, ".xml")) {
+        if (endsWith(name, extension)) {
             closedir(dir);
             if (endsWith(name, "/")) {
                 return path + name;
             } else {
-                return path + "/" + name;
+                return path + '/' + name;
             }
         }
     }
     closedir(dir);
 
-    return path;
+    return std::string();
+}
+
+std::string ModelInstance::findModelFilePathWithExtension(const std::string& extension) const {
+    return findFilePathWithExtension(path, extension);
 }
 
 uint getOVCPUThroughputStreams() {
@@ -160,6 +164,68 @@ uint getNumberOfParallelInferRequests() {
     return std::max(config.nireq(), 1u);
 }
 
+void ModelInstance::loadOVEngine() {
+    engine = std::make_unique<InferenceEngine::Core>();
+}
+
+std::unique_ptr<InferenceEngine::CNNNetwork> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
+    return std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(modelFile));
+}
+
+Status ModelInstance::loadOVCNNNetwork() {
+    auto& modelFile = modelFiles[".xml"];
+    spdlog::debug("Try reading model file:{}", modelFile);
+    try {
+        network = loadOVCNNNetworkPtr(modelFile);
+    } catch (std::exception& e) {
+        spdlog::error("Error:{}; occured during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
+void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
+    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
+}
+
+Status ModelInstance::loadOVExecutableNetwork(plugin_config_t pluginConfig) {
+    if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
+        uint ovBackendStreamsCount = getOVCPUThroughputStreams();
+        pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
+    }
+    try {
+        loadExecutableNetworkPtr(pluginConfig);
+    } catch (std::exception& e) {
+        spdlog::error("Error:{}; occured during loading ExecutableNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    spdlog::info("Plugin config for device {}:", backend);
+    for (const auto pair : pluginConfig) {
+        const auto key = pair.first;
+        const auto value = pair.second;
+        spdlog::info("{}: {}", key, value);
+    }
+    return StatusCode::OK;
+}
+
+Status ModelInstance::fetchModelFilepaths() {
+    spdlog::debug("Getting model files from path:{}", path);
+    if (!dirExists(path)) {
+        spdlog::error("Missing model directory {}", path);
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+        return StatusCode::PATH_INVALID;
+    }
+    for (auto extension : REQUIRED_MODEL_FILES_EXTENSIONS) {
+        auto file = findModelFilePathWithExtension(extension);
+        if (file.empty()) {
+            spdlog::error("Could not find *{} file for model:{} version:{} in path:{}", extension, getName(), getVersion(), path);
+            return StatusCode::FILE_INVALID;
+        }
+        modelFiles[extension] = file;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::loadModel(const ModelConfig& config) {
     this->name = config.getName();
     this->path = config.getPath();
@@ -171,29 +237,23 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     // load network
     try {
         this->status.setLoading();
-        if (!dirExists(path)) {
-            spdlog::error("Missing model directory {}", path);
-            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-            return StatusCode::PATH_INVALID;
+        auto status = fetchModelFilepaths();
+        if (!status.ok()) {
+            return status;
         }
-        engine = std::make_unique<InferenceEngine::Core>();
-        network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(getModelFile(path)));
+        loadOVEngine();
+        status = loadOVCNNNetwork();
+        if (!status.ok()) {
+            return status;
+        }
         this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
 
         network->setBatchSize(this->batchSize);
         loadInputTensors(config);
         loadOutputTensors(config);
-        auto pluginConfig = config.getPluginConfig();
-        if (pluginConfig.count(CPU_THROUGHPUT_STREAMS) == 0) {
-            uint ovBackendStreamsCount = getOVCPUThroughputStreams();
-            pluginConfig[CPU_THROUGHPUT_STREAMS] = std::to_string(ovBackendStreamsCount);
-        }
-        execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
-        spdlog::info("Plugin config for device {}:", backend);
-        for (const auto pair : pluginConfig) {
-            const auto key = pair.first;
-            const auto value = pair.second;
-            spdlog::info("{}: {}", key, value);
+        status = loadOVExecutableNetwork(config.getPluginConfig());
+        if (!status.ok()) {
+            return status;
         }
         uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
         inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
@@ -222,9 +282,10 @@ void ModelInstance::unloadModel() {
     execNetwork.reset();
     network.reset();
     engine.reset();
-    this->outputsInfo.clear();
-    this->inputsInfo.clear();
-    this->status.setEnd();
+    outputsInfo.clear();
+    inputsInfo.clear();
+    modelFiles.clear();
+    status.setEnd();
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
