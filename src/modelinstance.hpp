@@ -167,7 +167,7 @@ namespace ovms {
          *
          * @param config
          */
-        void loadInputTensors(const ModelConfig& config);
+        Status loadInputTensors(const ModelConfig& config);
 
         /**
          * @brief Internal method for loading outputs

@@ -677,6 +677,13 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
         }
 
         /**
+         * @brief Checks whether user requested reshape by specifying input(s) shape
+         */
+        bool isReshapeRequested() const {
+            return shape.size() > 0 || shapes.size() > 0;
+        }
+
+        /**
          * @brief  Parses mapping_config.json for mapping input/outputs in the model
          * 
          * @return Status 
