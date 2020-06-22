@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <inference_engine.hpp>
 #include "tensorflow/core/framework/tensor.h"
@@ -44,7 +45,32 @@ using tensorflow::serving::PredictionService;
 
 namespace ovms {
 
-Status getModelInstance(const PredictRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance) {
+class ModelInstancePredictRequestsHandlesCountGuard {
+public:
+    ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) : modelInstance(modelInstance) {
+        modelInstance.increasePredictRequestsHandlesCount();
+    }
+    ~ModelInstancePredictRequestsHandlesCountGuard() {
+        modelInstance.decreasePredictRequestsHandlesCount();
+    }
+private:
+    ModelInstance& modelInstance;
+};
+
+Status checkIfAvailable(const ovms::ModelInstance& modelInstance) {
+    ModelVersionState modelVersionState = modelInstance.getStatus().getState();
+    if (ModelVersionState::AVAILABLE > modelVersionState) {
+        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    }
+    if (ModelVersionState::AVAILABLE < modelVersionState) {
+        return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+    }
+    return StatusCode::OK;
+}
+
+Status getModelInstance(const PredictRequest* request,
+                                      std::shared_ptr<ovms::ModelInstance>& modelInstance,
+                                      std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
 
     auto& modelName = request->model_spec().name();
@@ -66,14 +92,24 @@ Status getModelInstance(const PredictRequest* request, std::shared_ptr<ovms::Mod
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
-    ModelVersionState modelVersionState = modelInstance->getStatus().getState();
-    if (ModelVersionState::AVAILABLE > modelVersionState) {
-        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    // don't lock modelInstance from unloading if not available already
+    Status status = checkIfAvailable(*modelInstance);
+    if (!status.ok()) {
+        return status;
     }
-    if (ModelVersionState::AVAILABLE < modelVersionState) {
-        return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+    modelInstancePredictRequestsHandlesCountGuardPtr = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*modelInstance);
+    // Check model state to stop blocking model from unloading when state already changed to UNLOADING
+    return checkIfAvailable(*modelInstance);
+}
+
+grpc::Status validateRequest(const PredictRequest* request, ovms::ModelInstance& modelInstance) {
+    auto status = modelInstance.validate(request);
+    if (!status.ok()) {
+        return grpc::Status(
+            grpc::StatusCode::INVALID_ARGUMENT,
+            status.string());
     }
-    return StatusCode::OK;
+    return status;
 }
 
 struct ExecutingStreamIdGuard {
@@ -116,7 +152,8 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
 
     std::shared_ptr<ovms::ModelInstance> modelVersion;
 
-    auto status = getModelInstance(request, modelVersion);
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    auto status = getModelInstance(request, modelVersion, modelInstancePredictRequestsHandlesCountGuard);
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
         return status.grpc();
@@ -129,16 +166,10 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     }
 
     timer.start("get infer request");
-    std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-    status = modelVersion->getInferRequestsQueue(inferRequestsQueue);
-    if (!status.ok()) {
-        SPDLOG_INFO("Getting infer req failed: {}", status.string());
-        return status.grpc();
-    }
-
-    ExecutingStreamIdGuard executingStreamIdGuard(*inferRequestsQueue);
+    ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion->getInferRequestsQueue();
+    ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
     int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue->getInferRequest(executingInferId);
+    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     timer.stop("get infer request");
     spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
             request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("get infer request") / 1000);
@@ -152,7 +183,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("deserialize") / 1000);
 
     timer.start("prediction");
-    status = performInference(*inferRequestsQueue, executingInferId, inferRequest);
+    status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     timer.stop("prediction");
     // TODO - current return code below is the same as in Python, but INVALID_ARGUMENT does not neccesarily mean
     // that the problem may be input

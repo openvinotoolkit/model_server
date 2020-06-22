@@ -216,74 +216,6 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
-Status ModelManager::addVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig &config) {
-    for (const auto version : *versionsToStart) {
-        spdlog::info("Will add model: {}; version: {} ...", config.getName(), version);
-        config.setVersion(version);
-        config.parseModelMapping();
-
-        auto status = model->addVersion(config);
-        if (!status.ok()) {
-            spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
-                config.getName(),
-                version,
-                status.string());
-            return status;
-        }
-    }
-    return StatusCode::OK;
-}
-
-Status ModelManager::retireVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versionsToRetire, ovms::ModelConfig &config) {
-    for (const auto version : *versionsToRetire) {
-        spdlog::info("Will unload model: {}; version: {} ...", config.getName(), version);
-        auto modelVersion = model->getModelInstanceByVersion(version);
-        if (!modelVersion) {
-            Status status = StatusCode::UNKNOWN_ERROR;
-            spdlog::error("Error occurred while unloading model: {}; version: {}; error: {}",
-                config.getName(),
-                version,
-                status.string());
-            return status;
-        }
-        modelVersion->unloadModel();
-        model->updateDefaultVersion();
-    }
-    return StatusCode::OK;
-}
-
-Status ModelManager::reloadVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig &config) {
-    for (const auto version : *versionsToReload) {
-        spdlog::info("Will reload model: {}; version: {} ...", config.getName(), version);
-        config.setVersion(version);
-        auto status = config.parseModelMapping();
-        if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
-            spdlog::error("Error while parsing model mapping for model {}", status.string());
-        }
-
-        auto modelVersion = model->getModelInstanceByVersion(version);
-        if (!modelVersion) {
-            status = StatusCode::UNKNOWN_ERROR;
-            spdlog::error("Error occurred while reloading model: {}; version: {}; error: {}",
-                config.getName(),
-                version,
-                status.string());
-            return status;
-        }
-        modelVersion->unloadModel();
-        status = modelVersion->loadModel(config);
-        if (!status.ok()) {
-            spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
-                config.getName(),
-                version,
-                status.string());
-            return status;
-        }
-        model->updateDefaultVersion();
-    }
-    return StatusCode::OK;
-}
-
 std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
@@ -330,21 +262,24 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
     getVersionsToChange(model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-    status = addVersions(model, versionsToStart, config);
+
+    status = model->addVersions(versionsToStart, config);
     if (!status.ok()) {
         spdlog::error("Error occurred while loading model {}; versions; error: {}",
             config.getName(),
             status.string());
         return status;
     }
-    status = reloadVersions(model, versionsToReload, config);
+
+    status = model->reloadVersions(versionsToReload, config);
     if (!status.ok()) {
         spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
             config.getName(),
             status.string());
         return status;
     }
-    status = retireVersions(model, versionsToRetire, config);
+
+    status = model->retireVersions(versionsToRetire);
     if (!status.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
             config.getName(),

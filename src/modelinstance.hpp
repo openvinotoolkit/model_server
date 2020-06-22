@@ -98,7 +98,14 @@ namespace ovms {
         /**
          * @brief OpenVINO inference execution stream pool
          */
-        std::shared_ptr<OVInferRequestsQueue> inferRequestsQueue;
+        std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
+
+        /**
+         * @brief Holds current usage count in predict requests
+         * 
+         * Needed for gating model unloading.
+         */
+        std::atomic<uint64_t> predictRequestsHandlesCount = 0;
 
         /**
          * @brief Internal method for loading inputs
@@ -114,6 +121,7 @@ namespace ovms {
          */
         void loadOutputTensors(const ModelConfig& config);
 
+
     public:
         /**
          * @brief A default constructor
@@ -124,6 +132,20 @@ namespace ovms {
          * @brief Destroy the Model Instance object
          */
         virtual ~ModelInstance() = default;
+
+        /**
+         * @brief Increases predict requests usage count
+         */
+        void increasePredictRequestsHandlesCount() {
+            ++predictRequestsHandlesCount;
+        }
+
+        /**
+         * @brief Decreases predict requests usage count
+         */
+        void decreasePredictRequestsHandlesCount() {
+            --predictRequestsHandlesCount;
+        }
 
         /**
          * @brief Gets the model name
@@ -202,33 +224,17 @@ namespace ovms {
          *
          * @return bool 
          */
-        virtual bool canUnloadInferRequests() const {
-            return inferRequestsQueue.use_count() < 2;
+        virtual bool canUnloadInstance() const {
+            return 0 == predictRequestsHandlesCount;
         }
 
         /**
          * @brief Get OV streams pool
          * 
          * @return OVStreamsQueue
-         * */
-        Status getInferRequestsQueue(std::shared_ptr<OVInferRequestsQueue>& inferRequestsQueueIn) {
-            switch (getStatus().getState()) {
-                case ModelVersionState::AVAILABLE: {
-                    inferRequestsQueueIn = inferRequestsQueue;
-                    return StatusCode::OK;
-                }
-                case ModelVersionState::START:
-                case ModelVersionState::LOADING: {
-                    return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
-                }
-                case ModelVersionState::UNLOADING:
-                case ModelVersionState::END: {
-                    return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
-                }
-                default: {
-                    return StatusCode::UNKNOWN_ERROR;
-                }
-            }
+         */
+        OVInferRequestsQueue& getInferRequestsQueue() {
+            return *inferRequestsQueue;
         }
 
         /**
@@ -238,13 +244,13 @@ namespace ovms {
          *
          * @return Status
          */
-        Status loadModel(const ModelConfig& config);
+        virtual Status loadModel(const ModelConfig& config);
 
         /**
          * @brief Unloads model version
          *
          */
-        void unloadModel();
+        virtual void unloadModel();
 
         const Status validate(const tensorflow::serving::PredictRequest* request);
     };

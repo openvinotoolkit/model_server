@@ -89,6 +89,7 @@ cc_test(
         "test/get_model_metadata_validation_test.cpp",
         "test/model_service_test.cpp",
         "test/model_version_policy_test.cpp",
+        "test/model_test.cpp",
         "test/modelinstance_test.cpp",
         "test/modelconfig_test.cpp",
         "test/modelmanager_test.cpp",

@@ -24,6 +24,8 @@
 
 #include "../modelinstance.hpp"
 
+using testing::Return;
+
 const std::vector<ovms::ModelVersionState> INFER_QUEUE_SUCCESS_FOR_STATES {
     ovms::ModelVersionState::AVAILABLE
 };
@@ -63,91 +65,47 @@ public:
    // MOCK_METHOD(size_t, getBatchSize, (), ());
    // MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), ());
    // MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), ());
-   MOCK_METHOD(bool, canUnloadInferRequests, (), (const));
-   // MOCK_METHOD(ovms::Status, getInferRequestsQueue, (std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueueIn), ());
+   MOCK_METHOD(bool, canUnloadInstance, (), (const));
+   // MOCK_METHOD(ovms::OVInferRequestsQueue&, getInferRequestsQueue, (), ());
    // MOCK_METHOD(ovms::Status, loadModel, (const ovms::ModelConfig& config), ());
    // MOCK_METHOD(void, unloadModel, (), ());
    // MOCK_METHOD(const ovms::ValidationStatusCode, validate, (const tensorflow::serving::PredictRequest* request), ());
 };
 
 }  // namespace
-class GetInferRequestQueueForState : public ::testing::Test {};
-
-TEST_F(GetInferRequestQueueForState, SuccessForAvailable) {
-   MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::AVAILABLE);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_TRUE(status.ok());
-}
-
-TEST_F(GetInferRequestQueueForState, NotReadyYetForStart) {
-   MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::START);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-}
-
-TEST_F(GetInferRequestQueueForState, NotReadyYetForLoading) {
-   MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::LOADING);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-}
-
-TEST_F(GetInferRequestQueueForState, ModelRetiredForUnloading) {
-   MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::UNLOADING);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-}
-
-TEST_F(GetInferRequestQueueForState, ModelRetiredForEnd) {
-   MockModelInstanceInState mockModelInstance(ovms::ModelVersionState::END);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = mockModelInstance.getInferRequestsQueue(inferRequestsQueue);
-   EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-}
 
 class TestUnloadModel : public ::testing::Test {};
 
-TEST_F(TestUnloadModel, CantUnloadModelWhileHoldingInferRequestsQueueReference) {
+TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
    ovms::ModelInstance modelInstance;
    // dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
-   modelInstance.loadModel(DUMMY_MODEL_CONFIG);
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
-   ASSERT_TRUE(status.ok());
-   ASSERT_EQ(2, inferRequestsQueue.use_count()) << "We expect to have ownership here & in modelInstance";
-   EXPECT_FALSE(modelInstance.canUnloadInferRequests());
-}
-
-TEST_F(TestUnloadModel, CanUnloadModelNotHoldingInferRequestsQueueReference) {
-   ovms::ModelInstance modelInstance;
-   // dirty hack to avoid initializing config
-   setenv("NIREQ", "1", 1);
-   modelInstance.loadModel(DUMMY_MODEL_CONFIG);
+   ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-   std::shared_ptr<ovms::OVInferRequestsQueue> inferRequestsQueue;
-   auto status = modelInstance.getInferRequestsQueue(inferRequestsQueue);
    ASSERT_TRUE(status.ok());
-   ASSERT_EQ(2, inferRequestsQueue.use_count()) << "We expect to have ownership here & in modelInstance";
-   EXPECT_FALSE(modelInstance.canUnloadInferRequests());
-   inferRequestsQueue.reset();
-   EXPECT_TRUE(modelInstance.canUnloadInferRequests());
-   modelInstance.unloadModel();
-   EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+   modelInstance.increasePredictRequestsHandlesCount();
+   EXPECT_FALSE(modelInstance.canUnloadInstance());
 }
 
-using testing::Return;
+TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
+   ovms::ModelInstance modelInstance;
+   // dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
+   ASSERT_TRUE(status.ok());
+   ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+   modelInstance.increasePredictRequestsHandlesCount();
+   modelInstance.decreasePredictRequestsHandlesCount();
+   EXPECT_TRUE(modelInstance.canUnloadInstance());
+}
 
-TEST_F(TestUnloadModel, CheckIfCanUnloadInferRequests) {
+TEST_F(TestUnloadModel, CheckIfCanUnload) {
    MockModelInstance mockModelInstance;
    // dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
    mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
-   EXPECT_CALL(mockModelInstance, canUnloadInferRequests())
+   EXPECT_CALL(mockModelInstance, canUnloadInstance())
       .WillOnce(Return(false))
       .WillOnce(Return(true));
    mockModelInstance.unloadModel();
@@ -156,7 +114,7 @@ TEST_F(TestUnloadModel, CheckIfCanUnloadInferRequests) {
 
 class MockModelInstanceCheckingUnloadingState : public ovms::ModelInstance {
 public:
-   virtual bool canUnloadInferRequests() const {
+   virtual bool canUnloadInstance() const {
       EXPECT_EQ(ovms::ModelVersionState::UNLOADING, getStatus().getState());
       return true;
    }

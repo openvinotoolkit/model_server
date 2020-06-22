@@ -39,9 +39,6 @@ namespace ovms {
          */
         ModelManager() = default;
 
-        Status addVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
-        Status retireVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
-        Status reloadVersions(std::shared_ptr<ovms::Model> model, std::shared_ptr<model_versions_t> versions, ovms::ModelConfig &config);
         std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
 
     private:
