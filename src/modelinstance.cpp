@@ -38,7 +38,7 @@ const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
 const char* NIREQ = "NIREQ";
 
 
-void ModelInstance::loadInputTensors(const ModelConfig& config) {
+Status ModelInstance::loadInputTensors(const ModelConfig& config) {
     auto networkShapes = network->getInputShapes();
 
     for (const auto& pair : network->getInputsInfo()) {
@@ -83,7 +83,19 @@ void ModelInstance::loadInputTensors(const ModelConfig& config) {
     }
 
     // Update OV model shapes
-    network->reshape(networkShapes);
+    if (config.isReshapeRequested()) {
+        spdlog::debug("model: {}, version: {}; reshaping inputs", getName(), getVersion());
+        try {
+            network->reshape(networkShapes);
+        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+            spdlog::error("could not perform reshape on model {}: {}", getName(), e.what());
+            return StatusCode::RESHAPE_ERROR;
+        }
+    } else {
+        spdlog::debug("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
+    }
+
+    return StatusCode::OK;
 }
 
 void ModelInstance::loadOutputTensors(const ModelConfig& config) {
@@ -249,7 +261,10 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
 
         network->setBatchSize(this->batchSize);
-        loadInputTensors(config);
+        status = loadInputTensors(config);
+        if (!status.ok()) {
+            return status;
+        }
         loadOutputTensors(config);
         status = loadOVExecutableNetwork(config.getPluginConfig());
         if (!status.ok()) {

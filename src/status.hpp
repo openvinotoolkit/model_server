@@ -36,6 +36,7 @@ enum class StatusCode {
     MODEL_VERSION_POLICY_WRONG_FORMAT,  /*!< Model version policy is in wrong format */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
     NO_MODEL_VERSION_AVAILABLE,         /*!< No model version found in path */
+    RESHAPE_ERROR,                      /*!< Impossible to perform reshape */
 
     // Model management
     MODEL_MISSING,                      /*!< Model with such name and/or version does not exist */
