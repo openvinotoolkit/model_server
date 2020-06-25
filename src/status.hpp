@@ -96,7 +96,16 @@ enum class StatusCode {
     GCS_FILE_NOT_FOUND,
     GCS_FILE_INVALID,
     GCS_FAILED_GET_OBJECT,
-    GCS_INCORRECT_REQUESTED_OBJECT_TYPE
+    GCS_INCORRECT_REQUESTED_OBJECT_TYPE,
+
+    // REST Parse
+    REST_BODY_IS_NOT_AN_OBJECT,         /*!< REST body should be JSON object */
+    REST_PREDICT_UNKNOWN_ORDER,         /*!< Could not detect order (row/column) */
+    REST_INSTANCES_NOT_AN_ARRAY,        /*!< When parsing row order, instances must be an array */
+    REST_INSTANCE_NOT_AN_OBJECT,        /*!< Instance needs to be an object */
+    REST_NO_INSTANCES_FOUND,            /*!< Missing instances in row order */
+    REST_COULD_NOT_PARSE_INSTANCE,      /*!< Error while parsing instance content */
+    REST_INSTANCES_BATCH_SIZE_DIFFER,   /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
 };
 
 class Status {
