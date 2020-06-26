@@ -37,6 +37,14 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 8
 BASE_OS_TAG_CLEARLINUX ?= latest
+HAS_AVX := $(shell grep avx /proc/cpuinfo | wc -l)
+
+check:
+ifeq ($(HAS_AVX),0)
+	@echo "CPU with AVX support required"
+	exit 1
+endif
+	@echo "CPU with AVX support detected"
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
@@ -65,7 +73,7 @@ TEST_PATH ?= tests/functional/
 
 default: docker_build
 
-venv: $(ACTIVATE)
+venv:check $(ACTIVATE)
 	@echo -n "Using venv "
 	@. $(ACTIVATE); python3 --version
 

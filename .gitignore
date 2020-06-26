@@ -1,7 +1,9 @@
 .venv
 .pytest_cache
 .vscode
+.vs
 .idea
+version
 __pycache__/
 report.json
 bazel-bin
@@ -11,4 +13,5 @@ bazel-testlogs
 __pycache__
 .workspace
 *user_config*
+*.swp
 dist/
