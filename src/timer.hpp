@@ -20,6 +20,12 @@
 #include <string>
 #include <unordered_map>
 
+template <typename T>
+struct is_chrono_duration_type : std::false_type {};
+
+template <typename T, typename U>
+struct is_chrono_duration_type<std::chrono::duration<T, U>> : std::true_type {};
+
 class Timer {
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> startTimestamps;
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> stopTimestamps;
@@ -37,10 +43,12 @@ public:
 #endif
     }
 
-    double elapsed_microseconds(const std::string& name) {
+    template <typename T>
+    double elapsed(const std::string& name) {
+        static_assert(is_chrono_duration_type<T>::value, "Non supported type.");
         double duration_us = 0;
 #ifdef DEBUG
-        duration_us = std::chrono::duration_cast<std::chrono::microseconds>(stopTimestamps[name] - startTimestamps[name]).count();
+        duration_us = std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
 #endif
         return  duration_us;
     }

@@ -69,7 +69,7 @@ TEST(OVInferRequestQueue, FullQueue) {
     reqid = inferRequestsQueue.getIdleStream();  // it should wait 1s for released request
     timer.stop("queue");
 
-    EXPECT_GT(timer.elapsed_microseconds("queue"), 1000000);
+    EXPECT_GT(timer.elapsed<std::chrono::microseconds>("queue"), 1'000'000);
     EXPECT_EQ(reqid, 3);
 }
 

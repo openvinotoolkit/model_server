@@ -55,6 +55,17 @@ public:
 
 class TestUnloadModel : public ::testing::Test {};
 
+TEST_F(TestUnloadModel, SuccesfullUnload) {
+   ovms::ModelInstance modelInstance;
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+   ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+   modelInstance.unloadModel();
+   EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+}
+
+
 TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
    ovms::ModelInstance modelInstance;
    // dirty hack to avoid initializing config
@@ -218,5 +229,63 @@ TEST_F(TestLoadModel, SuccesfullLoad) {
    // TODO dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
    EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
+   EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+class TestReloadModel : public ::testing::Test {};
+
+TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoaded) {
+   std::filesystem::path dir = std::filesystem::current_path();
+   std::string dummy_model = dir.u8string() + "/src/test/dummy";
+   ovms::ModelInstance modelInstance;
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+   EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
+   EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloaded) {
+   std::filesystem::path dir = std::filesystem::current_path();
+   std::string dummy_model = dir.u8string() + "/src/test/dummy";
+   ovms::ModelInstance modelInstance;
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+   modelInstance.unloadModel();
+   ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+   EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
+   EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
+   std::filesystem::path dir = std::filesystem::current_path();
+   std::string dummy_model = dir.u8string() + "/src/test/dummy";
+   ovms::ModelInstance modelInstance;
+   ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+   config.setBatchSize(1);
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+   ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+   auto newBatchSize = config.getBatchSize() + 1;
+   EXPECT_EQ(modelInstance.reloadModel(newBatchSize), ovms::StatusCode::OK);
+   EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloadedWithNewBatchSize) {
+   std::filesystem::path dir = std::filesystem::current_path();
+   std::string dummy_model = dir.u8string() + "/src/test/dummy";
+   ovms::ModelInstance modelInstance;
+   ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+   config.setBatchSize(1);
+   // TODO dirty hack to avoid initializing config
+   setenv("NIREQ", "1", 1);
+   ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+   ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+   modelInstance.unloadModel();
+   ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+   auto newBatchSize = config.getBatchSize() + 1;
+   EXPECT_EQ(modelInstance.reloadModel(newBatchSize), ovms::StatusCode::OK);
    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }

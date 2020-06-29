@@ -106,6 +106,7 @@ cc_test(
         "test/ovinferrequestqueue_test.cpp",
         "test/predict_validation_test.cpp",
         "test/rest_predict_request_test.cpp",
+        "test/prediction_service_test.cpp",
         "test/prediction_service_utils_test.cpp",
         "test/serialization_tests.cpp",
         "test/stringutils_test.cpp",

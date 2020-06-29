@@ -22,3 +22,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG {
    1,  // NIREQ
    0  // model_version unuesed since version are read from path
 };
+
+constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
+constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
+constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;

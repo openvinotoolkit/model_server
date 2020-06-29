@@ -92,8 +92,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 status.string());
             return StatusCode::UNKNOWN_ERROR;
         }
-        modelVersion->unloadModel();
-        status = modelVersion->loadModel(config);
+        status = modelVersion->reloadModel(config);
         if (!status.ok()) {
             spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),

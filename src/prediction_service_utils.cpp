@@ -19,6 +19,8 @@
 
 namespace ovms {
 
+using tensorflow::serving::PredictRequest;
+
 Status checkIfAvailable(const ModelInstance& modelInstance) {
     ModelVersionState modelVersionState = modelInstance.getStatus().getState();
     if (ModelVersionState::AVAILABLE < modelVersionState) {
@@ -88,6 +90,21 @@ Status getModelInstance(ovms::ModelManager& manager,
     // Check model state to stop blocking model from unloading when state already changed from AVAILABLE. Unloading will be unblocked by
     // ModelInstancePredictRequestsHandlesCountGuard falling out of scope in main Predict()
     return checkIfAvailable(*modelInstance);
+}
+
+Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
+    try {
+        inferRequest.SetCompletionCallback([&inferRequestsQueue, executingInferId]() {
+            inferRequestsQueue.signalCompletedInference(executingInferId);
+        });
+        inferRequest.StartAsync();
+        inferRequestsQueue.waitForAsync(executingInferId);
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        return status;
+    }
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

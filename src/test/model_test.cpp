@@ -23,20 +23,25 @@
 
 namespace {
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
-   static const ovms::model_version_t UNUSED_VERSION = 987789;
+    static const ovms::model_version_t UNUSED_VERSION = 987789;
 public:
-   MockModelInstanceChangingStates() {
-       status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, ovms::ModelVersionState::START);
-   }
-   virtual ~MockModelInstanceChangingStates() {}
-   ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    MockModelInstanceChangingStates() {
+        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, ovms::ModelVersionState::START);
+    }
+    virtual ~MockModelInstanceChangingStates() {}
+    ovms::Status loadModel(const ovms::ModelConfig& config) override {
         version = config.getVersion();
         status.setAvailable();
         return ovms::StatusCode::OK;
-   }
-   void unloadModel() override {
-       status.setEnd();
-   }
+    }
+    ovms::Status reloadModel(const ovms::ModelConfig& config) override {
+        version = config.getVersion();
+        status.setAvailable();
+        return ovms::StatusCode::OK;
+    }
+    void unloadModel() override {
+        status.setEnd();
+    }
 };
 
 class MockModel : public ovms::Model {

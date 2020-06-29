@@ -17,10 +17,25 @@
 #include <memory>
 #include <string>
 
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "modelmanager.hpp"
 #include "modelinstance.hpp"
 
 namespace ovms {
+
+struct ExecutingStreamIdGuard {
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
+        inferRequestsQueue_(inferRequestsQueue),
+        id_(inferRequestsQueue_.getIdleStream()) {}
+    ~ExecutingStreamIdGuard() {
+        inferRequestsQueue_.returnStream(id_);
+    }
+    int getId() { return id_; }
+private:
+    ovms::OVInferRequestsQueue& inferRequestsQueue_;
+    const int id_;
+};
 
 class ModelInstancePredictRequestsHandlesCountGuard {
 public:
@@ -39,4 +54,6 @@ Status getModelInstance(ModelManager& manager,
                         model_version_t modelVersionId,
                         std::shared_ptr<ModelInstance>& modelInstance,
                         std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+
+Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
 }  // namespace ovms
