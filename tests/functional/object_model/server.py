@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import config
+from object_model.ovms_binary import OvmsBinary
 from object_model.ovms_docker import OvmsDocker
 from utils.logger import get_logger
 
@@ -22,20 +23,22 @@ logger = get_logger(__name__)
 
 class Server:
     def __init__(self, request, command_args, container_name_infix, start_container_command,
-                 env_vars=None, network="", image=config.image, container_log_line=config.container_log_line,
+                 env_vars=None, image=config.image, container_log_line=config.container_log_line,
                  server_log_level=config.log_level):
         self.request = request
         self.command_args = command_args
         self.container_name_infix = container_name_infix
         self.start_container_command = start_container_command
         self.env_vars = env_vars
-        self.network = network
         self.image = image
         self.container_log_line = container_log_line
         self.server_log_level = server_log_level
 
     def start(self):
-        ovms_docker = OvmsDocker(self.request, self.command_args, self.container_name_infix,
-                                 self.start_container_command, self.env_vars, self.network,
-                                 self.image, self.container_log_line, self.server_log_level)
-        return ovms_docker.start()
+        if config.ovms_binary_path is not None:
+            ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
+        else:
+            ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
+                              self.start_container_command, self.env_vars,
+                              self.image, self.container_log_line, self.server_log_level)
+        return ovms.start()

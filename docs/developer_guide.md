@@ -155,3 +155,20 @@ To run tests (test_model_version_policy, test_model_versions_handling, test_mult
 os.environ["START_CONTAINER_COMMAND"] = "/ie-serving-py/start_server.sh ie_serving config "
 os.environ["CONTAINER_LOG_LINE"] = "server listens on port"
 ```
+
+### Running tests on OVMS binary file
+
+To run tests on OVMS binary file specify following variable in user_config.py or in environment by using export, its value should be replaced by actual path to binary file:
+
+```
+os.environ["OVMS_BINARY_PATH"] = "/home/example_path/ovms/bin/ovms"
+```
+
+The following command executed in location of OVMS binary file should return paths to "lib" directory included in ovms.tar.gz file (ovms/bin/./../lib).
+```
+ldd ./ovms
+```
+Otherwise specify following variable in user_config.py or in environment by using export:
+```
+os.environ["LD_LIBRARY_PATH"] = ""
+```

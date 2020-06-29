@@ -27,13 +27,10 @@ from object_model.server import Server
 @pytest.fixture(scope="class")
 def start_server_model_ver_policy(request):
 
-    shutil.copyfile('tests/functional/model_version_policy_config.json',
-                    config.path_to_mount + '/model_ver_policy_config.json')
-
     shutil.copyfile('tests/functional/mapping_config.json',
                     config.path_to_mount + '/model_ver/3/mapping_config.json')
 
-    start_server_command_args = {"config_path": "/opt/ml/model_ver_policy_config.json"}
+    start_server_command_args = {"config_path": "{}/model_version_policy_config.json".format(config.models_path)}
     container_name_infix = "test-batch4-2out"
 
     server = Server(request, start_server_command_args,

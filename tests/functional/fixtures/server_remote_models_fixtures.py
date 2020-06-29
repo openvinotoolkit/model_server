@@ -68,13 +68,12 @@ def get_docker_network(request, get_docker_context):
 
 
 @pytest.fixture(scope="session")
-def start_minio_server(request, get_docker_network, get_docker_context):
+def start_minio_server(request, get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
     client = get_docker_context
     client.images.pull(config.minio_image)
-    network = get_docker_network
-    container_name = "minio.locals3-{}.com".format(get_tests_suffix()),
+    container_name = "minio.locals3-{}.com".format(get_tests_suffix())
 
     minio_access_key = os.getenv('MINIO_ACCESS_KEY')
     minio_secret_key = os.getenv('MINIO_SECRET_KEY')
@@ -89,7 +88,7 @@ def start_minio_server(request, get_docker_network, get_docker_context):
             'MINIO_SECRET_KEY=' + minio_secret_key]
 
     minio_docker = MinioDocker(request, container_name, config.start_minio_container_command,
-                               envs, network.name)
+                               envs)
 
     return minio_docker.start()
 
@@ -115,7 +114,7 @@ def get_minio_server_s3(start_minio_server):
         os.environ["MINIO_ACCESS_KEY"] = minio_access_key
         os.environ["MINIO_SECRET_KEY"] = minio_secret_key
 
-    _, ports = start_minio_server
+    minio_container, ports = start_minio_server
     s3 = boto3.resource('s3',
                         endpoint_url='http://localhost:{}'.format(
                             ports["grpc_port"]),
@@ -134,22 +133,23 @@ def get_minio_server_s3(start_minio_server):
     s3.Bucket('inference').upload_file(input_xml,
                                        '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
 
-    return s3, ports
+    return s3, ports, minio_container
 
 
 @pytest.fixture(scope="class")
-def start_server_single_model_from_minio(request, get_docker_network, get_minio_server_s3):
-
-    network = get_docker_network
+def start_server_single_model_from_minio(request, get_minio_server_s3):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
     aws_secret_access_key = os.getenv('MINIO_SECRET_KEY')
     aws_region = os.getenv('AWS_REGION')
 
-    _, ports = get_minio_server_s3
+    _, ports, minio_container = get_minio_server_s3
     grpc_port = ports["grpc_port"]
-    minio_endpoint = 'http://minio.locals3-{}.com:{}'.format(
-        get_tests_suffix(), grpc_port)
+
+    if config.ovms_binary_path:
+        minio_endpoint = "http://localhost:{}".format(grpc_port)
+    else:
+        minio_endpoint = "{}:{}".format(MinioDocker.get_ip(minio_container), grpc_port)
 
     envs = ['MINIO_ACCESS_KEY=' + aws_access_key_id,
             'MINIO_SECRET_KEY=' + aws_secret_access_key,
@@ -162,5 +162,5 @@ def start_server_single_model_from_minio(request, get_docker_network, get_minio_
                                  "model_path": ResnetS3.model_path}
     container_name_infix = "test-single-minio"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs, network.name)
+                    container_name_infix, config.start_container_command, envs)
     return server.start()

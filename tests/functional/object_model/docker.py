@@ -28,12 +28,12 @@ CONTAINER_STATUS_RUNNING = "running"
 
 class Docker:
     
-    COMMON_RETRY = {"tries": 30, "delay": 2}
+    COMMON_RETRY = {"tries": 90, "delay": 2}
     GETTING_LOGS_RETRY = COMMON_RETRY
     GETTING_STATUS_RETRY = COMMON_RETRY
 
     def __init__(self, request, container_name, start_container_command,
-                 env_vars_container=None, network="", image=config.image, container_log_line=config.container_log_line):
+                 env_vars_container=None, image=config.image, container_log_line=config.container_log_line):
         self.client = docker.from_env()
         self.grpc_port, self.rest_port = get_ports_for_fixture()
         self.image = image
@@ -42,7 +42,6 @@ class Docker:
         self.container_name = container_name
         self.start_container_command = start_container_command
         self.env_vars_container = env_vars_container if env_vars_container else []
-        self.network = network
         self.container_log_line = container_log_line
 
     def start(self):
@@ -64,8 +63,7 @@ class Docker:
                                                                self.rest_port},
                                                     remove=True, volumes=volumes_dict,
                                                     command=self.start_container_command,
-                                                    environment=self.env_vars_container,
-                                                    network=self.network)
+                                                    environment=self.env_vars_container)
 
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING)
         self.ensure_logs_contains()
