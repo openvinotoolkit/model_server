@@ -101,17 +101,24 @@ enum class StatusCode {
     GCS_FAILED_GET_OBJECT,
     GCS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
+    // REST handler
+    REST_NOT_FOUND,                     /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,       /*!< Could not parse model version in request */
+    REST_MALFORMED_REQUEST,             /*!< Malformed REST request */
+
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,         /*!< REST body should be JSON object */
     REST_PREDICT_UNKNOWN_ORDER,         /*!< Could not detect order (row/column) */
     REST_INSTANCES_NOT_AN_ARRAY,        /*!< When parsing row order, instances must be an array */
-    REST_INSTANCE_NOT_AN_OBJECT,        /*!< Instance needs to be an object */
+    REST_NAMED_INSTANCE_NOT_AN_OBJECT,  /*!< When parsing named instance it needs to be an object */
+    REST_INPUT_NOT_PREALLOCATED,        /*!< When parsing no named instance, exactly one input need to be preallocated */
     REST_NO_INSTANCES_FOUND,            /*!< Missing instances in row order */
-    REST_COULD_NOT_PARSE_INSTANCE,      /*!< Error while parsing instance content */
+    REST_INSTANCES_NOT_NAMED_OR_NONAMED,/*!< Unknown instance format, neither named or nonamed */
+    REST_COULD_NOT_PARSE_INSTANCE,      /*!< Error while parsing instance content, not valid ndarray */
     REST_INSTANCES_BATCH_SIZE_DIFFER,   /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
-    REST_NOT_FOUND,                     /*!< Requested REST resource not found */
-    REST_COULD_NOT_PARSE_VERSION,       /*!< Could not parse model version in request */
-    REST_MALFORMED_REQUEST              /*!< Malformed REST request */
+    REST_INPUTS_NOT_AN_OBJECT,          /*!< When parsing column order, inputs must be an object */
+    REST_NO_INPUTS_FOUND,               /*!< Missing inputs in column order */
+    REST_COULD_NOT_PARSE_INPUT,         /*!< Error while parsing input content, not valid ndarray */
 };
 
 class Status {

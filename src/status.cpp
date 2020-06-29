@@ -98,26 +98,24 @@ const net_http::HTTPStatusCode Status::toHTTPStatusCode(StatusCode code) {
     switch (code) {
         case StatusCode::OK:
             return HTTPStatusCode::OK;
-        case StatusCode::REST_BODY_IS_NOT_AN_OBJECT:
-            return HTTPStatusCode::BAD_REQUEST;
-        case StatusCode::REST_PREDICT_UNKNOWN_ORDER:
-            return HTTPStatusCode::BAD_REQUEST;
-        case StatusCode::REST_INSTANCES_NOT_AN_ARRAY:
-            return HTTPStatusCode::BAD_REQUEST;
-        case StatusCode::REST_INSTANCE_NOT_AN_OBJECT:
-            return HTTPStatusCode::ERROR;
-        case StatusCode::REST_NO_INSTANCES_FOUND:
-            return HTTPStatusCode::ERROR;
-        case StatusCode::REST_COULD_NOT_PARSE_INSTANCE:
-            return HTTPStatusCode::ERROR;
-        case StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER:
-            return HTTPStatusCode::BAD_REQUEST;
         case StatusCode::REST_NOT_FOUND:
             return HTTPStatusCode::NOT_FOUND;
         case StatusCode::REST_COULD_NOT_PARSE_VERSION:
-            return HTTPStatusCode::BAD_REQUEST;
         case StatusCode::REST_MALFORMED_REQUEST:
-            return HTTPStatusCode::ERROR;
+            return HTTPStatusCode::BAD_REQUEST;
+        case StatusCode::REST_BODY_IS_NOT_AN_OBJECT:
+        case StatusCode::REST_PREDICT_UNKNOWN_ORDER:
+        case StatusCode::REST_INSTANCES_NOT_AN_ARRAY:
+        case StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT:
+        case StatusCode::REST_INPUT_NOT_PREALLOCATED:
+        case StatusCode::REST_NO_INSTANCES_FOUND:
+        case StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED:
+        case StatusCode::REST_COULD_NOT_PARSE_INSTANCE:
+        case StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER:
+        case StatusCode::REST_INPUTS_NOT_AN_OBJECT:
+        case StatusCode::REST_NO_INPUTS_FOUND:
+        case StatusCode::REST_COULD_NOT_PARSE_INPUT:
+            return HTTPStatusCode::BAD_REQUEST;
         default:
             return HTTPStatusCode::ERROR;
     }
