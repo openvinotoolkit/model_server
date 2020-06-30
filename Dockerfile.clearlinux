@@ -3,6 +3,7 @@ FROM clearlinux as base_build
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
+ARG ov_source_branch=2020.3.0
 ARG ovms_metadata_file
 
 RUN swupd bundle-add \
@@ -32,10 +33,10 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
-RUN git clone --recurse-submodules -j4 https://github.com/opencv/dldt --branch 2020.2 --single-branch --depth 1 /openvino
+RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 
 # Use package for centos7 on clearlinux - seems to be working just fine.
-RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
+RUN sed -i "/^[ \t]*set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
 
 WORKDIR /openvino/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
