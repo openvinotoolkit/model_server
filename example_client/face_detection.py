@@ -107,7 +107,7 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
                 print("x_max", x_max)
                 print("y_max", y_max)
 
-                img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
+                img_out = cv2.rectangle(cv2.UMat(img_out),(x_min,y_min),(x_max,y_max),(0,0,255),1)
                 # draw each detected box on the input image
         print("saving result to",os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'))
         cv2.imwrite(os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'),img_out)
