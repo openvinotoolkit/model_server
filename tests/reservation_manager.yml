@@ -1,0 +1,10 @@
+---
+config:
+  pool_range:
+    start: 30000
+    stop: 60000
+  pool_part_size: 1000
+  locks_dir: /tmp
+  envs:
+    ports_prefix: PORTS_PREFIX
+    slices: 2
