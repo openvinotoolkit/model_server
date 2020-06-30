@@ -27,6 +27,7 @@
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service.hpp"
+#include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "status.hpp"
 
@@ -45,61 +46,11 @@ using tensorflow::serving::PredictionService;
 
 namespace ovms {
 
-class ModelInstancePredictRequestsHandlesCountGuard {
-public:
-    ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) : modelInstance(modelInstance) {
-        modelInstance.increasePredictRequestsHandlesCount();
-    }
-    ~ModelInstancePredictRequestsHandlesCountGuard() {
-        modelInstance.decreasePredictRequestsHandlesCount();
-    }
-private:
-    ModelInstance& modelInstance;
-};
-
-Status checkIfAvailable(const ovms::ModelInstance& modelInstance) {
-    ModelVersionState modelVersionState = modelInstance.getStatus().getState();
-    if (ModelVersionState::AVAILABLE > modelVersionState) {
-        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
-    }
-    if (ModelVersionState::AVAILABLE < modelVersionState) {
-        return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
-    }
-    return StatusCode::OK;
-}
-
 Status getModelInstance(const PredictRequest* request,
-                                      std::shared_ptr<ovms::ModelInstance>& modelInstance,
-                                      std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+                        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+                        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
-
-    auto& modelName = request->model_spec().name();
-    auto modelVersionId = request->model_spec().version().value();
-    spdlog::debug("Requesting model:{}; version:{}.", modelName, modelVersionId);
-
-    auto model = manager.findModelByName(modelName);
-    if (model == nullptr) {
-        return StatusCode::MODEL_NAME_MISSING;
-    }
-    if (modelVersionId != 0) {
-        modelInstance = model->getModelInstanceByVersion(modelVersionId);
-        if (modelInstance == nullptr) {
-            return StatusCode::MODEL_VERSION_MISSING;
-        }
-    } else {
-        modelInstance = model->getDefaultModelInstance();
-        if (modelInstance == nullptr) {
-            return StatusCode::MODEL_VERSION_MISSING;
-        }
-    }
-    // don't lock modelInstance from unloading if not available already
-    Status status = checkIfAvailable(*modelInstance);
-    if (!status.ok()) {
-        return status;
-    }
-    modelInstancePredictRequestsHandlesCountGuardPtr = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*modelInstance);
-    // Check model state to stop blocking model from unloading when state already changed to UNLOADING
-    return checkIfAvailable(*modelInstance);
+    return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
 }
 
 grpc::Status validateRequest(const PredictRequest* request, ovms::ModelInstance& modelInstance) {

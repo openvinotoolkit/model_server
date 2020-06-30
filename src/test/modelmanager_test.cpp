@@ -90,7 +90,7 @@ TEST(ModelManager, ConfigParseNoModels) {
     std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     auto status = manager.start(configFile);
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST(ModelManager, WrongConfigFile) {
@@ -131,10 +131,10 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
     std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
     ovms::model_versions_t versions;
 
-    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getVersionReader(path);
+    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getInstance().getVersionReader(path);
     auto status = versionReader->readAvailableVersions(versions);
 
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
@@ -147,7 +147,7 @@ TEST(ModelManager, ReadVersionsInvalidPath) {
     }
 
     std::vector<ovms::model_version_t> versions;
-    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getVersionReader(path);
+    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getInstance().getVersionReader(path);
     auto status = versionReader->readAvailableVersions(versions);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
@@ -164,7 +164,7 @@ TEST(ModelManager, StartFromFile) {
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.start(fileToReload);
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, ovms::StatusCode::OK);
     manager.join();
     modelMock.reset();
 }
@@ -182,7 +182,7 @@ TEST(ModelManager, ConfigReloading) {
     auto status = manager.start(fileToReload);
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, ovms::StatusCode::OK);
     std::thread t([](){
         std::this_thread::sleep_for(SLEEP_TIME_S);
     });

@@ -31,7 +31,6 @@ Status Model::addVersion(const ModelConfig& config) {
     if (!status.ok()) {
         return status;
     }
-
     const auto& version = config.getVersion();
     modelVersions[version] = std::move(modelInstance);
     updateDefaultVersion();

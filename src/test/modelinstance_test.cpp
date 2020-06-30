@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "../modelinstance.hpp"
+#include "test_utils.hpp"
 
 using testing::Return;
 
@@ -34,15 +35,6 @@ const std::vector<ovms::ModelVersionState> INFER_QUEUE_FAILURE_FOR_STATES {
     ovms::ModelVersionState::LOADING,
     ovms::ModelVersionState::UNLOADING,
     ovms::ModelVersionState::END
-};
-
-const ovms::ModelConfig DUMMY_MODEL_CONFIG {
-   "dummy",
-   std::filesystem::current_path().u8string() + "/src/test/dummy",
-   "CPU",  // backend
-   1,  // batchsize
-   1,  // NIREQ
-   0  // model_version
 };
 
 namespace {
@@ -69,7 +61,7 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
    setenv("NIREQ", "1", 1);
    ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-   ASSERT_TRUE(status.ok());
+   ASSERT_EQ(status, ovms::StatusCode::OK);
    modelInstance.increasePredictRequestsHandlesCount();
    EXPECT_FALSE(modelInstance.canUnloadInstance());
 }
@@ -79,7 +71,7 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
    // dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
    ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
-   ASSERT_TRUE(status.ok());
+   ASSERT_EQ(status, ovms::StatusCode::OK);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
    modelInstance.increasePredictRequestsHandlesCount();
    modelInstance.decreasePredictRequestsHandlesCount();
@@ -225,6 +217,6 @@ TEST_F(TestLoadModel, SuccesfullLoad) {
    ovms::ModelInstance modelInstance;
    // TODO dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
-   EXPECT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+   EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }

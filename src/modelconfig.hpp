@@ -154,7 +154,7 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
                     basePath(basePath),
                     backend(backend),
                     batchSize(batchSize),
-                    modelVersionPolicy({}),
+                    modelVersionPolicy(std::make_shared<LatestModelVersionPolicy>()),
                     nireq(nireq),
                     pluginConfig({}),
                     shape({}),

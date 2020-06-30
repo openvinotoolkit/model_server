@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 
 #include "../model.hpp"
+#include "test_utils.hpp"
 
 namespace {
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
@@ -49,14 +50,6 @@ protected:
     }
 };
 
-const ovms::ModelConfig DUMMY_MODEL_CONFIG {
-   "dummy",
-   std::filesystem::current_path().u8string() + "/src/test/dummy",
-   "CPU",  // backend
-   1,  // batchsize
-   1,  // NIREQ
-};
-
 class ModelDefaultVersions: public ::testing::Test { };
 }  //  namespace
 
@@ -85,7 +78,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnValidWhen1Added) {
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
@@ -98,11 +91,11 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighest) {
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
@@ -115,12 +108,12 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
@@ -138,12 +131,12 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_TRUE(mockModel.addVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
@@ -152,7 +145,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_TRUE(mockModel.reloadVersions(versionsToChange, config).ok());
+    ASSERT_EQ(mockModel.reloadVersions(versionsToChange, config), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;

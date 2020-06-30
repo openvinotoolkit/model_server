@@ -200,7 +200,7 @@ namespace ovms {
          * @param path to where read versions from
          * @return Version Reader
          */
-        static std::shared_ptr<IVersionReader> getVersionReader(const std::string& path);
+        virtual std::shared_ptr<IVersionReader> getVersionReader(const std::string& path);
 
         /**
          * @brief Checks what versions needs to be started, reloaded, retired based on currently served ones

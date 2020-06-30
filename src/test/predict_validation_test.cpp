@@ -30,8 +30,8 @@ class PredictValidation : public ::testing::Test {
 
     class MockModelInstance : public ovms::ModelInstance {
     public:
-        MOCK_METHOD(const ovms::tensor_map_t&,  getInputsInfo,  ());
-        MOCK_METHOD(size_t,                     getBatchSize,   ());
+        MOCK_METHOD(const ovms::tensor_map_t&,  getInputsInfo,  (), (const, override));
+        MOCK_METHOD(size_t,                     getBatchSize,   (), (const, override));
     };
 
     std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
