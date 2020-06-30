@@ -32,11 +32,12 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
-const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
-const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
 const char* NIREQ = "NIREQ";
 
+const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
+
+const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 Status ModelInstance::loadInputTensors(const ModelConfig& config) {
     auto networkShapes = network->getInputShapes();
@@ -259,7 +260,6 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             return status;
         }
         this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
-
         network->setBatchSize(this->batchSize);
         status = loadInputTensors(config);
         if (!status.ok()) {
@@ -278,14 +278,40 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
             numberOfParallelInferRequests);
 
         this->status.setAvailable();
+        modelLoadedNotify.notify_all();
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
     }
-
     return StatusCode::OK;
+}
+
+bool ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds) {
+    std::mutex mtx;
+    std::unique_lock<std::mutex> lk(mtx);
+    // TODO wait several time since no guarantee that wakeup will be triggered before calling wait_for
+    const uint waitLoadedTimestepMilliseconds = 10;
+    uint waitCheckpointsCounter = WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS / waitLoadedTimestepMilliseconds;
+    SPDLOG_INFO("Waiting for loaded state for model:{} version:{} with timestep:{} timeout:{} check count:{}", getName(), getVersion(),
+        waitLoadedTimestepMilliseconds, WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS, waitCheckpointsCounter);
+
+    while (waitCheckpointsCounter-- > 0) {
+        // TODO consider bare sleep
+        if (modelLoadedNotify.wait_for(lk,
+                                    std::chrono::milliseconds(waitLoadedTimestepMilliseconds),
+                                    [this](){
+                                        return this->getStatus().getState() > ModelVersionState::LOADING;
+                                    })) {
+            SPDLOG_DEBUG("Waiting for loaded state reached timeout for model:{} version:{}", getName(), getVersion());
+            break;
+        }
+        if (getStatus().getState() > ModelVersionState::LOADING) {
+            break;
+        }
+    }
+    return getStatus().getState() > ModelVersionState::LOADING;
 }
 
 void ModelInstance::unloadModel() {

@@ -14,22 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <grpcpp/server_context.h>
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-
-namespace ovms {
-
-class PredictionServiceImpl final : public tensorflow::serving::PredictionService::Service {
-    grpc::Status Predict(
-                grpc::ServerContext*                    context,
-        const   tensorflow::serving::PredictRequest*    request,
-                tensorflow::serving::PredictResponse*   response) override;
-
-    grpc::Status GetModelMetadata(
-                grpc::ServerContext*                            context,
-        const   tensorflow::serving::GetModelMetadataRequest*   request,
-                tensorflow::serving::GetModelMetadataResponse*  response) override;
+const ovms::ModelConfig DUMMY_MODEL_CONFIG {
+   "dummy",
+   std::filesystem::current_path().u8string() + "/src/test/dummy",
+   "CPU",  // backend
+   1,  // batchsize
+   1,  // NIREQ
+   0  // model_version unuesed since version are read from path
 };
-
-}  // namespace ovms

@@ -115,7 +115,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
-    models.clear();
     configFilename = jsonFilename;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
@@ -233,7 +232,6 @@ std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
     if (basePath.rfind("gs://", 0) == 0) {
         return std::make_shared<ovms::GCSFileSystem>();
     }
-
     return std::make_shared<LocalFileSystem>();
 }
 
@@ -254,13 +252,13 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return status;
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
-    auto model = getModelIfExistCreateElse(config.getName());
-
     // TODO check if reload whole model when part of config changes (eg. CPU_THROUGHPUT_STREAMS)
     // right now assumes no need to reload model
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
+
+    auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     status = model->addVersions(versionsToStart, config);
@@ -270,7 +268,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             status.string());
         return status;
     }
-
     status = model->reloadVersions(versionsToReload, config);
     if (!status.ok()) {
         spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
@@ -278,7 +275,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             status.string());
         return status;
     }
-
     status = model->retireVersions(versionsToRetire);
     if (!status.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",

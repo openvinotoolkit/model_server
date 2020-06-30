@@ -34,10 +34,10 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public ovms::ModelInstance {
     public:
-        MOCK_METHOD(const ovms::tensor_map_t&,      getInputsInfo,  ());
-        MOCK_METHOD(const ovms::tensor_map_t&,      getOutputsInfo, ());
-        MOCK_METHOD(const std::string&,             getName,        ());
-        MOCK_METHOD(ovms::model_version_t,          getVersion,     ());
+        MOCK_METHOD(const ovms::tensor_map_t&,      getInputsInfo,  (), (const, override));
+        MOCK_METHOD(const ovms::tensor_map_t&,      getOutputsInfo, (), (const, override));
+        MOCK_METHOD(const std::string&,             getName,        (), (const, override));
+        MOCK_METHOD(ovms::model_version_t,          getVersion,     (), (const, override));
     };
 
     tensor_desc_map_t  inputTensors;

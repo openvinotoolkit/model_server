@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <condition_variable>
 #include <functional>
 #include <map>
 #include <memory>
@@ -134,6 +135,11 @@ namespace ovms {
          */
         static constexpr std::array<const char*, 2> REQUIRED_MODEL_FILES_EXTENSIONS {".bin", ".xml"};
 
+        /**
+         * @brief Notifies model instance users who wait for loading
+         */
+        std::condition_variable modelLoadedNotify;
+
     private:
         /**
          * @brief Holds the information about inputs and it's parameters
@@ -207,7 +213,7 @@ namespace ovms {
          * 
          * @return model name
          */
-        virtual const std::string& getName() {
+        virtual const std::string& getName() const {
             return name;
         }
 
@@ -216,7 +222,7 @@ namespace ovms {
          *
          * @return path
          */
-        const std::string& getPath() {
+        const std::string& getPath() const {
             return path;
         }
 
@@ -225,7 +231,7 @@ namespace ovms {
          *
          * @return version
          */
-        virtual model_version_t getVersion() {
+        virtual model_version_t getVersion() const {
             return version;
         }
 
@@ -252,7 +258,7 @@ namespace ovms {
          *
          * @return batch size
          */
-        virtual size_t getBatchSize() {
+        virtual size_t getBatchSize() const {
             return batchSize;
         }
 
@@ -261,7 +267,7 @@ namespace ovms {
          *
          * @return const tensor_map_t& 
          */
-        virtual const tensor_map_t& getInputsInfo() {
+        virtual const tensor_map_t& getInputsInfo() const {
             return inputsInfo;
         }
 
@@ -270,7 +276,7 @@ namespace ovms {
          *
          * @return const tensor_map_t& 
          */
-        virtual const tensor_map_t& getOutputsInfo() {
+        virtual const tensor_map_t& getOutputsInfo() const {
             return outputsInfo;
         }
 
@@ -307,6 +313,15 @@ namespace ovms {
          */
         virtual void unloadModel();
 
+        /**
+         * @brief Wait for model to change to AVAILABLE state
+         * 
+         * @return True if model exited loading state
+         */ 
+        bool waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds = WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS);
+
         const Status validate(const tensorflow::serving::PredictRequest* request);
+
+        static const int WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS = 100;
     };
 }  // namespace ovms
