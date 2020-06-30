@@ -443,15 +443,15 @@ In order to use this feature in OpenVino&trade; Model Server, following steps ar
 * Set `target_device` for the model in configuration json file to `MULTI:<DEVICE_1>,<DEVICE_2>` (e.g. `MULTI:MYRIAD,CPU`, order of the devices defines their priority, so `MYRIAD` devices will be used first in this example)
 * Set `nireq` (number of inference requests) for the model in configuration json file to be at least equal to the number of the devices that will be used - optimal number of inference requests may vary depending on the model and type of used devices. Following script will help you to get optimal number of requests suggested by OpenVino&trade;:
 ```python
-from openvino.inference_engine import IEPlugin, IENetwork
+from openvino.inference_engine import IECore, IENetwork
 
 # replace MULTI:MYRIAD,CPU if you are using different multi device configuration
-plugin = IEPlugin(device='MULTI:MYRIAD,CPU')
+core = IECore()
 # change paths to location of your model
 model_xml = "<model's xml file path>"
 model_bin = "<model's bin file path>"
 net = IENetwork(model=model_xml, weights=model_bin)
-exec_net = plugin.load(network=net)
+exec_net = core.load_network(network=net, device_name='MULTI:MYRIAD,CPU')
 print(exec_net.get_metric('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))
 ```
 * Set `grpc_workers` (or `rest_workers` if you are using REST endpoints for inference) parameter to be at least equal to the number of inference requests
