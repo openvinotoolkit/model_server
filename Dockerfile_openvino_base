@@ -1,4 +1,4 @@
-FROM openvino/ubuntu18_runtime:2020.2
+FROM openvino/ubuntu18_runtime:2020.3
 USER root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

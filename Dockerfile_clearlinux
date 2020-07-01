@@ -1,15 +1,114 @@
+FROM clearlinux as build
+
+ARG ov_source_branch=2020.3.0
+
+# Stage for building TF serving API for Python 3.8
+RUN swupd bundle-add \
+    c-basic \
+    curl \
+    devpkg-curl \
+    git \
+    devpkg-libusb \
+    deprecated-python2 \
+    python3-basic \
+    wget \
+    patch  \
+    diffutils \
+    dev-utils \
+    unzip \
+    which
+# Set up Bazel
+ENV BAZEL_VERSION 0.24.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    cd / && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+RUN git clone -b 2.0.0 https://github.com/tensorflow/serving
+WORKDIR serving
+RUN pip3 install wheel
+RUN mkdir -vp /.cache/bazel/
+RUN bazel build --jobs=8 --color=yes --curses=yes \
+    --verbose_failures \
+    tensorflow_serving/tools/pip_package:build_pip_package
+RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
+
+RUN swupd repair -V 32750 --force
+
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
+RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
+
+# Use package for centos7 on clearlinux - seems to be working just fine.
+RUN sed -i "/^[ \t]*set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
+
+WORKDIR /openvino/build
+# RUN pip3 install --no-cache-dir -r /openvino/inference-engine/ie_bridges/python/requirements.txt
+RUN pip3 install --no-cache-dir numpy
+RUN pip3 install --no-cache-dir cython==0.29.17
+RUN cmake -DENABLE_PYTHON=ON -DPYTHON_EXECUTABLE='/usr/bin/python3.8' -DPYTHON_LIBRARY=/usr/lib64/libpython3.8.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.8  -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy -Wno-error=deprecated-declarations " -DCMAKE_C_FLAGS=" -Wno-error=parentheses " ..
+
+RUN make --jobs=8
+
+
+FROM clearlinux:latest as clear-pkg
+
+RUN swupd update --no-boot-update \
+    && swupd bundle-add wget unzip lftp package-utils cpio \
+    && rm -rf /var/lib/swupd
+
+RUN if [ ! -e "/usr/lib64/libzstd.so.1"  ]; then ln -sf /usr/lib64/haswell/libzstd.so.1.4.5 /usr/lib64/libzstd.so.1 ; fi
+
+WORKDIR /pkg
+
+RUN mkdir -p rpms/runtime &&  source /etc/os-release \
+    && cd rpms/runtime \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget clinfo-bin*.rpm intel-compute-runtime-data*.rpm intel-compute-runtime-lib*.rpm intel-gmmlib-lib*.rpm intel-graphics-compiler-lib*.rpm libva-lib*.rpm ocl-icd-lib*.rpm opencl-clang-lib*.rpm"
+
+RUN mkdir -p out/runtime \
+    && for p in `ls rpms/runtime/*.rpm`; do rpm2cpio $p | (cd out/runtime/; cpio -i -d -u --quiet); done \
+    && (cd out/runtime ; echo "OpenCL Runtime files:" ; find . -type f -or -type l)
+
+RUN mkdir -p rpms/tf && pwd && source /etc/os-release \
+    && cd rpms/tf \
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget tensorflow-2.0.1-98.x86_64.rpm numpy-*  openblas-* Werkzeug* protobuf*  absl-py* wrapt* gast* astor* termcolor* Keras_Applications* Keras_Preprocessing*"
+
+RUN mkdir -p out/tf \
+    && for p in `ls rpms/tf/*.rpm`; do rpm2cpio $p | (cd out/tf/; cpio -i -d -u --quiet); done \
+    && (cd out/tf ; echo "TensorFlow files:" ; find . -type f -or -type l) \
+    && du -shc out/*
+
+
 FROM clearlinux
 
-RUN swupd update && swupd bundle-add computer-vision-basic && swupd clean
-# OpenVino R3 version
+RUN swupd update && \
+    swupd bundle-add \
+    python3-basic \
+    devpkg-libusb \
+    && rm -rf /var/lib/swupd
 
-COPY start_server.sh setup.py requirements_clearlinux.txt version /ie-serving-py/
-COPY ie_serving /ie-serving-py/ie_serving
+COPY --from=build /openvino/inference-engine/temp/tbb/lib /usr/local/lib/inference-engine
+COPY --from=build /openvino/bin/intel64/Release/lib /usr/local/lib/inference-engine
+COPY --from=clear-pkg /pkg/out/runtime/ /
+COPY --from=clear-pkg /pkg/out/tf/ /
 
 WORKDIR /ie-serving-py
 
-RUN pip --no-cache-dir install -r requirements_clearlinux.txt
+COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py/
+COPY --from=build /tmp/pip/tensorflow_serving_api-*.whl .
 
-RUN pip install .
+RUN pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
+    pip3 --no-cache-dir install -r requirements_clearlinux.txt && \
+    rm tensorflow_serving_api-*.whl
+
+COPY ie_serving /ie-serving-py/ie_serving
+
+RUN pip3 --no-cache-dir install .
+
+ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
+ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine
 
 RUN sed -i '/activate/d' start_server.sh
+
