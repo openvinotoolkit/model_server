@@ -1,0 +1,28 @@
+diff --git a/tensorflow_serving/util/BUILD b/tensorflow_serving/util/BUILD
+index 4fe1c1be..601e8675 100644
+--- a/tensorflow_serving/util/BUILD
++++ b/tensorflow_serving/util/BUILD
+@@ -4,7 +4,7 @@ load("//tensorflow_serving:serving.bzl", "serving_proto_library", "serving_proto
+ 
+ package(
+     default_visibility = [
+-        "//tensorflow_serving:internal",
++        "//visibility:public",
+     ],
+     features = ["-layering_check"],
+ )
+diff --git a/tensorflow_serving/util/net_http/server/public/BUILD b/tensorflow_serving/util/net_http/server/public/BUILD
+index e7f96d98..905ab4e4 100644
+--- a/tensorflow_serving/util/net_http/server/public/BUILD
++++ b/tensorflow_serving/util/net_http/server/public/BUILD
+@@ -2,9 +2,7 @@
+ 
+ package(
+     default_visibility = [
+-        ":http_server_clients",
+-        "//tensorflow_serving:internal",
+-        "//tensorflow_serving/util/net_http:__subpackages__",
++        "//visibility:public"
+     ],
+ )
+ 

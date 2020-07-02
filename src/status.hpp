@@ -20,8 +20,11 @@
 #include <utility>
 
 #include <grpcpp/server_context.h>
+#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 
 namespace ovms {
+
+namespace net_http = tensorflow::serving::net_http;
 
 enum class StatusCode {
     OK,                                 /*!< Success */
@@ -106,6 +109,9 @@ enum class StatusCode {
     REST_NO_INSTANCES_FOUND,            /*!< Missing instances in row order */
     REST_COULD_NOT_PARSE_INSTANCE,      /*!< Error while parsing instance content */
     REST_INSTANCES_BATCH_SIZE_DIFFER,   /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
+    REST_NOT_FOUND,                     /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,       /*!< Could not parse model version in request */
+    REST_MALFORMED_REQUEST              /*!< Malformed REST request */
 };
 
 class Status {
@@ -160,6 +166,8 @@ public:
     operator const std::string&() const {
         return this->string();
     }
+
+    static const net_http::HTTPStatusCode toHTTPStatusCode(StatusCode code);
 };
 
 }  // namespace ovms

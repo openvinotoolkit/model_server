@@ -34,9 +34,10 @@
 
 #include "avx_check.hpp"
 #include "config.hpp"
+#include "http_server.hpp"
+#include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
-#include "model_service.hpp"
 #include "stringutils.hpp"
 
 using grpc::Server;
@@ -114,7 +115,7 @@ void logConfig(Config& config) {
     spdlog::debug("gRPC port: {}", config.port());
     spdlog::debug("REST port: {}", config.restPort());
     spdlog::debug("REST workers: {}", config.restWorkers());
-    spdlog::debug("gRPC servers: {}", config.grpcWorkers());
+    spdlog::debug("gRPC workers: {}", config.grpcWorkers());
     spdlog::debug("gRPC channel arguments: {}", config.grpcChannelArguments());
     spdlog::debug("log level: {}", config.logLevel());
     spdlog::debug("log path: {}", config.logPath());
@@ -132,85 +133,127 @@ void onTerminate(int status) {
     exit(0);
 }
 
+void installSignalHandlers() {
+    static struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = onInterrupt;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
+    static struct sigaction sigTermHandler;
+    sigTermHandler.sa_handler = onTerminate;
+    sigemptyset(&sigTermHandler.sa_mask);
+    sigTermHandler.sa_flags = 0;
+    sigaction(SIGTERM, &sigTermHandler, NULL);
+}
+
+std::vector<std::unique_ptr<Server>> startGRPCServer(
+            PredictionServiceImpl& predict_service,
+            ModelServiceImpl& model_service) {
+    const int GIGABYTE = 1024 * 1024 * 1024;
+
+    std::vector<GrpcChannelArgument> channel_arguments;
+    auto& config = ovms::Config::instance();
+    auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
+    if (!status.ok()) {
+        spdlog::error("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
+        exit(1);
+    }
+
+    logConfig(config);
+    auto& manager = ModelManager::getInstance();
+    status = manager.start();
+    if (!status.ok()) {
+        spdlog::error("ovms::ModelManager::Start() Error: {}", status.string());
+        exit(1);
+    }
+
+    ServerBuilder builder;
+    builder.SetMaxReceiveMessageSize(GIGABYTE);
+    builder.SetMaxSendMessageSize(GIGABYTE);
+    builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
+    builder.RegisterService(&predict_service);
+    builder.RegisterService(&model_service);
+    for (const GrpcChannelArgument& channel_argument : channel_arguments) {
+        // gRPC accept arguments of two types, int and string. We will attempt to
+        // parse each arg as int and pass it on as such if successful. Otherwise we
+        // will pass it as a string. gRPC will log arguments that were not accepted.
+        spdlog::debug("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
+        try {
+            int i = std::stoi(channel_argument.value);
+            builder.AddChannelArgument(channel_argument.key, i);
+        }
+        catch (std::invalid_argument const &e) {
+            builder.AddChannelArgument(channel_argument.key, channel_argument.value);
+        }
+        catch (std::out_of_range const &e) {
+            spdlog::error("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
+        }
+    }
+
+    std::vector<std::unique_ptr<Server>> servers;
+    uint grpcServersCount = getGRPCServersCount();
+    spdlog::debug("Starting grpc servers: {}", grpcServersCount);
+
+    for (uint i = 0; i < grpcServersCount; ++i) {
+        servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
+    }
+    spdlog::info("Server started on port {}", config.port() );
+
+    return servers;
+}
+
+std::unique_ptr<ovms::http_server> startRESTServer() {
+    const int REST_TIMEOUT = 5000;
+
+    auto& config = ovms::Config::instance();
+    if (config.restPort() != 0) {
+        const std::string server_address = "localhost:" + std::to_string(config.restPort());
+
+        int workers = config.restWorkers() ? config.restWorkers() : 10;
+        spdlog::info("workers {}", workers);
+
+        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restPort(), workers, REST_TIMEOUT);
+        if (restServer != nullptr) {
+            spdlog::info("Started REST server at {}", server_address);
+        } else {
+            spdlog::error("Failed to start REST server at {}", server_address);
+        }
+
+        return restServer;
+    }
+
+    return nullptr;
+}
+
 int server_main(int argc, char** argv) {
     try {
-        const int GIGABYTE = 1024 * 1024 * 1024;
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
+        installSignalHandlers();
 
         if (!ovms::check_4th_gen_intel_core_features()) {
             spdlog::error("CPU with AVX support required, current CPU has no such support.");
             return 1;
         }
-
-        struct sigaction sigIntHandler;
-        sigIntHandler.sa_handler = onInterrupt;
-        sigemptyset(&sigIntHandler.sa_mask);
-        sigIntHandler.sa_flags = 0;
-        sigaction(SIGINT, &sigIntHandler, NULL);
-
-        struct sigaction sigTermHandler;
-        sigTermHandler.sa_handler = onTerminate;
-        sigemptyset(&sigTermHandler.sa_mask);
-        sigTermHandler.sa_flags = 0;
-        sigaction(SIGTERM, &sigTermHandler, NULL);
-
-        std::vector<GrpcChannelArgument> channel_arguments;
-        auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
-        if (!status.ok()) {
-            spdlog::error("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
-            return 1;
-        }
-
-        logConfig(config);
-        auto& manager = ModelManager::getInstance();
-        status = manager.start();
-        if (!status.ok()) {
-            spdlog::error("ovms::ModelManager::Start() Error: {}", status.string());
-            return 1;
-        }
-
-        PredictionServiceImpl service;
+        PredictionServiceImpl predict_service;
         ModelServiceImpl model_service;
-        ServerBuilder builder;
-        builder.SetMaxReceiveMessageSize(GIGABYTE);
-        builder.SetMaxSendMessageSize(GIGABYTE);
-        builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
-        builder.RegisterService(&service);
-        builder.RegisterService(&model_service);
-        for (const GrpcChannelArgument& channel_argument : channel_arguments) {
-            // gRPC accept arguments of two types, int and string. We will attempt to
-            // parse each arg as int and pass it on as such if successful. Otherwise we
-            // will pass it as a string. gRPC will log arguments that were not accepted.
-            spdlog::debug("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
-            try {
-                int i = std::stoi(channel_argument.value);
-                builder.AddChannelArgument(channel_argument.key, i);
-            }
-            catch (std::invalid_argument const &e) {
-                builder.AddChannelArgument(channel_argument.key, channel_argument.value);
-            }
-            catch (std::out_of_range const &e) {
-                spdlog::error("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
-            }
-        }
 
-        std::vector<std::unique_ptr<Server>> servers;
-        uint grpcServersCount = getGRPCServersCount();
-        spdlog::debug("Starting grpcservers: {}", grpcServersCount);
+        auto grpc = startGRPCServer(predict_service, model_service);
+        auto rest = startRESTServer();
 
-        for (uint i = 0; i < grpcServersCount; ++i) {
-            servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
-        }
+        grpc[0]->Wait();
 
-        spdlog::info("Server started on port {}", config.port() );
-        servers[0]->Wait();
-        } catch(std::exception& e) {
-            SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
-            return EXIT_FAILURE;
-        } catch(...) {
-            SPDLOG_ERROR("Unknown exception catch - will now terminate.");
-            return EXIT_FAILURE;
+        if (rest != nullptr) {
+            rest->WaitForTermination();
         }
+    } catch(std::exception& e) {
+        SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
+        return EXIT_FAILURE;
+    } catch(...) {
+        SPDLOG_ERROR("Unknown exception catch - will now terminate.");
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }

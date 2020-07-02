@@ -66,6 +66,8 @@ RUN make --jobs=$(nproc --all)
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
+COPY external /ovms/external/
+COPY third_party /ovms/third_party/
 RUN bazel build @org_tensorflow//tensorflow/core:framework
 RUN bazel build @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
