@@ -1,51 +1,186 @@
 OpenVINO ™ SOFTWARE LICENSE AGREEMENT
 
-This OpenVINO ™  Software License Agreement (“Agreement” is between you and Intel Corporation (“Intel”) that governs your use of Intel’s OpenVINO ™ software (together, including algorithms, any updates and new versions of the software, and the accompanying documentation, “Software”) that Intel provides to you in this distribution. If you are accepting this Agreement on behalf of an entity, you represent and warrant that you have the legal authority to bind that entity to the Agreement. “You” or “your” refers to you, or you and the entity you represent.
-Please read the following terms carefully. If you click to accept this Agreement, download, or install the Software, you are agreeing to be legally bound by this agreement. If you do not agree to the terms and conditions of this agreement, do not use the Software and destroy all copies in your possession.
+This OpenVINO ™  Software License Agreement (“Agreement” is between you and 
+Intel Corporation (“Intel”) that governs your use of Intel’s OpenVINO ™ software 
+(together, including algorithms, any updates and new versions of the software, 
+and the accompanying documentation, “Software”) that Intel provides to 
+you in this distribution. If you are accepting this Agreement on behalf of an 
+entity, you represent and warrant that you have the legal authority to bind that 
+entity to the Agreement. “You” or “your” refers to you, or you and the entity you 
+represent.
+
+Please read the following terms carefully. If you click to accept this Agreement, 
+download, or install the Software, you are agreeing to be legally bound by this 
+agreement. If you do not agree to the terms and conditions of this agreement, do 
+not use the Software and destroy all copies in your possession.
 
 1.	Licenses
 Use of OpenVINO ™ Software
 
-The following license applies to the Intel components in this distribution of the OpenVINO™ tookit (excluding software licensed under an open source license and the GNA library, which is licensed under the terms in the accompanying license text file):
-Conditioned on your compliance with the terms and conditions of this Agreement, Intel grants to you a nonexclusive, non-transferable, non-sublicenseable, revocable, royalty-free, worldwide license to: (a) download, install and use the Software for evaluation, testing, and development of an Intel-based Solution; and (b) distribute the OV Software in your commercial Intel-based Solution.
-“Intel-based Solution” means a solution in which all edge devices, gateways, and non-cloud computing devices include Intel® central processing units, and application, media, and accelerator integrated circuit components.
+The following license applies to the Intel components in this distribution of the 
+OpenVINO™ tookit (excluding software licensed under an open source license and the 
+GNA library, which is licensed under the terms in the accompanying license text 
+file): Conditioned on your compliance with the terms and conditions of this 
+Agreement, Intel grants to you a nonexclusive, non-transferable, 
+non-sublicenseable, revocable, royalty-free, worldwide license to: (a) 
+download, install and use the Software for evaluation, testing, and development 
+of an Intel-based Solution; and (b) distribute the OV Software in your commercial 
+Intel-based Solution.
+
+“Intel-based Solution” means a solution in which all edge devices, gateways, 
+and non-cloud computing devices include Intel® central processing units, and 
+application, media, and accelerator integrated circuit components.
 
 2.	Restrictions 
-You will not, and you will not assist, allow, or authorize others to: (a) modify, adapt, enhance, disassemble, decompile, reverse engineer, change or create derivative works of the Software unless identified as modifiable in the accompanying text files; (b) use the Software other than in connection with an Intel-based Solution as licensed in section 1; or (c) use the ESH Software or any related materials licensed from Intel to cause or contribute to a violation of an internationally recognized human right.
+You will not, and you will not assist, allow, or authorize others to: (a) modify, 
+adapt, enhance, disassemble, decompile, reverse engineer, change or create 
+derivative works of the Software unless identified as modifiable in the 
+accompanying text files; (b) use the Software other than in connection with an 
+Intel-based Solution as licensed in section 1; or (c) use the ESH Software or 
+any related materials licensed from Intel to cause or contribute to a violation 
+of an internationally recognized human right.
 
 3.	Reservation of Rights 
-Intel and the third-party licensors own the intellectual property rights to the Software. All right, title and interest, including the intellectual property rights, in the Software are and will remain the exclusive property of Intel and the third-party licensors.
-Except for the licenses expressly granted above in section 1, you acknowledge that Intel is not granting you other licenses, including, but not limited to, patent, copyright, trade secret, trademark, trade name, service mark or other intellectual property licenses related to the Software by implication, estoppel or otherwise. You agree not to remove any copyright notices from the Software.
+Intel and the third-party licensors own the intellectual property rights to 
+the Software. All right, title and interest, including the intellectual 
+property rights, in the Software are and will remain the exclusive property 
+of Intel and the third-party licensors.
+
+Except for the licenses expressly granted above in section 1, you acknowledge 
+that Intel is not granting you other licenses, including, but not limited to, 
+patent, copyright, trade secret, trademark, trade name, service mark or other 
+intellectual property licenses related to the Software by implication, 
+estoppel or otherwise. You agree not to remove any copyright notices from 
+the Software.
 
 4.	Open Source Statement 
-Open source software (OSS) components that are downloaded with Software are licensed under OSS license agreements identified in the comments in the applicable source code files or file headers in the downloaded software. You nor any original equipment manufacturing, original device manufacturing, customer, or distributor may subject any Intel software not currently licensed under an open source license to any OSS license obligations. Nothing in this Agreement limits any rights under, or grants rights that supersede, the terms of any OSS license.
+Open source software (OSS) components that are downloaded with Software are 
+licensed under OSS license agreements identified in the comments in the 
+applicable source code files or file headers in the downloaded software. 
+You nor any original equipment manufacturing, original device manufacturing, 
+customer, or distributor may subject any Intel software not currently 
+licensed under an open source license to any OSS license obligations. 
+Nothing in this Agreement limits any rights under, or grants rights 
+that supersede, the terms of any OSS license.
 
 5.	License to Feedback 
-This Agreement does not obligate you to provide Intel with materials, information, comments, suggestions, or other communication regarding the features, functions, performance, or use of the Software or Intel products or services (“Feedback”). To the extent you provide Feedback, you grant to Intel and its affiliates a non-exclusive, perpetual, sublicensable, irrevocable, worldwide, royalty-free, fully paid-up and transferable license, under all of your intellectual property rights, whether perfected or not, to publicly perform, publicly display, reproduce, use, make, have made, sell, offer for sale, distribute, import, create derivative works of and otherwise exploit any Feedback.
+This Agreement does not obligate you to provide Intel with materials, 
+information, comments, suggestions, or other communication regarding the 
+features, functions, performance, or use of the Software or Intel products 
+or services (“Feedback”). To the extent you provide Feedback, you grant 
+to Intel and its affiliates a non-exclusive, perpetual, sublicensable, 
+irrevocable, worldwide, royalty-free, fully paid-up and transferable 
+license, under all of your intellectual property rights, whether 
+perfected or not, to publicly perform, publicly display, reproduce, 
+use, make, have made, sell, offer for sale, distribute, import, create 
+derivative works of and otherwise exploit any Feedback.
 
 6.	Third Party Software  
-Certain third-party software or services mentioned or provided with or within the Software may only be used upon securing a license directly from the software owner and is subject to further license limitations. You acknowledge Intel is not providing you with a license to such third-party software and it is your responsibility to directly obtain appropriate licenses from such third parties.
+Certain third-party software or services mentioned or provided with or 
+within the Software may only be used upon securing a license directly 
+from the software owner and is subject to further license limitations. 
+You acknowledge Intel is not providing you with a license to such 
+third-party software and it is your responsibility to directly obtain 
+appropriate licenses from such third parties.
 
 7.	No Obligation; No Support 
-Intel may make changes to the Software, or items referenced therein, at any time without notice. Intel is not obligated to support, update, provide training for, or develop any further version of the Software or to grant any additional licenses. No agency, franchise, partnership, joint venture, or employee-employer relationship is intended or created by this Agreement.
+Intel may make changes to the Software, or items referenced therein, 
+at any time without notice. Intel is not obligated to support, update, 
+provide training for, or develop any further version of the Software 
+or to grant any additional licenses. No agency, franchise, 
+partnership, joint venture, or employee-employer relationship is 
+intended or created by this Agreement.
 
 8.	EXCLUSION OF WARRANTIES 
-You acknowledge and agree that downloading, installing and using the Software is at your own risk. The Software is provided to you "as is" without any express or implied warranty of any kind including warranties of merchantability, noninfringement, or fitness for a particular purpose. Intel does not warrant the lack of viruses, accuracy or completeness of any code, information, text, graphics, links or other items related to the Software.
+You acknowledge and agree that downloading, installing and using the 
+Software is at your own risk. The Software is provided to you "as is" 
+without any express or implied warranty of any kind including warranties 
+of merchantability, noninfringement, or fitness for a particular purpose. 
+Intel does not warrant the lack of viruses, accuracy or completeness of 
+any code, information, text, graphics, links or other items related to 
+the Software.
 
 9.	Limitation of Liability 
-Use of the OV Software is at your own risk. In no event will Intel or its affiliates, licensors, or suppliers be liable for any damages or losses whatsoever (including, without limitation, direct, indirect, incidental, consequential, or punitive damages or losses of actual or anticipated profits, revenue, business, data, information, or privacy) arising out of or related to this Agreement or your use or inability to use the Software, including any claim for breach of contract, breach of warranty, negligence, personal injury or strict liability, even if Intel has been advised of the possibility of such damages and whether the losses or damages where foreseen, foreseeable, or known. Some jurisdictions prohibit exclusion or limitation of liability for implied warranties or consequential or incidental damages, so the above limitation may in part not apply to you. The Software licensed in this Agreement is not designed or intended for use in any medical, lifesaving or life sustaining systems, transportation systems, nuclear systems, or for any other mission critical application in which the failure of the Software could lead to personal injury or death. You may also have other legal rights that vary from jurisdiction to jurisdiction. The limited remedies, warranty disclaimer, and limited liability are fundamental elements of the basis of the bargain between Intel and you. You acknowledge Intel would be unable to provide the Software without these limitations.
+Use of the OV Software is at your own risk. In no event will Intel or 
+its affiliates, licensors, or suppliers be liable for any damages or losses 
+whatsoever (including, without limitation, direct, indirect, incidental, 
+consequential, or punitive damages or losses of actual or anticipated 
+profits, revenue, business, data, information, or privacy) arising out of 
+or related to this Agreement or your use or inability to use the Software, 
+including any claim for breach of contract, breach of warranty, negligence, 
+personal injury or strict liability, even if Intel has been advised of the 
+possibility of such damages and whether the losses or damages where 
+foreseen, foreseeable, or known. Some jurisdictions prohibit exclusion or 
+limitation of liability for implied warranties or consequential or incidental 
+damages, so the above limitation may in part not apply to you. The Software 
+licensed in this Agreement is not designed or intended for use in any 
+medical, lifesaving or life sustaining systems, transportation systems, 
+nuclear systems, or for any other mission critical application in which 
+the failure of the Software could lead to personal injury or death. 
+You may also have other legal rights that vary from jurisdiction to 
+jurisdiction. The limited remedies, warranty disclaimer, and limited 
+liability are fundamental elements of the basis of the bargain 
+between Intel and you. You acknowledge Intel would be unable 
+to provide the Software without these limitations.
 
 10.	Indemnification
-You will indemnify and hold Intel and its affiliates and licensors (including their respective directors, officers, employees, and agents) harmless against all claims, liabilities, losses, costs, damages, and expenses (including reasonable attorney fees), arising out of, directly or indirectly, or related to your use of the software or of product liability, personal injury or death associated with any unintended use of the Software, even if such claim alleges that Intel or an Intel affiliate, licensors, or supplier was negligent in the design or manufacture of the Software.
+You will indemnify and hold Intel and its affiliates and licensors 
+(including their respective directors, officers, employees, and agents) 
+harmless against all claims, liabilities, losses, costs, damages, and 
+expenses (including reasonable attorney fees), arising out of, directly 
+or indirectly, or related to your use of the software or of product 
+liability, personal injury or death associated with any unintended 
+use of the Software, even if such claim alleges that Intel or an 
+Intel affiliate, licensors, or supplier was negligent in the 
+design or manufacture of the Software.
 
 11.	Termination and Survival 
-At any time, you may terminate this Agreement by uninstalling and destroying all copies of the Software. This Agreement will automatically terminate and the license from Intel to you will immediately end if you violate any term or condition of an Intel distribution portal’s Terms of Use where you downloaded the OV Software or any term or condition of this Agreement. Intel may terminate this Agreement for any reason with thirty (30) days’ notice. Upon termination, you must immediately cease using the Software and uninstall, delete and destroy all copies of the Software licensed from Intel in your possession or control and ensure the destruction of all Software licensed from Intel in the possession of your agents or contractors. All sections of this Agreement, except section 1, will survive termination.
+At any time, you may terminate this Agreement by uninstalling and 
+destroying all copies of the Software. This Agreement will 
+automatically terminate and the license from Intel to you will 
+immediately end if you violate any term or condition of an Intel 
+distribution portal’s Terms of Use where you downloaded the OV 
+Software or any term or condition of this Agreement. Intel may 
+terminate this Agreement for any reason with thirty (30) days’ 
+notice. Upon termination, you must immediately cease using the 
+Software and uninstall, delete and destroy all copies of the 
+Software licensed from Intel in your possession or control 
+and ensure the destruction of all Software licensed from 
+Intel in the possession of your agents or contractors. 
+All sections of this Agreement, except section 1, 
+will survive termination.
 
 12.	Governing Law and Jurisdiction 
-This Agreement and any dispute arising out of or relating to it will be governed by the laws of the U.S. and Delaware, without regard to conflict of laws principles. You agree the United Nations Convention on Contracts for the International Sale of Goods (1980) does not apply to this Agreement. The state and federal courts sitting in Wilmington, Delaware, U.S.A. will have exclusive jurisdiction over any dispute arising out of or relating to this Agreement. You consent to personal jurisdiction and venue in those courts. A judgement related to this Agreement obtained in a Delaware court may be enforced in any court that has jurisdiction.
+This Agreement and any dispute arising out of or relating to 
+it will be governed by the laws of the U.S. and Delaware, without 
+regard to conflict of laws principles. You agree the United 
+Nations Convention on Contracts for the International Sale of 
+Goods (1980) does not apply to this Agreement. The state and 
+federal courts sitting in Wilmington, Delaware, U.S.A. will 
+have exclusive jurisdiction over any dispute arising out of 
+or relating to this Agreement. You consent to personal 
+jurisdiction and venue in those courts. A judgement related 
+to this Agreement obtained in a Delaware court may be 
+enforced in any court that has jurisdiction.
 
 13.	Assignment 
-You may not delegate, assign or transfer this Agreement, the license granted or any of your rights or duties hereunder, expressly, by implication, by operation of law, or otherwise and any attempt to do so, without Intel’s express prior written consent, will be null and void. Intel may assign, delegate and transfer this Agreement, and its rights and obligations hereunder, in its sole discretion.
+You may not delegate, assign or transfer this Agreement, the 
+license granted or any of your rights or duties hereunder, 
+expressly, by implication, by operation of law, or otherwise 
+and any attempt to do so, without Intel’s express prior 
+written consent, will be null and void. Intel may assign, 
+delegate and transfer this Agreement, and its rights and 
+obligations hereunder, in its sole discretion.
 
 14.	Entire Agreement; Severability 
-The Intel distribution portal’s Terms of Use, the terms and conditions of this Agreement, and additional Intel license terms in the downloaded text files constitute the entire agreement between you and Intel relating to the Software, and merge and supersede all related discussions and understandings. If any provision of this Agreement is found invalid or unenforceable, the other terms and conditions will still be enforceable, and the affected provision will be changed and interpreted to best accomplish the objectives of such provision within legal limits.
+The Intel distribution portal’s Terms of Use, the terms 
+and conditions of this Agreement, and additional Intel 
+license terms in the downloaded text files constitute the 
+entire agreement between you and Intel relating to the 
+Software, and merge and supersede all related 
+discussions and understandings. If any provision of 
+this Agreement is found invalid or unenforceable, the 
+other terms and conditions will still be enforceable, 
+and the affected provision will be changed and 
+interpreted to best accomplish the objectives of such 
+provision within legal limits.
