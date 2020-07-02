@@ -74,10 +74,9 @@ namespace ovms {
         /**
          * @brief Validate passed arguments
          * 
-         * @return true 
-         * @return false 
+         * @return void 
          */
-        bool validate();
+        void validate();
 
         /**
          * @brief Get the config path

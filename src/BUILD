@@ -99,6 +99,7 @@ cc_test(
         "test/modelinstance_test.cpp",
         "test/modelconfig_test.cpp",
         "test/modelmanager_test.cpp",
+        "test/ovmsconfig_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/gcsfilesystem_test.cpp",
