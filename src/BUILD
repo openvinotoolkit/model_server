@@ -10,6 +10,10 @@ cc_library(
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
+        "http_rest_api_handler.cpp",
+        "http_rest_api_handler.hpp",
+        "http_server.cpp",
+        "http_server.hpp",
         "localfilesystem.cpp",
         "localfilesystem.hpp",
         "gcsfilesystem.cpp",
@@ -44,9 +48,6 @@ cc_library(
         "tensorinfo.hpp",
         "timer.hpp",
     ],
-    copts = [
-         "--std=c++17"
-    ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
@@ -59,7 +60,10 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client"
+        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
@@ -70,9 +74,6 @@ cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
-    ],
-    copts = [
-        "--std=c++17"
     ],
     linkopts = [
         "-lstdc++fs",
@@ -114,9 +115,6 @@ cc_test(
     data = [
         "test/dummy/0/dummy.xml",
         "test/dummy/0/dummy.bin",
-    ],
-    copts = [
-        "--std=c++17"
     ],
     linkopts = [
         "-lstdc++fs",
