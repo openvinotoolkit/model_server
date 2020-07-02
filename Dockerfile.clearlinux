@@ -9,6 +9,7 @@ ARG ovms_metadata_file
 RUN swupd bundle-add \
 	c-basic \
 	curl devpkg-curl \
+	gdb \
 	git \
 	devpkg-libusb \
 	deprecated-python2 \
