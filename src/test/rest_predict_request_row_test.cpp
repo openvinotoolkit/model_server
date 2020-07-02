@@ -59,14 +59,16 @@ const char* predictRequestRowNamedJson = R"({
     "signature_name": "serving_default"
 })";
 
-TEST(RestPredictRequestRowNamedJson, ParseValid) {
+TEST(RestPredictRequestRowJson, ParseValid2Inputs) {
     RestPredictRequest<float> request;
     auto status = request.parse(predictRequestRowNamedJson);
 
-    EXPECT_TRUE(status.ok());
-    EXPECT_EQ(request.getInputs().size(), 2);
-    EXPECT_EQ(request.getInputs().count("inputA"), 1);
-    EXPECT_EQ(request.getInputs().count("inputB"), 1);
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(request.getOrder(), Order::ROW);
+    EXPECT_EQ(request.getFormat(), Format::NAMED);
+    ASSERT_EQ(request.getInputs().size(), 2);
+    ASSERT_EQ(request.getInputs().count("inputA"), 1);
+    ASSERT_EQ(request.getInputs().count("inputB"), 1);
     EXPECT_THAT(request.getInputs().at("inputA").shape.get(), ElementsAre(2, 2, 3, 2));
     EXPECT_THAT(request.getInputs().at("inputB").shape.get(), ElementsAre(2, 2, 3));
     EXPECT_EQ(request.getInputs().at("inputA").data.size(), 2 * 2 * 3 * 2);
@@ -95,7 +97,7 @@ TEST(RestPredictRequestRowNamedJson, ParseValid) {
         14.0, 15.0, 16.0));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseValidWithPreallocation) {
+TEST(RestPredictRequestRowJson, ParseValidWithPreallocation) {
     shape_t shapes[] = {
         {2, 2, 3, 2},
         {2, 2, 3}
@@ -107,10 +109,12 @@ TEST(RestPredictRequestRowNamedJson, ParseValidWithPreallocation) {
     RestPredictRequest<float> request(tensors);
     auto status = request.parse(predictRequestRowNamedJson);
 
-    EXPECT_TRUE(status.ok());
-    EXPECT_EQ(request.getInputs().size(), 2);
-    EXPECT_EQ(request.getInputs().count("inputA"), 1);
-    EXPECT_EQ(request.getInputs().count("inputB"), 1);
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(request.getOrder(), Order::ROW);
+    EXPECT_EQ(request.getFormat(), Format::NAMED);
+    ASSERT_EQ(request.getInputs().size(), 2);
+    ASSERT_EQ(request.getInputs().count("inputA"), 1);
+    ASSERT_EQ(request.getInputs().count("inputB"), 1);
     EXPECT_THAT(request.getInputs().at("inputA").shape.get(), ElementsAre(2, 2, 3, 2));
     EXPECT_THAT(request.getInputs().at("inputB").shape.get(), ElementsAre(2, 2, 3));
     EXPECT_EQ(request.getInputs().at("inputA").data.size(), 2 * 2 * 3 * 2);
@@ -139,46 +143,50 @@ TEST(RestPredictRequestRowNamedJson, ParseValidWithPreallocation) {
         14.0, 15.0, 16.0));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_1x1) {
+TEST(RestPredictRequestRowJson, ValidShape_1x1) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[155]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(1, 1));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(155));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_1x2) {
+TEST(RestPredictRequestRowJson, ValidShape_1x2) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[155, 56]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(1, 2));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(155, 56));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x1) {
+TEST(RestPredictRequestRowJson, ValidShape_2x1) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[155]}, {"i":[513]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 1));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(155, 513));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x2) {
+TEST(RestPredictRequestRowJson, ValidShape_2x2) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[155, 9]}, {"i":[513, -5]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 2));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(155, 9, 513, -5));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x3) {
+TEST(RestPredictRequestRowJson, ValidShape_2x1x3) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[
             [5, 9, 2]
         ]},
@@ -187,12 +195,13 @@ TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x3) {
         ]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 1, 3));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(5, 9, 2, -5, -2, -10));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x3x1) {
+TEST(RestPredictRequestRowJson, ValidShape_2x3x1) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[
             [5],
             [9],
@@ -205,12 +214,13 @@ TEST(RestPredictRequestRowNamedJson, ValidShape_2x3x1) {
         ]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 3, 1));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(5, 9, 1, -1, -9, 25));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x2x1) {
+TEST(RestPredictRequestRowJson, ValidShape_2x1x2x1) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[
             [
                 [5],
@@ -225,12 +235,13 @@ TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x2x1) {
         ]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 1, 2, 1));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(5, 2, 6, 18));
 }
 
-TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x3x1x5) {
+TEST(RestPredictRequestRowJson, ValidShape_2x1x3x1x5) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[
         {"i":[
             [
                 [[1, 2, 3, 4, 5]],
@@ -247,9 +258,16 @@ TEST(RestPredictRequestRowNamedJson, ValidShape_2x1x3x1x5) {
         ]}
     ]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").shape.get(), ElementsAre(2, 1, 3, 1, 5));
+    EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(
+        1, 2, 3, 4, 5,
+        1, 2, 3, 4, 5,
+        1, 2, 3, 4, 5,
+        1, 2, 3, 4, 5,
+        1, 2, 3, 4, 5,
+        1, 2, 3, 4, 5));
 }
 
-TEST(RestPredictRequestRowNamedJson, MissingInputInBatch) {
+TEST(RestPredictRequestRowJson, MissingInputInBatch) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[
@@ -263,97 +281,97 @@ TEST(RestPredictRequestRowNamedJson, MissingInputInBatch) {
     ]})"), StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER);
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseUint8) {
+TEST(RestPredictRequestRowJson, ParseUint8) {
     RestPredictRequest<uint8_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,15,255]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,15,255]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 15, 255));
     request = RestPredictRequest<uint8_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,15.0,255.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,15.0,255.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 15, 255));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseInt8) {
+TEST(RestPredictRequestRowJson, ParseInt8) {
     RestPredictRequest<int8_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,127,-128]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,127,-128]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 127, -128));
     request = RestPredictRequest<int8_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,127.0,-128.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,127.0,-128.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 127, -128));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseUint16) {
+TEST(RestPredictRequestRowJson, ParseUint16) {
     RestPredictRequest<uint16_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,65535]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,65535]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 65535));
     request = RestPredictRequest<uint16_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,65535.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,65535.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 65535));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseInt16) {
+TEST(RestPredictRequestRowJson, ParseInt16) {
     RestPredictRequest<uint16_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,32768,-32767]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,32768,-32767]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 32768, -32767));
     request = RestPredictRequest<uint16_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,32768.0,-32767.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,32768.0,-32767.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 32768, -32767));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseUint32) {
+TEST(RestPredictRequestRowJson, ParseUint32) {
     RestPredictRequest<uint32_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,4294967295]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,4294967295]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 4294967295));
     request = RestPredictRequest<uint32_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,4294967295.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,4294967295.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 4294967295));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseInt32) {
+TEST(RestPredictRequestRowJson, ParseInt32) {
     RestPredictRequest<uint32_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,2147483648,-2147483647]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,2147483648,-2147483647]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 2147483648, -2147483647));
     request = RestPredictRequest<uint32_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,2147483648.0,-2147483647.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,2147483648.0,-2147483647.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 2147483648, -2147483647));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseUint64) {
+TEST(RestPredictRequestRowJson, ParseUint64) {
     RestPredictRequest<uint64_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,18446744073709551615]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,18446744073709551615]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 18446744073709551615));
     request = RestPredictRequest<uint64_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,555222.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,555222.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, 5, 128, 555222));  // Can't looselessly cast large double to int64
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseInt64) {
+TEST(RestPredictRequestRowJson, ParseInt64) {
     RestPredictRequest<int64_t> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,5522,-9223372036854775807]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,5522,-9223372036854775807]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 5522, -9223372036854775807));
     request = RestPredictRequest<int64_t>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,5522.0,-55333.0]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,5522.0,-55333.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(0, -5, 5522, -55333));  // Can't looselessly cast double to int64
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseFloat) {
+TEST(RestPredictRequestRowJson, ParseFloat) {
     RestPredictRequest<float> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(-5, 0, -4, 155234));
     request = RestPredictRequest<float>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[-5.12, 0.4344, -4.521, 155234.221]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[-5.12, 0.4344, -4.521, 155234.221]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(-5.12, 0.4344, -4.521, 155234.221));
 }
 
-TEST(RestPredictRequestRowNamedJson, ParseDouble) {
+TEST(RestPredictRequestRowJson, ParseDouble) {
     RestPredictRequest<double> request;
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(-5, 0, -4, 155234));
     request = RestPredictRequest<double>();
-    EXPECT_TRUE(request.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})").ok());
+    ASSERT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})"), StatusCode::OK);
     EXPECT_THAT(request.getInputs().at("i").data, ElementsAre(-5.1222, 0.434422, -4.52122, 155234.22122));
 }
 
-TEST(RestPredictRequestRowNamedJson, InvalidJson) {
+TEST(RestPredictRequestRowJson, InvalidJson) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(""),
@@ -376,7 +394,7 @@ TEST(RestPredictRequestRowNamedJson, InvalidJson) {
         StatusCode::JSON_INVALID);
 }
 
-TEST(RestPredictRequestRowNamedJson, BodyNotAnObject) {
+TEST(RestPredictRequestRowJson, BodyNotAnObject) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse("[]"), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
@@ -385,15 +403,15 @@ TEST(RestPredictRequestRowNamedJson, BodyNotAnObject) {
     EXPECT_EQ(request.parse("null"), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
 }
 
-TEST(RestPredictRequestRowNamedJson, CouldNotDetectOrder) {
+TEST(RestPredictRequestRowJson, CouldNotDetectOrder) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":""})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
     EXPECT_EQ(request.parse(R"({"signature_name":"","bad":[{"i":[1]}]})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[1]}],"inputs":[{"i":[1]}]})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[1]}],"inputs":{"i":[[1]]}})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
 }
 
-TEST(RestPredictRequestRowNamedJson, InstancesNotAnArray) {
+TEST(RestPredictRequestRowJson, InstancesNotAnArray) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":{}})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
@@ -401,20 +419,33 @@ TEST(RestPredictRequestRowNamedJson, InstancesNotAnArray) {
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":5})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
 }
 
-TEST(RestPredictRequestRowNamedJson, InstanceNotAnObject) {
+TEST(RestPredictRequestRowJson, NamedInstanceNotAnObject) {
     RestPredictRequest<float> request;
 
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[1,2,3]})"), StatusCode::REST_INSTANCE_NOT_AN_OBJECT);
-    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[null]})"), StatusCode::REST_INSTANCE_NOT_AN_OBJECT);
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[5]},2,3]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[5]},null]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
 }
 
-TEST(RestPredictRequestRowNamedJson, NoInstancesFound) {
+TEST(RestPredictRequestRowJson, NoNamedInstanceNotPreallocated) {
+    RestPredictRequest<float> request;
+
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[[[2,3]]]})"), StatusCode::REST_INPUT_NOT_PREALLOCATED);
+}
+
+TEST(RestPredictRequestRowJson, CouldNotDetectNamedOrNoNamed) {
+    RestPredictRequest<float> request;
+
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[null, 5, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
+    EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[2, 5, 6]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
+}
+
+TEST(RestPredictRequestRowJson, NoInstancesFound) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[]})"), StatusCode::REST_NO_INSTANCES_FOUND);
 }
 
-TEST(RestPredictRequestRowNamedJson, CannotParseInstance) {
+TEST(RestPredictRequestRowJson, CannotParseInstance) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
@@ -424,7 +455,7 @@ TEST(RestPredictRequestRowNamedJson, CannotParseInstance) {
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[[1,2],[3,"str"]]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_1) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_1) {
     RestPredictRequest<float> request;
 
     // [1, 4, 5] size is 3 instead of 2 to be valid
@@ -438,7 +469,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_1) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_2) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_2) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[
@@ -451,7 +482,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_2) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_3) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_3) {
     RestPredictRequest<float> request;
 
     EXPECT_EQ(request.parse(R"({"signature_name":"","instances":[{"i":[
@@ -469,7 +500,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_3) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_4) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_4) {
     RestPredictRequest<float> request;
 
     // [5, 6] is not a number but array
@@ -483,7 +514,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_4) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_5) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_5) {
     RestPredictRequest<float> request;
 
     // [1] is of wrong shape
@@ -498,7 +529,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_5) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_6) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_6) {
     RestPredictRequest<float> request;
 
     // [1, 1] missing - 2x2, 2x3
@@ -511,7 +542,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_6) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_7) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_7) {
     RestPredictRequest<float> request;
 
     // [1, 5] numbers are on wrong level
@@ -526,7 +557,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_7) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InputNotNdArray_8) {
+TEST(RestPredictRequestRowJson, InputNotNdArray_8) {
     RestPredictRequest<float> request;
 
     // [1, 2], [9, 3] numbers are on wrong level
@@ -540,7 +571,7 @@ TEST(RestPredictRequestRowNamedJson, InputNotNdArray_8) {
     ]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InstancesShapeDiffer_1) {
+TEST(RestPredictRequestRowJson, InstancesShapeDiffer_1) {
     RestPredictRequest<float> request;
 
     // 2x3x2 vs 2x2x2
@@ -562,7 +593,7 @@ TEST(RestPredictRequestRowNamedJson, InstancesShapeDiffer_1) {
     ]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InstancesShapeDiffer_2) {
+TEST(RestPredictRequestRowJson, InstancesShapeDiffer_2) {
     RestPredictRequest<float> request;
 
     // 2x3x2 vs 2x3x3
@@ -586,7 +617,7 @@ TEST(RestPredictRequestRowNamedJson, InstancesShapeDiffer_2) {
     ]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
-TEST(RestPredictRequestRowNamedJson, InstancesShapeDiffer_3) {
+TEST(RestPredictRequestRowJson, InstancesShapeDiffer_3) {
     RestPredictRequest<float> request;
 
     // 2x3x2 vs 1x2x3x2

@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <numeric>
 #include <functional>
+#include <memory>
 
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
@@ -30,6 +31,24 @@
 #include "status.hpp"
 
 namespace ovms {
+
+/**
+ * @brief Request order types
+ */
+enum class Order {
+    UNKNOWN,
+    ROW,
+    COLUMN
+};
+
+/**
+ * @brief Request format types
+ */
+enum class Format {
+    UNKNOWN,
+    NAMED,
+    NONAMED
+};
 
 /**
  * @brief This class represents shape encapsulation with utility methods used during predict request parsing.
@@ -165,6 +184,16 @@ class RestPredictRequest {
     using Inputs = std::unordered_map<std::string, Input<T>>;
 
     /**
+     * @brief Request order
+     */
+    Order order = Order::UNKNOWN;
+
+    /**
+     * @brief Request format
+     */
+    Format format = Format::UNKNOWN;
+
+    /**
      * @brief Parsed inputs
      */
     Inputs inputs;
@@ -185,31 +214,26 @@ class RestPredictRequest {
      *     ...
      * ]
      */
-    bool parseInstance(rapidjson::Value& doc, int dim, Input<T>& input) {
+    bool parseArray(rapidjson::Value& doc, int dim, Input<T>& input) {
+        if (!doc.IsArray()) {
+            return false;
+        }
         if (doc.GetArray().Size() == 0) {
             return false;
         }
+        if (!input.shape.setDimOrValidate(dim, doc.GetArray().Size())) {
+            return false;
+        }
         if (doc.GetArray()[0].IsArray()) {
-            if (!input.shape.setDimOrValidate(dim, doc.GetArray().Size())) {
-                return false;
-            }
-
             for (auto& itr : doc.GetArray()) {
-                if (!itr.IsArray()) {
-                    return false;
-                }
-                if (!parseInstance(itr, dim+1, input)) {
+                if (!parseArray(itr, dim+1, input)) {
                     return false;
                 }
             }
             return true;
         } else {
-            if (!input.shape.setDimOrValidate(dim, doc.GetArray().Size())) {
-                return false;
-            }
-
-            for (auto& itr : doc.GetArray()) {
-                if (!input.push(itr)) {
+            for (auto& value : doc.GetArray()) {
+                if (!input.push(value)) {
                     return false;
                 }
             }
@@ -219,7 +243,7 @@ class RestPredictRequest {
     }
 
     /**
-     * @brief Parses rapidjson Node for inputs in a string(name)=>array(data) forma.t
+     * @brief Parses rapidjson Node for inputs in a string(name)=>array(data) format
      * 
      * @param doc rapidjson Node
      * 
@@ -239,13 +263,9 @@ class RestPredictRequest {
         for (auto& itr : doc.GetObject()) {
             auto& input = inputs[itr.name.GetString()];
 
-            if (!itr.value.IsArray()) {
-                return false;
-            }
-
             input.shape.increaseBatchSize();
 
-            if (!parseInstance(itr.value, 1, input)) {
+            if (!parseArray(itr.value, 1, input)) {
                 return false;
             }
         }
@@ -271,43 +291,98 @@ class RestPredictRequest {
 
     /**
      * @brief Parses row format: list of objects, each object corresponding to one batch with one or multiple inputs.
+     *        When no named format is detected, instance is treated as array of single input batches with no name.
      * 
      * @param node rapidjson Node
      * 
      * @return Status indicating if processing succeeded, error code otherwise
+     *
+     * Rapid json node expected to be passed in following structure:
+     * [{inputs...}, {inputs...}, {inputs...}, ...]
+     * or:
+     * [no named input data batches...]
      */
     Status parseRowFormat(rapidjson::Value& node) {
+        order = Order::ROW;
         if (!node.IsArray()) {
             return StatusCode::REST_INSTANCES_NOT_AN_ARRAY;
         }
         if (node.GetArray().Size() == 0) {
             return StatusCode::REST_NO_INSTANCES_FOUND;
         }
-        for (auto& instance : node.GetArray()) {
-            if (!instance.IsObject()) {
-                return StatusCode::REST_INSTANCE_NOT_AN_OBJECT;
+        if (node.GetArray()[0].IsObject()) {
+            // named format
+            for (auto& instance : node.GetArray()) {
+                if (!instance.IsObject()) {
+                    return StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT;
+                }
+                if (!this->parseInstance(instance)) {
+                    return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
+                }
             }
-            if (!this->parseInstance(instance)) {
+        } else if (node.GetArray()[0].IsArray()) {
+            // no named format
+            if (inputs.size() != 1) {
+                return StatusCode::REST_INPUT_NOT_PREALLOCATED;
+            }
+            if (!parseArray(node, 0, inputs.begin()->second)) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
+            } else {
+                format = Format::NONAMED;
+                return StatusCode::OK;
             }
+        } else {
+            return StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED;
         }
 
         if (!isBatchSizeEqualForAllInputs()) {
             return StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER;
         }
+        format = Format::NAMED;
         return StatusCode::OK;
     }
 
     /**
-     * @brief Parses column format: list of inputs, all batch sizes packed into one list element.
+     * @brief Parses column format: object of input:batches key value pairs.
+     *        When no named format is detected, instance is treated as array of single input batches with no name.
      * 
      * @param node rapidjson Node
      * 
      * @return Status indicating if processing succeeded, error code otherwise
+     * 
+     * Rapid json node expected to be passed in following structure:
+     * {"inputA": [...], "inputB": [...], ...}
+     * or:
+     * [no named input data batches...]
      */
     Status parseColumnFormat(rapidjson::Value& node) {
-        SPDLOG_ERROR("column format not implemented");
-        return StatusCode::UNKNOWN_ERROR;
+        order = Order::COLUMN;
+        // no named format
+        if (node.IsArray()) {
+            if (inputs.size() != 1) {
+                return StatusCode::REST_INPUT_NOT_PREALLOCATED;
+            }
+            if (!parseArray(node, 0, inputs.begin()->second)) {
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+            format = Format::NONAMED;
+            return StatusCode::OK;
+        }
+        // named format
+        if (!node.IsObject()) {
+            return StatusCode::REST_INPUTS_NOT_AN_OBJECT;
+        }
+        if (node.GetObject().MemberCount() == 0) {
+            return StatusCode::REST_NO_INPUTS_FOUND;
+        }
+        for (auto& kv : node.GetObject()) {
+            auto& input = inputs[kv.name.GetString()];
+            if (!parseArray(kv.value, 0, input)) {
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+        }
+        format = Format::NAMED;
+        return StatusCode::OK;
     }
 
 public:
@@ -340,6 +415,16 @@ public:
      * @return inputs
      */
     const Inputs& getInputs() const { return inputs; }
+
+    /**
+     * @brief Gets request order
+     */
+    const Order getOrder() const { return order; }
+
+    /**
+     * @brief Gets request format
+     */
+    const Format getFormat() const { return format; }
 
     /*
     {
