@@ -35,6 +35,17 @@ Build, without using a docker cache:
 make NO_DOCKER_CACHE=true
 ```
 
+### Debugging in docker (using `gdb`)  
+Run container:
+```
+$ docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" --entrypoint bash ovms-build:latest
+```
+In container install and run `gdb`, recompile ovms with debug symbols:
+```
+[root@72dc3b874772 ovms]# yum -y install gdb
+[root@72dc3b874772 ovms]# bazel build //src:ovms -c dbg
+[root@72dc3b874772 ovms]# gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /model
+```
 
 
 ## OVMS testing

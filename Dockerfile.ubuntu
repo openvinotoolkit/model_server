@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         gcc-8 \
         g++-8 \
+        gdb \
         git \
         libcurl4-openssl-dev \
         libssl-dev \

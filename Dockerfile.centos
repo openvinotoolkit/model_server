@@ -9,6 +9,7 @@ ARG ovms_metadata_file
 RUN yum install -y epel-release && yum update -y && yum install -y \
             gcc \
             gcc-c++ \
+            gdb \
             cmake3 \
             make \
             automake \
