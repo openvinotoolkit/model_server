@@ -117,6 +117,11 @@ namespace ovms {
         Status loadOVExecutableNetwork(plugin_config_t pluginConfig);
 
         /**
+         * @brief Prepares inferenceRequestsQueue
+         */
+        void prepareInferenceRequestsQueue();
+
+        /**
          * @brief Fetch model file paths
          *
          * @return Status
@@ -152,6 +157,11 @@ namespace ovms {
         tensor_map_t outputsInfo;
 
         /**
+         * @brief Holds currently loaded model configuration
+         */
+        ModelConfig config;
+
+        /**
          * @brief Holds model required file names
          */
         std::map<std::string, std::string> modelFiles;
@@ -182,6 +192,17 @@ namespace ovms {
          */
         void loadOutputTensors(const ModelConfig& config);
 
+        /**
+         * @brief Performs model loading
+         *
+         * @return status
+         */
+        Status loadModelImpl(const ModelConfig& config, const size_t predictRequestedBatchSize = 0);
+
+        /**
+         * @brief Configures batchsize
+         */
+        void configureBatchSize(const ModelConfig& config, const size_t predictRequestedBatchSize = 0);
 
     public:
         /**
@@ -306,6 +327,24 @@ namespace ovms {
          * @return Status
          */
         virtual Status loadModel(const ModelConfig& config);
+
+        /**
+         * @brief Reloads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
+         *
+         * @param config model configuration
+         *
+         * @return Status
+         */
+        virtual Status reloadModel(const ModelConfig& config);
+
+        /**
+         * @brief Reloads model version with different batch size, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
+         *
+         * @param batchSize batch size
+         *
+         * @return Status
+         */
+        virtual Status reloadModel(size_t batchSize);
 
         /**
          * @brief Unloads model version

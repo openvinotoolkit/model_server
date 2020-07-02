@@ -53,50 +53,12 @@ Status getModelInstance(const PredictRequest* request,
     return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
 }
 
-grpc::Status validateRequest(const PredictRequest* request, ovms::ModelInstance& modelInstance) {
-    auto status = modelInstance.validate(request);
-    if (!status.ok()) {
-        return grpc::Status(
-            grpc::StatusCode::INVALID_ARGUMENT,
-            status.string());
-    }
-    return status;
-}
-
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream()) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-};
-
-Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
-    try {
-        inferRequest.SetCompletionCallback([&inferRequestsQueue, executingInferId]() {
-            inferRequestsQueue.signalCompletedInference(executingInferId);
-        });
-        inferRequest.StartAsync();
-        inferRequestsQueue.waitForAsync(executingInferId);
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-        SPDLOG_ERROR("{}: {}", status.string(), e.what());
-        return status;
-    }
-
-    return StatusCode::OK;
-}
-
 grpc::Status ovms::PredictionServiceImpl::Predict(
             ServerContext*      context,
     const   PredictRequest*     request,
             PredictResponse*    response) {
     Timer timer;
+    using std::chrono::milliseconds;
     spdlog::debug("Got new PredictRequest for model:{}; version:{}",
                   request->model_spec().name(),
                   request->model_spec().version().value());
@@ -123,7 +85,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     timer.stop("get infer request");
     spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("get infer request") / 1000);
+            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("get infer request"));
 
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, modelVersion->getInputsInfo(), inferRequest);
@@ -131,7 +93,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if (!status.ok())
         return status.grpc();
     spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("deserialize") / 1000);
+        request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("deserialize"));
 
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
@@ -141,7 +103,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if (!status.ok())
         return status.grpc();
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("prediction") / 1000);
+            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("prediction"));
 
     timer.start("serialize");
     status = serializePredictResponse(inferRequest, modelVersion->getOutputsInfo(), response);
@@ -149,7 +111,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if (!status.ok())
         return status.grpc();
     spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed_microseconds("serialize") / 1000);
+            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("serialize"));
 
     return grpc::Status::OK;
 }

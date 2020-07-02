@@ -230,6 +230,34 @@ namespace ovms {
         }
 
         /**
+         * @brief Get the layout name from InferenceEngine Layout
+         *
+         * @param InferenceEngine::Layout
+         * @return std::string
+         */
+        static std::string getStringFromLayout(InferenceEngine::Layout layout) {
+            switch (layout) {
+                case InferenceEngine::Layout::ANY:      return "ANY";
+                case InferenceEngine::Layout::NCHW:     return "NCHW";
+                case InferenceEngine::Layout::NHWC:     return "NHWC";
+                case InferenceEngine::Layout::NCDHW:    return "NCDHW";
+                case InferenceEngine::Layout::NDHWC:    return "NDHWC";
+                case InferenceEngine::Layout::OIHW:     return "OIHW";
+                case InferenceEngine::Layout::GOIHW:    return "GOIHW";
+                case InferenceEngine::Layout::OIDHW:    return "OIDHW";
+                case InferenceEngine::Layout::GOIDHW:   return "GOIDHW";
+                case InferenceEngine::Layout::SCALAR:   return "SCALAR";
+                case InferenceEngine::Layout::C:        return "C";
+                case InferenceEngine::Layout::CHW:      return "CHW";
+                case InferenceEngine::Layout::HW:       return "HW";
+                case InferenceEngine::Layout::NC:       return "NC";
+                case InferenceEngine::Layout::CN:       return "CN";
+                case InferenceEngine::Layout::BLOCKED:  return "BLOCKED";
+            }
+            return "";
+        }
+
+        /**
          * @brief Get the Layout enum
          * 
          * @return const InferenceEngine::Layout

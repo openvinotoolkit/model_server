@@ -80,7 +80,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config) {
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        spdlog::info("Input name: {}; mapping_name: {}; shape: {} ; precision: {}", name, mappingName, shape_stream.str(), precision_str);
+        spdlog::info("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
+            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
     }
 
     // Update OV model shapes
@@ -114,7 +115,8 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        spdlog::info("Output name: {} ; mapping name: {}; shape: {} ; precision: {}", name, mappingName, shape_stream.str(), precision_str);
+        spdlog::info("Output name: {} ; mapping name: {}; shape: {} ; precision: {}, layout:{}",
+            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(output->getLayout()));
     }
 }
 
@@ -239,28 +241,38 @@ Status ModelInstance::fetchModelFilepaths() {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadModel(const ModelConfig& config) {
-    this->name = config.getName();
+void ModelInstance::prepareInferenceRequestsQueue() {
+    uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
+    inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
+    spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
+        getName(),
+        getVersion(),
+        numberOfParallelInferRequests);
+}
+
+void ModelInstance::configureBatchSize(const ModelConfig& config, const size_t predictRequestedBatchSize) {
+    if (0 == predictRequestedBatchSize) {
+        batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
+    } else {
+        batchSize = predictRequestedBatchSize;
+    }
+    network->setBatchSize(batchSize);
+}
+
+Status ModelInstance::loadModelImpl(const ModelConfig& config, const size_t predictRequestedBatchSize) {
     this->path = config.getPath();
-    this->version = config.getVersion();
     this->backend = config.getBackend();
-    this->status = ModelVersionStatus(this->name, this->version);
-    spdlog::info("Loading model:{}, version:{}, from path:{}, with backend:{} ...",
-        config.getName(), config.getVersion(), config.getPath(), config.getBackend());
-    // load network
+    auto status = fetchModelFilepaths();
+    if (!status.ok()) {
+        return status;
+    }
     try {
-        this->status.setLoading();
-        auto status = fetchModelFilepaths();
-        if (!status.ok()) {
-            return status;
-        }
         loadOVEngine();
         status = loadOVCNNNetwork();
         if (!status.ok()) {
             return status;
         }
-        this->batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
-        network->setBatchSize(this->batchSize);
+        configureBatchSize(config, predictRequestedBatchSize);
         status = loadInputTensors(config);
         if (!status.ok()) {
             return status;
@@ -270,22 +282,55 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         if (!status.ok()) {
             return status;
         }
-        uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
-        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
-        spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
-            config.getName(),
-            config.getVersion(),
-            numberOfParallelInferRequests);
-
-        this->status.setAvailable();
-        modelLoadedNotify.notify_all();
+        prepareInferenceRequestsQueue();
     }
     catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
     }
-    return StatusCode::OK;
+    this->status.setAvailable();
+    this->config = config;
+    modelLoadedNotify.notify_all();
+    return status;
+}
+
+Status ModelInstance::loadModel(const ModelConfig& config) {
+    spdlog::info("Loading model:{}, version:{}, from path:{}, with backend:{} ...",
+        config.getName(), config.getVersion(), config.getPath(), config.getBackend());
+    this->status = ModelVersionStatus(config.getName(), config.getVersion());
+    this->status.setLoading();
+    this->name = config.getName();
+    this->version = config.getVersion();
+    return loadModelImpl(config);
+}
+
+Status ModelInstance::reloadModel(const ModelConfig& config) {
+    this->status.setLoading();
+    while (!canUnloadInstance()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+    }
+    return loadModelImpl(config);
+}
+
+Status ModelInstance::reloadModel(size_t batchSize) {
+    SPDLOG_INFO("Will reload model:{} version:{} from batch size:{} to batch size:{}",
+        getName(), getVersion(), getBatchSize(), batchSize);
+    ModelConfig configWithNewBatchSize = config;
+    configWithNewBatchSize.setBatchSize(batchSize);
+    ModelConfig oldConfig = config;
+    // TODO make fail-safe old config store
+    auto status = reloadModel(configWithNewBatchSize);
+    if (!status.ok()) {
+        SPDLOG_INFO("Failed to reload model:{} version:{} with new batch size:{}. Reloading to previous batch size:{} with error:{}",
+            getName(), getVersion(), batchSize, getBatchSize(), status.string());
+        status = reloadModel(oldConfig);
+        if (!status.ok()) {
+            SPDLOG_INFO("Failed to reload model:{} version:{} to previous batch size:{} with error:{}",
+                getName(), getVersion(), getBatchSize(), status.string());
+        }
+    }
+    return status;
 }
 
 bool ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds) {
