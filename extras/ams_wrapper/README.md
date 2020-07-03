@@ -230,13 +230,18 @@ It is, however, not officially supported.
 
 By default, the OpenVINO Model Server for LVA is started, serving included models, using CPU as the target device executing the inference requests. 
 Besides CPU, OVMS for LVA is currently supporting 
-[Myriad Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MYRIAD.html) 
+[Myriad Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MYRIAD.html), 
+[GPU Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html)
 and [Heterogeneous Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HETERO.html). 
 
 It is possible to set the target device for each individual model by setting additional environment variable 
 OVMS_MODEL_DEVICES, or passing –ovms_model_devices parameter to OVMS for LVA, with a semicolon separated list of models with assigned target devices. 
 Below is an example: 
 OVMS_MODEL_DEVICES='vehicle_detection_adas=CPU;vehicle_attributes=MYRIAD' 
+
+Note: Depending on the device, additional docker parameters might be required to mount required resources in the container.
+There should be also installed appropriate drivers on the host operating system.
+Refer to the plugin documentation and examples from [OVMS documentation](../../docs/docker_container.md#starting-docker-container-with-ncs).
 
 ## Starting docker container
 

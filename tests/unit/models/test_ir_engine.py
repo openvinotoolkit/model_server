@@ -53,14 +53,14 @@ def test_init_class():
                     outputs={'output': MockedIOInfo('FP32', [1, 1], 'NCHW')})
     batching_info = BatchingInfo(None)
     shape_info = ShapeInfo(None, net.inputs)
-    plugin = None
+    core = None
     requests_queue = queue.Queue()
     free_ireq_index_queue = queue.Queue(maxsize=1)
     free_ireq_index_queue.put(0)
     engine = IrEngine(model_name='test', model_version=1,
                       mapping_config=mapping_config,
                       exec_net=exec_net,
-                      net=net, plugin=plugin, batching_info=batching_info,
+                      net=net, core=core, batching_info=batching_info,
                       shape_info=shape_info, num_ireq=1,
                       free_ireq_index_queue=free_ireq_index_queue,
                       requests_queue=requests_queue,
@@ -73,9 +73,9 @@ def test_init_class():
 
 
 def test_build_device_cpu(mocker):
-    mocker.patch("ie_serving.models.ir_engine.IEPlugin")
+    mocker.patch("ie_serving.models.ir_engine.IECore")
     cpu_extension_mock = mocker.patch(
-        "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
+        "ie_serving.models.ir_engine.IECore.add_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     batch_size_param, shape_param = None, None
@@ -91,9 +91,9 @@ def test_build_device_cpu(mocker):
 
 
 def test_build_device_other(mocker):
-    mocker.patch("ie_serving.models.ir_engine.IEPlugin")
+    mocker.patch("ie_serving.models.ir_engine.IECore")
     cpu_extension_mock = mocker.patch(
-        "ie_serving.models.ir_engine.IEPlugin.add_cpu_extension")
+        "ie_serving.models.ir_engine.IECore.add_extension")
     model_xml = 'model1.xml'
     model_bin = 'model1.bin'
     mapping_config = 'mapping_config.json'

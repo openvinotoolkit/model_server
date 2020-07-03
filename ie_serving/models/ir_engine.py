@@ -18,7 +18,7 @@ import json
 import queue
 from threading import Thread
 
-from openvino.inference_engine import IENetwork, IEPlugin
+from openvino.inference_engine import IENetwork, IECore
 
 from ie_serving.config import GLOBAL_CONFIG
 from ie_serving.logger import get_logger
@@ -51,7 +51,7 @@ def inference_callback(status, py_data):
 
 class IrEngine():
 
-    def __init__(self, model_name, model_version, net, plugin,
+    def __init__(self, model_name, model_version, net, core,
                  mapping_config, exec_net, batching_info, shape_info,
                  free_ireq_index_queue, num_ireq, requests_queue,
                  target_device, plugin_config):
@@ -61,7 +61,7 @@ class IrEngine():
         self.net = net
         self.batching_info = batching_info
         self.shape_info = shape_info
-        self.plugin = plugin
+        self.core = core
         self.input_tensor_names = list(net.inputs.keys())
         self.output_tensor_names = list(net.outputs.keys())
         self.model_keys = self.set_keys(mapping_config)
@@ -85,11 +85,12 @@ class IrEngine():
     def build(cls, model_name, model_version, model_xml, model_bin,
               mapping_config, batch_size_param, shape_param, num_ireq,
               target_device, plugin_config):
-        plugin = IEPlugin(device=target_device,
-                          plugin_dirs=GLOBAL_CONFIG['plugin_dir'])
+        core = IECore()
         if GLOBAL_CONFIG['cpu_extension'] is not None \
                 and 'CPU' in target_device:
-            plugin.add_cpu_extension(GLOBAL_CONFIG['cpu_extension'])
+            core.add_extension(
+                extension_path=GLOBAL_CONFIG['cpu_extension'],
+                device_name='CPU')
         net = IENetwork(model=model_xml, weights=model_bin)
         batching_info = BatchingInfo(batch_size_param)
         shape_info = ShapeInfo(shape_param, net.inputs)
@@ -124,10 +125,11 @@ class IrEngine():
         requests_queue = queue.Queue(maxsize=GLOBAL_CONFIG[
             'engine_requests_queue_size'])
 
-        exec_net = plugin.load(network=net, num_requests=num_ireq,
-                               config=plugin_config)
+        exec_net = core.load_network(network=net, num_requests=num_ireq,
+                                     config=plugin_config,
+                                     device_name=target_device)
         ir_engine = cls(model_name=model_name, model_version=model_version,
-                        mapping_config=mapping_config, net=net, plugin=plugin,
+                        mapping_config=mapping_config, net=net, core=core,
                         exec_net=exec_net, batching_info=batching_info,
                         shape_info=shape_info,
                         free_ireq_index_queue=free_ireq_index_queue,
@@ -321,9 +323,10 @@ class IrEngine():
         logger.debug("[Model: {}, version: {}] --- Loading network...".
                      format(self.model_name, self.model_version))
         try:
-            self.exec_net = self.plugin.load(network=self.net,
-                                             num_requests=self.num_ireq,
-                                             config=self.plugin_config)
+            self.exec_net = self.core.load_network(
+                network=self.net, num_requests=self.num_ireq,
+                config=self.plugin_config, device_name=self.target_device
+                )
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
@@ -346,9 +349,10 @@ class IrEngine():
         self.net.batch_size = batch_size
 
         try:
-            self.exec_net = self.plugin.load(network=self.net,
-                                             num_requests=self.num_ireq,
-                                             config=self.plugin_config)
+            self.exec_net = self.core.load_network(
+                network=self.net, num_requests=self.num_ireq,
+                config=self.plugin_config, device_name=self.target_device
+                )
         except Exception as e:
             message = "Error occurred while loading network: {}".format(
                 str(e))
