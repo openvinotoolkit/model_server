@@ -22,6 +22,7 @@ ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTA
 WORKDIR /ie-serving-py
 
 COPY requirements.txt /ie-serving-py/
+ENV WRAPT_INSTALL_EXTENSIONS=false
 RUN virtualenv -p python3 .venv && \
     . .venv/bin/activate && pip3 --no-cache-dir install -r requirements.txt
 
