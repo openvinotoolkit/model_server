@@ -73,6 +73,15 @@ Status ModelManager::start() {
         return status;
     }
 
+    bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
+    bool shapeSet = (modelConfig.getShapes().size() > 0);
+
+    spdlog::debug("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    if (batchSizeSet && shapeSet) {
+        spdlog::warn("Both shape and batch size have been defined. Batch size parameter will be ignored.");
+        modelConfig.setBatchingMode(FIXED);
+        modelConfig.setBatchSize(0);
+    }
     return reloadModelWithVersions(modelConfig);
 }
 

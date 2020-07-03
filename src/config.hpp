@@ -150,10 +150,10 @@ public:
     /**
          * @brief Gets the batch size
          * 
-         * @return size_t
+         * @return const std::string&
          */
-    size_t batchSize() {
-        return result->operator[]("batch_size").as<size_t>();
+    const std::string& batchSize() {
+        return result->operator[]("batch_size").as<std::string>();
     }
 
     /**

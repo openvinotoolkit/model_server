@@ -90,7 +90,6 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference_auto(self, start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
@@ -202,7 +201,6 @@ class TestBatchModelInference:
             expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])

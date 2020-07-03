@@ -104,52 +104,136 @@ TEST(ModelConfig, layout_multi) {
 TEST(ModelConfig, shape) {
     ovms::ModelConfig config;
 
-    ovms::shape_t s1{1, 2, 3};
-    ovms::shape_t s2{6, 6, 200, 300};
-    ovms::shape_t s3{100, 500};
+    ovms::ShapeInfo s1{ovms::FIXED, {1, 2, 3}};
+    ovms::ShapeInfo s2{ovms::FIXED, {6, 6, 200, 300}};
+    ovms::ShapeInfo s3{ovms::FIXED, {100, 500}};
 
     ovms::shapes_map_t shapeMap;
     shapeMap["first"] = s1;
     shapeMap["second"] = s2;
 
-    // single shape
-    config.setShape(s1);
-    auto gs1 = config.getShape();
-    auto gs2 = config.getShapes();
-    EXPECT_THAT(gs1, ElementsAre(1, 2, 3));
-    EXPECT_EQ(gs2.size(), 0);
-
-    // single from string
-    std::string str1 = "";
-    std::string str2 = "(64,128,256,   300)";
-    std::string str3 = "   (     64 , 300   )   ";
-    std::string str4 = "    64 , 300   )   ";
-
-    config.setShape(str1);
-    auto r_str1 = config.getShape();
-    EXPECT_EQ(r_str1.size(), 0);
-
-    config.setShape(str2);
-    auto r_str2 = config.getShape();
-    EXPECT_THAT(r_str2, ElementsAre(64, 128, 256, 300));
-
-    config.setShape(str3);
-    auto r_str3 = config.getShape();
-    EXPECT_THAT(r_str3, ElementsAre(64, 300));
-
-    config.setShape(str4);
-    auto r_str4 = config.getShape();
-    EXPECT_EQ(r_str4.size(), 0);
+    config.setShapes(shapeMap);
+    auto gs1 = config.getShapes();
+    EXPECT_EQ(gs1.size(), 2);
+    EXPECT_THAT(gs1["first"].shape, ElementsAre(1, 2, 3));
+    EXPECT_THAT(gs1["second"].shape, ElementsAre(6, 6, 200, 300));
 
     // mutli shape
     config.setShapes(shapeMap);
     config.addShape("third", s3);
 
-    gs1 = config.getShape();
-    gs2 = config.getShapes();
-    EXPECT_EQ(gs1.size(), 0);
-    EXPECT_EQ(gs2.size(), 3);
-    EXPECT_THAT(gs2["second"], ElementsAre(6, 6, 200, 300));
+    gs1 = config.getShapes();
+    EXPECT_EQ(gs1.size(), 3);
+    EXPECT_THAT(gs1["third"].shape, ElementsAre(100, 500));
+}
+
+TEST(ModelConfig, parseShapeFromString) {
+    ovms::ModelConfig config;
+    // Valid
+    std::string auto_str = "auto";
+    std::string valid_str1 = "(64,128,256,   300)";
+    std::string valid_str2 = "   (     64 , 300   )   ";
+    ovms::ShapeInfo shapeInfo;
+
+    config.parseShape(shapeInfo, auto_str);
+    EXPECT_EQ(shapeInfo.shapeMode, ovms::AUTO);
+    EXPECT_EQ(shapeInfo.shape.size(), 0);
+
+    config.parseShape(shapeInfo, valid_str1);
+    EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
+    EXPECT_THAT(shapeInfo.shape, ElementsAre(64, 128, 256, 300));
+
+    config.parseShape(shapeInfo, valid_str2);
+    EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
+    EXPECT_THAT(shapeInfo.shape, ElementsAre(64, 300));
+
+    // Invalid
+    std::string invalid_str1 = "(1, 2, 3, 4]";
+    std::string invalid_str2 = "(1, 2, 3.14, 4)";
+    ovms::Status status;
+
+    status = config.parseShape(shapeInfo, invalid_str1);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+    status = config.parseShape(shapeInfo, invalid_str2);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, parseShapeParam) {
+    ovms::ModelConfig config;
+    // Valid
+    std::string auto_str = "auto";
+    std::string valid_str1 = "(64,128,256,300)";
+    std::string valid_str2 = "{\"input\": \"(1, 3, 3, 200)\"}";
+    std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10)\"}";
+
+    config.parseShapeParameter(auto_str);
+    auto shapes = config.getShapes();
+    EXPECT_EQ(shapes[ovms::DEFAULT_INPUT_NAME].shapeMode, ovms::AUTO);
+
+    config.parseShapeParameter(valid_str1);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes[ovms::DEFAULT_INPUT_NAME].shapeMode, ovms::FIXED);
+    EXPECT_THAT(shapes[ovms::DEFAULT_INPUT_NAME].shape, ElementsAre(64, 128, 256, 300));
+
+    config.parseShapeParameter(valid_str2);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
+    EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 3, 200));
+
+    config.parseShapeParameter(valid_str3);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
+    EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
+    EXPECT_THAT(shapes["extra_input"].shape, ElementsAre(10));
+
+    // Invalid
+
+    std::string invalid_str1 = "string";
+    std::string invalid_str2 = "[1, 3, 43]";
+    std::string invalid_str3 = "{\"input\": \"auto\", \"extra_input\": \"10\"}";
+
+    auto status = config.parseShapeParameter(invalid_str1);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    status = config.parseShapeParameter(invalid_str2);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    status = config.parseShapeParameter(invalid_str3);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, setShapesFromRequest) {
+    ovms::ModelConfig config;
+    ovms::ShapeInfo shapeInfo;
+    shapeInfo.shapeMode = ovms::AUTO;
+    shapeInfo.shape = {1, 2, 3, 4};
+    ovms::shapes_map_t shapes = { {"input", shapeInfo} };
+    config.setShapes(shapes);
+
+    std::map<std::string, ovms::shape_t> req1 { {"input", {10, 20, 30, 40}} };
+    config.setShapesFromRequest(req1);
+    auto r_shapes = config.getShapes();
+    EXPECT_THAT(r_shapes["input"].shape, ElementsAre(10, 20, 30, 40));
+
+    shapeInfo.shapeMode = ovms::AUTO;
+    shapeInfo.shape = {};
+    shapes = { {ovms::DEFAULT_INPUT_NAME, shapeInfo} };
+    config.setShapes(shapes);
+
+    std::map<std::string, ovms::shape_t> req2 { {"input", {100, 200, 300, 400}} };
+    config.setShapesFromRequest(req2);
+    r_shapes = config.getShapes();
+    EXPECT_THAT(r_shapes[ovms::DEFAULT_INPUT_NAME].shape, ElementsAre(100, 200, 300, 400));
+
+    shapes = { {"input1", shapeInfo}, {"input2", shapeInfo} };
+    config.setShapes(shapes);
+
+    std::map<std::string, ovms::shape_t> req3 { {"input1", {1, 1, 1}}, {"input2", {2, 2, 2}} };
+    config.setShapesFromRequest(req3);
+    r_shapes = config.getShapes();
+    EXPECT_THAT(r_shapes["input1"].shape, ElementsAre(1, 1, 1));
+    EXPECT_THAT(r_shapes["input2"].shape, ElementsAre(2, 2, 2));
 }
 
 TEST(ModelConfig, plugin_config) {

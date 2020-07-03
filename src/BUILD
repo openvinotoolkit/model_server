@@ -52,7 +52,7 @@ cc_library(
         "status.hpp",
         "stringutils.hpp",
         "tensorinfo.hpp",
-        "timer.hpp",
+        "timer.hpp"
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",

@@ -215,7 +215,7 @@ test_throughput: venv
 		--model_name resnet \
 		--model_path /models/resnet50 \
 		--port $(OVMS_CPP_CONTAINTER_PORT); \
-		sleep 5
+		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
 		--images_numpy_path imgs.npy \
@@ -237,7 +237,7 @@ test_throughput_dummy_model: venv
 		--model_name dummy \
 		--model_path /dummy \
 		--port $(OVMS_CPP_CONTAINTER_PORT); \
-		sleep 5
+		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
 		--images_numpy_path dummy_input.npy \

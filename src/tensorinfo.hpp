@@ -127,7 +127,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getName() {
+    const std::string& getName() const {
         return name;
     }
 
@@ -136,7 +136,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getMappedName() {
+    const std::string& getMappedName() const {
         return mapping.size() == 0 ? name : mapping;
     }
 
@@ -145,7 +145,7 @@ public:
          * 
          * @return const InferenceEngine::Precision
          */
-    const InferenceEngine::Precision getPrecision() {
+    const InferenceEngine::Precision getPrecision() const {
         return precision;
     }
 
@@ -163,7 +163,7 @@ public:
          * 
          * @return const tensorflow::DataType
          */
-    const tensorflow::DataType getPrecisionAsDataType() {
+    const tensorflow::DataType getPrecisionAsDataType() const {
         switch (precision) {
         case InferenceEngine::Precision::FP32:
             return tensorflow::DataType::DT_FLOAT;
@@ -197,7 +197,7 @@ public:
         *
         * @return const std::string
         */
-    const std::string getPrecisionAsString() {
+    const std::string getPrecisionAsString() const {
         switch (precision) {
         case InferenceEngine::Precision::FP32:
             return "FP32";
@@ -316,7 +316,7 @@ public:
          * 
          * @return const InferenceEngine::Layout
          */
-    const InferenceEngine::Layout& getLayout() {
+    const InferenceEngine::Layout& getLayout() const {
         return layout;
     }
 
@@ -325,7 +325,7 @@ public:
          *
          * @return shape
          */
-    const shape_t& getShape() {
+    const shape_t& getShape() const {
         return shape;
     }
 
@@ -334,7 +334,7 @@ public:
          * 
          * @return const InferenceEngine::TensorDesc& 
          */
-    const InferenceEngine::TensorDesc getTensorDesc() {
+    const InferenceEngine::TensorDesc getTensorDesc() const {
         return InferenceEngine::TensorDesc{precision, shape, layout};
     }
 };
