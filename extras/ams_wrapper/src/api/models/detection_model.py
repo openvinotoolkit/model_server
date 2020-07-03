@@ -47,10 +47,10 @@ class DetectionModel(Model):
                 label_value = self.labels[output_name][label]
 
             conf = detection[output_config.value_index_mapping['confidence']].item()
-            x_min = detection[output_config.value_index_mapping['x_min']].item()
-            y_min = detection[output_config.value_index_mapping['y_min']].item()
-            x_max = detection[output_config.value_index_mapping['x_max']].item()
-            y_max = detection[output_config.value_index_mapping['y_max']].item()
+            x_min = max(detection[output_config.value_index_mapping['x_min']].item(), 0)
+            y_min = max(detection[output_config.value_index_mapping['y_min']].item(), 0)
+            x_max = max(detection[output_config.value_index_mapping['x_max']].item(), 0)
+            y_max = max(detection[output_config.value_index_mapping['y_max']].item(), 0)
 
             tag = Tag(label_value, conf)
 

@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser(description='Demo for object detection requests
                                              'analyses input images and saveswith with detected objects.'
                                              'it relies on model given as parameter...')
 
-parser.add_argument('--model_name', required=False, help='Name of the model to be used', default="face-detaction")
+parser.add_argument('--model_name', required=False, help='Name of the model to be used', default="face-detection")
 parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="images/people")
 parser.add_argument('--output_dir', required=False, help='Directory for staring images with detection results', default="results")
 parser.add_argument('--batch_size', required=False, help='How many images should be grouped in one batch', default=1, type=int)
@@ -55,7 +55,7 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 files = os.listdir(args['input_images_dir'])
 batch_size = args['batch_size']
 model_name = args['model_name']
-print("Running "+model_name+" on files:" + str(files)) 
+print("Running "+model_name+" on files:" + str(files))
 
 imgs = np.zeros((0,3,args['height'],args['width']), np.dtype('<f'))
 for i in files:
@@ -107,10 +107,10 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
                 print("y_min", y_min)
                 print("x_max", x_max)
                 print("y_max", y_max)
-                img_out = img_out.copy()
-                img_out = cv2.rectangle(img_out,(x_min,y_min),(x_max,y_max),(0,0,255),1)
+
+                img_out = cv2.rectangle(cv2.UMat(img_out),(x_min,y_min),(x_max,y_max),(0,0,255),1)
                 # draw each detected box on the input image
-        
+
         output_path = os.path.join(args['output_dir'],model_name+"_"+str(iteration)+"_"+str(y)+'.jpg')
         print("saving result to", output_path)
         result_flag = cv2.imwrite(output_path,img_out)

@@ -56,6 +56,11 @@ pipeline {
                         sh './tests/scripts/functional-tests-ov-base.sh'
                     }
                 }
+                stage('functional tests openvino clearlinux') {
+                    steps {
+                        sh './tests/scripts/functional-tests-clearlinux.sh'
+                    }
+                }
             }
         }
         stage('functional tests ams') {

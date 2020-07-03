@@ -77,7 +77,7 @@ def get_fake_model():
     net = MockedNet(
         inputs={DEFAULT_INPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
         outputs={DEFAULT_OUTPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')})
-    plugin = None
+    core = None
     batching_info = BatchingInfo(None)
     shape_info = ShapeInfo(None, net.inputs)
     new_engines = {}
@@ -88,7 +88,7 @@ def get_fake_model():
     for version in available_versions:
         engine = IrEngine(model_name='test', model_version=version,
                           mapping_config=mapping_config, exec_net=exec_net,
-                          net=net, plugin=plugin, batching_info=batching_info,
+                          net=net, core=core, batching_info=batching_info,
                           shape_info=shape_info, target_device="CPU",
                           free_ireq_index_queue=free_ireq_index_queue,
                           plugin_config=None, num_ireq=1,
@@ -107,6 +107,7 @@ def get_fake_model():
                            shape_param=shape_param,
                            version_policy_filter=lambda versions: versions[:],
                            versions_statuses=versions_statuses,
+                           update_locks={},
                            plugin_config=None, target_device="CPU",
                            num_ireq=1)
     return new_model
@@ -119,7 +120,7 @@ def get_fake_ir_engine():
     net = MockedNet(
         inputs={DEFAULT_INPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')},
         outputs={DEFAULT_OUTPUT_KEY: MockedIOInfo('FP32', [1, 1, 1], 'NCHW')})
-    plugin = None
+    core = None
     batching_info = BatchingInfo(None)
     shape_info = ShapeInfo(None, net.inputs)
     requests_queue = queue.Queue()
@@ -127,7 +128,7 @@ def get_fake_ir_engine():
     free_ireq_index_queue.put(0)
     engine = IrEngine(model_name='test', model_version=1,
                       mapping_config=mapping_config, exec_net=exec_net,
-                      net=net, plugin=plugin, batching_info=batching_info,
+                      net=net, core=core, batching_info=batching_info,
                       shape_info=shape_info, target_device="CPU",
                       free_ireq_index_queue=free_ireq_index_queue,
                       plugin_config=None, num_ireq=1,

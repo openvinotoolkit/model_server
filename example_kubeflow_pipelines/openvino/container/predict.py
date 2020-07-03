@@ -1,4 +1,4 @@
-from openvino.inference_engine import IENetwork, IEPlugin
+from openvino.inference_engine import IENetwork, IECore
 import argparse
 import numpy as np
 from urllib.parse import urlparse
@@ -99,9 +99,9 @@ def main():
 
     cpu_extension = "/usr/local/lib/libcpu_extension.so"
 
-    plugin = IEPlugin(device=device, plugin_dirs=plugin_dir)
+    core = IECore()
     if cpu_extension and 'CPU' in device:
-        plugin.add_cpu_extension(cpu_extension)
+        core.add_extension(cpu_extension)
 
     print("inference engine:", model_xml, model_bin, device)
 
@@ -117,7 +117,7 @@ def main():
     print(output_blob)
 
     print("Loading IR to the plugin...")
-    exec_net = plugin.load(network=net, num_requests=1)
+    exec_net = core.load_network(network=net, num_requests=1, device_name=device)
 
     print("Loading input numpy")
     imgs = np.load(input_numpy_file, mmap_mode='r', allow_pickle=False)

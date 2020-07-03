@@ -28,8 +28,10 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
-OVMS_VERSION := "2020.2"
+OVMS_VERSION := "2020.3"
 DLDT_PACKAGE_URL := "$(dldt_package_url)"
+OV_SOURCE_BRANCH ?= "2020.3.0"
+
 TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest
 DOCKER_AMS_TAG ?= ams:latest
@@ -63,7 +65,7 @@ unit: $(ACTIVATE)
 	@. $(ACTIVATE); py.test $(TEST_DIRS)/unit/
 
 coverage: $(ACTIVATE)
-	@echo "Computing unit test coverage..." 
+	@echo "Computing unit test coverage..."
 	@. $(ACTIVATE); coverage run --source=ie_serving -m pytest $(TEST_DIRS)/unit/ && coverage report --fail-under=70
 
 ams_coverage: $(ACTIVATE)
@@ -72,14 +74,14 @@ ams_coverage: $(ACTIVATE)
 	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/unit --cov-report=html --cov-fail-under=79
 
 ams_test: $(ACTIVATE)
-	echo "Running ams wrapper unit tests" 
+	echo "Running ams wrapper unit tests"
 	test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/unit/test_images || ($(AMS_EXAMPLE)tests/unit/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/unit)
 	@. $(ACTIVATE); pytest  $(AMS_EXAMPLE)tests/unit
 
-ams_clean: 
+ams_clean:
 	@echo "Removing ams virtual env files and test images ..."
-	@rm -rf $(VIRTUALENV_DIR)	
+	@rm -rf $(VIRTUALENV_DIR)
 	@rm -rf $(AMS_EXAMPLE)tests/unit/test_images
 
 test: $(ACTIVATE)
@@ -120,7 +122,7 @@ docker_build_ov_base:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2020_R1 apt >> version
+	@echo OpenVINO version: $(OVMS_VERSION) ov_base >> version
 	@echo docker build -f Dockerfile_openvino_base --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 	@docker build -f Dockerfile_openvino_base --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
 
@@ -137,23 +139,23 @@ docker_build_ams:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: `ls -1 l_openvino_toolkit*` >> version
-	@echo docker build -f Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
-	@docker build -f Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@echo docker build -f extras/ams_wrapper/Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@docker build -f extras/ams_wrapper/Dockerfile_ams_centos --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
 
 docker_build_ams_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
-	@docker build -f Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@echo docker build -f extras/ams_wrapper/Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
+	@docker build -f extras/ams_wrapper/Dockerfile_ams_clearlinux --build-arg no_proxy=$(no_proxy) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg DLDT_PACKAGE_URL="$(DLDT_PACKAGE_URL)" -t $(DOCKER_AMS_TAG) .
 
 docker_build_clearlinux:
 	@echo "Building docker image"
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
-	@echo OpenVINO version: 2019_R3 clearlinux >> version
-	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" -t $(DOCKER_OVMS_TAG) .
+	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
+	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
+	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
