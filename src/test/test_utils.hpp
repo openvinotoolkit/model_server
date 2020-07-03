@@ -37,6 +37,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG {
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
+constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 
 static ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::shape_t>&& tensors,

@@ -269,8 +269,9 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
         0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
+    const auto MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS = 1.2 * ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
-        config.getName(), ovms::ModelInstance::WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS * 2);
+        config.getName(), MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelWithModelInstanceLoadedWaitInLoadingState->getDefaultModelInstance()->getStatus().getState());
     std::shared_ptr<ovms::ModelInstance> modelInstance;

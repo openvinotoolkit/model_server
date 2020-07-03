@@ -246,8 +246,6 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoaded) {
 }
 
 TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloaded) {
-   std::filesystem::path dir = std::filesystem::current_path();
-   std::string dummy_model = dir.u8string() + "/src/test/dummy";
    ovms::ModelInstance modelInstance;
    // TODO dirty hack to avoid initializing config
    setenv("NIREQ", "1", 1);
@@ -259,8 +257,6 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloaded) {
 }
 
 TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
-   std::filesystem::path dir = std::filesystem::current_path();
-   std::string dummy_model = dir.u8string() + "/src/test/dummy";
    ovms::ModelInstance modelInstance;
    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
    config.setBatchSize(1);
@@ -269,13 +265,12 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
    auto newBatchSize = config.getBatchSize() + 1;
-   EXPECT_EQ(modelInstance.reloadModel(newBatchSize), ovms::StatusCode::OK);
+   std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+   EXPECT_EQ(modelInstance.reloadModel(newBatchSize, predictHandlesCounterGuard), ovms::StatusCode::OK);
    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloadedWithNewBatchSize) {
-   std::filesystem::path dir = std::filesystem::current_path();
-   std::string dummy_model = dir.u8string() + "/src/test/dummy";
    ovms::ModelInstance modelInstance;
    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
    config.setBatchSize(1);
@@ -286,6 +281,7 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloadedWithNewBatchSize) {
    modelInstance.unloadModel();
    ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
    auto newBatchSize = config.getBatchSize() + 1;
-   EXPECT_EQ(modelInstance.reloadModel(newBatchSize), ovms::StatusCode::OK);
+   std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+   EXPECT_EQ(modelInstance.reloadModel(newBatchSize, predictHandlesCounterGuard), ovms::StatusCode::OK);
    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }

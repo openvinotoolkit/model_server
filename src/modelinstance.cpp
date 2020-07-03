@@ -244,9 +244,10 @@ Status ModelInstance::fetchModelFilepaths() {
 void ModelInstance::prepareInferenceRequestsQueue() {
     uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
-    spdlog::info("Loaded model {}; version: {}; No of InferRequests: {}",
+    spdlog::info("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
+        getBatchSize(),
         numberOfParallelInferRequests);
 }
 
@@ -296,6 +297,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const size_t pred
 }
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     spdlog::info("Loading model:{}, version:{}, from path:{}, with backend:{} ...",
         config.getName(), config.getVersion(), config.getPath(), config.getBackend());
     this->status = ModelVersionStatus(config.getName(), config.getVersion());
@@ -306,63 +308,100 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
 }
 
 Status ModelInstance::reloadModel(const ModelConfig& config) {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading();
     while (!canUnloadInstance()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+        SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} inferences in progress.",
+            getName(), getVersion(), predictRequestsHandlesCount);
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     return loadModelImpl(config);
 }
 
-Status ModelInstance::reloadModel(size_t batchSize) {
+Status ModelInstance::reloadModel(size_t batchSize, std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard) {
+    // temporarily release current predictRequest lock on model loading
+    predictHandlesCounterGuard.reset();
+    // block concurrent requests for reloading/unloading - assure that after reload predict request
+    // will block further requests for reloading/unloading until inference is performed
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     SPDLOG_INFO("Will reload model:{} version:{} from batch size:{} to batch size:{}",
         getName(), getVersion(), getBatchSize(), batchSize);
     ModelConfig configWithNewBatchSize = config;
     configWithNewBatchSize.setBatchSize(batchSize);
     ModelConfig oldConfig = config;
-    // TODO make fail-safe old config store
     auto status = reloadModel(configWithNewBatchSize);
     if (!status.ok()) {
-        SPDLOG_INFO("Failed to reload model:{} version:{} with new batch size:{}. Reloading to previous batch size:{} with error:{}",
-            getName(), getVersion(), batchSize, getBatchSize(), status.string());
+        SPDLOG_WARN("Failed to reload model:{} version:{} with new batch size:{} with error:{} Reloading to previous batch size:{} ...",
+            getName(), getVersion(), batchSize, status.string(), getBatchSize());
         status = reloadModel(oldConfig);
         if (!status.ok()) {
-            SPDLOG_INFO("Failed to reload model:{} version:{} to previous batch size:{} with error:{}",
+            SPDLOG_ERROR("Failed to reload model:{} version:{} back to previous batch size:{} with error:{}",
                 getName(), getVersion(), getBatchSize(), status.string());
         }
+    } else {
+        predictHandlesCounterGuard = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*this);
     }
     return status;
 }
 
-bool ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds) {
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lk(mtx);
-    // TODO wait several time since no guarantee that wakeup will be triggered before calling wait_for
-    const uint waitLoadedTimestepMilliseconds = 10;
-    uint waitCheckpointsCounter = WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS / waitLoadedTimestepMilliseconds;
-    SPDLOG_INFO("Waiting for loaded state for model:{} version:{} with timestep:{} timeout:{} check count:{}", getName(), getVersion(),
-        waitLoadedTimestepMilliseconds, WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS, waitCheckpointsCounter);
+Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+                                  std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard) {
+    // order is important here for performance reasons
+    // assumption: model is already loaded for most of the calls
+    predictHandlesCounterGuard = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*this);
+    if (getStatus().getState() == ModelVersionState::AVAILABLE) {
+        SPDLOG_INFO("Model:{}, version:{} already loaded", getName(), getVersion());
+        return StatusCode::OK;
+    }
+    SPDLOG_INFO("Model:{} version:{} is still loading", getName(), getVersion());
+    predictHandlesCounterGuard.reset();
 
+    // wait several time since no guarantee that cv wakeup will be triggered before calling wait_for
+    const uint waitLoadedTimestepMilliseconds = 100;
+    const uint waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
+    uint waitCheckpointsCounter = waitCheckpoints;
+    SPDLOG_INFO("Waiting for loaded state for model:{} version:{} with timestep:{} timeout:{} check count:{}", getName(), getVersion(),
+        waitLoadedTimestepMilliseconds, waitForModelLoadedTimeoutMilliseconds, waitCheckpointsCounter);
+    std::mutex cv_mtx;
+    std::unique_lock<std::mutex> cv_lock(cv_mtx);
     while (waitCheckpointsCounter-- > 0) {
-        // TODO consider bare sleep
-        if (modelLoadedNotify.wait_for(lk,
-                                    std::chrono::milliseconds(waitLoadedTimestepMilliseconds),
-                                    [this](){
-                                        return this->getStatus().getState() > ModelVersionState::LOADING;
-                                    })) {
-            SPDLOG_DEBUG("Waiting for loaded state reached timeout for model:{} version:{}", getName(), getVersion());
-            break;
+        if (modelLoadedNotify.wait_for(cv_lock,
+                                       std::chrono::milliseconds(waitLoadedTimestepMilliseconds),
+                                       [this](){
+                                           return this->getStatus().getState() > ModelVersionState::LOADING;
+                                       })) {
+            SPDLOG_INFO("Waiting for model:{} version:{} loaded state for:{} time",
+                getName(), getVersion(), waitCheckpoints - waitCheckpointsCounter);
         }
-        if (getStatus().getState() > ModelVersionState::LOADING) {
-            break;
+        predictHandlesCounterGuard = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*this);
+        if (getStatus().getState() == ModelVersionState::AVAILABLE) {
+            SPDLOG_INFO("Succesfully waited for model:{}, version:{}", getName(), getVersion());
+            return StatusCode::OK;
+        }
+        predictHandlesCounterGuard.reset();
+        if (ModelVersionState::AVAILABLE < getStatus().getState()) {
+            SPDLOG_INFO("Stopped waiting for model:{} version:{} since it is unloading.", getName(), getVersion());
+            return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
         }
     }
-    return getStatus().getState() > ModelVersionState::LOADING;
+    SPDLOG_INFO("Waiting for loaded state reached timeout for model:{} version:{}",
+        getName(), getVersion());
+    if (getStatus().getState() > ModelVersionState::AVAILABLE) {
+        SPDLOG_ERROR("Waiting for model:{}, version:{} ended since it started unloading.", getName(), getVersion());
+        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    } else {
+        SPDLOG_ERROR("Waiting for model:{}, version:{} ended due to timeout.", getName(), getVersion());
+        return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+    }
 }
 
 void ModelInstance::unloadModel() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setUnloading();
     while (!canUnloadInstance()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+        SPDLOG_INFO("Waiting to unload model:{} version:{}. Blocked by:{} inferences in progres.",
+            getName(), getVersion(), predictRequestsHandlesCount);
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     inferRequestsQueue.reset();
     execNetwork.reset();
@@ -473,7 +512,6 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             }
         }
     }
-
     return StatusCode::OK;
 }
 
