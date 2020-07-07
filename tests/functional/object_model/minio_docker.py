@@ -17,6 +17,7 @@ from docker import DockerClient
 
 import config
 from object_model.docker import Docker
+from utils.parametrization import generate_test_object_name
 
 
 class MinioDocker(Docker):
@@ -24,6 +25,7 @@ class MinioDocker(Docker):
     def __init__(self, request, container_name, start_container_command=config.start_minio_container_command,
                  env_vars_container=None, image=config.minio_image,
                  container_log_line=config.container_minio_log_line):
+        container_name = generate_test_object_name(prefix=container_name)
         super().__init__(request, container_name, start_container_command,
                          env_vars_container, image, container_log_line)
         self.start_container_command = start_container_command.format(self.grpc_port)
