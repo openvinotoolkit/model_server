@@ -63,6 +63,92 @@ def start_server_single_model(request, get_image, get_test_dir,
 
 
 @pytest.fixture(scope="class")
+def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
+                                             vehicle_attributes_model_downloader,
+                                             get_docker_context):
+
+    print("Downloaded model files:", vehicle_attributes_model_downloader)
+    client = get_docker_context
+    path_to_mount = get_test_dir + '/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
+
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name vehicle-attributes " \
+              "--model_path /opt/ml/vehicle-attributes-recognition-barrier-0039 " \
+              "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
+              " --plugin_config " \
+              "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
+              "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
+
+    container = \
+        client.containers.run(
+            image=get_image,
+            detach=True,
+            name='ie-serving-py-test-single-{}'.format(get_tests_suffix()),
+            ports={'{}/tcp'.format(grpc_port): grpc_port,
+                   '{}/tcp'.format(rest_port): rest_port},
+            remove=True,
+            volumes=volumes_dict,
+            # In this case, slower,
+            # non-default serialization method is used
+            environment=[
+                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
+            command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+
+
+@pytest.fixture(scope="class")
+def start_server_single_vehicle_model(request, get_image, get_test_dir,
+                                      vehicle_adas_model_downloader,
+                                      get_docker_context):
+
+    print("Downloaded model files:", vehicle_adas_model_downloader)
+    client = get_docker_context
+    path_to_mount = get_test_dir + '/saved_models/'
+    volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                 'mode': 'ro'}}
+
+    grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
+
+    command = "/ie-serving-py/start_server.sh ie_serving model " \
+              "--model_name vehicle-detection " \
+              "--model_path /opt/ml/vehicle-detection-adas-binary-0001 " \
+              "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
+              " --plugin_config " \
+              "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": " \
+              "\\\"CPU_THROUGHPUT_AUTO\\\"}\""
+
+    container = \
+        client.containers.run(
+            image=get_image,
+            detach=True,
+            name='ie-serving-py-test-single-{}'.format(get_tests_suffix()),
+            ports={'{}/tcp'.format(grpc_port): grpc_port,
+                   '{}/tcp'.format(rest_port): rest_port},
+            remove=True,
+            volumes=volumes_dict,
+            # In this case, slower,
+            # non-default serialization method is used
+            environment=[
+                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
+            command=command)
+    request.addfinalizer(container.kill)
+
+    running = wait_endpoint_setup(container)
+    assert running is True, "docker container was not started successfully"
+
+    return container, {"grpc_port": grpc_port, "rest_port": rest_port}
+
+
+@pytest.fixture(scope="class")
 def start_server_with_mapping(request, get_image, get_test_dir,
                               get_docker_context):
     shutil.copyfile('tests/functional/mapping_config.json',

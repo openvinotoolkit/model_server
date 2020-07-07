@@ -54,6 +54,7 @@ ENV LD_LIBRARY_PATH="$DL_INSTALL_DIR/inference_engine/external/tbb/lib:$DL_INSTA
 WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements.txt /ie-serving-py/
+ENV WRAPT_INSTALL_EXTENSIONS=false
 RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 install -r requirements.txt
 
 COPY ie_serving /ie-serving-py/ie_serving

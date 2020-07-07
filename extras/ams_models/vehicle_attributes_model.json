@@ -1,0 +1,46 @@
+{
+    "endpoint": "vehicleClassification",
+    "model_type": "classification_attributes",
+    "inputs": [
+        {
+          "input_name": "input",
+          "input_format": "NCHW",
+          "color_format": "BGR",
+          "target_height": 72,
+          "target_width": 72,
+          "channels": 3
+        }
+      ],
+    "outputs":
+     [
+        {
+            "output_name": "color",
+            "top_k_results": 1,
+            "classes": {
+                "white": 0.0,
+                "gray": 1.0,
+                "yellow": 2.0,
+                "red": 3.0,
+                "green": 4.0,
+                "blue": 5.0,
+                "black": 6.0
+            },
+            "is_softmax": true
+        },
+        {
+            "output_name": "type",
+            "top_k_results": 1,
+            "classes": {
+                "car": 0.0,
+                "van": 1.0,
+                "truck": 2.0,
+                "bus": 3.0
+            },
+            "is_softmax": true
+        }
+    ],
+    "ovms_mapping": {
+        "model_name": "vehicle_attributes",
+        "model_version": 0
+    }
+}

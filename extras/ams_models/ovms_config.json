@@ -1,0 +1,29 @@
+{
+  "model_config_list":[
+    {
+      "config": {
+        "name": "vehicle_detection_adas",
+        "base_path": "/opt/models/vehicle_detection_adas",
+        "nireq": 10
+      }
+    },
+    {
+      "config": {
+        "name": "vehicle_attributes",
+        "base_path": "/opt/models/vehicle_attributes"
+      }
+    },
+    {
+      "config": {
+        "name": "person_vehicle_bike_detection",
+        "base_path": "/opt/models/person_vehicle_bike_detection"
+      }
+    },
+    {
+      "config": {
+        "name": "face_detection_adas",
+        "base_path": "/opt/models/face_detection_adas"
+      }
+    }
+  ]
+}

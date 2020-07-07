@@ -12,7 +12,8 @@ The example relies on the model [face_detection_0004](https://docs.openvinotoolk
 
 ```bash
 python face_detection.py --help
-usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
+usage: face_detection.py [-h] [--model_name MODEL_NAME]
+                         [--input_images_dir INPUT_IMAGES_DIR]
                          [--output_dir OUTPUT_DIR] [--batch_size BATCH_SIZE]
                          [--width WIDTH] [--height HEIGHT]
                          [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
@@ -22,6 +23,7 @@ saves with with detected faces.it relies on model face_detection...
 
 optional arguments:
   -h, --help            show this help message and exit
+  --model_name MODEL_NAME
   --input_images_dir INPUT_IMAGES_DIR
                         Directory with input images
   --output_dir OUTPUT_DIR
@@ -36,7 +38,7 @@ optional arguments:
                         Specify port to grpc service. default: 9000
 ```
 
-## Usage example
+## Usage example face detection
 
 Start the OVMS service locally:
 
@@ -64,7 +66,32 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
-<#iteration>_<#image_in_batch>.jpeg
+<#model-name>_<#iteration>_<#image_in_batch>.jpeg
 
+## Usage example vehicle detection
 
+Start the OVMS service locally:
 
+```bash
+mkdir -p model/1
+wget -P model/1 https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.xml
+wget -P model/1 https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/1/vehicle-detection-adas-binary-0001/FP32-INT1/vehicle-detection-adas-binary-0001.bin
+docker run -d -v `pwd`/model:/models -e LOG_LEVEL=DEBUG -p 9000:9000 ie-serving-py:latest \
+/ie-serving-py/start_server.sh ie_serving model --model_path /models --model_name vehicle-detection --port 9000  --shape auto
+```
+
+Run the client:
+```bash
+cd example_client
+virtualenv .venv
+. .venv/bin/activate
+pip install -r client_requirements.txt
+mkdir results
+
+python face_detection.py --model_name=vehicle-detection --batch_size 2 --width 672 --height 384 --input_images_dir images/vehicle --output_dir results
+```
+
+The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
+following naming convention:
+
+<#model_name>_<#iteration>_<#image_in_batch>.jpeg

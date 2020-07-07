@@ -1,0 +1,4 @@
+requests==2.23.0
+tensorflow-serving-api==2.0.0
+opencv-python==4.2.0.34
+

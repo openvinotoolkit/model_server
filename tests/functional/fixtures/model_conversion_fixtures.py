@@ -37,7 +37,7 @@ def download_file(url, dir, name):
     return target_file
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def resnet_multiple_batch_sizes(get_test_dir, get_docker_context):
     tensorflow_model = \
         download_file('https://download.01.org/opencv/public_models/012020/resnet-50-tf/resnet_v1-50.pb', # noqa

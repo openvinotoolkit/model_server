@@ -375,6 +375,20 @@ ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_pat
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
+## Starting docker container with GPU
+
+The GPU plugin uses the Intel® Compute Library for Deep Neural Networks (clDNN) to infer deep neural networks.
+It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics
+
+Before using GPU as OVMS target device, you need to install the required drivers. Next, start the docker container
+with additional parameter `--device /dev/dri` to pass the device context and set OVMS parameter `--target_device GPU`.
+The command example is listed below:
+
+```
+docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 \
+ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+```
+
 ## Batch Processing
 
 `batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer tool.

@@ -1,0 +1,37 @@
+{
+    "endpoint": "faceDetection",
+    "model_type": "detection",
+    "inputs": [
+        {
+          "input_name": "data",
+          "input_format": "NCHW",
+          "color_format": "BGR",
+          "target_height": 384,
+          "target_width": 672,
+          "channels": 3
+        }
+      ],
+    "outputs": [
+        {
+            "output_name": "detection_out",
+            "confidence_threshold": 0.5,
+            "classes": {
+                "background": 0.0,
+                "face": 1.0
+            },
+            "value_index_mapping": {
+                "image_id": 0,
+                "value": 1,
+                "confidence": 2,
+                "x_min": 3,
+                "y_min": 4,
+                "x_max": 5,
+                "y_max": 6
+            }
+        }
+    ],
+    "ovms_mapping": {
+        "model_name": "face_detection_adas",
+        "model_version": 0
+    }
+}
