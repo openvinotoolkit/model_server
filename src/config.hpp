@@ -92,19 +92,19 @@ namespace ovms {
         /**
          * @brief Gets the grpc port
          * 
-         * @return uint16_t
+         * @return uint64_t
          */
-        uint16_t port() {
-            return result->operator[]("port").as<uint16_t>();
+        uint64_t port() {
+            return result->operator[]("port").as<uint64_t>();
         }
 
         /**
          * @brief Gets the REST port
          * 
-         * @return uint16_t
+         * @return uint64_t
          */
-        uint16_t restPort() {
-            return result->operator[]("rest_port").as<uint16_t>();
+        uint64_t restPort() {
+            return result->operator[]("rest_port").as<uint64_t>();
         }
 
         /**

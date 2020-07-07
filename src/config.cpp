@@ -26,7 +26,7 @@ namespace ovms {
     const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
     const std::string DEFAULT_NIREQ = std::to_string(AVAILABLE_CORES / 8 + 2);
     const std::string DEFAULT_GRPC_SERVERS = std::to_string(AVAILABLE_CORES / 8 + 4);
-    const uint MAX_PORT_NUMBER = std::numeric_limits<uint>::max();
+    const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
     Config& Config::parse(int argc, char** argv) {
         try {
@@ -37,11 +37,11 @@ namespace ovms {
                     "show this help message and exit")
                 ("port",
                     "gRPC server port",
-                    cxxopts::value<uint16_t>()->default_value("9178"),
+                    cxxopts::value<uint64_t>()->default_value("9178"),
                     "PORT")
                 ("rest_port",
                     "REST server port, the REST server will not be started if rest_port is blank or set to 0",
-                    cxxopts::value<uint16_t>()->default_value("0"),
+                    cxxopts::value<uint64_t>()->default_value("0"),
                     "REST_PORT")
                 ("grpc_workers",
                     "number of gRPC servers. Recommended to be >= NIREQ. Default value calculated at runtime: NIREQ + 2",
@@ -128,15 +128,16 @@ namespace ovms {
             exit(EX_USAGE);
         }
 
-        // port and rest_port cannot be the same
-        if (port() == restPort()) {
-            std::cerr << "port and rest_port cannot have the same values" << std::endl;
-            exit(EX_USAGE);
-        }
         if (result->count("config_path") && (result->count("batch_size") || result->count("shape") ||
             result->count("nireq") || result->count("model_version_policy") || result->count("target_device") ||
             result->count("plugin_config"))) {
             std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
+            exit(EX_USAGE);
+        }
+
+        // check grpc_workers value
+        if (result->count("grpc_workers") && ((this->grpcWorkers() > AVAILABLE_CORES) || (this->grpcWorkers() < 1))) {
+            std::cerr << "grpc_workers count should be from 1 to CPU core count : " << AVAILABLE_CORES << std::endl;
             exit(EX_USAGE);
         }
 
@@ -150,6 +151,12 @@ namespace ovms {
             exit(EX_USAGE);
         }
 
+        // port and rest_port cannot be the same
+        if (this->port() == this->restPort()) {
+            std::cerr << "port and rest_port cannot have the same values" << std::endl;
+            exit(EX_USAGE);
+        }
         return;
     }
+
 }  // namespace ovms
