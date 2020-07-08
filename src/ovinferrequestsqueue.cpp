@@ -18,16 +18,6 @@
 
 namespace ovms {
 
-void OVInferRequestsQueue::signalCompletedInference(int streamID) {
-    activeStreams[streamID].notify_one();
-}
-
-void OVInferRequestsQueue::waitForAsync(int streamID) {
-    std::mutex mx;
-    std::unique_lock <std::mutex> lock(mx);
-    activeStreams[streamID].wait(lock);
-}
-
 int OVInferRequestsQueue::getIdleStream() {
     int value;
     std::unique_lock <std::mutex> lk(front_mut);
