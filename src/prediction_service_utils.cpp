@@ -94,14 +94,16 @@ Status getModelInstance(ovms::ModelManager& manager,
 
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
     try {
-        inferRequest.SetCompletionCallback([&inferRequestsQueue, executingInferId]() {
-            inferRequestsQueue.signalCompletedInference(executingInferId);
-        });
         inferRequest.StartAsync();
-        inferRequestsQueue.waitForAsync(executingInferId);
+        InferenceEngine::StatusCode sts = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+        if (sts != InferenceEngine::StatusCode::OK) {
+            Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+            SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
+            return status;
+        }
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
         return status;
     }
     return StatusCode::OK;

@@ -23,6 +23,13 @@ pipeline {
                 }
             }
         }
+        stage('latency test - dummy model') {
+            steps {
+                lock("commit-pipeline-${env.NODE_NAME}-latency-test-dummy") {
+                    sh 'make test_perf_dummy_model'
+                }
+            }
+        }
         stage('functional tests') {
             steps {
                 lock("commit-pipeline-${env.NODE_NAME}-functional-test") {
@@ -35,6 +42,13 @@ pipeline {
             steps {
                 lock("commit-pipeline-${env.NODE_NAME}-throughput-test") {
                     sh 'make test_throughput'
+                }
+            }
+        }
+        stage('throughput test - dummy model') {
+            steps {
+                lock("commit-pipeline-${env.NODE_NAME}-throughput-test-dummy") {
+                    sh 'make test_throughput_dummy_model'
                 }
             }
         }

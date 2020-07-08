@@ -40,23 +40,12 @@ class OVInferRequestsQueue {
     void returnStream(int streamID);
 
     /**
-    * @brief Sends notification from callback function to predict
-    */
-    void signalCompletedInference(int streamID);
-
-    /**
-    * @brief Wait for async callback notification
-    */
-    void waitForAsync(int streamID);
-
-    /**
     * @brief Constructor with initialization
     */
     OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
         streams(streamsLength),
         front_idx{0},
-        back_idx{0},
-        activeStreams(streamsLength) {
+        back_idx{0} {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
             inferRequests.push_back(network.CreateInferRequest());
@@ -89,7 +78,6 @@ class OVInferRequestsQueue {
     /**
     * @brief Vector representing OV streams and used for notification about completed inference operations
     */
-    std::vector<std::condition_variable> activeStreams;
     std::mutex front_mut;
     std::condition_variable not_full_cond;
     /**

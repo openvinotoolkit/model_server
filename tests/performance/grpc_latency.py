@@ -155,10 +155,15 @@ while iteration <= iterations:
         # If we want to check accurracy
         if accurracy_measuring_mode:
             output = np.array(make_ndarray(result.outputs[args.output_name]))
-            actual_label = np.argmax(output[0])
-            if expected_label == actual_label:
-                matches_count += 1
-            total_count += 1
+            if args.model_name == "dummy":
+                if (img + 1 == output ).all():
+                    matches_count += 1
+                total_count += 1
+            else:
+                actual_label = np.argmax(output[0])
+                if (expected_label == actual_label) :
+                    matches_count += 1
+                total_count += 1
 
         if args.report_every > 0 and iteration < iterations and iteration % args.report_every == 0:
             print(f'[{args.id:2}] Iteration {iteration:5}/{iterations:5}; '

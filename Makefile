@@ -144,6 +144,29 @@ test_perf: venv
 	@echo "Removing test container"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
+test_perf_dummy_model: venv
+	@echo "Dropping test container if exist"
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@echo "Starting docker image"
+	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+	@echo "Running latency test"
+	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+		--images_numpy_path tests/performance/dummy_input.npy \
+		--labels_numpy_path tests/performance/dummy_lbs.npy \
+		--iteration 10000 \
+		--batchsize 1 \
+		--report_every 1000 \
+		--input_name b \
+		--output_name a \
+		--model_name dummy
+	@echo "Removing test container"
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+
+
 test_throughput: venv
 	@echo "Dropping test container if exist"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
@@ -164,6 +187,30 @@ test_throughput: venv
 		--iteration 500 \
 		--batchsize 1 \
 		--input_name data
+	@echo "Removing test container"
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+
+test_throughput_dummy_model: venv
+	@echo "Dropping test container if exist"
+	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@echo "Starting docker image"
+	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--model_name dummy \
+		--model_path /dummy \
+		--port $(OVMS_CPP_CONTAINTER_PORT); \
+		sleep 5
+	@echo "Running throughput test"
+	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+		--images_numpy_path dummy_input.npy \
+		--labels_numpy_path dummy_lbs.npy \
+		--iteration 10000 \
+		--batchsize 1 \
+		--input_name b \
+		--output_name a \
+		--model_name dummy
 	@echo "Removing test container"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
