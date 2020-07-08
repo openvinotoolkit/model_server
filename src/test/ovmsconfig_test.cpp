@@ -93,12 +93,23 @@ TEST_F(OvmsConfigTest, negativeTwoParams) {
 }
 
 
-TEST_F(OvmsConfigTest, negativeMissingPaths) {
+TEST_F(OvmsConfigTest, negativeMissingPathAndName) {
     char* n_argv[] = { "ovms", "--rest_port", "8080" };
-    int arg_count = 5;
+    int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
+TEST_F(OvmsConfigTest, negativeMissingName) {
+    char* n_argv[] = { "ovms", "--model_path", "/path/to/model" };
+    int arg_count = 3;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
+}
+
+TEST_F(OvmsConfigTest, negativeMissingPath) {
+    char* n_argv[] = { "ovms", "--model_name", "model" };
+    int arg_count = 3;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
+}
 
 TEST_F(OvmsConfigTest, negativeSamePorts) {
     char* n_argv[] = { "ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080" };
@@ -164,8 +175,8 @@ TEST_F(OvmsConfigTest, negativeRestPortMax) {
 
 
 TEST_F(OvmsConfigTest, negativeGrpcWorkersMax) {
-    char* n_argv[] = { "ovms", "--model_path", "/path1", "--grpc_workers", "10000" };
-    int arg_count = 5;
+    char* n_argv[] = { "ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000" };
+    int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "grpc_workers count should be from 1");
 }
 

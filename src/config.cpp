@@ -123,7 +123,7 @@ namespace ovms {
             exit(EX_USAGE);
         }
 
-        if (!result->count("config_path") && (!result->count("model_name") && !result->count("model_path"))) {
+        if (!result->count("config_path") && !(result->count("model_name") && result->count("model_path"))) {
             std::cerr << "Use config_path or model_path with model_name" << std::endl;
             exit(EX_USAGE);
         }
