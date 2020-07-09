@@ -96,7 +96,6 @@ class TestSingleModelInference:
         assert version_status.status.error_message == ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname', 'column_name', 'column_noname'])
     def test_run_inference_rest(self, start_server_single_model, request_format):

@@ -120,6 +120,9 @@ enum class StatusCode {
     REST_INPUTS_NOT_AN_OBJECT,          /*!< When parsing column order, inputs must be an object */
     REST_NO_INPUTS_FOUND,               /*!< Missing inputs in column order */
     REST_COULD_NOT_PARSE_INPUT,         /*!< Error while parsing input content, not valid ndarray */
+    REST_PROTO_TO_STRING_ERROR,         /*!< Error while parsing ResponseProto to JSON string */
+    REST_UNSUPPORTED_PRECISION,         /*!< Unsupported conversion from tensor_content to _val container */
+    REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,
 };
 
 class Status {

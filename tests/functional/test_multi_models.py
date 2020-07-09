@@ -102,7 +102,6 @@ class TestMultiModelInference:
             assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_run_inference_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model

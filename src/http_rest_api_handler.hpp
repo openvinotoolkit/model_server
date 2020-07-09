@@ -53,7 +53,7 @@ public:
     Status processRequest(
         const std::string_view http_method,
         const std::string_view request_path,
-        const std::string_view request_body,
+        const std::string& request_body,
         std::vector<std::pair<std::string, std::string>>* headers,
         std::string* response);
 
@@ -69,10 +69,10 @@ public:
      * @return StatusCode 
      */
     Status processPredictRequest(
-        const std::string_view model_name,
+        const std::string& model_name,
         const std::optional<int64_t>& model_version,
         const std::optional<std::string_view>& model_version_label,
-        const std::string_view request,
+        const std::string& request,
         std::string* response);
 
     /**

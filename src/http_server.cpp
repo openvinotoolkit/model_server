@@ -82,6 +82,9 @@ private:
                      req->uri_path(),
                      body.size());
         const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output);
+        if (!status.ok() && output.empty()) {
+            output.append("{\"error\": \"" + status.string() + "\"}");
+        }
         const auto http_status = status.http();
         for (const auto& kv : headers) {
             req->OverwriteResponseHeader(kv.first, kv.second);
@@ -91,7 +94,7 @@ private:
             spdlog::error("Error Processing HTTP/REST request: {} {} Error: {}",
                           req->http_method(),
                           req->uri_path(),
-                          status.getCode());
+                          status.getCode());  // TODO: convert code to string error
         }
         req->ReplyWithStatus(http_status);
     }

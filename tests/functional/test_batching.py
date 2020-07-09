@@ -16,6 +16,7 @@
 import pytest
 import numpy as np
 import json
+import os
 from constants import ERROR_SHAPE
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
@@ -29,11 +30,12 @@ class TestBatchModelInference:
 
     @pytest.fixture()
     def mapping_names(self):
-        with open("mapping_config.json", 'r') as f:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        config_path = os.path.join(dir_path, "mapping_config.json")
+        with open(config_path, 'r') as f:
             json_string = f.read()
             try:
                 json_dict = json.loads(json_string)
-                return json_dict
             except ValueError as e:
                 logger.error("Error while loading json: {}".format(json_string))
                 raise e
@@ -124,7 +126,6 @@ class TestBatchModelInference:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -159,14 +160,12 @@ class TestBatchModelInference:
                             output_tensors=out_names,
                             request_format=request_format)
         for output_names in out_names:
-            assert output[output_names].shape == AgeGender.output_shape[out_mapping[out_names]], ERROR_SHAPE
+            assert output[output_names].shape == AgeGender.output_shape[out_mapping[output_names]], ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_run_inference_bs4_rest(self, age_gender_model_downloader,
-                                    start_server_batch_model_auto_bs4_2out,
+    def test_run_inference_bs4_rest(self, start_server_batch_model_auto_bs4_2out,
                                     mapping_names,
                                     request_format):
         """
@@ -189,7 +188,6 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_auto_bs4_2out
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
 
         in_name, out_names, out_mapping = mapping_names
 
@@ -201,15 +199,14 @@ class TestBatchModelInference:
                             output_tensors=out_names,
                             request_format=request_format)
         for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_run_inference_rest_auto(self, age_gender_model_downloader,
-                                     start_server_batch_model_auto_2out,
+    def test_run_inference_rest_auto(self, start_server_batch_model_auto_2out,
                                      mapping_names,
                                      request_format):
         """
@@ -231,7 +228,7 @@ class TestBatchModelInference:
         """
 
         _, ports = start_server_batch_model_auto_2out
-        logger.info("Downloaded model files: {}".format(age_gender_model_downloader))
+
         in_name, out_names, out_mapping = mapping_names
 
         batch_size = 6
@@ -242,7 +239,7 @@ class TestBatchModelInference:
                             output_tensors=out_names,
                             request_format=request_format)
         for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
         batch_size = 3
@@ -252,7 +249,7 @@ class TestBatchModelInference:
                             output_tensors=out_names,
                             request_format=request_format)
         for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
+            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,

@@ -100,7 +100,6 @@ class TestModelVersionHandling:
         assert version_status.status.error_message == ERROR_MESSAGE[
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_run_inference_rest(self, start_server_multi_model, version):
 

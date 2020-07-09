@@ -16,10 +16,16 @@
 #include "prediction_service_utils.hpp"
 #include "modelmanager.hpp"
 #include "modelinstance.hpp"
+#include "deserialization.hpp"
+#include "serialization.hpp"
 
-namespace ovms {
+#define DEBUG
+#include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
+using tensorflow::serving::PredictResponse;
+
+namespace ovms {
 
 Status checkIfAvailable(const ModelInstance& modelInstance) {
     ModelVersionState modelVersionState = modelInstance.getStatus().getState();
@@ -106,6 +112,57 @@ Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const in
         SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
         return status;
     }
+    return StatusCode::OK;
+}
+
+Status inference(
+            ModelInstance   &modelVersion,
+    const   PredictRequest  *request_proto,
+            PredictResponse *response_proto) {
+    Timer timer;
+    using std::chrono::microseconds;
+
+    auto status = modelVersion.validate(request_proto);
+    if (!status.ok()) {
+        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
+        return status;
+    }
+
+    timer.start("get infer request");
+    ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion.getInferRequestsQueue();
+    ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
+    int executingInferId = executingStreamIdGuard.getId();
+    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
+    timer.stop("get infer request");
+    spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+
+    timer.start("deserialize");
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request_proto, modelVersion.getInputsInfo(), inferRequest);
+    timer.stop("deserialize");
+    if (!status.ok())
+        return status;
+    spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+
+    timer.start("prediction");
+    status = performInference(inferRequestsQueue, executingInferId, inferRequest);
+    timer.stop("prediction");
+    // TODO - current return code below is the same as in Python, but INVALID_ARGUMENT does not neccesarily mean
+    // that the problem may be input
+    if (!status.ok())
+        return status;
+    spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+
+    timer.start("serialize");
+    status = serializePredictResponse(inferRequest, modelVersion.getOutputsInfo(), response_proto);
+    timer.stop("serialize");
+    if (!status.ok())
+        return status;
+    spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+
     return StatusCode::OK;
 }
 
