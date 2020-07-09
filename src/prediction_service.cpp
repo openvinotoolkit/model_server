@@ -22,13 +22,11 @@
 #include "tensorflow/core/framework/tensor.h"
 #include <spdlog/spdlog.h>
 
-#include "deserialization.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service.hpp"
 #include "prediction_service_utils.hpp"
-#include "serialization.hpp"
 #include "status.hpp"
 
 #define DEBUG
@@ -58,61 +56,28 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     const   PredictRequest*     request,
             PredictResponse*    response) {
     Timer timer;
-    using std::chrono::milliseconds;
-    spdlog::debug("Got new PredictRequest for model:{}; version:{}",
+    timer.start("total");
+    using std::chrono::microseconds;
+    spdlog::debug("Processing gRPC request for model: {}; version: {}",
                   request->model_spec().name(),
                   request->model_spec().version().value());
 
-    std::shared_ptr<ovms::ModelInstance> modelVersion;
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
 
     std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
-    auto status = getModelInstance(request, modelVersion, modelInstancePredictRequestsHandlesCountGuard);
+    auto status = getModelInstance(request, modelInstance, modelInstancePredictRequestsHandlesCountGuard);
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
         return status.grpc();
     }
 
-    status = modelVersion->validate(request);
+    status = inference(*modelInstance, request, response);
     if (!status.ok()) {
-        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
         return status.grpc();
     }
 
-    timer.start("get infer request");
-    ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion->getInferRequestsQueue();
-    ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
-    int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
-    timer.stop("get infer request");
-    spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("get infer request"));
-
-    timer.start("deserialize");
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, modelVersion->getInputsInfo(), inferRequest);
-    timer.stop("deserialize");
-    if (!status.ok())
-        return status.grpc();
-    spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("deserialize"));
-
-    timer.start("prediction");
-    status = performInference(inferRequestsQueue, executingInferId, inferRequest);
-    timer.stop("prediction");
-    // TODO - current return code below is the same as in Python, but INVALID_ARGUMENT does not neccesarily mean
-    // that the problem may be input
-    if (!status.ok())
-        return status.grpc();
-    spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("prediction"));
-
-    timer.start("serialize");
-    status = serializePredictResponse(inferRequest, modelVersion->getOutputsInfo(), response);
-    timer.stop("serialize");
-    if (!status.ok())
-        return status.grpc();
-    spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request->model_spec().name(), modelVersion->getVersion(), executingInferId, timer.elapsed<milliseconds>("serialize"));
-
+    timer.stop("total");
+    spdlog::debug("Total time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
 }
 

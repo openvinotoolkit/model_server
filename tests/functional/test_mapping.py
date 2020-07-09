@@ -81,7 +81,6 @@ class TestSingleModelMappingInference:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])

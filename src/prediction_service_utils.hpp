@@ -56,4 +56,10 @@ Status getModelInstance(ModelManager& manager,
                         std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
 
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
+
+Status inference(
+            ModelInstance                           &modelVersion,
+    const   tensorflow::serving::PredictRequest     *request_proto,
+            tensorflow::serving::PredictResponse    *response_proto);
+
 }  // namespace ovms

@@ -15,27 +15,16 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
 #include <string>
 
-#include <inference_engine.hpp>
-#include <spdlog/spdlog.h>
-#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "rest_parser.hpp"
 #include "status.hpp"
-#include "tensorinfo.hpp"
 
 namespace ovms {
-
-Status serializeBlobToTensorProto(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& networkOutput,
-    InferenceEngine::Blob::Ptr blob);
-
-Status serializePredictResponse(
-    InferenceEngine::InferRequest& inferRequest,
-    const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response);
-
+    Status makeJsonFromPredictResponse(
+        tensorflow::serving::PredictResponse& response_proto,
+        std::string* response_json,
+        Order order);
 }  // namespace ovms

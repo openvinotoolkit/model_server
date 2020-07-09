@@ -153,9 +153,9 @@ class ResnetS3:
 class ResnetGS:
     name = "resnet_gs"
     dtype = np.float32
-    input_name = "input"
+    input_name = "data"
     input_shape = (1, 3, 224, 224)
-    output_name = "resnet_v1_50/predictions/Reshape_1"
+    output_name = "prob"
     output_shape = (1, 1000)
     rest_request_format = 'row_name'
     model_path = "gs://public-artifacts/intelai_public_models/resnet_50_i8/"

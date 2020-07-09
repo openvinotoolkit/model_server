@@ -18,13 +18,22 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <memory>
 
 #include <spdlog/spdlog.h>
 
 #include "get_model_metadata_impl.hpp"
 #include "http_rest_api_handler.hpp"
 #include "model_service.hpp"
+#include "prediction_service_utils.hpp"
+#include "rest_parser.hpp"
+#include "rest_utils.hpp"
 
+#define DEBUG
+#include "timer.hpp"
+
+using tensorflow::serving::PredictRequest;
+using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
@@ -37,7 +46,7 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
 Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,
     const std::string_view request_path,
-    const std::string_view request_body,
+    const std::string& request_body,
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response) {
 
@@ -109,16 +118,65 @@ Status HttpRestApiHandler::processRequest(
     return status;
 }
 
-
 Status HttpRestApiHandler::processPredictRequest(
-    const std::string_view model_name,
+    const std::string& model_name,
     const std::optional<int64_t>& model_version,
     const std::optional<std::string_view>& model_version_label,
-    const std::string_view request,
+    const std::string& request,
     std::string* response) {
     // model_version_label currently is not in use
-    spdlog::debug("Processing predict request");
-    response->append("{}");
+
+    Timer timer;
+    timer.start("total");
+    using std::chrono::microseconds;
+
+    spdlog::debug("Processing REST request for model: {}; version: {}",
+        model_name, model_version.value_or(0));
+
+    std::shared_ptr<ModelInstance> modelInstance;
+
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    auto status = getModelInstance(
+        ModelManager::getInstance(),
+        model_name,
+        model_version.value_or(0),
+        modelInstance,
+        modelInstancePredictRequestsHandlesCountGuard);
+
+    if (!status.ok()) {
+        SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
+        return status;
+    }
+
+    timer.start("parse");
+    RestParser request_parser(modelInstance->getInputsInfo());
+    status = request_parser.parse(request.c_str());
+    if (!status.ok()) {
+        return status;
+    }
+    timer.stop("parse");
+
+    spdlog::debug("Parsing json for model {}, version {}, {:.3f} ms",
+        model_name, modelInstance->getVersion(), timer.elapsed<microseconds>("parse") / 1000);
+
+    tensorflow::serving::PredictRequest& request_proto = request_parser.getProto();
+    request_proto.mutable_model_spec()->set_name(model_name);
+    if (model_version.has_value()) {
+        request_proto.mutable_model_spec()->mutable_version()->set_value(model_version.value());
+    }
+
+    tensorflow::serving::PredictResponse response_proto;
+    status = inference(*modelInstance, &request_proto, &response_proto);
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = makeJsonFromPredictResponse(response_proto, response, request_parser.getOrder());
+    if (!status.ok())
+        return status;
+
+    timer.stop("total");
+    spdlog::debug("Total time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
     return StatusCode::OK;
 }
 
@@ -134,17 +192,14 @@ Status HttpRestApiHandler::processModelMetadataRequest(
     std::string modelName(model_name);
     status = GetModelMetadataImpl::createGrpcRequest(modelName, model_version, &grpc_request);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     status = GetModelMetadataImpl::getModelStatus(&grpc_request, &grpc_response);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     status = GetModelMetadataImpl::serializeResponse2Json(&grpc_response, response);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     return StatusCode::OK;
@@ -163,17 +218,14 @@ Status HttpRestApiHandler::processModelStatusRequest(
     std::string modelName(model_name);
     status = GetModelStatusImpl::createGrpcRequest(modelName, model_version, &grpc_request);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     status = GetModelStatusImpl::serializeResponse2Json(&grpc_response, response);
     if (!status.ok()) {
-        response->append("{\"error\": \"" + status.string() + "\"}");
         return status;
     }
     return StatusCode::OK;
