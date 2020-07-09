@@ -55,7 +55,7 @@ public:
         const std::string_view request_path,
         const std::string_view request_body,
         std::vector<std::pair<std::string, std::string>>* headers,
-        std::string* resposnse);
+        std::string* response);
 
     /**
      * @brief Process predict request

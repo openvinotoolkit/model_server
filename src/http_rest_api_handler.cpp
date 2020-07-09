@@ -20,8 +20,11 @@
 #include <vector>
 
 #include <spdlog/spdlog.h>
-#include "model_service.hpp"
+
+#include "get_model_metadata_impl.hpp"
 #include "http_rest_api_handler.hpp"
+#include "model_service.hpp"
+
 
 namespace ovms {
 
@@ -115,9 +118,7 @@ Status HttpRestApiHandler::processPredictRequest(
     std::string* response) {
     // model_version_label currently is not in use
     spdlog::debug("Processing predict request");
-
     response->append("{}");
-
     return StatusCode::OK;
 }
 
@@ -127,9 +128,25 @@ Status HttpRestApiHandler::processModelMetadataRequest(
     const std::optional<std::string_view>& model_version_label,
     std::string* response) {
     // model_version_label currently is not in use
-    spdlog::debug("Processing metadata request");
-    response->append("{}");
-
+    tensorflow::serving::GetModelMetadataRequest grpc_request;
+    tensorflow::serving::GetModelMetadataResponse grpc_response;
+    Status status;
+    std::string modelName(model_name);
+    status = GetModelMetadataImpl::createGrpcRequest(modelName, model_version, &grpc_request);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
+    status = GetModelMetadataImpl::getModelStatus(&grpc_request, &grpc_response);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
+    status = GetModelMetadataImpl::serializeResponse2Json(&grpc_response, response);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
     return StatusCode::OK;
 }
 
