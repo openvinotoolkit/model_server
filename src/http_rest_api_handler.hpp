@@ -50,7 +50,7 @@ public:
      *
      * @return StatusCode 
      */
-    StatusCode processRequest(
+    Status processRequest(
         const std::string_view http_method,
         const std::string_view request_path,
         const std::string_view request_body,
@@ -68,7 +68,7 @@ public:
      *
      * @return StatusCode 
      */
-    StatusCode processPredictRequest(
+    Status processPredictRequest(
         const std::string_view model_name,
         const std::optional<int64_t>& model_version,
         const std::optional<std::string_view>& model_version_label,
@@ -85,7 +85,7 @@ public:
      *
      * @return StatusCode 
      */
-    StatusCode processModelMetadataRequest(
+    Status processModelMetadataRequest(
         const std::string_view model_name,
         const std::optional<int64_t>& model_version,
         const std::optional<std::string_view>& model_version_label,
@@ -100,7 +100,7 @@ public:
      * @param response 
      * @return StatusCode 
      */
-    StatusCode processModelStatusRequest(
+    Status processModelStatusRequest(
         const std::string_view model_name,
         const std::optional<int64_t>& model_version,
         const std::optional<std::string_view>& model_version_label,

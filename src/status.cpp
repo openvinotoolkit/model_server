@@ -93,11 +93,15 @@ const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::st
         {grpc::StatusCode::INTERNAL, "Internal server error"}},
 };
 
-const net_http::HTTPStatusCode Status::toHTTPStatusCode(StatusCode code) {
+const net_http::HTTPStatusCode Status::http() const {
     using net_http::HTTPStatusCode;
     switch (code) {
         case StatusCode::OK:
             return HTTPStatusCode::OK;
+        case StatusCode::MODEL_NAME_MISSING:
+            return HTTPStatusCode::NOT_FOUND;
+        case StatusCode::MODEL_VERSION_MISSING:
+            return HTTPStatusCode::NOT_FOUND;
         case StatusCode::REST_NOT_FOUND:
             return HTTPStatusCode::NOT_FOUND;
         case StatusCode::REST_COULD_NOT_PARSE_VERSION:

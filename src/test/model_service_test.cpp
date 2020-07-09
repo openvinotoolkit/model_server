@@ -123,3 +123,62 @@ TEST(ModelService, non_existing_version) {
   ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
   EXPECT_EQ(ret.ok(), false);
 }
+
+TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
+    std::string model_name = "dummy";
+    const std::optional<int64_t> model_version = 1;
+    tensorflow::serving::GetModelStatusRequest request_grpc;
+    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
+    bool has_requested_version = request_p->model_spec().has_version();
+    auto requested_version = request_p->model_spec().version().value();
+    std::string requested_model_name = request_p->model_spec().name();
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(has_requested_version, true);
+    EXPECT_EQ(requested_version, 1);
+    EXPECT_EQ(requested_model_name, "dummy");
+}
+
+TEST(RestModelStatus, CreateGrpcRequestNegativeVersion) {
+    std::string model_name = "dummy";
+    const std::optional<int64_t>  model_version = -5;
+    tensorflow::serving::GetModelStatusRequest request_grpc;
+    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
+    EXPECT_EQ(status, StatusCode::MODEL_VERSION_MISSING);
+}
+
+TEST(RestModelStatus, CreateGrpcRequestNoVersion) {
+    std::string model_name = "dummy1";
+    const std::optional<int64_t> model_version;
+    tensorflow::serving::GetModelStatusRequest request_grpc;
+    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
+    bool has_requested_version = request_p->model_spec().has_version();
+    std::string requested_model_name = request_p->model_spec().name();
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(has_requested_version, false);
+    EXPECT_EQ(requested_model_name, "dummy1");
+}
+
+TEST(RestModelStatus, serialize2Json) {
+    const char* expected_json = R"({
+ "model_version_status": [
+  {
+   "version": "2",
+   "state": "START"
+  }
+ ]
+}
+)";
+    tensorflow::serving::GetModelStatusResponse response;
+    model_version_t requested_version = 2;
+    const std::string& model_name = "dummy";
+    ModelVersionStatus status = ModelVersionStatus(model_name,  requested_version, ModelVersionState::START);
+    addStatusToResponse(&response, requested_version, status);
+    const tensorflow::serving::GetModelStatusResponse response_const = response;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json);
+}

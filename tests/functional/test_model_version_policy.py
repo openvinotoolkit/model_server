@@ -202,7 +202,6 @@ class TestModelVerPolicy:
             else:
                 assert 404 == result.status_code
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
         ('specific', [False, True, False]),
@@ -217,7 +216,7 @@ class TestModelVerPolicy:
 
         versions = [1, 2, 3]
         for x in range(len(versions)):
-            rest_url = get_status_url(model=model_name, port=ports["rest_port"], version=str(x))
+            rest_url = get_status_url(model=model_name, port=ports["rest_port"], version=str(versions[x]))
             result = requests.get(rest_url)
             if not throw_error[x]:
                 output_json = result.text
@@ -236,7 +235,7 @@ class TestModelVerPolicy:
 
                 #   aggregated results check
         if model_name == 'all':
-            rest_url = get_status_url(model=model_name, port=ports["rest_port"], version="all")
+            rest_url = get_status_url(model=model_name, port=ports["rest_port"])
             response = get_model_status_response_rest(rest_url)
             versions_statuses = response.model_version_status
             assert len(versions_statuses) == 3

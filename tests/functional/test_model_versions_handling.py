@@ -140,7 +140,6 @@ class TestModelVersionHandling:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
     def test_get_model_status_rest(self, start_server_multi_model, version):
 
@@ -154,7 +153,7 @@ class TestModelVersionHandling:
         if version is None:
             assert len(versions_statuses) == 2
         else:
-            assert version_status.version == 1
+            assert version_status.version == version
         assert version_status.state == ModelVersionState.AVAILABLE
         assert version_status.status.error_code == ErrorCode.OK
         assert version_status.status.error_message == ERROR_MESSAGE[
