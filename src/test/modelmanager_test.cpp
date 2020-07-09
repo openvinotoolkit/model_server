@@ -121,6 +121,38 @@ TEST(ModelManager, ConfigParseEmptyJson) {
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
+TEST(ModelManager, ConfigParseNodeConfigWithoutNameKey) {
+    const char* configWithoutNameKey = R"({
+       "model_config_list": [
+       {
+          "config": {
+            "base_path": "/tmp/models/dummy2"
+          }
+       }]
+    })";
+
+    std::string configFile = createConfigFileWithContent(configWithoutNameKey);
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
+    const char* configWithoutBasePathKey = R"({
+       "model_config_list": [
+       {
+          "config": {
+            "name": "alpha"
+          }
+       }]
+    })";
+
+    std::string configFile = createConfigFileWithContent(configWithoutBasePathKey);
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+}
+
 TEST(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = "/tmp/test_model/";
 
