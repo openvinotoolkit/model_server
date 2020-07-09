@@ -17,11 +17,19 @@
 #include <string>
 #include <memory>
 
+#include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
+#include "tensorflow_serving/apis/model_service.grpc.pb.h"
+#include "tensorflow_serving/apis/model_service.pb.h"
+#include "tensorflow_serving/apis/get_model_status.pb.h"
 
 #include "modelmanager.hpp"
 #include "model_service.hpp"
 #include "status.hpp"
+
+
+using google::protobuf::util::MessageToJsonString;
+using google::protobuf::util::JsonPrintOptions;
 
 namespace ovms {
 
@@ -35,6 +43,34 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
         ::grpc::ServerContext *context, const tensorflow::serving::GetModelStatusRequest *request,
         tensorflow::serving::GetModelStatusResponse *response) {
+    return GetModelStatusImpl::getModelStatus(request, response).grpc();
+}
+
+Status  GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest * request ) {
+    request->mutable_model_spec()->set_name(model_name);
+    if (model_version.has_value()) {
+        if (model_version.value() < 0) {
+            spdlog::error("Version in GetModelStatus request cannot be negative. Provided value {}", model_version.value());
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+        request->mutable_model_spec()->mutable_version()->set_value(model_version.value());
+    }
+    return StatusCode::OK;
+}
+
+Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse * response, std::string * output) {
+    JsonPrintOptions opts;
+    opts.add_whitespace = true;
+    opts.always_print_primitive_fields = true;
+    const auto& status = MessageToJsonString(*response, output, opts);
+    if (!status.ok()) {
+        spdlog::error("Failed to convert proto to json. Error: ", status.ToString());
+        return StatusCode::JSON_SERIALIZATION_ERROR;
+    }
+    return StatusCode::OK;
+}
+
+Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelStatusRequest * request, tensorflow::serving::GetModelStatusResponse * response) {
     SPDLOG_DEBUG("model_service: request: {}", request->DebugString());
     bool has_requested_version = request->model_spec().has_version();
     auto requested_version = request->model_spec().version().value();
@@ -42,7 +78,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     auto model_ptr = ModelManager::getInstance().findModelByName(requested_model_name);
     if (!model_ptr) {
         SPDLOG_INFO("requested model {} was not found", requested_model_name);
-        return (Status) StatusCode::MODEL_NAME_MISSING;
+        return StatusCode::MODEL_NAME_MISSING;
     }
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
     if (has_requested_version || requested_version != 0) {
@@ -50,7 +86,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
         std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
         if (!model_instance) {
             SPDLOG_INFO("requested model {} in version {} was not found.", requested_model_name, requested_version);
-            return (Status) StatusCode::MODEL_VERSION_MISSING;
+            return StatusCode::MODEL_VERSION_MISSING;
         }
         const auto& status = model_instance->getStatus();
         SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, requested_version, status.getStateString());
@@ -61,7 +97,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
         for (const auto& [model_version, model_instance_ptr] : model_versions) {
             if (!model_instance_ptr) {
                 spdlog::error("during model iteration, found null model instance pointer!");
-                return (Status) StatusCode::MODEL_VERSION_MISSING;
+                return StatusCode::MODEL_VERSION_MISSING;
             }
             const auto& status = model_instance_ptr->getStatus();
             SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, model_version, status.getStateString());
@@ -70,7 +106,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     }
     SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
     SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
-    return grpc::Status::OK;
+    return StatusCode::OK;
 }
 
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(

@@ -20,7 +20,7 @@
 #include <vector>
 
 #include <spdlog/spdlog.h>
-
+#include "model_service.hpp"
 #include "http_rest_api_handler.hpp"
 
 namespace ovms {
@@ -31,7 +31,7 @@ const std::string HttpRestApiHandler::predictionRegexExp =
 const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
 
-StatusCode HttpRestApiHandler::processRequest(
+Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,
     const std::string_view request_path,
     const std::string_view request_body,
@@ -46,7 +46,7 @@ StatusCode HttpRestApiHandler::processRequest(
     std::string model_version_label_str;
     std::string method;
     std::string model_subresource;
-    StatusCode status = StatusCode::REST_MALFORMED_REQUEST;
+    Status status = StatusCode::REST_MALFORMED_REQUEST;
 
     // Parse request parameters
     bool parse_successful = false;
@@ -107,40 +107,58 @@ StatusCode HttpRestApiHandler::processRequest(
 }
 
 
-StatusCode HttpRestApiHandler::processPredictRequest(
+Status HttpRestApiHandler::processPredictRequest(
     const std::string_view model_name,
     const std::optional<int64_t>& model_version,
     const std::optional<std::string_view>& model_version_label,
     const std::string_view request,
     std::string* response) {
-    // model_verion_label currently is not in use
+    // model_version_label currently is not in use
     spdlog::debug("Processing predict request");
+
     response->append("{}");
 
     return StatusCode::OK;
 }
 
-StatusCode HttpRestApiHandler::processModelMetadataRequest(
+Status HttpRestApiHandler::processModelMetadataRequest(
     const std::string_view model_name,
     const std::optional<int64_t>& model_version,
     const std::optional<std::string_view>& model_version_label,
     std::string* response) {
-    // model_verion_label currently is not in use
+    // model_version_label currently is not in use
     spdlog::debug("Processing metadata request");
     response->append("{}");
 
     return StatusCode::OK;
 }
 
-StatusCode HttpRestApiHandler::processModelStatusRequest(
+Status HttpRestApiHandler::processModelStatusRequest(
     const std::string_view model_name,
     const std::optional<int64_t>& model_version,
     const std::optional<std::string_view>& model_version_label,
     std::string* response) {
-    // model_verion_label currently is not in use
+    // model_version_label currently is not in use
     spdlog::debug("Processing model status request");
-    response->append("{}");
-
+    tensorflow::serving::GetModelStatusRequest grpc_request;
+    tensorflow::serving::GetModelStatusResponse grpc_response;
+    Status status;
+    std::string modelName(model_name);
+    status = GetModelStatusImpl::createGrpcRequest(modelName, model_version, &grpc_request);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
+    status = GetModelStatusImpl::serializeResponse2Json(&grpc_response, response);
+    if (!status.ok()) {
+        response->append("{\"error\": \"" + status.string() + "\"}");
+        return status;
+    }
     return StatusCode::OK;
 }
 

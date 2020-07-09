@@ -33,6 +33,7 @@ enum class StatusCode {
     FILE_INVALID,                       /*!< File not found or cannot open */
     NETWORK_NOT_LOADED,
     JSON_INVALID,                       /*!< The file/content is not valid json */
+    JSON_SERIALIZATION_ERROR,            /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                 /*!< The provided shape param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,         /*!< Plugin config is in wrong format */
@@ -133,6 +134,9 @@ public:
     bool ok() const {
         return code == StatusCode::OK;
     }
+    const StatusCode getCode() const {
+        return this->code;
+    }
 
     bool operator==(const Status& status) const {
         return this->code == status.code;
@@ -174,7 +178,7 @@ public:
         return this->string();
     }
 
-    static const net_http::HTTPStatusCode toHTTPStatusCode(StatusCode code);
+    const net_http::HTTPStatusCode http() const;
 };
 
 }  // namespace ovms
