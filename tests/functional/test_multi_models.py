@@ -118,7 +118,6 @@ class TestMultiModelInference:
             logger.info("Output shape: {}".format(output[model.output_name].shape))
             assert output[model.output_name].shape == model.output_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model

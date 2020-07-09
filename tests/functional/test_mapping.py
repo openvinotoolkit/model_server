@@ -116,7 +116,6 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping

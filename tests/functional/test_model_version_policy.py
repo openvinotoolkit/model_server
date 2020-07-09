@@ -129,7 +129,6 @@ class TestModelVerPolicy:
                 assert version_status.status.error_message == ERROR_MESSAGE[
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("model_name, throw_error", [
         ('all', [False, False, False]),
         ('specific', [False, True, False]),

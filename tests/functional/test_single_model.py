@@ -127,7 +127,6 @@ class TestSingleModelInference:
         logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, start_server_single_model):
 
         _, ports = start_server_single_model

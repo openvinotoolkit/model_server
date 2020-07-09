@@ -16,13 +16,15 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-
+#include <rapidjson/document.h>
 #include "../get_model_metadata_impl.hpp"
+#include "../modelmanager.hpp"
+#include "../status.hpp"
 
 using ::testing::Return;
 using ::testing::ReturnRef;
 using ::testing::NiceMock;
-
+using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
     struct Info {
@@ -232,4 +234,49 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
     EXPECT_TRUE(isShape(
         outputs.at("Output_FP32_2_20_3").tensor_shape(),
         {2, 20, 3}));
+}
+
+TEST_F(GetModelMetadataResponse, serialize2Json) {
+    ovms::GetModelMetadataImpl::buildResponse(instance, &response);
+    std::string json_output;
+    const tensorflow::serving::GetModelMetadataResponse * response_p = &response;
+    ovms::Status error_status = ovms::GetModelMetadataImpl::serializeResponse2Json(response_p, &json_output);
+    const char * json_array = json_output.c_str();
+    Document received_doc;
+    received_doc.Parse(json_array);
+    EXPECT_TRUE(received_doc.IsObject());
+    EXPECT_TRUE(received_doc.HasMember("modelSpec"));
+    EXPECT_TRUE(received_doc.HasMember("metadata"));
+}
+
+TEST(RESTGetModelMetadataResponse, createGrpcRequestVersionSet) {
+    std::string model_name = "dummy";
+    std::optional<int64_t> model_version = 1;
+    tensorflow::serving::GetModelMetadataRequest request_grpc;
+    tensorflow::serving::GetModelMetadataRequest * request_p = &request_grpc;
+    ovms::Status status = ovms::GetModelMetadataImpl::createGrpcRequest(model_name, model_version, request_p);
+    bool has_requested_version = request_p->model_spec().has_version();
+    auto requested_version = request_p->model_spec().version().value();
+    std::string metadata_field = request_p->metadata_field(0);
+    std::string requested_model_name = request_p->model_spec().name();
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(has_requested_version, true);
+    EXPECT_EQ(requested_version, 1);
+    EXPECT_EQ(requested_model_name, "dummy");
+    EXPECT_EQ(metadata_field, "signature_def");
+}
+
+TEST(RESTGetModelMetadataResponse, createGrpcRequestNoVersion) {
+    std::string model_name = "dummy";
+    std::optional<int64_t> model_version;
+    tensorflow::serving::GetModelMetadataRequest request_grpc;
+    tensorflow::serving::GetModelMetadataRequest * request_p = &request_grpc;
+    ovms::Status status = ovms::GetModelMetadataImpl::createGrpcRequest(model_name, model_version, request_p);
+    bool has_requested_version = request_p->model_spec().has_version();
+    std::string metadata_field = request_p->metadata_field(0);
+    std::string requested_model_name = request_p->model_spec().name();
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(has_requested_version, false);
+    EXPECT_EQ(requested_model_name, "dummy");
+    EXPECT_EQ(metadata_field, "signature_def");
 }

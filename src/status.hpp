@@ -134,6 +134,7 @@ public:
     bool ok() const {
         return code == StatusCode::OK;
     }
+
     const StatusCode getCode() const {
         return this->code;
     }

@@ -255,7 +255,6 @@ class TestBatchModelInference:
             expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[out_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_batch_model):
 

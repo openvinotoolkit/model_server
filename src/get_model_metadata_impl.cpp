@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <google/protobuf/util/json_util.h>
 #include "get_model_metadata_impl.hpp"
+
+using google::protobuf::util::MessageToJsonString;
+using google::protobuf::util::JsonPrintOptions;
 
 namespace ovms {
 
@@ -113,6 +117,31 @@ void GetModelMetadataImpl::buildResponse(
     convert(instance->getOutputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
 
     (*response->mutable_metadata())["signature_def"].PackFrom(def);
+}
+
+Status  GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest * request ) {
+    request->mutable_model_spec()->set_name(model_name);
+    if (model_version.has_value()) {
+        if (model_version.value() < 0) {
+            spdlog::error("Version in GetModelMetadata request cannot be negative. Provided value {}", model_version.value());
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+        request->mutable_model_spec()->mutable_version()->set_value(model_version.value());
+    }
+    request->mutable_metadata_field()->Add("signature_def");
+    return StatusCode::OK;
+}
+
+Status GetModelMetadataImpl::serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse * response, std::string * output) {
+    JsonPrintOptions opts;
+    opts.add_whitespace = true;
+    opts.always_print_primitive_fields = true;
+    const auto& status = MessageToJsonString(*response, output, opts);
+    if (!status.ok()) {
+        spdlog::error("Failed to convert proto to json. Error: ", status.ToString());
+        return StatusCode::JSON_SERIALIZATION_ERROR;
+    }
+    return StatusCode::OK;
 }
 
 }  // namespace ovms
