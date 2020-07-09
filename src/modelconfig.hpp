@@ -737,6 +737,11 @@ const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
          * @return Status 
          */
         Status parseNode(const rapidjson::Value& v) {
+            if (!v.HasMember("name") || !v.HasMember("base_path")) {
+                spdlog::error("There was an error parsing json config - missing required parameter.");
+                return StatusCode::JSON_INVALID;
+            }
+
             this->setName(v["name"].GetString());
             this->setBasePath(v["base_path"].GetString());
 

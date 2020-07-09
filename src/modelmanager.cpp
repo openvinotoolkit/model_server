@@ -118,7 +118,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     configFilename = jsonFilename;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
-        modelConfig.parseNode(configs["config"]);
+        auto status = modelConfig.parseNode(configs["config"]);
+        if (status != StatusCode::OK) {
+            return status;
+        }
         reloadModelWithVersions(modelConfig);
     }
     return StatusCode::OK;
