@@ -41,6 +41,11 @@ namespace ovms {
 
         std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
 
+                /**
+         * @brief A collection of models
+         */
+        std::map<std::string, std::shared_ptr<Model>> models;
+
     private:
         /**
          * @brief Private copying constructor
@@ -66,11 +71,6 @@ namespace ovms {
         std::string configFilename;
 
         /**
-         * @brief A collection of models
-         */
-        std::map<std::string, std::shared_ptr<Model>> models;
-
-        /**
          * @brief A thread object used for monitoring changes in config
          */
         std::thread monitor;
@@ -94,7 +94,7 @@ namespace ovms {
          * @brief Destroy the Model Manager object
          * 
          */
-        virtual ~ModelManager() {}
+        virtual ~ModelManager() { }
 
         /**
          * @brief Gets config filename

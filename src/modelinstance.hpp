@@ -35,6 +35,7 @@ namespace ovms {
 
     using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
+    class ModelInstancePredictRequestsHandlesCountGuard;
     /**
      * @brief This class contains all the information about inference engine model
      */
@@ -177,6 +178,11 @@ namespace ovms {
          * Needed for gating model unloading.
          */
         std::atomic<uint64_t> predictRequestsHandlesCount = 0;
+
+        /**
+         * @brief Lock to disable concurrent modelinstance load/unload/reload
+         */
+        std::recursive_mutex loadingMutex;
 
         /**
          * @brief Internal method for loading inputs
@@ -341,10 +347,11 @@ namespace ovms {
          * @brief Reloads model version with different batch size, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
          *
          * @param batchSize batch size
+         * @param predictHandlesCounterGuard predictHandlesCounterGuardPtr
          *
          * @return Status
          */
-        virtual Status reloadModel(size_t batchSize);
+        virtual Status reloadModel(size_t batchSize, std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuardPtr);
 
         /**
          * @brief Unloads model version
@@ -354,13 +361,30 @@ namespace ovms {
 
         /**
          * @brief Wait for model to change to AVAILABLE state
-         * 
-         * @return True if model exited loading state
+         *
+         * @param waitForModelLoadedTimeoutMilliseconds
+         * @param predictHandlesCounterGuard
+         *
+         * @return Status
          */ 
-        bool waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds = WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS);
+        Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+                           std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard);
 
         const Status validate(const tensorflow::serving::PredictRequest* request);
 
         static const int WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS = 100;
+    };
+
+    class ModelInstancePredictRequestsHandlesCountGuard {
+    public:
+        ModelInstancePredictRequestsHandlesCountGuard() = delete;
+        ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) : modelInstance(modelInstance) {
+            modelInstance.increasePredictRequestsHandlesCount();
+        }
+        ~ModelInstancePredictRequestsHandlesCountGuard() {
+            modelInstance.decreasePredictRequestsHandlesCount();
+        }
+    private:
+        ModelInstance& modelInstance;
     };
 }  // namespace ovms

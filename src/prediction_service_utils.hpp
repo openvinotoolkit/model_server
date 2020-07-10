@@ -24,6 +24,8 @@
 
 namespace ovms {
 
+const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+
 struct ExecutingStreamIdGuard {
     ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),
@@ -35,18 +37,6 @@ struct ExecutingStreamIdGuard {
 private:
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
-};
-
-class ModelInstancePredictRequestsHandlesCountGuard {
-public:
-    ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) : modelInstance(modelInstance) {
-        modelInstance.increasePredictRequestsHandlesCount();
-    }
-    ~ModelInstancePredictRequestsHandlesCountGuard() {
-        modelInstance.decreasePredictRequestsHandlesCount();
-    }
-private:
-    ModelInstance& modelInstance;
 };
 
 Status getModelInstance(ModelManager& manager,
@@ -62,4 +52,8 @@ Status inference(
     const   tensorflow::serving::PredictRequest     *request_proto,
             tensorflow::serving::PredictResponse    *response_proto);
 
+Status assureModelInstanceLoadedWithProperBatchSize(
+    ModelInstance& modelInstance,
+    size_t requestedBatchSize,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
 }  // namespace ovms
