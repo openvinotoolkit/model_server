@@ -15,6 +15,9 @@
 #
 
 import os
+import re
+import socket
+from datetime import datetime
 
 from utils.helpers import SingletonMeta
 
@@ -48,3 +51,42 @@ def get_ports_for_fixture():
 
 class Suffix(metaclass=SingletonMeta):
     index = 0
+
+
+class ObjectName:
+    _date_format, _time_format, _ms_format = "%d", "%H%M%S", "%f"
+    _NON_ALPHA_NUM = r'[^a-z0-9]+'
+
+    def __init__(self, short=False, prefix=None, separator='_'):
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
+        hostname = socket.gethostname().split(".", 1)[0].lower()
+        self._prefix = prefix if prefix else hostname
+        self._prefix = "{}{}".format(worker_id, self._prefix)
+        self._separator = separator
+        self._short = short
+        self._now = datetime.now()
+
+    def __str__(self):
+        separator = '' if self._short else self._separator
+        parts = [self._prefix] + self.stem
+        name = separator.join(parts).lower()
+        return re.sub(self._NON_ALPHA_NUM, separator, name)
+
+    @property
+    def stem(self) -> list:
+        seed = [
+            self._now.strftime(self._date_format),
+            self._now.strftime(self._time_format),
+            self._now.strftime(self._ms_format)
+        ]
+        return seed[:2] if self._short else seed
+
+    def build(self) -> str:
+        return str(self)
+
+
+def generate_test_object_name(short=False, prefix=None, separator="_"):
+    name = ObjectName(short=short, prefix=prefix, separator=separator)
+    return name.build()
+
+

@@ -17,7 +17,7 @@
 import config
 from command_wrappers.server import start_ovms_container_command
 from object_model.docker import Docker
-from utils.parametrization import get_tests_suffix
+from utils.parametrization import generate_test_object_name
 
 
 class OvmsDocker(Docker):
@@ -28,7 +28,7 @@ class OvmsDocker(Docker):
         self.container_name_infix = container_name_infix
         self.server_log_level = server_log_level
         container_name_prefix = image.split(":")[0].split("/")[-1]
-        container_name = "{}-{}-{}".format(container_name_prefix, container_name_infix, get_tests_suffix())
+        container_name = generate_test_object_name(prefix="{}-{}".format(container_name_prefix, container_name_infix))
         super().__init__(request, container_name, start_container_command,
                          env_vars, image, container_log_line)
         self.command_args["port"] = self.grpc_port
