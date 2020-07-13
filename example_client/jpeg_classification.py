@@ -85,7 +85,7 @@ for line in lines:
 
     request = predict_pb2.PredictRequest()
     request.model_spec.name = args.get('model_name')
-    request.inputs[args['input_name']].CopyFrom(tf_contrib_util.make_tensor_proto(img, shape=(img.shape)))
+    request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
     end_time = datetime.datetime.now()
