@@ -44,6 +44,8 @@ cc_library(
         "s3filesystem.cpp",
         "s3filesystem.hpp",
         "serialization.cpp",
+        "schema.hpp",
+        "schema.cpp",
         "serialization.hpp",
         "server.cpp",
         "status.cpp",

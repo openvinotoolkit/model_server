@@ -29,10 +29,14 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
+#include <rapidjson/schema.h>
+#include <rapidjson/error/error.h>
+#include <rapidjson/error/en.h>
 
 #include "model_version_policy.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
+#include "schema.hpp"
 
 namespace ovms {
 
@@ -699,10 +703,20 @@ public:
             return StatusCode::FILE_INVALID;
         }
 
-        rapidjson::IStreamWrapper isw(ifs);
-        if (doc.ParseStream(isw).HasParseError()) {
-            return StatusCode::JSON_INVALID;
-        }
+            if (validateJsonAgainstSchema(doc, MODELS_MAPPING_SCHEMA) != StatusCode::OK) {
+                return StatusCode::JSON_INVALID;
+            }
+
+            // Process inputs
+            const auto itr = doc.FindMember("inputs");
+            if (itr == doc.MemberEnd() || !itr->value.IsObject()) {
+                spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
+            } else {
+                for (const auto& key : itr->value.GetObject()) {
+                    SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
+                    mappingInputs[key.name.GetString()] = key.value.GetString();
+                }
+            }
 
         // Process inputs
         const auto itr = doc.FindMember("inputs");
@@ -734,14 +748,9 @@ public:
          * 
          * @return Status 
          */
-    Status parseNode(const rapidjson::Value& v) {
-        if (!v.HasMember("name") || !v.HasMember("base_path")) {
-            spdlog::error("There was an error parsing json config - missing required parameter.");
-            return StatusCode::JSON_INVALID;
-        }
-
-        this->setName(v["name"].GetString());
-        this->setBasePath(v["base_path"].GetString());
+        Status parseNode(const rapidjson::Value& v) {
+            this->setName(v["name"].GetString());
+            this->setBasePath(v["base_path"].GetString());
 
         // Check for optional parameters
         if (v.HasMember("batch_size")) {
