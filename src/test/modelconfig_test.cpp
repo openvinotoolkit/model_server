@@ -21,9 +21,17 @@
 #include <gtest/gtest.h>
 
 #include "../modelconfig.hpp"
+#include "../status.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
+
+// returns path to a file.
+static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/config.json") {
+    std::ofstream configFile{filename};
+    configFile << content << std::endl;
+    return filename;
+}
 
 TEST(ModelConfig, getters_setters) {
     ovms::ModelConfig config;
@@ -198,4 +206,25 @@ TEST(ModelConfig, mappingOutputs) {
 
     EXPECT_EQ(in, "input");
     EXPECT_EQ(empty, "");
+}
+
+TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
+    ovms::ModelConfig config;
+
+    const char* jsonNotMatchingSchema = R"({
+       "input":{
+          "value1"
+       },
+       "output":{
+          "value2"
+       }
+    })";
+
+    std::string tmp_dir = "/tmp/";
+    std::string filename = tmp_dir + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    config.setBasePath(tmp_dir);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
 }

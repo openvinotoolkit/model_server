@@ -24,13 +24,10 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
-<<<<<<< HEAD
-=======
 #include <rapidjson/schema.h>
 #include <rapidjson/error/error.h>
 #include <rapidjson/error/en.h>
 
->>>>>>> Add json validation against schema
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
@@ -40,11 +37,8 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "s3filesystem.hpp"
-<<<<<<< HEAD
-=======
 #include "gcsfilesystem.hpp"
 #include "schema.hpp"
->>>>>>> Add json validation against schema
 
 namespace ovms {
 
