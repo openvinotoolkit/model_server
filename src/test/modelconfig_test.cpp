@@ -224,7 +224,6 @@ TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
     std::string filename = tmp_dir + ovms::MAPPING_CONFIG_JSON;
     createConfigFileWithContent(jsonNotMatchingSchema, filename);
     config.setBasePath(tmp_dir);
-    
     auto ret = config.parseModelMapping();
     EXPECT_EQ(ret, ovms::StatusCode::OK);
 }

@@ -22,6 +22,8 @@
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 
+#include "test_utils.hpp"
+
 using testing::_;
 using testing::ContainerEq;
 using testing::Return;

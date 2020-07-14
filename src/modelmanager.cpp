@@ -37,7 +37,6 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "s3filesystem.hpp"
-#include "gcsfilesystem.hpp"
 #include "schema.hpp"
 
 namespace ovms {
