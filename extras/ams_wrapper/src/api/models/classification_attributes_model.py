@@ -19,7 +19,7 @@ import json
 from src.logger import get_logger
 from src.api.models.model import Model
 from src.api.models.model_config import ModelOutputConfiguration
-from src.api.types import Attribute, SingleClassification, Classification
+from src.api.types import Attribute_fix, SingleClassification_fix, Classification_fix
 
 logger = get_logger(__name__)
 
@@ -58,7 +58,7 @@ class ClassificationAttributes(Model):
                     highest_prob = probability
 
                 if is_softmax or is_softmax is None:
-                    attribute = Attribute(class_name, probability)
+                    attribute = Attribute_fix(class_name,probability)
                 else:
                     value = probability * value_multiplier
                     attribute = Attribute(class_name, value)
@@ -71,10 +71,15 @@ class ClassificationAttributes(Model):
             if current_conf.confidence_threshold:
                 attributes = [attr for attr in attributes
                               if attr.confidence >= current_conf.confidence_threshold]
-            classification = SingleClassification(subtype_name=output_name, attributes=attributes)
+            if (output_name=="color"):
+                output_name="vehicleColorClassification"
+            elif (output_name=="type"):
+                output_name="vehicleTypeClassification"
+
+            classification = SingleClassification_fix(subtype_name= output_name,attributes=attributes)
             classifications.append(classification)
 
-        model_classification = Classification(classifications=classifications)
+        model_classification = Classification_fix(classifications=classifications)
 
         response = json.dumps(model_classification.as_dict())
 
