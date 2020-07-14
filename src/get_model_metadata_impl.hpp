@@ -31,21 +31,21 @@ using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::Ten
 class GetModelMetadataImpl {
 public:
     static Status validate(
-        const   tensorflow::serving::GetModelMetadataRequest*   request);
+        const tensorflow::serving::GetModelMetadataRequest* request);
 
     static void convert(
-        const   tensor_map_t&           from,
-                proto_signature_map_t*  to);
+        const tensor_map_t& from,
+        proto_signature_map_t* to);
 
     static void buildResponse(
-        std::shared_ptr<ModelInstance>                  instance,
-        tensorflow::serving::GetModelMetadataResponse*  response);
+        std::shared_ptr<ModelInstance> instance,
+        tensorflow::serving::GetModelMetadataResponse* response);
 
     static Status getModelStatus(
-        const   tensorflow::serving::GetModelMetadataRequest*   request,
-                tensorflow::serving::GetModelMetadataResponse*  response);
-    static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest * request);
-    static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse * response, std::string * output);
+        const tensorflow::serving::GetModelMetadataRequest* request,
+        tensorflow::serving::GetModelMetadataResponse* response);
+    static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
+    static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output);
 };
 
 }  // namespace ovms

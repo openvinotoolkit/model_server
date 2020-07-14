@@ -15,124 +15,124 @@
 //*****************************************************************************
 #pragma once
 
-#include "filesystem.hpp"
-#include "status.hpp"
+#include <regex>
+#include <string>
 
 #include "google/cloud/storage/client.h"
 
-#include <regex>
-#include <string>
+#include "filesystem.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
 class GCSFileSystem : public FileSystem {
 public:
-  /**
+    /**
    * @brief Construct a new GCSFileSystem object
    *
    */
-  GCSFileSystem();
-  /**
+    GCSFileSystem();
+    /**
    * @brief Construct a new GCSFileSystem object
    *
    * @param options
    */
-  GCSFileSystem(const google::cloud::storage::v1::ClientOptions &options);
+    GCSFileSystem(const google::cloud::storage::v1::ClientOptions& options);
 
-  /**
+    /**
    * @brief Destroy the GCSFileSystem object
    *
    */
-  virtual ~GCSFileSystem();
+    virtual ~GCSFileSystem();
 
-  /**
+    /**
    * @brief Check if given path or file exists
    *
    * @param path
    * @param exists
    * @return StatusCode
    */
-  StatusCode fileExists(const std::string &path, bool *exists) override;
+    StatusCode fileExists(const std::string& path, bool* exists) override;
 
-  /**
+    /**
    * @brief Check if given path is a directory
    *
    * @param path
    * @param is_dir
    * @return StatusCode
    */
-  StatusCode isDirectory(const std::string &path, bool *is_dir) override;
+    StatusCode isDirectory(const std::string& path, bool* is_dir) override;
 
-  /**
+    /**
    * @brief Get path modification time
    *
    * @param path
    * @param mtime_ns
    * @return StatusCode
    */
-  StatusCode fileModificationTime(const std::string &path,
-                                  int64_t *mtime_ns) override;
+    StatusCode fileModificationTime(const std::string& path,
+        int64_t* mtime_ns) override;
 
-  /**
+    /**
    * @brief Get the files and directories in given directory
    *
    * @param path
    * @param contents
    * @return StatusCode
    */
-  StatusCode getDirectoryContents(const std::string &path,
-                                  files_list_t *contents) override;
+    StatusCode getDirectoryContents(const std::string& path,
+        files_list_t* contents) override;
 
-  /**
+    /**
    * @brief Get only directories in given directory
    *
    * @param path
    * @param subdirs
    * @return StatusCode
    */
-  StatusCode getDirectorySubdirs(const std::string &path,
-                                 files_list_t *subdirs) override;
+    StatusCode getDirectorySubdirs(const std::string& path,
+        files_list_t* subdirs) override;
 
-  /**
+    /**
    * @brief Get only files in given directory
    *
    * @param path
    * @param files
    * @return StatusCode
    */
-  StatusCode getDirectoryFiles(const std::string &path,
-                               files_list_t *files) override;
+    StatusCode getDirectoryFiles(const std::string& path,
+        files_list_t* files) override;
 
-  /**
+    /**
    * @brief Read the content of the given file into a string
    *
    * @param path
    * @param contents
    * @return StatusCode
    */
-  StatusCode readTextFile(const std::string &path,
-                          std::string *contents) override;
+    StatusCode readTextFile(const std::string& path,
+        std::string* contents) override;
 
-  /**
+    /**
    * @brief Download a remote directory
    *
    * @param path
    * @param local_path
    * @return StatusCode
    */
-  StatusCode downloadFileFolder(const std::string &path,
-                                std::string *local_path) override;
+    StatusCode downloadFileFolder(const std::string& path,
+        std::string* local_path) override;
 
-  /**
+    /**
    * @brief Delete a folder
    *
    * @param path
    * @return StatusCode
    */
-  StatusCode deleteFileFolder(const std::string &path) override;
+    StatusCode deleteFileFolder(const std::string& path) override;
 
 private:
-  /**
+    /**
    * @brief
    *
    * @param path
@@ -140,34 +140,34 @@ private:
    * @param object
    * @return StatusCode
    */
-  StatusCode parsePath(const std::string &path, std::string *bucket,
-                       std::string *object);
+    StatusCode parsePath(const std::string& path, std::string* bucket,
+        std::string* object);
 
-  /**
+    /**
    *
    * @brief
    *
    * @param remote_path
    * @param local_path
    */
-  StatusCode downloadFile(const std::string &remote_path,
-                          const std::string &local_path);
+    StatusCode downloadFile(const std::string& remote_path,
+        const std::string& local_path);
 
-  /**
+    /**
    * @brief Download a remote directory to a callee-provided local_path.
    *
    * @param path
    * @param local_path
    * @return StatusCode
    */
-  StatusCode downloadFileFolderTo(const std::string &path,
-                                  const std::string &local_path);
+    StatusCode downloadFileFolderTo(const std::string& path,
+        const std::string& local_path);
 
-  /**
+    /**
    * @brief
    *
    */
-  google::cloud::storage::Client client_;
+    google::cloud::storage::Client client_;
 };
 
 }  // namespace ovms

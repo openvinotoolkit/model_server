@@ -14,17 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../modelconfig.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
-
 
 TEST(ModelConfig, getters_setters) {
     ovms::ModelConfig config;
@@ -79,8 +78,8 @@ TEST(ModelConfig, layout_multi) {
     auto l2 = config.getLayouts();
     EXPECT_EQ(l1, "");
     EXPECT_THAT(l2, UnorderedElementsAre(
-        Pair("A", "layout_A"),
-        Pair("B", "layout_B")));
+                        Pair("A", "layout_A"),
+                        Pair("B", "layout_B")));
 
     config.setLayout("NHWC");
     l2 = config.getLayouts();
@@ -92,9 +91,9 @@ TEST(ModelConfig, layout_multi) {
     l2 = config.getLayouts();
     EXPECT_EQ(l1, "");
     EXPECT_THAT(l2, UnorderedElementsAre(
-        Pair("A", "layout_A"),
-        Pair("B", "layout_B"),
-        Pair("C", "layout_C")));
+                        Pair("A", "layout_A"),
+                        Pair("B", "layout_B"),
+                        Pair("C", "layout_C")));
 }
 
 TEST(ModelConfig, shape) {
@@ -159,22 +158,21 @@ TEST(ModelConfig, plugin_config) {
 
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
-        Pair("OptionA", "ValueA"),
-        Pair("OptionX", "ValueX")));
+                                        Pair("OptionA", "ValueA"),
+                                        Pair("OptionX", "ValueX")));
 }
 
 TEST(ModelConfig, mappingInputs) {
     ovms::ModelConfig config;
-    ovms::mapping_config_t mapping {
-        { "resnet", "value" },
-        { "output", "input"}
-    };
+    ovms::mapping_config_t mapping{
+        {"resnet", "value"},
+        {"output", "input"}};
 
     config.setMappingInputs(mapping);
     auto ret = config.getMappingInputs();
     EXPECT_THAT(ret, UnorderedElementsAre(
-        Pair("resnet", "value"),
-        Pair("output", "input")));
+                         Pair("resnet", "value"),
+                         Pair("output", "input")));
 
     auto in = config.getMappingInputByKey("output");
     auto empty = config.getMappingInputByKey("notexist");
@@ -185,16 +183,15 @@ TEST(ModelConfig, mappingInputs) {
 
 TEST(ModelConfig, mappingOutputs) {
     ovms::ModelConfig config;
-    ovms::mapping_config_t mapping {
-        { "resnet", "value" },
-        { "output", "input"}
-    };
+    ovms::mapping_config_t mapping{
+        {"resnet", "value"},
+        {"output", "input"}};
 
     config.setMappingOutputs(mapping);
     auto ret = config.getMappingOutputs();
     EXPECT_THAT(ret, UnorderedElementsAre(
-        Pair("resnet", "value"),
-        Pair("output", "input")));
+                         Pair("resnet", "value"),
+                         Pair("output", "input")));
 
     auto in = config.getMappingOutputByKey("output");
     auto empty = config.getMappingOutputByKey("notexist");

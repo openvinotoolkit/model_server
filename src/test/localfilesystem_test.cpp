@@ -14,12 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
@@ -55,7 +55,6 @@ TEST(LocalFileSystem, FileExists) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, true);
 }
-
 
 TEST(LocalFileSystem, IsDirectory) {
     ovms::LocalFileSystem lfs;

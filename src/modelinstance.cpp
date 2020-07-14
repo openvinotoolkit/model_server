@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <dirent.h>
-#include <sys/types.h>
+#include "modelinstance.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -23,10 +22,12 @@
 #include <string>
 #include <thread>
 #include <utility>
+
+#include <dirent.h>
 #include <spdlog/spdlog.h>
+#include <sys/types.h>
 
 #include "config.hpp"
-#include "modelinstance.hpp"
 
 using namespace InferenceEngine;
 
@@ -122,7 +123,7 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
 
 // Temporary methods. To be replaces with proper storage class.
 bool dirExists(const std::string& path) {
-    DIR *dir = opendir(path.c_str());
+    DIR* dir = opendir(path.c_str());
     if (dir) {
         closedir(dir);
         return true;
@@ -132,8 +133,8 @@ bool dirExists(const std::string& path) {
 }
 
 std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
-    struct dirent *entry;
-    DIR *dir = opendir(path.c_str());
+    struct dirent* entry;
+    DIR* dir = opendir(path.c_str());
 
     while ((entry = readdir(dir)) != nullptr) {
         auto name = std::string(entry->d_name);
@@ -284,8 +285,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const size_t pred
             return status;
         }
         prepareInferenceRequestsQueue();
-    }
-    catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
@@ -345,7 +345,7 @@ Status ModelInstance::reloadModel(size_t batchSize, std::unique_ptr<ModelInstanc
 }
 
 Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
-                                  std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard) {
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard) {
     // order is important here for performance reasons
     // assumption: model is already loaded for most of the calls
     predictHandlesCounterGuard = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*this);
@@ -366,10 +366,10 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     std::unique_lock<std::mutex> cv_lock(cv_mtx);
     while (waitCheckpointsCounter-- > 0) {
         if (modelLoadedNotify.wait_for(cv_lock,
-                                       std::chrono::milliseconds(waitLoadedTimestepMilliseconds),
-                                       [this](){
-                                           return this->getStatus().getState() > ModelVersionState::LOADING;
-                                       })) {
+                std::chrono::milliseconds(waitLoadedTimestepMilliseconds),
+                [this]() {
+                    return this->getStatus().getState() > ModelVersionState::LOADING;
+                })) {
             SPDLOG_INFO("Waiting for model:{} version:{} loaded state for:{} time",
                 getName(), getVersion(), waitCheckpoints - waitCheckpointsCounter);
         }
@@ -474,7 +474,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             1,
             std::multiplies<size_t>());
 
-/*
+        /*
         int8        data in request.tensor_content
         uint8       data in request.tensor_content
         int16       data in request.tensor_content

@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "model.hpp"
+
 #include <map>
 #include <memory>
 #include <utility>
-#include "model.hpp"
 
 namespace ovms {
 
@@ -37,7 +38,7 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig &config) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config) {
     Status status;
     for (const auto version : *versionsToStart) {
         spdlog::info("Will add model: {}; version: {} ...", getName(), version);
@@ -74,7 +75,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
     return StatusCode::OK;
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig &config) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
     Status status;
     for (const auto version : *versionsToReload) {
         spdlog::info("Will reload model: {}; version: {} ...", getName(), version);

@@ -21,7 +21,7 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--output=vs7 \
 	--recursive \
 	--linelength=120 \
-	--filter=-build/c++11,-runtime/references,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
+	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
@@ -89,6 +89,10 @@ $(ACTIVATE):
 style: venv
 	@echo "Style-checking codebase..."
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+
+clang-format: venv
+	@echo "Formating files with clang-format.."
+	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build
 docker_build:

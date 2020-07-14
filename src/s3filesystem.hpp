@@ -15,11 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <regex>
 #include <string>
 
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
-#include <regex>
 
 #include "filesystem.hpp"
 #include "status.hpp"
@@ -122,7 +122,7 @@ public:
      */
     StatusCode deleteFileFolder(const std::string& path) override;
 
- private:
+private:
     /**
      * @brief 
      * 

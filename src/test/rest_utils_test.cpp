@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../rest_utils.hpp"
 
@@ -34,14 +34,14 @@ protected:
         output2->set_dtype(tensorflow::DataType::DT_INT8);
 
         float data1[8] = {5.0f, 10.0f, -3.0f, 2.5f,
-                          9.0f, 55.5f, -0.5f, -1.5f};
+            9.0f, 55.5f, -0.5f, -1.5f};
         output1->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data1), 8 * sizeof(float));
         output1->mutable_tensor_shape()->add_dim()->set_size(2);
         output1->mutable_tensor_shape()->add_dim()->set_size(1);
         output1->mutable_tensor_shape()->add_dim()->set_size(4);
 
         int8_t data2[10] = {5, 2, 3, 8, -2,
-                            -100, 0, 125, 4, -1};
+            -100, 0, 125, 4, -1};
         output2->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data2), 10 * sizeof(int8_t));
         output2->mutable_tensor_shape()->add_dim()->set_size(2);
         output2->mutable_tensor_shape()->add_dim()->set_size(5);
@@ -52,7 +52,7 @@ class RestUtilsPrecisionTest : public ::testing::Test {
 protected:
     tensorflow::serving::PredictResponse proto;
     std::string json;
-    tensorflow::TensorProto *output;
+    tensorflow::TensorProto* output;
 
     void SetUp() override {
         output = &((*proto.mutable_outputs())["output"]);

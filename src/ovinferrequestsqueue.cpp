@@ -20,7 +20,7 @@ namespace ovms {
 
 int OVInferRequestsQueue::getIdleStream() {
     int value;
-    std::unique_lock <std::mutex> lk(front_mut);
+    std::unique_lock<std::mutex> lk(front_mut);
     if (streams[front_idx] < 0) {
         not_full_cond.wait(lk, [this] { return streams[front_idx] >= 0; });
     }
@@ -33,10 +33,10 @@ int OVInferRequestsQueue::getIdleStream() {
 void OVInferRequestsQueue::returnStream(int streamID) {
     std::uint32_t old_back = back_idx.load();
     while (!back_idx.compare_exchange_weak(
-            old_back,
-            (old_back + 1) % streams.size(),
-            std::memory_order_relaxed))
-    {}
+        old_back,
+        (old_back + 1) % streams.size(),
+        std::memory_order_relaxed)) {
+    }
     streams[old_back] = streamID;
     not_full_cond.notify_one();
 }

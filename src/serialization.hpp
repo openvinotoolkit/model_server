@@ -20,6 +20,7 @@
 
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
+
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 

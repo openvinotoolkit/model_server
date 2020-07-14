@@ -15,9 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
-#include <filesystem>
 #include <unordered_map>
 #include <vector>
 
@@ -25,13 +25,13 @@
 
 #include "../tensorinfo.hpp"
 
-const ovms::ModelConfig DUMMY_MODEL_CONFIG {
+const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
     std::filesystem::current_path().u8string() + "/src/test/dummy",
     "CPU",  // backend
-    1,  // batchsize
-    1,  // NIREQ
-    0  // model_version unuesed since version are read from path
+    1,      // batchsize
+    1,      // NIREQ
+    0       // model_version unuesed since version are read from path
 };
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
@@ -66,7 +66,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     return result;
 }
 
-template<typename T>
+template <typename T>
 static std::vector<T> asVector(const std::string& tensor_content) {
     std::vector<T> v(tensor_content.size() / sizeof(T) + 1);
     std::memcpy(

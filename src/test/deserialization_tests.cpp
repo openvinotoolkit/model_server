@@ -14,20 +14,20 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
 #include <tuple>
+#include <vector>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <gmock/gmock-generated-function-mockers.h>
+#include <gtest/gtest.h>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "../deserialization.hpp"
-
 #include "ovtestutils.hpp"
+
+#include <gmock/gmock-generated-function-mockers.h>
 
 using tensorflow::TensorProto;
 
@@ -35,88 +35,88 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 using InferenceEngine::IInferRequest;
-using InferenceEngine::ResponseDesc;
-using InferenceEngine::PreProcessInfo;
 using InferenceEngine::Precision;
+using InferenceEngine::PreProcessInfo;
+using InferenceEngine::ResponseDesc;
 
 using namespace ovms;
 using namespace InferenceEngine;
 
-using testing::NiceMock;
 using testing::_;
+using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<Precision> SUPPORTED_INPUT_PRECISIONS {
-        // Precision::UNSPECIFIED,
-        // Precision::MIXED,
-        Precision::FP32,
-        Precision::FP16,
-        // Precision::Q78,
-        Precision::I16,
-        Precision::U8,
-        Precision::I8,
-        Precision::U16,
-        Precision::I32,
-        // Precision::I64,
-        // Precision::BIN,
-        // Precision::BOOL
-        // //Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+const std::vector<Precision> SUPPORTED_INPUT_PRECISIONS{
+    // Precision::UNSPECIFIED,
+    // Precision::MIXED,
+    Precision::FP32,
+    Precision::FP16,
+    // Precision::Q78,
+    Precision::I16,
+    Precision::U8,
+    Precision::I8,
+    Precision::U16,
+    Precision::I32,
+    // Precision::I64,
+    // Precision::BIN,
+    // Precision::BOOL
+    // //Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
 };
 
-const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS {
-        Precision::UNSPECIFIED,
-        Precision::MIXED,
-        // Precision::FP32,
-        // Precision::FP16,
-        Precision::Q78,
-        // Precision::I16,
-        // Precision::U8,
-        // Precision::I8,
-        // Precision::U16,
-        // Precision::I32,
-        Precision::I64,
-        Precision::BIN,
-        Precision::BOOL
-        // Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS{
+    Precision::UNSPECIFIED,
+    Precision::MIXED,
+    // Precision::FP32,
+    // Precision::FP16,
+    Precision::Q78,
+    // Precision::I16,
+    // Precision::U8,
+    // Precision::I8,
+    // Precision::U16,
+    // Precision::I32,
+    Precision::I64,
+    Precision::BIN,
+    Precision::BOOL
+    // Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
-    protected:
-        void SetUp() override {
-            Precision precision = Precision::FP32;
-            InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
-                precision,
-                {1, 3, 1, 1},
-                InferenceEngine::Layout::NHWC};
+protected:
+    void SetUp() override {
+        Precision precision = Precision::FP32;
+        InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
+            precision,
+            {1, 3, 1, 1},
+            InferenceEngine::Layout::NHWC};
 
-            tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
-                tensorName,
-                tensorDesc_prec_1_3_1_1_NHWC.getPrecision(),
-                tensorDesc_prec_1_3_1_1_NHWC.getDims(),
-                tensorDesc_prec_1_3_1_1_NHWC.getLayout());
-            SetUpTensorProto(fromInferenceEnginePrecision(precision));
-        }
-        void SetUpTensorProto(tensorflow::DataType dataType) {
-            tensorProto.set_dtype(dataType);
-            auto tensorShape = tensorProto.mutable_tensor_shape();
-            tensorShape->Clear();
-            tensorShape->add_dim()->set_size(1);
-            tensorShape->add_dim()->set_size(3);
-            tensorShape->add_dim()->set_size(1);
-            tensorShape->add_dim()->set_size(1);
-            *(tensorProto.mutable_tensor_content()) = std::string(1 * 3 * 1 * 1, '1');
-        }
-        TensorProto tensorProto;
-        const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
-        ovms::tensor_map_t tensorMap;
+        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
+            tensorName,
+            tensorDesc_prec_1_3_1_1_NHWC.getPrecision(),
+            tensorDesc_prec_1_3_1_1_NHWC.getDims(),
+            tensorDesc_prec_1_3_1_1_NHWC.getLayout());
+        SetUpTensorProto(fromInferenceEnginePrecision(precision));
+    }
+    void SetUpTensorProto(tensorflow::DataType dataType) {
+        tensorProto.set_dtype(dataType);
+        auto tensorShape = tensorProto.mutable_tensor_shape();
+        tensorShape->Clear();
+        tensorShape->add_dim()->set_size(1);
+        tensorShape->add_dim()->set_size(3);
+        tensorShape->add_dim()->set_size(1);
+        tensorShape->add_dim()->set_size(1);
+        *(tensorProto.mutable_tensor_content()) = std::string(1 * 3 * 1 * 1, '1');
+    }
+    TensorProto tensorProto;
+    const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
+    ovms::tensor_map_t tensorMap;
 };
 
-class DeserializeTFTensorProto : public TensorflowGRPCPredict { };
+class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
 
-class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict { };
+class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
 
 class GRPCPredictRequest : public TensorflowGRPCPredict {
-    public:
+public:
     void SetUp() {
         TensorflowGRPCPredict::SetUp();
         (*request.mutable_inputs())[tensorName] = tensorProto;
@@ -124,11 +124,12 @@ class GRPCPredictRequest : public TensorflowGRPCPredict {
     void TearDown() {
         request.mutable_inputs()->clear();
     }
-    public:
-        PredictRequest request;
- };
 
-class GRPCPredictRequestNegative : public GRPCPredictRequest { };
+public:
+    PredictRequest request;
+};
+
+class GRPCPredictRequestNegative : public GRPCPredictRequest {};
 
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     Precision testedPrecision = GetParam();
@@ -152,11 +153,11 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
 }
 
 class MockTensorProtoDeserializatorThrowingInferenceEngine {
-    public:
+public:
     MOCK_METHOD(InferenceEngine::Blob::Ptr,
-                deserializeTensorProto,
-                (const tensorflow::TensorProto&,
-                 const std::shared_ptr<ovms::TensorInfo>&));
+        deserializeTensorProto,
+        (const tensorflow::TensorProto&,
+            const std::shared_ptr<ovms::TensorInfo>&));
 };
 
 // Enables static method mock
@@ -164,8 +165,8 @@ class MockTensorProtoDeserializator {
 public:
     static MockTensorProtoDeserializatorThrowingInferenceEngine* mock;
     static InferenceEngine::Blob::Ptr deserializeTensorProto(
-            const tensorflow::TensorProto& requestInput,
-            const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
+        const tensorflow::TensorProto& requestInput,
+        const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
         return mock->deserializeTensorProto(requestInput, tensorInfo);
     }
 };

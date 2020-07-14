@@ -13,17 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <google/protobuf/util/json_util.h>
 #include "get_model_metadata_impl.hpp"
 
-using google::protobuf::util::MessageToJsonString;
+#include <google/protobuf/util/json_util.h>
+
 using google::protobuf::util::JsonPrintOptions;
+using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
 
 Status GetModelMetadataImpl::getModelStatus(
-    const   tensorflow::serving::GetModelMetadataRequest*   request,
-            tensorflow::serving::GetModelMetadataResponse*  response) {
+    const tensorflow::serving::GetModelMetadataRequest* request,
+    tensorflow::serving::GetModelMetadataResponse* response) {
     auto status = validate(request);
     if (!status.ok()) {
         return status;
@@ -67,7 +68,7 @@ Status GetModelMetadataImpl::getModelStatus(
 }
 
 Status GetModelMetadataImpl::validate(
-    const   tensorflow::serving::GetModelMetadataRequest*   request) {
+    const tensorflow::serving::GetModelMetadataRequest* request) {
 
     if (!request->has_model_spec()) {
         return StatusCode::MODEL_SPEC_MISSING;
@@ -87,8 +88,8 @@ Status GetModelMetadataImpl::validate(
 }
 
 void GetModelMetadataImpl::convert(
-    const   tensor_map_t&           from,
-            proto_signature_map_t*  to) {
+    const tensor_map_t& from,
+    proto_signature_map_t* to) {
     for (const auto& pair : from) {
         auto tensor = pair.second;
         auto& input = (*to)[tensor->getMappedName()];
@@ -105,8 +106,8 @@ void GetModelMetadataImpl::convert(
 }
 
 void GetModelMetadataImpl::buildResponse(
-    std::shared_ptr<ModelInstance>                  instance,
-    tensorflow::serving::GetModelMetadataResponse*  response) {
+    std::shared_ptr<ModelInstance> instance,
+    tensorflow::serving::GetModelMetadataResponse* response) {
 
     response->Clear();
     response->mutable_model_spec()->set_name(instance->getName());
@@ -119,7 +120,7 @@ void GetModelMetadataImpl::buildResponse(
     (*response->mutable_metadata())["signature_def"].PackFrom(def);
 }
 
-Status  GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest * request ) {
+Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
         if (model_version.value() < 0) {
@@ -132,7 +133,7 @@ Status  GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::opt
     return StatusCode::OK;
 }
 
-Status GetModelMetadataImpl::serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse * response, std::string * output) {
+Status GetModelMetadataImpl::serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output) {
     JsonPrintOptions opts;
     opts.add_whitespace = true;
     opts.always_print_primitive_fields = true;

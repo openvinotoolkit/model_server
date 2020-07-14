@@ -23,6 +23,8 @@
 // OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#include "s3filesystem.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -36,8 +38,6 @@
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/ListObjectsRequest.h>
 #include <spdlog/spdlog.h>
-
-#include "s3filesystem.hpp"
 
 namespace ovms {
 
@@ -73,11 +73,10 @@ StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket,
     return StatusCode::OK;
 }
 
-
 S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3_path) :
     options_(options),
     s3_regex_(S3_URL_PREFIX + "([0-9a-zA-Z-.]+):([0-9]+)/([0-9a-z.-]+)(((/"
-              "[0-9a-zA-Z.-_]+)*)?)") {
+                              "[0-9a-zA-Z.-_]+)*)?)") {
     Aws::Client::ClientConfiguration config;
     Aws::Auth::AWSCredentials credentials;
 
@@ -511,7 +510,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
             auto get_object_outcome = client_.GetObject(object_request);
             if (get_object_outcome.IsSuccess()) {
                 auto& retrieved_file =
-                get_object_outcome.GetResultWithOwnership().GetBody();
+                    get_object_outcome.GetResultWithOwnership().GetBody();
                 std::string s3_removed_path = (*iter).substr(effective_path.size());
                 std::string local_file_path = joinPath({*local_path, s3_removed_path});
                 std::ofstream output_file(local_file_path.c_str(), std::ios::binary);

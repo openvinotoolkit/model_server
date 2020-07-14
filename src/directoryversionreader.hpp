@@ -39,7 +39,8 @@ public:
  */
 class DirectoryVersionReader : public IVersionReader {
 public:
-    DirectoryVersionReader(const std::string& path) : path(path) {}
+    DirectoryVersionReader(const std::string& path) :
+        path(path) {}
     virtual ~DirectoryVersionReader() {}
     virtual Status readAvailableVersions(model_versions_t& versions) {
         std::filesystem::directory_iterator it;
@@ -58,9 +59,9 @@ public:
             try {
                 ovms::model_version_t version = std::stoll(version_string);
                 versions.push_back(version);
-            } catch(const std::invalid_argument& e) {
+            } catch (const std::invalid_argument& e) {
                 spdlog::warn("Expected version directory to be in number format. Got:{}", version_string);
-            } catch(const std::out_of_range& e) {
+            } catch (const std::out_of_range& e) {
                 spdlog::error("Directory name is out of range for supported version format. Got:{}", version_string);
             }
         }

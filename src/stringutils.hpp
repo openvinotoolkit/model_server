@@ -17,12 +17,13 @@
 
 #include <algorithm>
 #include <cctype>
-#include <locale>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <utility>
 #include <limits>
+#include <locale>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace ovms {
 
@@ -31,7 +32,7 @@ namespace ovms {
  * 
  * @param std::string&
  */
-static inline void ltrim(std::string &str) {
+static inline void ltrim(std::string& str) {
     str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int c) {
         return !std::isspace(c);
     }));
@@ -42,10 +43,12 @@ static inline void ltrim(std::string &str) {
  * 
  * @param str
  */
-static inline void rtrim(std::string &str) {
+static inline void rtrim(std::string& str) {
     str.erase(std::find_if(str.rbegin(), str.rend(), [](int c) {
         return !std::isspace(c);
-    }).base(), str.end());
+    })
+                  .base(),
+        str.end());
 }
 
 /**
@@ -53,7 +56,7 @@ static inline void rtrim(std::string &str) {
  * 
  * @param str
  */
-static inline void trim(std::string &str) {
+static inline void trim(std::string& str) {
     ltrim(str);
     rtrim(str);
 }
@@ -63,11 +66,12 @@ static inline void trim(std::string &str) {
  * 
  * @param str
  */
-static inline void erase_spaces(std::string &str) {
+static inline void erase_spaces(std::string& str) {
     str.erase(std::remove_if(str.begin(), str.end(),
-        [](char c) -> bool {
-            return std::isspace<char>(c, std::locale::classic());
-        }), str.end());
+                  [](char c) -> bool {
+                      return std::isspace<char>(c, std::locale::classic());
+                  }),
+        str.end());
 }
 
 /**
@@ -77,8 +81,7 @@ static inline void erase_spaces(std::string &str) {
  * @param delimiter 
  * @return std::vector<std::string> 
  */
-static inline
-std::vector<std::string> tokenize(const std::string& str, const char delimiter) {
+static inline std::vector<std::string> tokenize(const std::string& str, const char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     std::istringstream iss(str);
@@ -97,13 +100,12 @@ std::vector<std::string> tokenize(const std::string& str, const char delimiter) 
  * @return true
  * @return false
  */
-static inline
-bool endsWith(const std::string& str, const std::string& match) {
+static inline bool endsWith(const std::string& str, const std::string& match) {
     auto it = match.begin();
     return str.size() >= match.size() &&
-        std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char & c){
-            return ::tolower(c) == ::tolower(*(it++));
-        });
+           std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char& c) {
+               return ::tolower(c) == ::tolower(*(it++));
+           });
 }
 
 /**
@@ -113,8 +115,7 @@ bool endsWith(const std::string& str, const std::string& match) {
  * @param default value
  * @return converted value and result indicating if conversion succeeded
  */
-static inline
-std::optional<uint32_t> stou32(const std::string& input) {
+static inline std::optional<uint32_t> stou32(const std::string& input) {
     std::string str = input;
     ovms::erase_spaces(str);
 
@@ -124,7 +125,7 @@ std::optional<uint32_t> stou32(const std::string& input) {
 
     try {
         uint64_t val = std::stoul(str);
-        if (val > std::numeric_limits<uint32_t>::max())  {
+        if (val > std::numeric_limits<uint32_t>::max()) {
             return std::nullopt;
         }
         return {static_cast<uint32_t>(val)};
@@ -140,8 +141,7 @@ std::optional<uint32_t> stou32(const std::string& input) {
  * @param default value
  * @return converted value and result indicating if conversion succeeded
  */
-static inline
-std::optional<int32_t> stoi32(const std::string& str) {
+static inline std::optional<int32_t> stoi32(const std::string& str) {
     try {
         return {static_cast<int32_t>(std::stoi(str))};
     } catch (...) {

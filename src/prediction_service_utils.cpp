@@ -14,9 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #include "prediction_service_utils.hpp"
-#include "modelmanager.hpp"
-#include "modelinstance.hpp"
+
 #include "deserialization.hpp"
+#include "modelinstance.hpp"
+#include "modelmanager.hpp"
 #include "serialization.hpp"
 
 #define DEBUG
@@ -28,10 +29,10 @@ using tensorflow::serving::PredictResponse;
 namespace ovms {
 
 Status getModelInstance(ovms::ModelManager& manager,
-                        const std::string& modelName,
-                        ovms::model_version_t modelVersionId,
-                        std::shared_ptr<ovms::ModelInstance>& modelInstance,
-                        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    const std::string& modelName,
+    ovms::model_version_t modelVersionId,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     SPDLOG_INFO("Requesting model:{}; version:{}.", modelName, modelVersionId);
 
     auto model = manager.findModelByName(modelName);
@@ -70,9 +71,9 @@ Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const in
 }
 
 Status inference(
-            ModelInstance   &modelVersion,
-    const   PredictRequest  *request_proto,
-            PredictResponse *response_proto) {
+    ModelInstance& modelVersion,
+    const PredictRequest* request_proto,
+    PredictResponse* response_proto) {
     Timer timer;
     using std::chrono::microseconds;
 
@@ -89,7 +90,7 @@ Status inference(
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     timer.stop("get infer request");
     spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request_proto, modelVersion.getInputsInfo(), inferRequest);
@@ -107,7 +108,7 @@ Status inference(
     if (!status.ok())
         return status;
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
     status = serializePredictResponse(inferRequest, modelVersion.getOutputsInfo(), response_proto);
@@ -115,15 +116,15 @@ Status inference(
     if (!status.ok())
         return status;
     spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-            request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     return StatusCode::OK;
 }
 
 Status assureModelInstanceLoadedWithProperBatchSize(
-        ModelInstance& modelInstance,
-        size_t requestedBatchSize,
-        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    ModelInstance& modelInstance,
+    size_t requestedBatchSize,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     if (modelInstance.getBatchSize() != requestedBatchSize) {
         SPDLOG_INFO("Model:{} version:{} loaded with different batch size:{} than requested:{}",
             modelInstance.getName(), modelInstance.getVersion(), modelInstance.getBatchSize(), requestedBatchSize);

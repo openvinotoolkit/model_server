@@ -14,18 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdio>
-#include <fstream>
-#include <filesystem>
-#include <thread>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <future>
+#include <thread>
 
-#include <stdlib.h>
-
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
-
+#include <gtest/gtest.h>
 #include <inference_engine.hpp>
+#include <stdlib.h>
 
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
@@ -35,8 +33,9 @@ using testing::Each;
 using testing::Eq;
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
-    public:
-    ConstructorEnabledModelManager() : ModelManager() {}
+public:
+    ConstructorEnabledModelManager() :
+        ModelManager() {}
     ~ConstructorEnabledModelManager() {
         SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
         models.clear();
@@ -60,15 +59,15 @@ public:
      * @brief This function should mimic most closely predict request to check for thread safety
      */
     void performPredict(const std::string modelName,
-                        const ovms::model_version_t modelVersion,
-                        const size_t batchSize,
-                        std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
-                        std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
+        const ovms::model_version_t modelVersion,
+        const size_t batchSize,
+        std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
+        std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
     void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
         auto blob = InferenceEngine::make_shared_blob<float>(
-        modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
-        const_cast<float*>(reinterpret_cast<const float*>(input.data())));
+            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
+            const_cast<float*>(reinterpret_cast<const float*>(input.data())));
         inferRequest.SetBlob(DUMMY_MODEL_INPUT_NAME, blob);
     }
 
@@ -94,7 +93,7 @@ public:
         for (auto i = 0u; i < waitingBeforeGettingModelCount; ++i) {
             predictsWaitingBeforeGettingModelInstance.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i](){
+                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
                         performPredict(config.getName(), config.getVersion(), initialBatchSize + (i % 3),
                             std::move(
                                 std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
@@ -103,7 +102,7 @@ public:
         for (auto i = 0u; i < waitingBeforePerformInferenceCount; ++i) {
             predictsWaitingBeforeInference.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforePerformInference, i](){
+                    [this, initialBatchSize, &releaseWaitBeforePerformInference, i]() {
                         performPredict(config.getName(), config.getVersion(), initialBatchSize,
                             nullptr,
                             std::move(
@@ -135,10 +134,10 @@ public:
 };
 
 void TestPredict::performPredict(const std::string modelName,
-                                 const ovms::model_version_t modelVersion,
-                                 const size_t batchSize,
-                                 std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
-                                 std::unique_ptr<std::future<void>> waitBeforePerformInference) {
+    const ovms::model_version_t modelVersion,
+    const size_t batchSize,
+    std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
+    std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
@@ -147,16 +146,14 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before getModelInstance. Batch size:" << batchSize << std::endl;
         waitBeforeGettingModelInstance->get();
     }
-    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstancePredictRequestsHandlesCountGuard),
-              ovms::StatusCode::OK);
-    ASSERT_EQ(assureModelInstanceLoadedWithProperBatchSize(*modelInstance, batchSize, modelInstancePredictRequestsHandlesCountGuard),
-              ovms::StatusCode::OK);
+    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstancePredictRequestsHandlesCountGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(assureModelInstanceLoadedWithProperBatchSize(*modelInstance, batchSize, modelInstancePredictRequestsHandlesCountGuard), ovms::StatusCode::OK);
     ovms::OVInferRequestsQueue& inferRequestsQueue = modelInstance->getInferRequestsQueue();
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
     int executingInferId = executingStreamIdGuard.getId();
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     std::vector<float> input(DUMMY_MODEL_INPUT_SIZE * batchSize);
-    std::generate(input.begin(), input.end(), [](){ return 1.;});
+    std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
     if (waitBeforePerformInference) {
@@ -197,18 +194,17 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferRequestJustBeforePredict) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::promise<void> releaseWaitBeforePerformInference;
     std::thread t(
-        [this, &releaseWaitBeforePerformInference](){
+        [this, &releaseWaitBeforePerformInference]() {
             performPredict(config.getName(), config.getVersion(), initialBatchSize,
-                           nullptr,
-                           std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference.get_future())));
+                nullptr,
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference.get_future())));
         });
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
-    ASSERT_EQ(getModelInstance(manager, config.getName(), config.getVersion(), modelInstance, modelInstancePredictRequestsHandlesCountGuard),
-              ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard1;
+    ASSERT_EQ(getModelInstance(manager, config.getName(), config.getVersion(), modelInstance, modelInstancePredictRequestsHandlesCountGuard1), ovms::StatusCode::OK);
 
-    std::thread t2([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard](){modelInstance->reloadModel(newBatchSize, modelInstancePredictRequestsHandlesCountGuard);});
+    std::thread t2([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard1]() { modelInstance->reloadModel(newBatchSize, modelInstancePredictRequestsHandlesCountGuard1); });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     releaseWaitBeforePerformInference.set_value();
     t2.join();
@@ -219,7 +215,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferRequestJustBeforePredict) {
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
 
     std::vector<float> input(DUMMY_MODEL_INPUT_SIZE * newBatchSize);
-    std::generate(input.begin(), input.end(), [](){ return 1.;});
+    std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
     ASSERT_EQ(performInference(inferRequestsQueue, executingInferId, inferRequest), ovms::StatusCode::OK);
@@ -240,18 +236,18 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferRequestJustBeforeGettingModelInsta
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     std::promise<void> releaseWaitBeforeGettingModelInstance;
     std::thread secondPredictRequest(
-        [this, &releaseWaitBeforeGettingModelInstance](){
+        [this, &releaseWaitBeforeGettingModelInstance]() {
             performPredict(config.getName(), config.getVersion(), initialBatchSize,
-                           std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance.get_future())));
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance.get_future())));
         });
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
     ASSERT_EQ(getModelInstance(manager, config.getName(), config.getVersion(), modelInstance, modelInstancePredictRequestsHandlesCountGuard),
-              ovms::StatusCode::OK);
-    std::thread assureProperBSLoadedThread([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard](){
-            auto status = assureModelInstanceLoadedWithProperBatchSize(*modelInstance, newBatchSize, modelInstancePredictRequestsHandlesCountGuard);
-            ASSERT_EQ(status, ovms::StatusCode::OK);
+        ovms::StatusCode::OK);
+    std::thread assureProperBSLoadedThread([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard]() {
+        auto status = assureModelInstanceLoadedWithProperBatchSize(*modelInstance, newBatchSize, modelInstancePredictRequestsHandlesCountGuard);
+        ASSERT_EQ(status, ovms::StatusCode::OK);
     });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::cout << "Now notifying second predict to get model with proper batchsize." << std::endl;
@@ -265,7 +261,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferRequestJustBeforeGettingModelInsta
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
 
     std::vector<float> input(DUMMY_MODEL_INPUT_SIZE * newBatchSize);
-    std::generate(input.begin(), input.end(), [](){ return 1.;});
+    std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
 
     deserialize(input, inferRequest, modelInstance);
@@ -295,7 +291,6 @@ TEST_F(TestPredict, SuccesfullReloadWhenSeveralInferRequestJustBeforeInference) 
     const uint waitingBeforeGettingModelCount = 0;
     testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
-
 
 TEST_F(TestPredict, SuccesfullReloadWhenSeveralInferRequestAtDifferentStages) {
     const int initialBatchSize = 1;

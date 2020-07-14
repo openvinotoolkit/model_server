@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "localfilesystem.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <string>
 
 #include <spdlog/spdlog.h>
-
-#include "localfilesystem.hpp"
 
 #if defined(__APPLE__) || defined(__NetBSD__)
 #define st_mtim st_mtimespec
@@ -33,7 +33,7 @@ constexpr uint64_t NANOS_PER_SECOND = 1000000000;
 StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
     try {
         *exists = fs::exists(path);
-    } catch(fs::filesystem_error& e) {
+    } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
         return StatusCode::PATH_INVALID;
     }
@@ -44,7 +44,7 @@ StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
 StatusCode LocalFileSystem::isDirectory(const std::string& path, bool* is_dir) {
     try {
         *is_dir = fs::is_directory(path);
-    } catch(fs::filesystem_error& e) {
+    } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
         return StatusCode::PATH_INVALID;
     }
@@ -70,7 +70,7 @@ StatusCode LocalFileSystem::getDirectoryContents(const std::string& path, files_
         for (const auto& entry : fs::directory_iterator(path)) {
             contents->insert(entry.path().string());
         }
-    } catch(fs::filesystem_error& e) {
+    } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
         return StatusCode::PATH_INVALID;
     }
@@ -85,7 +85,7 @@ StatusCode LocalFileSystem::getDirectorySubdirs(const std::string& path, files_l
                 subdirs->insert(entry.path().string());
             }
         }
-    } catch(fs::filesystem_error& e) {
+    } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
         return StatusCode::PATH_INVALID;
     }
@@ -100,7 +100,7 @@ StatusCode LocalFileSystem::getDirectoryFiles(const std::string& path, files_lis
                 files->insert(entry.path().string());
             }
         }
-    } catch(fs::filesystem_error& e) {
+    } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
         return StatusCode::PATH_INVALID;
     }

@@ -14,18 +14,18 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include <chrono>
 #include <filesystem>
+#include <random>
 #include <string>
 #include <thread>
-#include <chrono>
-#include <random>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../ovinferrequestsqueue.hpp"
 #define DEBUG
 #include "../timer.hpp"
-
 
 using namespace testing;
 
@@ -78,7 +78,7 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
         int st = ms.getIdleStream();
         int rd = std::rand();
         tv[st] = rd;
-        std::mt19937_64 eng {std::random_device {}()};
+        std::mt19937_64 eng{std::random_device{}()};
         std::uniform_int_distribution<> dist{10, 50};  // mocked inference delay range in ms
         std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
         std::mutex mut;
@@ -89,7 +89,7 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
 }
 
 TEST(OVInferRequestQueue, MultiThread) {
-    int nireq = 30;  // represnet queue size
+    int nireq = 30;            // represnet queue size
     int number_clients = 100;  // represent number of serving clients
     InferenceEngine::Core engine;
     InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
@@ -107,5 +107,3 @@ TEST(OVInferRequestQueue, MultiThread) {
     }
     // wait for all thread to complete successfully
 }
-
-

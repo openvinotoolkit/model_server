@@ -18,8 +18,8 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #include <inference_engine.hpp>
 
@@ -28,7 +28,7 @@ namespace ovms {
 * @brief Class representing circular buffer for managing IE streams
 */
 class OVInferRequestsQueue {
- public:
+public:
     /**
     * @brief Allocating idle stream for execution
     */
@@ -59,7 +59,7 @@ class OVInferRequestsQueue {
         return inferRequests[streamID];
     }
 
- protected:
+protected:
     /**
     * @brief Vector representing circular buffer for infer queue
     */

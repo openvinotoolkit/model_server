@@ -13,19 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "prediction_service.hpp"
+
 #include <condition_variable>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include <inference_engine.hpp>
-#include "tensorflow/core/framework/tensor.h"
 #include <spdlog/spdlog.h>
+
+#include "tensorflow/core/framework/tensor.h"
 
 #include "get_model_metadata_impl.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "prediction_service.hpp"
 #include "prediction_service_utils.hpp"
 #include "status.hpp"
 
@@ -38,29 +40,29 @@ using namespace InferenceEngine;
 
 using tensorflow::TensorProto;
 
+using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
-using tensorflow::serving::PredictionService;
 
 namespace ovms {
 
 Status getModelInstance(const PredictRequest* request,
-                        std::shared_ptr<ovms::ModelInstance>& modelInstance,
-                        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
     return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
-            ServerContext*      context,
-    const   PredictRequest*     request,
-            PredictResponse*    response) {
+    ServerContext* context,
+    const PredictRequest* request,
+    PredictResponse* response) {
     Timer timer;
     timer.start("total");
     using std::chrono::microseconds;
     spdlog::debug("Processing gRPC request for model: {}; version: {}",
-                  request->model_spec().name(),
-                  request->model_spec().version().value());
+        request->model_spec().name(),
+        request->model_spec().version().value());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
 
@@ -88,9 +90,9 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
 }
 
 grpc::Status PredictionServiceImpl::GetModelMetadata(
-            grpc::ServerContext*                            context,
-    const   tensorflow::serving::GetModelMetadataRequest*   request,
-            tensorflow::serving::GetModelMetadataResponse*  response) {
+    grpc::ServerContext* context,
+    const tensorflow::serving::GetModelMetadataRequest* request,
+    tensorflow::serving::GetModelMetadataResponse* response) {
     return GetModelMetadataImpl::getModelStatus(request, response).grpc();
 }
 

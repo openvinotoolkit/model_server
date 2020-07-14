@@ -14,16 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <rapidjson/document.h>
+
 #include "../get_model_metadata_impl.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
 
+using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
-using ::testing::NiceMock;
 using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
@@ -36,19 +37,19 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public ovms::ModelInstance {
     public:
-        MOCK_METHOD(const ovms::tensor_map_t&,      getInputsInfo,  (), (const, override));
-        MOCK_METHOD(const ovms::tensor_map_t&,      getOutputsInfo, (), (const, override));
-        MOCK_METHOD(const std::string&,             getName,        (), (const, override));
-        MOCK_METHOD(ovms::model_version_t,          getVersion,     (), (const, override));
+        MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+        MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
+        MOCK_METHOD(const std::string&, getName, (), (const, override));
+        MOCK_METHOD(ovms::model_version_t, getVersion, (), (const, override));
     };
 
-    tensor_desc_map_t  inputTensors;
-    tensor_desc_map_t  outputTensors;
+    tensor_desc_map_t inputTensors;
+    tensor_desc_map_t outputTensors;
     ovms::tensor_map_t networkInputs;
     ovms::tensor_map_t networkOutputs;
 
-    std::string             modelName       = "resnet";
-    ovms::model_version_t   modelVersion    = 23;
+    std::string modelName = "resnet";
+    ovms::model_version_t modelVersion = 23;
 
 protected:
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
@@ -59,28 +60,28 @@ protected:
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
-                InferenceEngine::Precision::FP32,
-                {1, 3, 224, 224},
-            }},
+                                           InferenceEngine::Precision::FP32,
+                                           {1, 3, 224, 224},
+                                       }},
             {"Input_U8_1_3_62_62", {
-                InferenceEngine::Precision::U8,
-                {1, 3, 62, 62},
-            }},
+                                       InferenceEngine::Precision::U8,
+                                       {1, 3, 62, 62},
+                                   }},
         });
 
         outputTensors = tensor_desc_map_t({
             {"Output_I32_1_2000", {
-                InferenceEngine::Precision::I32,
-                {1, 2000},
-            }},
+                                      InferenceEngine::Precision::I32,
+                                      {1, 2000},
+                                  }},
             {"Output_FP32_2_20_3", {
-                InferenceEngine::Precision::FP32,
-                {2, 20, 3},
-            }},
+                                       InferenceEngine::Precision::FP32,
+                                       {2, 20, 3},
+                                   }},
         });
 
         auto prepare = [](const tensor_desc_map_t& desc,
-                          ovms::tensor_map_t& tensors) {
+                           ovms::tensor_map_t& tensors) {
             for (const auto& pair : desc) {
                 tensors[pair.first] = std::make_shared<ovms::TensorInfo>(
                     pair.first,
@@ -89,7 +90,7 @@ protected:
             }
         };
 
-        prepare(inputTensors,  networkInputs);
+        prepare(inputTensors, networkInputs);
         prepare(outputTensors, networkOutputs);
 
         ON_CALL(*instance, getInputsInfo())
@@ -156,10 +157,10 @@ TEST_F(GetModelMetadataResponse, HasCorrectTensorNames) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    EXPECT_EQ(inputs .size(), 2);
+    EXPECT_EQ(inputs.size(), 2);
     EXPECT_EQ(outputs.size(), 2);
 
     EXPECT_EQ(
@@ -182,7 +183,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectPrecision) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
     EXPECT_EQ(
@@ -205,12 +206,12 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
-    const auto& inputs  = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
     auto isShape = [](
-        const tensorflow::TensorShapeProto& actual,
-        const std::vector<size_t>&&         expected) -> bool {
+                       const tensorflow::TensorShapeProto& actual,
+                       const std::vector<size_t>&& expected) -> bool {
         if (actual.dim_size() != expected.size()) {
             return false;
         }
@@ -239,9 +240,9 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
 TEST_F(GetModelMetadataResponse, serialize2Json) {
     ovms::GetModelMetadataImpl::buildResponse(instance, &response);
     std::string json_output;
-    const tensorflow::serving::GetModelMetadataResponse * response_p = &response;
+    const tensorflow::serving::GetModelMetadataResponse* response_p = &response;
     ovms::Status error_status = ovms::GetModelMetadataImpl::serializeResponse2Json(response_p, &json_output);
-    const char * json_array = json_output.c_str();
+    const char* json_array = json_output.c_str();
     Document received_doc;
     received_doc.Parse(json_array);
     EXPECT_TRUE(received_doc.IsObject());
@@ -253,7 +254,7 @@ TEST(RESTGetModelMetadataResponse, createGrpcRequestVersionSet) {
     std::string model_name = "dummy";
     std::optional<int64_t> model_version = 1;
     tensorflow::serving::GetModelMetadataRequest request_grpc;
-    tensorflow::serving::GetModelMetadataRequest * request_p = &request_grpc;
+    tensorflow::serving::GetModelMetadataRequest* request_p = &request_grpc;
     ovms::Status status = ovms::GetModelMetadataImpl::createGrpcRequest(model_name, model_version, request_p);
     bool has_requested_version = request_p->model_spec().has_version();
     auto requested_version = request_p->model_spec().version().value();
@@ -270,7 +271,7 @@ TEST(RESTGetModelMetadataResponse, createGrpcRequestNoVersion) {
     std::string model_name = "dummy";
     std::optional<int64_t> model_version;
     tensorflow::serving::GetModelMetadataRequest request_grpc;
-    tensorflow::serving::GetModelMetadataRequest * request_p = &request_grpc;
+    tensorflow::serving::GetModelMetadataRequest* request_p = &request_grpc;
     ovms::Status status = ovms::GetModelMetadataImpl::createGrpcRequest(model_name, model_version, request_p);
     bool has_requested_version = request_p->model_spec().has_version();
     std::string metadata_field = request_p->metadata_field(0);

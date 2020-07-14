@@ -14,22 +14,23 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <string>
+#include "model_service.hpp"
+
 #include <memory>
+#include <string>
 
 #include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
+
+#include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
-#include "tensorflow_serving/apis/get_model_status.pb.h"
 
 #include "modelmanager.hpp"
-#include "model_service.hpp"
 #include "status.hpp"
 
-
-using google::protobuf::util::MessageToJsonString;
 using google::protobuf::util::JsonPrintOptions;
+using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
 
@@ -41,12 +42,12 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 }
 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
-        ::grpc::ServerContext *context, const tensorflow::serving::GetModelStatusRequest *request,
-        tensorflow::serving::GetModelStatusResponse *response) {
+    ::grpc::ServerContext* context, const tensorflow::serving::GetModelStatusRequest* request,
+    tensorflow::serving::GetModelStatusResponse* response) {
     return GetModelStatusImpl::getModelStatus(request, response).grpc();
 }
 
-Status  GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest * request ) {
+Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
         if (model_version.value() < 0) {
@@ -58,7 +59,7 @@ Status  GetModelStatusImpl::createGrpcRequest(std::string model_name, const std:
     return StatusCode::OK;
 }
 
-Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse * response, std::string * output) {
+Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output) {
     JsonPrintOptions opts;
     opts.add_whitespace = true;
     opts.always_print_primitive_fields = true;
@@ -70,7 +71,7 @@ Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::Get
     return StatusCode::OK;
 }
 
-Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelStatusRequest * request, tensorflow::serving::GetModelStatusResponse * response) {
+Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response) {
     SPDLOG_DEBUG("model_service: request: {}", request->DebugString());
     bool has_requested_version = request->model_spec().has_version();
     auto requested_version = request->model_spec().version().value();
@@ -110,8 +111,8 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
 }
 
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(
-        ::grpc::ServerContext *context, const tensorflow::serving::ReloadConfigRequest *request,
-        tensorflow::serving::ReloadConfigResponse *response) {
+    ::grpc::ServerContext* context, const tensorflow::serving::ReloadConfigRequest* request,
+    tensorflow::serving::ReloadConfigResponse* response) {
     spdlog::info("Requested HandleReloadConfigRequest - but this service is reloading config automatically by itself, therefore this operation has no *EXTRA* affect.");
     return grpc::Status::OK;  // we're reloading config all the time; for a total client compatibility, this means returning success here.
 }
