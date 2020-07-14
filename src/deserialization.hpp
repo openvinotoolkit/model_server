@@ -20,6 +20,7 @@
 
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
+
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
@@ -28,21 +29,22 @@
 
 namespace ovms {
 
-template<typename T>
+template <typename T>
 InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
-                                    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
     return InferenceEngine::make_shared_blob<T>(
         tensorInfo->getTensorDesc(),
         const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
 }
 
 class ConcreteTensorProtoDeserializator {
-    public:
+public:
     static InferenceEngine::Blob::Ptr deserializeTensorProto(
-            const tensorflow::TensorProto& requestInput,
-            const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const tensorflow::TensorProto& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision()) {
-        case InferenceEngine::Precision::FP32:  return makeBlob<float>      (requestInput, tensorInfo);
+        case InferenceEngine::Precision::FP32:
+            return makeBlob<float>(requestInput, tensorInfo);
         case InferenceEngine::Precision::FP16: {  // TODO: Not tested manually for accurracy.
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L45
@@ -55,8 +57,10 @@ class ConcreteTensorProtoDeserializator {
             }
             return blob;
         }
-        case InferenceEngine::Precision::U8:    return makeBlob<uint8_t>    (requestInput, tensorInfo);
-        case InferenceEngine::Precision::I8:    return makeBlob<int8_t>     (requestInput, tensorInfo);
+        case InferenceEngine::Precision::U8:
+            return makeBlob<uint8_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I8:
+            return makeBlob<int8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::U16: {
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
@@ -69,8 +73,10 @@ class ConcreteTensorProtoDeserializator {
             }
             return blob;
         }
-        case InferenceEngine::Precision::I16:   return makeBlob<int16_t>    (requestInput, tensorInfo);
-        case InferenceEngine::Precision::I32:   return makeBlob<int32_t>    (requestInput, tensorInfo);
+        case InferenceEngine::Precision::I16:
+            return makeBlob<int16_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I32:
+            return makeBlob<int32_t>(requestInput, tensorInfo);
 
         // TODO: Unsupported yet
         case InferenceEngine::Precision::I64:
@@ -88,16 +94,16 @@ class ConcreteTensorProtoDeserializator {
 
 template <class TensorProtoDeserializator>
 InferenceEngine::Blob::Ptr deserializeTensorProto(
-        const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
 template <class TensorProtoDeserializator>
 Status deserializePredictRequest(
-                    const tensorflow::serving::PredictRequest& request,
-                    const tensor_map_t& inputMap,
-                    InferenceEngine::InferRequest& inferRequest) {
+    const tensorflow::serving::PredictRequest& request,
+    const tensor_map_t& inputMap,
+    InferenceEngine::InferRequest& inferRequest) {
     try {
         for (const auto& pair : inputMap) {
             const auto& name = pair.first;

@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <functional>
-
 #include "rest_parser.hpp"
+
+#include <functional>
 
 namespace ovms {
 
@@ -26,10 +26,11 @@ RestParser::RestParser(const tensor_map_t& tensors) {
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
         input.mutable_tensor_content()->reserve(std::accumulate(
-            tensor->getShape().begin(),
-            tensor->getShape().end(),
-            1,
-            std::multiplies<size_t>()) * DataTypeSize(tensor->getPrecisionAsDataType()));
+                                                    tensor->getShape().begin(),
+                                                    tensor->getShape().end(),
+                                                    1,
+                                                    std::multiplies<size_t>()) *
+                                                DataTypeSize(tensor->getPrecisionAsDataType()));
     }
 }
 
@@ -45,7 +46,7 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
     }
     if (doc.GetArray()[0].IsArray()) {
         for (auto& itr : doc.GetArray()) {
-            if (!parseArray(itr, dim+1, proto)) {
+            if (!parseArray(itr, dim + 1, proto)) {
                 return false;
             }
         }
@@ -197,7 +198,7 @@ bool RestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int s
     }
 }
 
-template<typename T>
+template <typename T>
 bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     if (sizeof(T) != DataTypeSize(proto.dtype())) {
         return false;
@@ -206,7 +207,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         return addToTensorContent<T>(proto, static_cast<T>(value.GetDouble()));

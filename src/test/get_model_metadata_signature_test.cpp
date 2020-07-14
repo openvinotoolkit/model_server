@@ -20,7 +20,6 @@
 
 #include "../get_model_metadata_impl.hpp"
 
-
 class GetModelMetadataSignature : public ::testing::Test {
     struct Info {
         InferenceEngine::Precision precision;
@@ -38,13 +37,13 @@ protected:
     void SetUp() override {
         tensors = tensor_desc_map_t{
             {"Input_FP32_1_3_224_224", {
-                InferenceEngine::Precision::FP32,
-                {1, 3, 224, 224},
-            }},
+                                           InferenceEngine::Precision::FP32,
+                                           {1, 3, 224, 224},
+                                       }},
             {"Input_I64_1_6_128_128_16", {
-                InferenceEngine::Precision::I64,
-                {1, 6, 128, 128, 16},
-            }},
+                                             InferenceEngine::Precision::I64,
+                                             {1, 6, 128, 128, 16},
+                                         }},
         };
 
         for (const auto& pair : tensors) {
@@ -63,28 +62,28 @@ TEST_F(GetModelMetadataSignature, ConvertCorrectNumberOfInputs) {
 
 TEST_F(GetModelMetadataSignature, ConvertInputsExist) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
-    EXPECT_NE(signature.find("Input_FP32_1_3_224_224"),     signature.end());
-    EXPECT_NE(signature.find("Input_I64_1_6_128_128_16"),   signature.end());
+    EXPECT_NE(signature.find("Input_FP32_1_3_224_224"), signature.end());
+    EXPECT_NE(signature.find("Input_I64_1_6_128_128_16"), signature.end());
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectInputNames) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
-    EXPECT_EQ(signature["Input_FP32_1_3_224_224"].name(),   "Input_FP32_1_3_224_224");
+    EXPECT_EQ(signature["Input_FP32_1_3_224_224"].name(), "Input_FP32_1_3_224_224");
     EXPECT_EQ(signature["Input_I64_1_6_128_128_16"].name(), "Input_I64_1_6_128_128_16");
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectPrecision) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
-    EXPECT_EQ(signature["Input_FP32_1_3_224_224"].dtype(),      tensorflow::DT_FLOAT);
-    EXPECT_EQ(signature["Input_I64_1_6_128_128_16"].dtype(),    tensorflow::DT_INT64);
+    EXPECT_EQ(signature["Input_FP32_1_3_224_224"].dtype(), tensorflow::DT_FLOAT);
+    EXPECT_EQ(signature["Input_I64_1_6_128_128_16"].dtype(), tensorflow::DT_INT64);
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
 
     auto isShape = [](
-        const tensorflow::TensorShapeProto& actual,
-        const std::vector<size_t>&&         expected) -> bool {
+                       const tensorflow::TensorShapeProto& actual,
+                       const std::vector<size_t>&& expected) -> bool {
         if (actual.dim_size() != expected.size()) {
             return false;
         }

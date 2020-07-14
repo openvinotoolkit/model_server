@@ -21,9 +21,10 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/status.h>
 
+#include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
-#include "tensorflow_serving/apis/get_model_status.pb.h"
+
 #include "modelmanager.hpp"
 #include "status.hpp"
 
@@ -32,21 +33,20 @@ namespace ovms {
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, model_version_t version, const ModelVersionStatus& model_version_status);
 
 class ModelServiceImpl final : public tensorflow::serving::ModelService::Service {
- public:
-  ::grpc::Status GetModelStatus(::grpc::ServerContext *context,
-                                const tensorflow::serving::GetModelStatusRequest *request,
-                                tensorflow::serving::GetModelStatusResponse *response) override;
-  ::grpc::Status HandleReloadConfigRequest(::grpc::ServerContext *context,
-                                           const tensorflow::serving::ReloadConfigRequest *request,
-                                           tensorflow::serving::ReloadConfigResponse *response) override;
+public:
+    ::grpc::Status GetModelStatus(::grpc::ServerContext* context,
+        const tensorflow::serving::GetModelStatusRequest* request,
+        tensorflow::serving::GetModelStatusResponse* response) override;
+    ::grpc::Status HandleReloadConfigRequest(::grpc::ServerContext* context,
+        const tensorflow::serving::ReloadConfigRequest* request,
+        tensorflow::serving::ReloadConfigResponse* response) override;
 };
 
 class GetModelStatusImpl {
 public:
-    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest * request, tensorflow::serving::GetModelStatusResponse * response);
-    static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest * request);
-    static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse * response, std::string * output);
+    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response);
+    static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
+    static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output);
 };
-
 
 }  // namespace ovms

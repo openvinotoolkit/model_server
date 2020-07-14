@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
 #include "test_utils.hpp"
@@ -25,9 +25,7 @@ using namespace testing;
 using ::testing::ElementsAre;
 
 TEST(RestParserNoNamed, RowOrder_2x1x3x1x5) {
-    RestParser parser(prepareTensors({
-        {"my_input", {2, 1, 3, 1, 5}}
-    }));
+    RestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         [
@@ -44,25 +42,24 @@ TEST(RestParserNoNamed, RowOrder_2x1x3x1x5) {
                 [[1, 2, 3, 4, 5]]
             ]
         ]
-    ]})"), StatusCode::OK);
+    ]})"),
+        StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::ROW);
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
     EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(2, 1, 3, 1, 5));
     EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5));
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5));
 }
 
 TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
-    RestParser parser(prepareTensors({
-        {"my_input", {2, 1, 3, 1, 5}}
-    }));
+    RestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[
         [
@@ -79,17 +76,18 @@ TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
                 [[1, 2, 3, 4, 5]]
             ]
         ]
-    ]})"), StatusCode::OK);
+    ]})"),
+        StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
     EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(2, 1, 3, 1, 5));
     EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5,
-        1, 2, 3, 4, 5));
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5,
+                                                                1, 2, 3, 4, 5));
 }

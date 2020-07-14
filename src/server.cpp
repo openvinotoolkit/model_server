@@ -13,24 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <signal.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include <cstdlib>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
+#include <grpcpp/security/server_credentials.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <grpcpp/security/server_credentials.h>
-#include <spdlog/spdlog.h>
+#include <signal.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "avx_check.hpp"
 #include "config.hpp"
@@ -91,7 +90,7 @@ void configure_logger(const std::string log_level, const std::string log_path) {
     if (!log_level.empty()) {
         if (log_level == "DEBUG") {
             serving_logger->set_level(spdlog::level::debug);
-        } else if (log_level =="ERROR") {
+        } else if (log_level == "ERROR") {
             serving_logger->set_level(spdlog::level::err);
         }
     }
@@ -148,8 +147,8 @@ void installSignalHandlers() {
 }
 
 std::vector<std::unique_ptr<Server>> startGRPCServer(
-            PredictionServiceImpl& predict_service,
-            ModelServiceImpl& model_service) {
+    PredictionServiceImpl& predict_service,
+    ModelServiceImpl& model_service) {
     const int GIGABYTE = 1024 * 1024 * 1024;
 
     std::vector<GrpcChannelArgument> channel_arguments;
@@ -182,11 +181,9 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
         try {
             int i = std::stoi(channel_argument.value);
             builder.AddChannelArgument(channel_argument.key, i);
-        }
-        catch (std::invalid_argument const &e) {
+        } catch (std::invalid_argument const& e) {
             builder.AddChannelArgument(channel_argument.key, channel_argument.value);
-        }
-        catch (std::out_of_range const &e) {
+        } catch (std::out_of_range const& e) {
             spdlog::error("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
         }
     }
@@ -198,7 +195,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     for (uint i = 0; i < grpcServersCount; ++i) {
         servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
     }
-    spdlog::info("Server started on port {}", config.port() );
+    spdlog::info("Server started on port {}", config.port());
 
     return servers;
 }
@@ -247,10 +244,10 @@ int server_main(int argc, char** argv) {
         if (rest != nullptr) {
             rest->WaitForTermination();
         }
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;
-    } catch(...) {
+    } catch (...) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
         return EXIT_FAILURE;
     }

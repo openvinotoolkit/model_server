@@ -16,22 +16,22 @@
 
 #include <string>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../modelinstance.hpp"
 
+using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
-using ::testing::NiceMock;
 
 class PredictValidation : public ::testing::Test {
     using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
 
     class MockModelInstance : public ovms::ModelInstance {
     public:
-        MOCK_METHOD(const ovms::tensor_map_t&,  getInputsInfo,  (), (const, override));
-        MOCK_METHOD(size_t,                     getBatchSize,   (), (const, override));
+        MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+        MOCK_METHOD(size_t, getBatchSize, (), (const, override));
     };
 
     std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
@@ -43,26 +43,10 @@ protected:
 
     void SetUp() override {
         tensors = tensor_desc_map_t({
-            {"Input_FP32_1_3_224_224_NHWC", {
-                InferenceEngine::Precision::FP32,
-                {1, 3, 224, 224},
-                InferenceEngine::Layout::NHWC
-            }},
-            {"Input_U8_1_3_62_62_NCHW", {
-                InferenceEngine::Precision::U8,
-                {1, 3, 62, 62},
-                InferenceEngine::Layout::NCHW
-            }},
-            {"Input_I64_1_6_128_128_16_NCDHW", {
-                InferenceEngine::Precision::I64,
-                {1, 6, 128, 128, 16},
-                InferenceEngine::Layout::NCDHW
-            }},
-            {"Input_U16_1_2_8_4_NCHW", {
-                InferenceEngine::Precision::U16,
-                {1, 2, 8, 4},
-                InferenceEngine::Layout::NCHW
-            }},
+            {"Input_FP32_1_3_224_224_NHWC", {InferenceEngine::Precision::FP32, {1, 3, 224, 224}, InferenceEngine::Layout::NHWC}},
+            {"Input_U8_1_3_62_62_NCHW", {InferenceEngine::Precision::U8, {1, 3, 62, 62}, InferenceEngine::Layout::NCHW}},
+            {"Input_I64_1_6_128_128_16_NCDHW", {InferenceEngine::Precision::I64, {1, 6, 128, 128, 16}, InferenceEngine::Layout::NCDHW}},
+            {"Input_U16_1_2_8_4_NCHW", {InferenceEngine::Precision::U16, {1, 2, 8, 4}, InferenceEngine::Layout::NCHW}},
         });
 
         for (const auto& pair : tensors) {

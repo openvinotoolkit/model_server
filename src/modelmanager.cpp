@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <sys/stat.h>
+#include "modelmanager.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -24,16 +24,15 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
-
 #include <spdlog/spdlog.h>
+#include <sys/stat.h>
 
 #include "config.hpp"
 #include "directoryversionreader.hpp"
 #include "filesystem.hpp"
-#include "localfilesystem.hpp"
-#include "modelmanager.hpp"
-#include "s3filesystem.hpp"
 #include "gcsfilesystem.hpp"
+#include "localfilesystem.hpp"
+#include "s3filesystem.hpp"
 
 namespace ovms {
 
@@ -47,13 +46,12 @@ Status ModelManager::start() {
     }
 
     // start manager using commandline parameters
-    ModelConfig modelConfig {
+    ModelConfig modelConfig{
         config.modelName(),
         config.modelPath(),
         config.targetDevice(),
         config.batchSize(),
-        config.nireq()
-    };
+        config.nireq()};
 
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
@@ -158,11 +156,11 @@ std::shared_ptr<IVersionReader> ModelManager::getVersionReader(const std::string
 }
 
 void ModelManager::getVersionsToChange(
-                        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
-                        model_versions_t requestedVersions,
-                        std::shared_ptr<model_versions_t>& versionsToStartIn,
-                        std::shared_ptr<model_versions_t>& versionsToReloadIn,
-                        std::shared_ptr<model_versions_t>& versionsToRetireIn) {
+    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+    model_versions_t requestedVersions,
+    std::shared_ptr<model_versions_t>& versionsToStartIn,
+    std::shared_ptr<model_versions_t>& versionsToReloadIn,
+    std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
     spdlog::info("Currently registered versions count:{}", modelVersionsInstances.size());
@@ -197,10 +195,10 @@ void ModelManager::getVersionsToChange(
     versionsToRetire->resize(it - versionsToRetire->begin());
     try {
         it = std::remove_if(versionsToRetire->begin(),
-                    versionsToRetire->end(),
-                    [&modelVersionsInstances](model_version_t version) {
-                        return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
-                    });
+            versionsToRetire->end(),
+            [&modelVersionsInstances](model_version_t version) {
+                return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
+            });
     } catch (std::out_of_range& e) {
         spdlog::error("Data race occured during versions update. Could not found version. Details:{}", e.what());
     }

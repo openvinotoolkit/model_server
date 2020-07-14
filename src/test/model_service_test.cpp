@@ -14,50 +14,49 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "gtest/gtest.h"
-
-#include "../modelversionstatus.hpp"
-#include "../model_service.hpp"
-
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
+#include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
-#include "tensorflow_serving/apis/get_model_status.pb.h"
+
+#include "../model_service.hpp"
+#include "../modelversionstatus.hpp"
+#include "gtest/gtest.h"
 
 using namespace ovms;
 
 TEST(ModelService, config_reload) {
-  ModelServiceImpl s;
+    ModelServiceImpl s;
 
-  tensorflow::serving::ReloadConfigRequest req;
-  tensorflow::serving::ReloadConfigResponse res;
+    tensorflow::serving::ReloadConfigRequest req;
+    tensorflow::serving::ReloadConfigResponse res;
 
-  spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
-  ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &req, &res);
-  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
-  EXPECT_EQ(ret.ok(), true);
+    spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
+    ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &req, &res);
+    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
+    EXPECT_EQ(ret.ok(), true);
 }
 
 static void test_LoadModels() {
-  spdlog::info("Loading model data for tests...");
+    spdlog::info("Loading model data for tests...");
 }
 
 ::grpc::Status test_PerformModelStatusRequest(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
-  spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
-  ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
-  spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
-  return ret;
+    spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
+    ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
+    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
+    return ret;
 }
 
 TEST(ModelService, empty_request) {
-  test_LoadModels();
-  ModelServiceImpl s;
-  tensorflow::serving::GetModelStatusRequest req;
-  tensorflow::serving::GetModelStatusResponse res;
-  ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-  EXPECT_EQ(ret.ok(), false);
+    test_LoadModels();
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
+    EXPECT_EQ(ret.ok(), false);
 }
 
 /* Gated by ModelManager CRTP-based mock.
@@ -96,39 +95,39 @@ TEST(ModelService, all_versions)
 */
 
 TEST(ModelService, non_existing_model) {
-  test_LoadModels();
-  ModelServiceImpl s;
-  tensorflow::serving::GetModelStatusRequest req;
-  tensorflow::serving::GetModelStatusResponse res;
+    test_LoadModels();
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
 
-  auto model_spec = req.mutable_model_spec();
-  model_spec->Clear();
-  model_spec->set_name("non_existing_model");
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("non_existing_model");
 
-  ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-  EXPECT_EQ(ret.ok(), false);
+    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
+    EXPECT_EQ(ret.ok(), false);
 }
 
 TEST(ModelService, non_existing_version) {
-  test_LoadModels();
-  ModelServiceImpl s;
-  tensorflow::serving::GetModelStatusRequest req;
-  tensorflow::serving::GetModelStatusResponse res;
+    test_LoadModels();
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
 
-  auto model_spec = req.mutable_model_spec();
-  model_spec->Clear();
-  model_spec->set_name("existing_model");
-  model_spec->mutable_version()->set_value(9894689454358);  // non-existing version
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("existing_model");
+    model_spec->mutable_version()->set_value(9894689454358);  // non-existing version
 
-  ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-  EXPECT_EQ(ret.ok(), false);
+    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
+    EXPECT_EQ(ret.ok(), false);
 }
 
 TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
     std::string model_name = "dummy";
     const std::optional<int64_t> model_version = 1;
     tensorflow::serving::GetModelStatusRequest request_grpc;
-    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    tensorflow::serving::GetModelStatusRequest* request_p = &request_grpc;
     Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
     bool has_requested_version = request_p->model_spec().has_version();
     auto requested_version = request_p->model_spec().version().value();
@@ -141,9 +140,9 @@ TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
 
 TEST(RestModelStatus, CreateGrpcRequestNegativeVersion) {
     std::string model_name = "dummy";
-    const std::optional<int64_t>  model_version = -5;
+    const std::optional<int64_t> model_version = -5;
     tensorflow::serving::GetModelStatusRequest request_grpc;
-    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    tensorflow::serving::GetModelStatusRequest* request_p = &request_grpc;
     Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
     EXPECT_EQ(status, StatusCode::MODEL_VERSION_MISSING);
 }
@@ -152,7 +151,7 @@ TEST(RestModelStatus, CreateGrpcRequestNoVersion) {
     std::string model_name = "dummy1";
     const std::optional<int64_t> model_version;
     tensorflow::serving::GetModelStatusRequest request_grpc;
-    tensorflow::serving::GetModelStatusRequest * request_p = &request_grpc;
+    tensorflow::serving::GetModelStatusRequest* request_p = &request_grpc;
     Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
     bool has_requested_version = request_p->model_spec().has_version();
     std::string requested_model_name = request_p->model_spec().name();
@@ -174,7 +173,7 @@ TEST(RestModelStatus, serialize2Json) {
     tensorflow::serving::GetModelStatusResponse response;
     model_version_t requested_version = 2;
     const std::string& model_name = "dummy";
-    ModelVersionStatus status = ModelVersionStatus(model_name,  requested_version, ModelVersionState::START);
+    ModelVersionStatus status = ModelVersionStatus(model_name, requested_version, ModelVersionState::START);
     addStatusToResponse(&response, requested_version, status);
     const tensorflow::serving::GetModelStatusResponse response_const = response;
     std::string json_output;

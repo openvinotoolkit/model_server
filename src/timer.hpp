@@ -50,7 +50,7 @@ public:
 #ifdef DEBUG
         duration_us = std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
 #endif
-        return  duration_us;
+        return duration_us;
     }
 
     void print() {

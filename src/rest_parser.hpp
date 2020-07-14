@@ -20,8 +20,8 @@
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "tensorinfo.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 

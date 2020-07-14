@@ -13,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <regex>
+#include "http_rest_api_handler.hpp"
+
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <memory>
 
 #include <spdlog/spdlog.h>
 
 #include "get_model_metadata_impl.hpp"
-#include "http_rest_api_handler.hpp"
 #include "model_service.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
@@ -88,8 +88,7 @@ Status HttpRestApiHandler::processRequest(
         int64_t version;
         try {
             version = std::atol(model_version_str.c_str());
-        }
-        catch (std::exception& e) {
+        } catch (std::exception& e) {
             spdlog::error("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
         }

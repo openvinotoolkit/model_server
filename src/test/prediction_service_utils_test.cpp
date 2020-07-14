@@ -17,24 +17,22 @@
 #include <memory>
 #include <thread>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../directoryversionreader.hpp"
-#include "../modelmanager.hpp"
 #include "../model.hpp"
+#include "../modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
-
-
 #include "test_utils.hpp"
-class GetModelInstanceTest: public ::testing::Test { };
+class GetModelInstanceTest : public ::testing::Test {};
 
-class MockModel : public ovms::Model { };
+class MockModel : public ovms::Model {};
 
 std::shared_ptr<ovms::Model> model;
 
-class MockModelManagerWith1Model: public ovms::ModelManager {
-    public:
+class MockModelManagerWith1Model : public ovms::ModelManager {
+public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return model;
     }
@@ -50,13 +48,13 @@ TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
 
 TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config {
+    ovms::ModelConfig config{
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,  // batchsize
-        1,  // NIREQ
-        0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
+        1,      // batchsize
+        1,      // NIREQ
+        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
     model = std::make_unique<ovms::Model>(config.getName());
@@ -80,7 +78,8 @@ protected:
 
 class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
-    ModelWithModelInstanceFakeLoad(const std::string& name) : Model(name) {}
+    ModelWithModelInstanceFakeLoad(const std::string& name) :
+        Model(name) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
         return std::make_shared<MockModelInstanceFakeLoad>();
     }
@@ -100,6 +99,7 @@ public:
     void registerVersionToLoad(ovms::model_version_t version) {
         toRegister.emplace_back(version);
     }
+
 private:
     std::vector<ovms::model_version_t> toRegister;
 };
@@ -107,7 +107,7 @@ private:
 std::shared_ptr<MockVersionReader> mockVersionReader;
 
 class ModelManagerWithModelInstanceFakeLoad : public ovms::ModelManager {
-    public:
+public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelWithModelInstanceFakeLoad;
     }
@@ -118,13 +118,13 @@ class ModelManagerWithModelInstanceFakeLoad : public ovms::ModelManager {
 
 TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config {
+    ovms::ModelConfig config{
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,  // batchsize
-        1,  // NIREQ
-        0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
+        1,      // batchsize
+        1,      // NIREQ
+        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
     model = std::make_unique<ovms::Model>(config.getName());
@@ -140,13 +140,13 @@ TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLo
 
 TEST_F(GetModelInstanceTest, WithRequestedDefaultVersion0ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config {
+    ovms::ModelConfig config{
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,  // batchsize
-        1,  // NIREQ
-        0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
+        1,      // batchsize
+        1,      // NIREQ
+        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
     model = std::make_shared<ovms::Model>(config.getName());
@@ -173,7 +173,8 @@ protected:
 
 class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
-    ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) : Model(name) {}
+    ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
+        Model(name) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>();
     }
@@ -182,7 +183,7 @@ public:
 std::shared_ptr<ModelWithModelInstanceLoadedStuckInLoadingState> modelWithModelInstanceLoadedStuckInLoadingState;
 
 class ModelManagerWithModelInstanceLoadedStuckInLoadingState : public ovms::ModelManager {
-    public:
+public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelWithModelInstanceLoadedStuckInLoadingState;
     }
@@ -195,19 +196,22 @@ public:
     ModelInstanceLoadedWaitInLoadingState(const uint modelInstanceLoadDelayInMilliseconds) :
         ModelInstance(),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
+
 protected:
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
         this->name = config.getName();
         this->version = config.getVersion();
         this->status = ovms::ModelVersionStatus(name, version);
         this->status.setLoading();
-        std::thread([this](){
+        std::thread([this]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(modelInstanceLoadDelayInMilliseconds));
             status.setAvailable();
             modelLoadedNotify.notify_all();
-        }).detach();
+        })
+            .detach();
         return ovms::StatusCode::OK;
     }
+
 private:
     const uint modelInstanceLoadDelayInMilliseconds;
 };
@@ -220,6 +224,7 @@ public:
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(modelInstanceLoadDelayInMilliseconds);
     }
+
 private:
     const uint modelInstanceLoadDelayInMilliseconds;
 };
@@ -227,24 +232,24 @@ private:
 std::shared_ptr<ModelWithModelInstanceLoadedWaitInLoadingState> modelWithModelInstanceLoadedWaitInLoadingState;
 
 class ModelManagerWithModelInstanceLoadedWaitInLoadingState : public ovms::ModelManager {
-    public:
+public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelWithModelInstanceLoadedWaitInLoadingState;
     }
 };
 
-class ModelInstanceModelLoadedNotify: public ::testing::Test { };
+class ModelInstanceModelLoadedNotify : public ::testing::Test {};
 
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInNotReachingTimeoutShouldSuceed) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    ovms::ModelConfig config {
+    ovms::ModelConfig config{
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,  // batchsize
-        1,  // NIREQ
-        0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
+        1,      // batchsize
+        1,      // NIREQ
+        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
@@ -260,13 +265,13 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInReachingTimeoutShouldReturnModelNotLoadedYet) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    ovms::ModelConfig config {
+    ovms::ModelConfig config{
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,  // batchsize
-        1,  // NIREQ
-        0  // model_version UNUSED - 0 is taken from src/test/dummy/0 path
+        1,      // batchsize
+        1,      // NIREQ
+        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
     setenv("NIREQ", "1", 1);
     const auto MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS = 1.2 * ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS;

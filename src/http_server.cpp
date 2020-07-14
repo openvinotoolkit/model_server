@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "http_server.hpp"
+
 #include <memory>
 #include <regex>
 #include <string>
@@ -27,7 +29,6 @@
 #include "tensorflow_serving/util/threadpool_executor.h"
 
 #include "http_rest_api_handler.hpp"
-#include "http_server.hpp"
 
 namespace ovms {
 
@@ -35,8 +36,8 @@ namespace net_http = tensorflow::serving::net_http;
 
 class RequestExecutor final : public net_http::EventExecutor {
 public:
-    explicit RequestExecutor(int num_threads)
-        : executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
+    explicit RequestExecutor(int num_threads) :
+        executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
 
     void Schedule(std::function<void()> fn) override { executor_.Schedule(fn); }
 
@@ -46,8 +47,8 @@ private:
 
 class RestApiRequestDispatcher {
 public:
-    RestApiRequestDispatcher(int timeout_in_ms)
-                             : regex_(HttpRestApiHandler::kPathRegex) {
+    RestApiRequestDispatcher(int timeout_in_ms) :
+        regex_(HttpRestApiHandler::kPathRegex) {
         handler_.reset(new HttpRestApiHandler(timeout_in_ms));
     }
 
@@ -78,9 +79,9 @@ private:
         std::vector<std::pair<std::string, std::string>> headers;
         std::string output;
         spdlog::info("Processing HTTP request: {} {} body: {} bytes",
-                     req->http_method(),
-                     req->uri_path(),
-                     body.size());
+            req->http_method(),
+            req->uri_path(),
+            body.size());
         const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output);
         if (!status.ok() && output.empty()) {
             output.append("{\"error\": \"" + status.string() + "\"}");
@@ -92,9 +93,9 @@ private:
         req->WriteResponseString(output);
         if (http_status != net_http::HTTPStatusCode::OK) {
             spdlog::error("Error Processing HTTP/REST request: {} {} Error: {}",
-                          req->http_method(),
-                          req->uri_path(),
-                          status.getCode());  // TODO: convert code to string error
+                req->http_method(),
+                req->uri_path(),
+                status.getCode());  // TODO: convert code to string error
         }
         req->ReplyWithStatus(http_status);
     }

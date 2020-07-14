@@ -14,11 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <iterator>
+#include "model_version_policy.hpp"
+
 #include <algorithm>
 #include <functional>
-
-#include "model_version_policy.hpp"
+#include <iterator>
 
 namespace ovms {
 

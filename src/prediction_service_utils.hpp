@@ -19,8 +19,8 @@
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "modelmanager.hpp"
 #include "modelinstance.hpp"
+#include "modelmanager.hpp"
 
 namespace ovms {
 
@@ -34,23 +34,24 @@ struct ExecutingStreamIdGuard {
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
+
 private:
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
 };
 
 Status getModelInstance(ModelManager& manager,
-                        const std::string& modelName,
-                        model_version_t modelVersionId,
-                        std::shared_ptr<ModelInstance>& modelInstance,
-                        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    const std::string& modelName,
+    model_version_t modelVersionId,
+    std::shared_ptr<ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
 
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
 
 Status inference(
-            ModelInstance                           &modelVersion,
-    const   tensorflow::serving::PredictRequest     *request_proto,
-            tensorflow::serving::PredictResponse    *response_proto);
+    ModelInstance& modelVersion,
+    const tensorflow::serving::PredictRequest* request_proto,
+    tensorflow::serving::PredictResponse* response_proto);
 
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,

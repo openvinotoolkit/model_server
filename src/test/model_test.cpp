@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include <deque>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "../model.hpp"
 #include "test_utils.hpp"
@@ -24,6 +24,7 @@
 namespace {
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
+
 public:
     MockModelInstanceChangingStates() {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, ovms::ModelVersionState::START);
@@ -46,7 +47,8 @@ public:
 
 class MockModel : public ovms::Model {
 public:
-    MockModel() : Model("UNUSED_NAME") {}
+    MockModel() :
+        Model("UNUSED_NAME") {}
     virtual ~MockModel() {}
 
 protected:
@@ -55,7 +57,7 @@ protected:
     }
 };
 
-class ModelDefaultVersions: public ::testing::Test { };
+class ModelDefaultVersions : public ::testing::Test {};
 }  //  namespace
 
 TEST_F(ModelDefaultVersions, DefaultVersionNullWhenNoVersionAdded) {
