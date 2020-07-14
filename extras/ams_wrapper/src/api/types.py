@@ -46,6 +46,17 @@ class Attribute:
         }
         return result_dict
 
+class Attribute_fix:
+    def __init__(self, value: str,confidence: float):
+        self.value = value
+        self.confidence = confidence
+
+    def as_dict(self):
+        result_dict = {
+            "tag": self.value,
+        }
+        return result_dict
+
 
 class Rectangle:
     def __init__(self, l: float, t: float, w: float, h: float):
@@ -90,6 +101,20 @@ class SingleClassification:
                                          for attribute in self.attributes]
         return result_dict
 
+class SingleClassification_fix:
+    def __init__(self,subtype_name: str, attributes: List[Attribute]):
+        self.attributes = attributes
+        self.type_name = "classification"
+        self.subtype_name = subtype_name
+
+    def as_dict(self):
+        result_dict = {
+            "type": self.type_name,
+            "subtype": self.subtype_name,
+            "classification": self.attributes[0].as_dict()
+        }
+        return result_dict
+
 
 class Classification(ResultType):
     def __init__(self, subtype_name: str, classifications: List[SingleClassification]):
@@ -104,6 +129,18 @@ class Classification(ResultType):
             "classifications": [classification.as_dict() for classification in self.classifications]
         }
         return result_dict
+
+class Classification_fix(ResultType):
+    def __init__(self,classifications: List[SingleClassification]):
+        self.classifications = classifications
+
+    def as_dict(self):
+        result_dict = {
+            "inferences": [classification.as_dict() for classification in self.classifications]
+        }
+        result_dict["inferences"][0],result_dict["inferences"][1]=result_dict["inferences"][1],result_dict["inferences"][0]
+        return result_dict
+
 
 
 class SingleEntity:
