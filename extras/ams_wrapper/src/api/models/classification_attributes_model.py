@@ -58,10 +58,10 @@ class ClassificationAttributes(Model):
                     highest_prob = probability
 
                 if is_softmax or is_softmax is None:
-                    attribute = Attribute_fix(class_name,probability)
+                    attribute = Attribute_fix(class_name, probability)
                 else:
                     value = probability * value_multiplier
-                    attribute = Attribute(class_name, value)
+                    attribute = Attribute_fix(class_name, value, None)
 
                 attributes.append(attribute)
 
@@ -71,12 +71,12 @@ class ClassificationAttributes(Model):
             if current_conf.confidence_threshold:
                 attributes = [attr for attr in attributes
                               if attr.confidence >= current_conf.confidence_threshold]
-            if (output_name=="color"):
-                output_name="vehicleColorClassification"
-            elif (output_name=="type"):
-                output_name="vehicleTypeClassification"
+            if (output_name == "color"):
+                output_name = "vehicleColorClassification"
+            elif (output_name == "type"):
+                output_name = "vehicleTypeClassification"
 
-            classification = SingleClassification_fix(subtype_name= output_name,attributes=attributes)
+            classification = SingleClassification_fix(subtype_name=output_name, attributes=attributes)
             classifications.append(classification)
 
         model_classification = Classification_fix(classifications=classifications)
