@@ -210,22 +210,22 @@ class TestVehicleAttributes():
                        output_tensors=[out_color, out_type])
 
         sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__),
-                        '../../../extras/ams_wrapper/')))
+                                                     '../../../extras/ams_wrapper/')))
         from src.api.models.model_builder import ModelBuilder
 
         config_path = os.path.abspath(os.path.join(os.path.realpath(__file__),
-                                      '../../../extras/ams_models/vehicle_attributes_model.json'))
+                                                   '../../../extras/ams_models/vehicle_attributes_model.json'))
         model_attrib = ModelBuilder.build_model(config_path, 4000)
 
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
 
-        class_count = str(json_response).count("color")
+        class_count = str(json_response).count("vehicleColorClassification")
 
         print("detected types:" + str(class_count))
         assert class_count == 1
 
-        class_count = str(json_response).count('"name": "type"')
+        class_count = str(json_response).count('vehicleTypeClassification')
 
         print("detected types:" + str(class_count))
         assert class_count == 1
@@ -237,14 +237,21 @@ class TestVehicleAttributes():
             assert False
 
         print("format_check:" + str(format_check))
-        assert format_check["subtype"] == "vehicleClassification"
+        #        assert format_check["subtype"] == "vehicleClassification"
+        assert format_check["inferences"][1]["subtype"] == "vehicleColorClassification"
 
-        first_color = (format_check["classifications"]
-                       [0]["attributes"][0]["value"])
+        print("format_check:" + str(format_check))
+        #        assert format_check["subtype"] == "vehicleClassification"
+        assert format_check["inferences"][0]["subtype"] == "vehicleTypeClassification"
+
+
+
+        first_color = (format_check["inferences"]
+        [1]["classification"]["tag"])
         print("first color:" + first_color)
         assert first_color == "red"
 
-        first_type = (format_check["classifications"]
-                      [1]["attributes"][0]["value"])
+        first_type = (format_check["inferences"]
+        [0]["classification"]["tag"])
         print("first type:" + first_type)
         assert first_type == "truck"
