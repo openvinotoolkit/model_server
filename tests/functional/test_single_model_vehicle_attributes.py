@@ -220,12 +220,12 @@ class TestVehicleAttributes():
         json_response = model_attrib.postprocess_inference_output(output)
         print("json_response=  " + str(json_response))
 
-        class_count = str(json_response).count("color")
+        class_count = str(json_response).count("vehicleColorClassification")
 
         print("detected types:" + str(class_count))
         assert class_count == 1
 
-        class_count = str(json_response).count('"subtype": "type"')
+        class_count = str(json_response).count('vehicleTypeClassification')
 
         print("detected types:" + str(class_count))
         assert class_count == 1
@@ -237,15 +237,21 @@ class TestVehicleAttributes():
             assert False
 
         print("format_check:" + str(format_check))
-        assert format_check["inferences"][0]["subtype"] == "color"
+        #        assert format_check["subtype"] == "vehicleClassification"
+        assert format_check["inferences"][1]["subtype"] == "vehicleColorClassification"
 
         print("format_check:" + str(format_check))
-        assert format_check["inferences"][1]["subtype"] == "type"
+        #        assert format_check["subtype"] == "vehicleClassification"
+        assert format_check["inferences"][0]["subtype"] == "vehicleTypeClassification"
 
-        first_color = (format_check["inferences"][0]["classification"]["tag"])
+
+
+        first_color = (format_check["inferences"]
+        [1]["classification"]["tag"])
         print("first color:" + first_color)
         assert first_color == "red"
 
-        first_type = (format_check["inferences"][1]["classification"]["tag"])
+        first_type = (format_check["inferences"]
+        [0]["classification"]["tag"])
         print("first type:" + first_type)
         assert first_type == "truck"
