@@ -49,6 +49,7 @@ class Docker:
         def finalizer():
             self.save_container_logs()
             self.container.stop()
+            self.container.remove()
 
         self.request.addfinalizer(finalizer)
 
@@ -61,10 +62,9 @@ class Docker:
                                                                self.grpc_port,
                                                            '{}/tcp'.format(self.rest_port):
                                                                self.rest_port},
-                                                    remove=True, volumes=volumes_dict,
+                                                    volumes=volumes_dict,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container)
-
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING)
         self.ensure_logs_contains()
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
