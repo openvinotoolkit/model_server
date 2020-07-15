@@ -244,14 +244,10 @@ class TestVehicleAttributes():
         #        assert format_check["subtype"] == "vehicleClassification"
         assert format_check["inferences"][0]["subtype"] == "vehicleTypeClassification"
 
-
-
-        first_color = (format_check["inferences"]
-        [1]["classification"]["tag"])
+        first_color = (format_check["inferences"][1]["classification"]["tag"])
         print("first color:" + first_color)
         assert first_color == "red"
 
-        first_type = (format_check["inferences"]
-        [0]["classification"]["tag"])
+        first_type = (format_check["inferences"][0]["classification"]["tag"])
         print("first type:" + first_type)
         assert first_type == "truck"
