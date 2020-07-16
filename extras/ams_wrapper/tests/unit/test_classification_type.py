@@ -19,40 +19,43 @@ from src.api.types import SingleClassification, Classification, Attribute
 
 def test_single_classification():
     expected_dict = {
-        "attributes": [{
-            "name": "type",
-            "value": "car",
-            "confidence": 0.97
-        }]
+        "type": "classification",
+        "subtype": "type",
+        "classification": {
+            "tag": "car"
+        }
     }
-    attribute = Attribute("type", "car", 0.97)
+    attribute = Attribute('car', 0.97)
     attribs = []
     attribs.append(attribute)
-    test_classification = SingleClassification(attribs)
+    test_classification = SingleClassification(subtype_name='type', attributes=attribs)
     assert expected_dict == test_classification.as_dict()
+    print(test_classification.as_dict())
 
 
 def test_entity():
     expected_dict = {
-        "type": "classification",
-        "subtype": "animalClassification",
-        "classifications": [
-            {"attributes": [{
-                "name": "animal",
-             "value": "dog",
-             "confidence": 0.85
-             }]},
-            {"attributes": [{
-                "name": "animal",
-                "value": "fox",
-             "confidence": 0.11
-             }]}
+        "inferences": [
+            {
+                "type": "classification",
+                "subtype": "animal",
+                "classification": {
+                    "tag": "fox"
+                }
+            },
+            {
+                "type": "classification",
+                "subtype": "animal",
+                "classification": {
+                    "tag": "dog"
+                }
+            }
         ]
     }
 
     classifications = [
-        SingleClassification([Attribute("animal", "dog", 0.85)]),
-        SingleClassification([Attribute("animal", "fox", 0.11)]),
+        SingleClassification(subtype_name='animal', attributes=[Attribute("dog", 0.85)]),
+        SingleClassification(subtype_name='animal', attributes=[Attribute("fox", 0.11)]),
     ]
-    classification = Classification("animalClassification", classifications)
+    classification = Classification(classifications)
     assert expected_dict == classification.as_dict()
