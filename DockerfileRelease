@@ -1,6 +1,8 @@
 ARG PKG_IMAGE
 ARG DIST_IMAGE
+
 FROM $PKG_IMAGE as prepare_pkg
+
 
 RUN ls -lahR /ovms
 

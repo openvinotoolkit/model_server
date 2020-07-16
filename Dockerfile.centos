@@ -1,12 +1,21 @@
-FROM centos:8 as base_build
+FROM centos:7.8.2003 as base_build
 
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
 ARG ov_source_branch=2020.3.0
 ARG ovms_metadata_file
+ARG ov_use_binary=1
+ARG DLDT_PACKAGE_URL
+ARG INSTALL_DIR=/opt/intel/openvino
+ARG TEMP_DIR=/tmp/openvino_installer
+ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
+ARG DL_DIR=/tmp
+# build_type=[ opt, dbg ]
+ARG build_type=dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 
-RUN yum install -y epel-release && yum update -y && yum install -y \
+RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
             gcc \
             gcc-c++ \
             gdb \
@@ -37,9 +46,18 @@ RUN yum install -y epel-release && yum update -y && yum install -y \
             wget \
             which \
             boost-devel boost-filesystem boost-thread \
+            devtoolset-8-gcc* \
+            yum-utils \
+            numactl-libs \
             unzip && \
             yum clean all
 
+RUN ln -s /usr/bin/cmake3 /usr/bin/cmake
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
+ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
+ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
+ENV BAZEL_LINKLIBS=-l%:libstdc++.a
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/
 
 # GPU support:
 RUN yum install -y yum-plugin-copr
@@ -57,17 +75,27 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
+
+
+################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
-RUN git clone --recurse-submodules -j4 https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
-
-# FIX support for centos8
-RUN sed -i "/^[ \t]*set(OPENCV_SUFFIX \"centos7\")/a         elseif (\$\{LINUX_OS_NAME\} STREQUAL \"CentOS 8\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
-# onyx needs `python` binary:
-RUN ln -s /usr/bin/python2 /usr/bin/python
-
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 WORKDIR /openvino/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses " -DCMAKE_C_FLAGTS=" -Wno-error=parentheses " ..
-RUN make --jobs=$(nproc --all)
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy  " -DCMAKE_C_FLAGTS=" -Wno-error=parentheses -Wno-error=deprecated-copy  "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$(nproc --all)
+#RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make
+################## END OF OPENVINO SOURCE BUILD ######################
+
+################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
+WORKDIR /
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
+    tar -zxf l_openvino_toolkit*.tgz && \
+    cd l_openvino_toolkit* && \
+    sed -i 's/decline/accept/g' silent.cfg && \
+    ./install.sh -s silent.cfg --ignore-signature && \
+    rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+#################### END OF OPENVINO BINARY INSTALL
 
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
@@ -81,14 +109,29 @@ WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
-RUN bazel build @org_tensorflow//tensorflow/core:framework
-RUN bazel build @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+
+RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 COPY src/ /ovms/src/
-RUN bazel build //src:ovms
-RUN cp -r /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
-RUN bazel test --test_summary=detailed --test_output=all //src:ovms_test
+
+##### WORKAROUND: libHDDL* links with old protobuf version. Disabling:
+RUN rm -rf /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libHDDLPlugin.so \
+	   /opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+
+
+RUN bazel build ${debug_bazel_flags} //src:ovms
+RUN ./bazel-bin/src/./ovms
+
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  cp -r /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ;  cp -r /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-${build_type}/bin/_solib_k8/*/
+RUN ./bazel-bin/src/./ovms
+
+RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
+RUN ./bazel-bin/src/./ovms
 
 ADD ${ovms_metadata_file} metadata.json
+
+RUN ./bazel-bin/src/./ovms
 
 ENTRYPOINT ["./bazel-bin/src/ovms"]
