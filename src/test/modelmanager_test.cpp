@@ -30,15 +30,6 @@ using testing::Return;
 using testing::ReturnRef;
 
 namespace {
-// returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
-    std::ofstream configFile{filename};
-    configFile << content << std::endl;
-    configFile.close();
-    return filename;
-}
-
-
 const char* config_1_model = R"({
    "model_config_list": [
     {

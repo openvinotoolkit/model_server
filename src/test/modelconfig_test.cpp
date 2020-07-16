@@ -23,18 +23,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "../modelconfig.hpp"
 #include "../status.hpp"
+
+#include "test_utils.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
-
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/config.json") {
-    std::ofstream configFile{filename};
-    configFile << content << std::endl;
-    configFile.close();
-    return filename;
-}
 
 TEST(ModelConfig, getters_setters) {
     ovms::ModelConfig config;

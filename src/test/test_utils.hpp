@@ -24,6 +24,7 @@
 #include <inference_engine.hpp>
 
 #include "../tensorinfo.hpp"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -75,4 +76,12 @@ static std::vector<T> asVector(const std::string& tensor_content) {
         tensor_content.size());
     v.resize(tensor_content.size() / sizeof(T));
     return v;
+}
+
+// returns path to a file.
+static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
+    std::ofstream configFile{filename};
+    configFile << content << std::endl;
+    configFile.close();
+    return filename;
 }
