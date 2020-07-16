@@ -1,0 +1,44 @@
+//*****************************************************************************
+// Copyright 2020 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
+#include "node.hpp"
+
+namespace ovms {
+
+class ExitNode : public Node {
+    tensorflow::serving::PredictResponse* response;
+
+public:
+    ExitNode(tensorflow::serving::PredictResponse* response) :
+        response(response) {
+    }
+
+    Status execute() override {
+        // Get required blobs from previous nodes
+        // Serialize blobs to PredictResponse
+        return StatusCode::OK;
+    }
+
+    // Exit nodes have no dependants
+    void addDependant(Node& node) override {
+        throw "This node cannot have dependant";
+    }
+};
+
+}  // namespace ovms
