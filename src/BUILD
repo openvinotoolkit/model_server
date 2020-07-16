@@ -64,7 +64,8 @@ cc_library(
         "status.hpp",
         "stringutils.hpp",
         "tensorinfo.hpp",
-        "timer.hpp"
+        "threadsafequeue.hpp",
+        "timer.hpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -142,6 +143,7 @@ cc_test(
         "test/serialization_tests.cpp",
         "test/stringutils_test.cpp",
         "test/test_utils.hpp",
+        "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
     ],
     data = [
