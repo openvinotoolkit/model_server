@@ -232,7 +232,7 @@ TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
     EXPECT_EQ(config.getMappingOutputs().empty(), false);
@@ -257,7 +257,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
     EXPECT_EQ(config.getMappingOutputs().empty(), true);
@@ -282,7 +282,7 @@ TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), true);
     EXPECT_EQ(config.getMappingOutputs().empty(), false);
@@ -313,7 +313,7 @@ TEST(ModelConfig, parseModelMappingWhenAdditionalObjectInConfig) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
     EXPECT_EQ(config.getMappingOutputs().empty(), false);
@@ -339,7 +339,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsIsNotAnObject) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), true);
     EXPECT_EQ(config.getMappingOutputs().empty(), false);
@@ -365,7 +365,7 @@ TEST(ModelConfig, parseModelMappingWhenOutputsIsNotAnObject) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(json, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
     EXPECT_EQ(config.getMappingOutputs().empty(), true);
@@ -386,7 +386,7 @@ TEST(ModelConfig, parseModelMappingWhenConfigIsNotJson) {
 
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     std::string created_filename = createConfigFileWithContent(invalidJson, filename);
-    
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), true);
     EXPECT_EQ(config.getMappingOutputs().empty(), true);
