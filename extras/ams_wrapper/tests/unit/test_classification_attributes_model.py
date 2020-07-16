@@ -77,7 +77,7 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "vehicleTypeClassification",
+                 "subtype": "type",
                  "classification": {
                      "tag": "van"
                  }
@@ -85,7 +85,7 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
 
              {
                  "type": "classification",
-                 "subtype": "vehicleColorClassification",
+                 "subtype": "color",
                  "classification": {
                      "tag": "yellow"
                  }
@@ -107,7 +107,7 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "vehicleTypeClassification",
+                 "subtype": "type",
                  "classification": {
                      "tag": "van"
                  }
@@ -115,7 +115,7 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
 
              {
                  "type": "classification",
-                 "subtype": "vehicleColorClassification",
+                 "subtype": "color",
                  "classification": {
                      "tag": "yellow"
                  }
@@ -140,7 +140,7 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "vehicleTypeClassification",
+                 "subtype": "type",
                  "classification": {
                      "tag": "van"
                  }
@@ -148,7 +148,7 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
 
              {
                  "type": "classification",
-                 "subtype": "vehicleColorClassification",
+                 "subtype": "color",
                  "classification": {
                      "tag": "yellow"
                  }
