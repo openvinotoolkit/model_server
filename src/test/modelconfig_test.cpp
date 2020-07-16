@@ -20,16 +20,19 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "../modelconfig.hpp"
 #include "../status.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
 
-// returns path to a file.
-static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/config.json") {
+std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/config.json") {
     std::ofstream configFile{filename};
     configFile << content << std::endl;
+    configFile.close();
     return filename;
 }
 
@@ -211,19 +214,148 @@ TEST(ModelConfig, mappingOutputs) {
 TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
     ovms::ModelConfig config;
 
-    const char* jsonNotMatchingSchema = R"({
-       "input":{
-          "value1"
-       },
-       "output":{
-          "value2"
-       }
+    const char* jsonMatchingSchema = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2"
+        }
     })";
 
-    std::string tmp_dir = "/tmp/";
-    std::string filename = tmp_dir + ovms::MAPPING_CONFIG_JSON;
-    createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
     config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonMatchingSchema, filename);
+    
     auto ret = config.parseModelMapping();
     EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
+    ovms::ModelConfig config;
+
+    const char* jsonNotMatchingSchema = R"({
+       "inputs":{
+            "key":"value1"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
+    ovms::ModelConfig config;
+
+    const char* jsonNotMatchingSchema = R"({
+       "inputs":{
+            "key":"value1"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelConfig, parseModelMappingWhenAdditionalObjectInConfig) {
+    ovms::ModelConfig config;
+
+    const char* jsonMatchingSchema = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2"
+        },
+       "object":{
+            "key":"value3"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonMatchingSchema, filename);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenInputsIsNotAnObject) {
+    ovms::ModelConfig config;
+
+    const char* jsonNotMatchingSchema = R"({
+       "inputs":["Array", "is", "not", "an", "object"],
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelConfig, parseModelMappingWhenOutputsIsNotAnObject) {
+    ovms::ModelConfig config;
+
+    const char* jsonNotMatchingSchema = R"({
+       "inputs":{
+            "key":"value"
+        },
+       "outputs":["Array", "is", "not", "an", "object"]
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    std::string created_filename = createConfigFileWithContent(jsonNotMatchingSchema, filename);
+    
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
 }

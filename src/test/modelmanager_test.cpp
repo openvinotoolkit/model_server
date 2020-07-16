@@ -34,6 +34,7 @@ namespace {
 std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
     std::ofstream configFile{filename};
     configFile << content << std::endl;
+    configFile.close();
     return filename;
 }
 
