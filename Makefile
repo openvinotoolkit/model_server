@@ -35,7 +35,7 @@ BASE_OS ?= centos
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 18.04
-BASE_OS_TAG_CENTOS ?= 8
+BASE_OS_TAG_CENTOS ?= 7.8.2003
 BASE_OS_TAG_CLEARLINUX ?= latest
 HAS_AVX := $(shell grep avx /proc/cpuinfo | wc -l)
 
@@ -45,7 +45,22 @@ ifeq ($(HAS_AVX),0)
 	exit 1
 endif
 	@echo "CPU with AVX support detected"
+
+# NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
+#         - uncomment source build section, comment binary section
+#         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.3.0
+DLDT_PACKAGE_URL ?= http://registrationcenter-download.intel.com/akdlm/irc_nas/16670/l_openvino_toolkit_p_2020.3.194_online.tgz
+OV_USE_BINARY ?= 1
+
+# opt, dbg:
+BAZEL_BUILD_TYPE ?= opt
+
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
+else
+  BAZEL_DEBUG_FLAGS=" --strip=never "
+endif
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
@@ -112,13 +127,17 @@ endif
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	docker build $(NO_CACHE_OPTION) -f DockerfileRelease . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg DIST_IMAGE=$(DIST_OS):$(DIST_OS_TAG)
