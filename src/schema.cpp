@@ -54,16 +54,24 @@ namespace ovms {
     }}
     })";
 
-    const char *MODELS_MAPPING_SCHEMA = R"({
+    const char *MODELS_MAPPING_INPUTS_SCHEMA = R"({
     "type": "object",
     "required": [
-        "inputs",
-        "outputs"
+        "inputs"
     ],
     "properties": {
         "inputs":{
             "type": "object"
-        },
+        }
+    }
+    })";
+
+    const char *MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
+    "type": "object",
+    "required": [
+        "outputs"
+    ],
+    "properties": {
         "outputs":{
             "type": "object"
         }

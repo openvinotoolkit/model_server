@@ -709,22 +709,26 @@ public:
             return StatusCode::JSON_INVALID;
         }
 
-        if (validateJsonAgainstSchema(doc, MODELS_MAPPING_SCHEMA) != StatusCode::OK) {
-            return StatusCode::JSON_INVALID;
+        if (validateJsonAgainstSchema(doc, MODELS_MAPPING_INPUTS_SCHEMA) != StatusCode::OK) {
+            spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
+        } else {
+            // Process inputs
+            const auto itr = doc.FindMember("inputs");
+            for (const auto& key : itr->value.GetObject()) {
+                SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
+                mappingInputs[key.name.GetString()] = key.value.GetString();
+            }
         }
 
-        // Process inputs
-        const auto itr = doc.FindMember("inputs");
-        for (const auto& key : itr->value.GetObject()) {
-            SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
-            mappingInputs[key.name.GetString()] = key.value.GetString();
-        }
-
-        // Process outputs
-        const auto it = doc.FindMember("outputs");
-        for (const auto& key : it->value.GetObject()) {
-            SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
-            mappingOutputs[key.name.GetString()] = key.value.GetString();
+        if (validateJsonAgainstSchema(doc, MODELS_MAPPING_OUTPUTS_SCHEMA) != StatusCode::OK) {
+            spdlog::warn("Couldn't load outputs object from file {}", path.c_str());
+        } else {
+            // Process outputs
+            const auto it = doc.FindMember("outputs");
+            for (const auto& key : it->value.GetObject()) {
+                SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
+                mappingOutputs[key.name.GetString()] = key.value.GetString();
+            }
         }
 
         return StatusCode::OK;
