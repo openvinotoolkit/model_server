@@ -40,14 +40,14 @@ def test_entity():
                 "type": "classification",
                 "subtype": "animal",
                 "classification": {
-                    "tag": "fox"
+                    "tag": "dog"
                 }
             },
             {
                 "type": "classification",
                 "subtype": "animal",
                 "classification": {
-                    "tag": "dog"
+                    "tag": "fox"
                 }
             }
         ]
