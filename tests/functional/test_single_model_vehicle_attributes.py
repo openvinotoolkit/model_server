@@ -246,10 +246,10 @@ class TestVehicleAttributes():
         print("first color:" + first_color)
         assert first_color == "red"
         first_confidence = format_check["inferences"][0]["classification"]["confidence"]
-        assert(first_confidence == 0.5460447072982788)
+        assert(round(first_confidence, 3) == 0.546)
 
         first_type = (format_check["inferences"][1]["classification"]["tag"])
         print("first type:" + first_type)
         assert first_type == "truck"
         second_confidence = format_check["inferences"][1]["classification"]["confidence"]
-        assert(second_confidence == 0.9425312280654907)
+        assert(round(second_confidence, 4) == 0.9425)
