@@ -50,7 +50,7 @@ class TestSingleModelInference():
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
 
         # This could be replaced with status polling
-        time.sleep(8)
+        time.sleep(15)
 
         # Available versions: 1, 4
 
@@ -104,7 +104,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_bs4_copy_dir)
         resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         # Available versions: 1, 3
 
@@ -147,7 +147,7 @@ class TestSingleModelInference():
         # Available versions: 1, 3, 4
 
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         request_v1 = get_model_metadata(model_name=model_name, version=1)
         response_v1 = stub.GetModelMetadata(request_v1, 10)
@@ -202,7 +202,7 @@ class TestSingleModelInference():
         shutil.rmtree(resnet_copy_dir)
         shutil.rmtree(resnet_bs4_copy_dir)
         shutil.rmtree(resnet_bs8_copy_dir)
-        time.sleep(10)
+        time.sleep(15)
 
     def test_latest_version(self, resnet_multiple_batch_sizes, get_test_dir,
                             start_server_update_flow_latest,
@@ -215,7 +215,7 @@ class TestSingleModelInference():
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         resnet_v1_copy_dir = copy_model(resnet, 1, dir)
-        time.sleep(8)
+        time.sleep(15)
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
         status_stub = create_grpc_channel('localhost:{}'.format(
@@ -254,7 +254,7 @@ class TestSingleModelInference():
         ###
 
         resnet_v2_copy_dir = copy_model(resnet_bs4, 2, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         expected_input_metadata_v2 = {in_name: {'dtype': 1,
                                                 'shape': [4, 3, 224, 224]}}
@@ -291,7 +291,7 @@ class TestSingleModelInference():
         ###
         shutil.rmtree(resnet_v1_copy_dir)
         shutil.rmtree(resnet_v2_copy_dir)
-        time.sleep(10)
+        time.sleep(15)
 
     def test_specific_version_rest(self, resnet_multiple_batch_sizes,
                                    get_test_dir,
@@ -304,7 +304,7 @@ class TestSingleModelInference():
         shutil.rmtree(dir, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
-        time.sleep(8)
+        time.sleep(15)
 
         in_name = 'map/TensorArrayStack/TensorArrayGatherV3'
         out_name = 'softmax_tensor'
@@ -365,7 +365,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_bs4_copy_dir)
         resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         # Available versions: 1, 3
 
@@ -410,7 +410,7 @@ class TestSingleModelInference():
         # Available versions: 1, 3, 4
 
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         rest_url_v1 = 'http://localhost:{}/v1/models/resnet/' \
                       'versions/1/metadata'.format(ports["rest_port"])
@@ -466,7 +466,7 @@ class TestSingleModelInference():
         shutil.rmtree(resnet_copy_dir)
         shutil.rmtree(resnet_bs4_copy_dir)
         shutil.rmtree(resnet_bs8_copy_dir)
-        time.sleep(10)
+        time.sleep(15)
 
     def test_latest_version_rest(self, resnet_multiple_batch_sizes,
                                  get_test_dir,
@@ -478,7 +478,7 @@ class TestSingleModelInference():
         # ensure model dir is empty at the beginning
         shutil.rmtree(dir, ignore_errors=True)
         resnet_copy_dir = copy_model(resnet, 1, dir)
-        time.sleep(8)
+        time.sleep(15)
 
         print("Getting info about resnet model")
         model_name = 'resnet'
@@ -516,7 +516,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_copy_dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 2, dir)
-        time.sleep(10)
+        time.sleep(15)
 
         expected_input_metadata = {in_name: {'dtype': 1,
                                              'shape': [4, 3, 224, 224]}}
@@ -550,7 +550,7 @@ class TestSingleModelInference():
         ###
 
         shutil.rmtree(resnet_bs4_copy_dir)
-        time.sleep(10)
+        time.sleep(15)
 
     def test_update_rest_grpc(self, resnet_multiple_batch_sizes, get_test_dir,
                               start_server_update_flow_specific,
@@ -565,7 +565,7 @@ class TestSingleModelInference():
                                    PREDICTION_SERVICE)
         resnet_copy_dir = copy_model(resnet, 1, dir)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
-        time.sleep(8)
+        time.sleep(15)
 
         # Available versions: 1, 4
 
@@ -606,7 +606,7 @@ class TestSingleModelInference():
 
         shutil.rmtree(resnet_bs4_copy_dir)
         resnet_bs8_copy_dir = copy_model(resnet_bs8, 3, dir)
-        time.sleep(3)
+        time.sleep(10)
 
         # Available versions: 1, 3
 
@@ -629,9 +629,9 @@ class TestSingleModelInference():
 
         # Available versions: 1, 3, 4
 
-        time.sleep(3)
+        time.sleep(10)
         resnet_bs4_copy_dir = copy_model(resnet_bs4, 4, dir)
-        time.sleep(3)
+        time.sleep(10)
         rest_url = 'http://localhost:{}/v1/models/resnet/versions/1/metadata'.\
                    format(ports["rest_port"])
         response_v1 = get_model_metadata_response_rest(rest_url)
