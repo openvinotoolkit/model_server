@@ -71,7 +71,7 @@ coverage: $(ACTIVATE)
 ams_coverage: $(ACTIVATE)
 	@echo "Computing unit test coverage for ams..."
 	@. $(ACTIVATE); test -d $(AMS_EXAMPLE)tests/unit/test_images  || ($(AMS_EXAMPLE)tests/unit/get_test_images.sh && mv test_images $(AMS_EXAMPLE)tests/unit)
-	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/unit --cov-report=html --cov-fail-under=79
+	@. $(ACTIVATE); pytest --cov-config=$(AMS_EXAMPLE).coveragerc --cov=src $(AMS_EXAMPLE)tests/unit --cov-report=html --cov-fail-under=78
 
 ams_test: $(ACTIVATE)
 	echo "Running ams wrapper unit tests"
