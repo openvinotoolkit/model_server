@@ -237,15 +237,15 @@ class TestVehicleAttributes():
             assert False
 
         print("format_check:" + str(format_check))
-        assert format_check["inferences"][1]["subtype"] == "color"
+        assert format_check["inferences"][0]["subtype"] == "color"
 
         print("format_check:" + str(format_check))
-        assert format_check["inferences"][0]["subtype"] == "type"
+        assert format_check["inferences"][1]["subtype"] == "type"
 
-        first_color = (format_check["inferences"][1]["classification"]["tag"])
+        first_color = (format_check["inferences"][0]["classification"]["tag"])
         print("first color:" + first_color)
         assert first_color == "red"
 
-        first_type = (format_check["inferences"][0]["classification"]["tag"])
+        first_type = (format_check["inferences"][1]["classification"]["tag"])
         print("first type:" + first_type)
         assert first_type == "truck"

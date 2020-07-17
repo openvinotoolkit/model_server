@@ -195,7 +195,7 @@ class TestAmsInference:
         # highest_value = ""
         # attribute_name = ""
 
-        highest_value = response_json["inferences"][1]["classification"]["tag"]
+        highest_value = response_json["inferences"][0]["classification"]["tag"]
 
         assert highest_value == "red"
         #        assert attribute_name == "color"
@@ -204,7 +204,7 @@ class TestAmsInference:
         # highest_value = ""
         # attribute_name = ""
 
-        highest_value = response_json["inferences"][0]["classification"]["tag"]
+        highest_value = response_json["inferences"][1]["classification"]["tag"]
         assert highest_value == "truck"
     #        assert attribute_name == "type"
 
