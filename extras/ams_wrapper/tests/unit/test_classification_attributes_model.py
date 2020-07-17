@@ -79,14 +79,16 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
                  "type": "classification",
                  "subtype": "color",
                  "classification": {
-                     "tag": "yellow"
+                     "tag": "yellow",
+                     "confidence": 0.3
                  }
              },
              {
                  "type": "classification",
                  "subtype": "type",
                  "classification": {
-                     "tag": "van"
+                     "tag": "van",
+                     "confidence": 0.5
                  }
              }
          ]
@@ -108,14 +110,16 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
                  "type": "classification",
                  "subtype": "color",
                  "classification": {
-                     "tag": "yellow"
+                     "tag": "yellow",
+                     "confidence": 0.3
                  }
              },
              {
                  "type": "classification",
                  "subtype": "type",
                  "classification": {
-                     "tag": "van"
+                     "tag": "van",
+                     "confidence": 0.5
                  }
              }
          ]
@@ -140,14 +144,16 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
                  "type": "classification",
                  "subtype": "color",
                  "classification": {
-                     "tag": "yellow"
+                     "tag": "yellow",
+                     "confidence": 0.3
                  }
              },
              {
                  "type": "classification",
                  "subtype": "type",
                  "classification": {
-                     "tag": "van"
+                     "tag": "van",
+                     "confidence": 0.5
                  }
              }
          ]

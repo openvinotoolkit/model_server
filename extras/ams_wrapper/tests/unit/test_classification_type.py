@@ -40,6 +40,7 @@ def test_entity():
                 "type": "classification",
                 "subtype": "animal",
                 "classification": {
+                    'confidence': 0.85,
                     "tag": "dog"
                 }
             },
@@ -47,6 +48,7 @@ def test_entity():
                 "type": "classification",
                 "subtype": "animal",
                 "classification": {
+                    'confidence': 0.11,
                     "tag": "fox"
                 }
             }
