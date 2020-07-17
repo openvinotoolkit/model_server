@@ -141,14 +141,16 @@ Below is a sample of such model:
         "type": "classification",
         "subtype": "type",
         "classification": {
-          "tag": "truck"
+          "tag": "truck",
+          "confidece": 0.75
         }
       },
       {
         "type": "classification",
         "subtype": "color",
         "classification": {
-          "tag": "gray"
+          "tag": "gray",
+          "confidece": 0.5
         }
       }
     ]
