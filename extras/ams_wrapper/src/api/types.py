@@ -33,16 +33,13 @@ class Tag:
 
 
 class Attribute:
-    def __init__(self, name: str, value: str, confidence: float):
-        self.name = name
+    def __init__(self, value: str, confidence: float):
         self.value = value
         self.confidence = confidence
 
     def as_dict(self):
         result_dict = {
-            "name": self.name,
-            "value": self.value,
-            "confidence": self.confidence
+            "tag": self.value,
         }
         return result_dict
 
@@ -80,28 +77,27 @@ class Motion(ResultType):
 
 
 class SingleClassification:
-    def __init__(self, attributes: List[Attribute]):
+    def __init__(self, subtype_name: str, attributes: List[Attribute]):
         self.attributes = attributes
-
-    def as_dict(self):
-        result_dict = {}
-        if self.attributes is not None:
-            result_dict["attributes"] = [attribute.as_dict()
-                                         for attribute in self.attributes]
-        return result_dict
-
-
-class Classification(ResultType):
-    def __init__(self, subtype_name: str, classifications: List[SingleClassification]):
         self.type_name = "classification"
         self.subtype_name = subtype_name
-        self.classifications = classifications
 
     def as_dict(self):
         result_dict = {
             "type": self.type_name,
             "subtype": self.subtype_name,
-            "classifications": [classification.as_dict() for classification in self.classifications]
+            "classification": self.attributes[0].as_dict()
+        }
+        return result_dict
+
+
+class Classification(ResultType):
+    def __init__(self, classifications: List[SingleClassification]):
+        self.classifications = classifications
+
+    def as_dict(self):
+        result_dict = {
+            "inferences": [classification.as_dict() for classification in self.classifications]
         }
         return result_dict
 

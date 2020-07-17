@@ -190,34 +190,23 @@ class TestAmsInference:
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
+        print(response_json)
+        # highest_probability = 0.0
+        # highest_value = ""
+        # attribute_name = ""
 
-        highest_probability = 0.0
-        highest_value = ""
-        attribute_name = ""
+        highest_value = response_json["inferences"][0]["classification"]["tag"]
 
-        for classification in response_json["classifications"][0]["attributes"]:
-            if classification["confidence"] > highest_probability:
-                highest_probability = classification["confidence"]
-                highest_value = classification["value"]
-                attribute_name = classification["name"]
-
-        assert highest_probability > 0.547
         assert highest_value == "red"
-        assert attribute_name == "color"
+        #        assert attribute_name == "color"
 
-        highest_probability = 0.0
-        highest_value = ""
-        attribute_name = ""
+        # highest_probability = 0.0
+        # highest_value = ""
+        # attribute_name = ""
 
-        for classification in response_json["classifications"][1]["attributes"]:
-            if classification["confidence"] > highest_probability:
-                highest_probability = classification["confidence"]
-                highest_value = classification["value"]
-                attribute_name = classification["name"]
-
-        assert highest_probability > 0.9421
+        highest_value = response_json["inferences"][1]["classification"]["tag"]
         assert highest_value == "truck"
-        assert attribute_name == "type"
+    #        assert attribute_name == "type"
 
     def test_vehicleDetection(self, start_ams_service, object_detection_image_two_entities):
         with open(object_detection_image_two_entities, mode='rb') as image_file:
@@ -253,14 +242,10 @@ class TestAmsInference:
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
         assert detections_count == 1
-        assert 0.034460186958313 - \
-            epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
-        assert 0.0431380569934845 - \
-            epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
-        assert 0.783527314662933 - \
-            epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
-        assert 0.173053205013275 - \
-            epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
+        assert 0.034460186958313 - epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
+        assert 0.0431380569934845 - epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
+        assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
+        assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
 
     def test_faceDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
@@ -287,14 +272,10 @@ class TestAmsInference:
 
         epsilon = 0.000001
 
-        assert 0.38243523240089417 - \
-            epsilon <= detection['box']['l'] <= 0.38243523240089417 + epsilon
-        assert 0.28849169611930847 - \
-            epsilon <= detection['box']['t'] <= 0.28849169611930847 + epsilon
-        assert 0.036220431327819824 - \
-            epsilon <= detection['box']['w'] <= 0.036220431327819824 + epsilon
-        assert 0.07158094644546509 - \
-            epsilon <= detection['box']['h'] <= 0.07158094644546509 + epsilon
+        assert 0.38243523240089417 - epsilon <= detection['box']['l'] <= 0.38243523240089417 + epsilon
+        assert 0.28849169611930847 - epsilon <= detection['box']['t'] <= 0.28849169611930847 + epsilon
+        assert 0.036220431327819824 - epsilon <= detection['box']['w'] <= 0.036220431327819824 + epsilon
+        assert 0.07158094644546509 - epsilon <= detection['box']['h'] <= 0.07158094644546509 + epsilon
 
     def test_personVehicleBikeDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
@@ -321,14 +302,10 @@ class TestAmsInference:
 
         epsilon = 0.000001
 
-        assert 0.3313550353050232 - \
-            epsilon <= detection['box']['l'] <= 0.3313550353050232 + epsilon
-        assert 0.25375649333000183 - \
-            epsilon <= detection['box']['t'] <= 0.25375649333000183 + epsilon
-        assert 0.1486881971359253 - \
-            epsilon <= detection['box']['w'] <= 0.1486881971359253 + epsilon
-        assert 0.7409175932407379 - \
-            epsilon <= detection['box']['h'] <= 0.7409175932407379 + epsilon
+        assert 0.3313550353050232 - epsilon <= detection['box']['l'] <= 0.3313550353050232 + epsilon
+        assert 0.25375649333000183 - epsilon <= detection['box']['t'] <= 0.25375649333000183 + epsilon
+        assert 0.1486881971359253 - epsilon <= detection['box']['w'] <= 0.1486881971359253 + epsilon
+        assert 0.7409175932407379 - epsilon <= detection['box']['h'] <= 0.7409175932407379 + epsilon
 
     # @pytest.mark.parametrize("image,expected_instances", [(object_detection_image_no_entity, 0),
     #                                                       (object_detection_image_one_entity, 1),

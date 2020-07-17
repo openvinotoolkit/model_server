@@ -58,10 +58,10 @@ class ClassificationAttributes(Model):
                     highest_prob = probability
 
                 if is_softmax or is_softmax is None:
-                    attribute = Attribute(output_name, class_name, probability)
+                    attribute = Attribute(class_name, probability)
                 else:
                     value = probability * value_multiplier
-                    attribute = Attribute(class_name, value, None)
+                    attribute = Attribute(class_name, value)
 
                 attributes.append(attribute)
 
@@ -71,11 +71,10 @@ class ClassificationAttributes(Model):
             if current_conf.confidence_threshold:
                 attributes = [attr for attr in attributes
                               if attr.confidence >= current_conf.confidence_threshold]
-            classification = SingleClassification(attributes)
+            classification = SingleClassification(subtype_name=output_name, attributes=attributes)
             classifications.append(classification)
 
-        model_classification = Classification(subtype_name=self.endpoint,
-                                              classifications=classifications)
+        model_classification = Classification(classifications=classifications)
 
         response = json.dumps(model_classification.as_dict())
 

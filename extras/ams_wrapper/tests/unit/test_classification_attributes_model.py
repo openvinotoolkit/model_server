@@ -25,22 +25,22 @@ from src.api.models.model_config import ModelOutputConfiguration
 
 MOCK_INFERENCE_OUTPUT = {
     'color':
-    np.array([[
-        [[0.05]],
-        [[0.2]],
-        [[0.3]],
-        [[0.1]],
-        [[0.1]],
-        [[0.2]],
-        [[0.05]],
-    ]]),
+        np.array([[
+            [[0.05]],
+            [[0.2]],
+            [[0.3]],
+            [[0.1]],
+            [[0.1]],
+            [[0.2]],
+            [[0.05]],
+        ]]),
     'type':
-    np.array([[
-        [[0.2]],
-        [[0.5]],
-        [[0.1]],
-        [[0.2]]
-    ]])
+        np.array([[
+            [[0.2]],
+            [[0.5]],
+            [[0.1]],
+            [[0.2]]
+        ]])
 }
 
 
@@ -72,28 +72,26 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
 
 
 @pytest.mark.parametrize("inference_output,expected_response", [
-                        (MOCK_INFERENCE_OUTPUT,
-                         {"type": "classification", "subtype": None,
-                          "classifications": [{"attributes": [
-                              {"name": "color", "value": "yellow", "confidence": 0.3},
-                              {"name": "color", "value": "gray", "confidence": 0.2},
-                              {"name": "color", "value": "blue", "confidence": 0.2},
-                              {"name": "color", "value": "red", "confidence": 0.1},
-                              {"name": "color", "value": "green", "confidence": 0.1},
-                              {"name": "color", "value": "white",
-                                  "confidence": 0.05},
-                              {"name": "color", "value": "black", "confidence": 0.05}]},
-                              {"attributes": [
-                                  {"name": "type", "value": "van",
-                                      "confidence": 0.5},
-                                  {"name": "type", "value": "car",
-                                      "confidence": 0.2},
-                                  {"name": "type", "value": "bus",
-                                      "confidence": 0.2},
-                                  {"name": "type", "value": "truck",
-                                   "confidence": 0.1},
-                              ]}]}
-                         )])
+    (MOCK_INFERENCE_OUTPUT,
+     {
+         "inferences": [
+             {
+                 "type": "classification",
+                 "subtype": "color",
+                 "classification": {
+                     "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
+                 }
+             }
+         ]
+     }
+     )])
 def test_postprocess_inference_output(inference_output, expected_response, fake_output_config):
     model = ClassificationAttributes(endpoint=None, ovms_connector=None, input_configs=None,
                                      output_configs=fake_output_config)
@@ -103,16 +101,27 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
 
 
 @pytest.mark.parametrize("inference_output,expected_response,top_k", [
-                        (MOCK_INFERENCE_OUTPUT,
-                         {"type": "classification", "subtype": None,
-                          "classifications": [{"attributes": [
-                              {"name": "color", "value": "yellow", "confidence": 0.3}]},
-                              {"attributes": [
-                                  {"name": "type", "value": "van",
-                                      "confidence": 0.5},
-                              ]}]},
-                         1
-                         )])
+    (MOCK_INFERENCE_OUTPUT,
+     {
+         "inferences": [
+             {
+                 "type": "classification",
+                 "subtype": "color",
+                 "classification": {
+                     "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
+                 }
+             }
+         ]
+     },
+     1
+     )])
 def test_postprocess_inference_output_top_k(inference_output, expected_response, top_k, fake_output_config):
     for key in fake_output_config.keys():
         fake_output_config[key].top_k_results = top_k
@@ -124,22 +133,27 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
 
 
 @pytest.mark.parametrize("inference_output,expected_response,confidence_threshold", [
-                        (MOCK_INFERENCE_OUTPUT,
-                         {"type": "classification", "subtype": None,
-                          "classifications": [{"attributes": [
-                              {"name": "color", "value": "yellow", "confidence": 0.3},
-                              {"name": "color", "value": "gray", "confidence": 0.2},
-                              {"name": "color", "value": "blue", "confidence": 0.2}]},
-                              {"attributes": [
-                                  {"name": "type", "value": "van",
-                                      "confidence": 0.5},
-                                  {"name": "type", "value": "car",
-                                      "confidence": 0.2},
-                                  {"name": "type", "value": "bus",
-                                      "confidence": 0.2},
-                              ]}]},
-                         0.2
-                         )])
+    (MOCK_INFERENCE_OUTPUT,
+     {
+         "inferences": [
+             {
+                 "type": "classification",
+                 "subtype": "color",
+                 "classification": {
+                     "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
+                 }
+             }
+         ]
+     },
+     0.2
+     )])
 def test_postprocess_inference_output_confidence_threshold(inference_output,
                                                            expected_response,
                                                            confidence_threshold, fake_output_config):

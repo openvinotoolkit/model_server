@@ -136,74 +136,23 @@ Model includes a configuration file in json format. See an example configuration
 Below is a sample of such model:
 ```json
 {
-   "subtype" : "vehicleClassification",
-   "type" : "classification",
-   "classifications" : [
-{
-        "attributes" : [
-	{
-		"confidence": 0.589816808700562, 
-		"name": "color",
-		 "value": "red"
-	},
- 	{
-		"confidence": 0.289313167333603,
-		 "name": "color",
-		 "value": "white"
-	},
- 	{
-		"confidence": 0.0435199774801731, 
-		"name": "color", 
-		"value": "gray"
-	},
- 	{
-		"confidence": 0.0417489744722843, 
-		"name": "color", 
-		"value": "blue"
-	},
- 	{
-		"confidence": 0.0278004333376884, 
-		"name": "color", 
-		"value": "black"
-	},
- 	{
-		"confidence": 0.00414687860757113,
-		 "name": "color", 
-		"value": "green"
-	},
- 	{
-		"confidence": 0.00365369999781251,
-		 "name": "color",
-		 "value": "yellow"
-	}
-]
+    "inferences": [
+      {
+        "type": "classification",
+        "subtype": "type",
+        "classification": {
+          "tag": "truck"
+        }
       },
       {
-         "attributes" : [
-            {
-               "name" : "type",
-               "confidence" : 0.00293471338227391,
-               "value" : "car"
-            },
-            {
-               "name" : "type",
-               "value" : "van",
-               "confidence" : 0.000757944362703711
-            },
-            {
-               "confidence" : 0.996138155460358,
-               "value" : "truck",
-               "name" : "type"
-            },
-            {
-               "name" : "type",
-               "confidence" : 0.000169166218256578,
-               "value" : "bus"
-            }
-         ]
+        "type": "classification",
+        "subtype": "color",
+        "classification": {
+          "tag": "gray"
+        }
       }
-   ]
-}
+    ]
+  }
 ```
 
 ## Deployment and configuration of OpenVINO Inference Server for LVA    
