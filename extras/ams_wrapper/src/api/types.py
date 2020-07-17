@@ -99,8 +99,6 @@ class Classification(ResultType):
         result_dict = {
             "inferences": [classification.as_dict() for classification in self.classifications]
         }
-        result_dict["inferences"][0], result_dict["inferences"][1] = \
-            result_dict["inferences"][1], result_dict["inferences"][0]
         return result_dict
 
 

@@ -77,17 +77,16 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             },
-
-             {
-                 "type": "classification",
                  "subtype": "color",
                  "classification": {
                      "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
                  }
              }
          ]
@@ -107,17 +106,16 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             },
-
-             {
-                 "type": "classification",
                  "subtype": "color",
                  "classification": {
                      "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
                  }
              }
          ]
@@ -140,17 +138,16 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
          "inferences": [
              {
                  "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             },
-
-             {
-                 "type": "classification",
                  "subtype": "color",
                  "classification": {
                      "tag": "yellow"
+                 }
+             },
+             {
+                 "type": "classification",
+                 "subtype": "type",
+                 "classification": {
+                     "tag": "van"
                  }
              }
          ]
