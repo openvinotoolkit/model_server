@@ -105,6 +105,13 @@ style: venv
 	@echo "Style-checking codebase..."
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
+sdl-check: venv
+	@echo "Checking SDL requirements..."
+	@echo "Checking docker files..."        
+ifneq ($(shell find . -type f -name 'Dockerfile.*' | xargs grep ADD | wc -l), 0)
+	$(error Replace COPY with ADD in dockerfiles)
+endif
+
 clang-format: venv
 	@echo "Formating files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;

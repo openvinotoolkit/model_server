@@ -10,6 +10,12 @@ pipeline {
             }
         }
 
+        stage('sdl check') {
+            steps {
+                sh 'make sdl-check'
+            }
+        }
+
         stage('docker build') {
             steps {
                 sh 'make docker_build'
