@@ -22,7 +22,8 @@ def test_single_classification():
         "type": "classification",
         "subtype": "type",
         "classification": {
-            "tag": "car"
+            "tag": "car",
+            "confidence": 0.97
         }
     }
     attribute = Attribute('car', 0.97)
