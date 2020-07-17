@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -28,11 +29,11 @@ namespace ovms {
 class Pipeline {
     std::vector<std::unique_ptr<Node>> nodes;
 
-    Node& entry;
-    Node& exit;
+    EntryNode& entry;
+    ExitNode& exit;
 
 public:
-    Pipeline(Node& entry, Node& exit) :
+    Pipeline(EntryNode& entry, ExitNode& exit) :
         entry(entry),
         exit(exit) {}
 
@@ -40,12 +41,12 @@ public:
         nodes.emplace_back(std::move(node));
     }
 
-    Node& getEntry() const { return this->entry; }
-    Node& getExit() const { return this->exit; }
+    EntryNode& getEntry() const { return this->entry; }
+    ExitNode& getExit() const { return this->exit; }
 
-    static void connect(Node& from, Node& to) {
+    static void connect(Node& from, Node& to, const BlobNames& required_blob_names) {
         from.addDependant(to);
-        to.addDependency(from);
+        to.addDependency(from, required_blob_names);
     }
 };
 

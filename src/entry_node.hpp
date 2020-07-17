@@ -22,16 +22,19 @@
 namespace ovms {
 
 class EntryNode : public Node {
-public:
-    EntryNode(tensorflow::serving::PredictRequest* request) {}
+    tensorflow::serving::PredictRequest* request;
 
-    Status execute() override {
-        // Deserialization from PredictRequest to multiple Blob::Ptr
-        return StatusCode::OK;
-    }
+public:
+    EntryNode(tensorflow::serving::PredictRequest* request) :
+        Node("entry"),
+        request(request) {}
+
+    Status execute() override { return StatusCode::OK; }
+
+    Status fetchResults(BlobMap& map) override;
 
     // Entry nodes have no dependency
-    void addDependency(Node& node) override {
+    void addDependency(Node&, const BlobNames&) override {
         throw "This node cannot have dependency";
     }
 };

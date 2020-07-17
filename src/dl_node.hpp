@@ -15,27 +15,29 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
+#include <string>
+
+#include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "node.hpp"
 
 namespace ovms {
 
 class DLNode : public Node {
-    ModelInstance* model;
+    std::string model_name;
+    std::optional<model_version_t> model_version;
 
 public:
-    // Instead of passing instance, consider pasing name & version.
-    // This would not block model instances during pipeline executing up till instance is really needed.
-    DLNode(ModelInstance* model) :
-        model(model) {
+    DLNode(const std::string& node_name, const std::string& model_name, std::optional<model_version_t> model_version) :
+        Node(node_name),
+        model_name(model_name),
+        model_version(model_version) {
     }
 
-    Status execute() override {
-        // Get required multiple Blob::Ptr from previous nodes
-        // Do inference
-        // Retrieve multiple output Blob::Ptr from InferRequest result
-        return StatusCode::OK;
-    }
+    Status execute() override;
+
+    Status fetchResults(BlobMap& map) override;
 };
 
 }  // namespace ovms

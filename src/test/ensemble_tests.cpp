@@ -29,7 +29,15 @@ using ::testing::UnorderedElementsAre;
 TEST(Ensemble, OneModel) {
     PredictRequest request;
     PredictResponse response;
-    ModelInstance instance;
+    std::string model_name = "resnet";
+    std::optional<model_version_t> model_version = 1;
+
+    tensorflow::TensorProto image;
+    image.mutable_tensor_content()->assign("\x22\x5A\x91\x05\x12\x5F");  // int8_t tensor 2x3: [[0x22, 0x5a, 0x91], [0x05, 0x12, 0x5f]]
+    image.mutable_tensor_shape()->add_dim()->set_size(2);
+    image.mutable_tensor_shape()->add_dim()->set_size(3);
+
+    (*request.mutable_inputs())["image"] = image;
 
     // Most basic configuration, just process resnet
 
@@ -37,91 +45,35 @@ TEST(Ensemble, OneModel) {
     //  O------->O------->O
 
     auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>(&instance);
+    auto model = std::make_unique<DLNode>("resnet_node", model_name, model_version);
     auto output = std::make_unique<ExitNode>(&response);
 
     Pipeline pipeline(*input, *output);
 
-    pipeline.connect(*input, *model);
-    pipeline.connect(*model, *output);
+    pipeline.connect(*input, *model, {"image"});
+    pipeline.connect(*model, *output, {"probability"});
+
+    Node* input_ptr = input.get();
+    Node* model_ptr = model.get();
+    Node* output_ptr = output.get();
 
     pipeline.push(std::move(input));
     pipeline.push(std::move(model));
     pipeline.push(std::move(output));
 
-    // MessageQueue::push(Message(pipeline.getEntry()));
-    // while (not done pipeline.getExit())
-    //     run event loop
-}
+    BlobMap map;
+    input_ptr->execute();
+    input_ptr->fetchResults(map);
 
-TEST(Ensemble, TwoModels) {
-    PredictRequest request;
-    PredictResponse response;
-    ModelInstance instance1;
-    ModelInstance instance2;
+    model_ptr->setInputs(*input_ptr, map);
+    model_ptr->execute();
+    map.clear();
+    model_ptr->fetchResults(map);
 
-    // Two model configuration, process resnet 2x concurrently
+    output_ptr->setInputs(*model_ptr, map);
+    output_ptr->execute();
+    map.clear();
+    model_ptr->fetchResults(map);
 
-    // input   resnet1  output
-    //   /------->O------\
-    //  O                 O
-    //   \------->O------/
-    //         resnet2
-
-    auto input = std::make_unique<EntryNode>(&request);
-    auto resnet1 = std::make_unique<DLNode>(&instance1);
-    auto resnet2 = std::make_unique<DLNode>(&instance2);
-    auto output = std::make_unique<ExitNode>(&response);
-
-    Pipeline pipeline(*input, *output);
-
-    pipeline.connect(*input, *resnet1);
-    pipeline.connect(*input, *resnet2);
-    pipeline.connect(*resnet1, *output);
-    pipeline.connect(*resnet2, *output);
-
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(resnet1));
-    pipeline.push(std::move(resnet2));
-    pipeline.push(std::move(output));
-
-    // MessageQueue::push(Message(pipeline.getEntry()));
-    // while (not done pipeline.getExit())
-    //     run event loop
-}
-
-TEST(Ensemble, MultipleModels) {
-    PredictRequest request;
-    PredictResponse response;
-    ModelInstance instance;
-    Timer timer;
-    timer.start("A");
-
-    const int N = 10000;
-
-    auto input = std::make_unique<EntryNode>(&request);
-    auto output = std::make_unique<ExitNode>(&response);
-
-    Pipeline pipeline(*input, *output);
-
-    std::vector<std::unique_ptr<DLNode>> nodes;
-    for (int i = 0; i < N; i++) {
-        nodes.push_back(std::make_unique<DLNode>(&instance));
-        pipeline.connect(*input, *nodes[i]);
-        pipeline.connect(*nodes[i], *output);
-    }
-
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(output));
-
-    for (int i = 0; i < N; i++) {
-        pipeline.push(std::move(nodes[i]));
-    }
-
-    // MessageQueue::push(Message(pipeline.getEntry()));
-    // while (not done pipeline.getExit())
-    //     run event loop
-
-    timer.stop("A");
-    std::cout << timer.elapsed<std::chrono::microseconds>("A") / 1000 << "ms" << std::endl;
+    // ResponseProto ready
 }

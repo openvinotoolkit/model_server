@@ -26,14 +26,15 @@ class ExitNode : public Node {
 
 public:
     ExitNode(tensorflow::serving::PredictResponse* response) :
+        Node("exit"),
         response(response) {
     }
 
-    Status execute() override {
-        // Get required blobs from previous nodes
-        // Serialize blobs to PredictResponse
-        return StatusCode::OK;
-    }
+    // Exit node does not have execute logic.
+    // It serializes its received input blobs to proto in ::fetchResults
+    Status execute() override { return StatusCode::OK; }
+
+    Status fetchResults(BlobMap& map) override;
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {

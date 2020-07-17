@@ -14,3 +14,31 @@
 // limitations under the License.
 //*****************************************************************************
 #include "node.hpp"
+
+#include <algorithm>
+
+#include <spdlog/spdlog.h>
+
+namespace ovms {
+
+void Node::setInputs(const Node& dependency, BlobMap& inputs) {
+    auto& map = this->input_blobs[dependency.getName()];
+
+    // This node had no dependency
+    if (this->required_blob_names.count(dependency.getName()) == 0) {
+        // Possibly some kind of error?
+        return;
+    }
+
+    const auto& names = this->required_blob_names[dependency.getName()];
+
+    // Set only inputs that are required by this node
+    for (const auto& kv : inputs) {
+        if (std::find(names.cbegin(), names.cend(), kv.first) != names.cend()) {
+            SPDLOG_INFO("Node::setInputs: setting required input for {} from {}, input name: {}", getName(), dependency.getName(), kv.first);
+            map[kv.first] = kv.second;
+        }
+    }
+}
+
+}  // namespace ovms

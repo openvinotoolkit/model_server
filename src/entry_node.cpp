@@ -14,3 +14,32 @@
 // limitations under the License.
 //*****************************************************************************
 #include "entry_node.hpp"
+
+#include <spdlog/spdlog.h>
+
+namespace ovms {
+
+Status EntryNode::fetchResults(BlobMap& map) {
+    for (auto& kv : this->request->inputs()) {
+        const auto& name = kv.first;
+        const auto& tensor_proto = kv.second;
+
+        // Retrieve shape in OV format
+        InferenceEngine::SizeVector shape;
+        for (int i = 0; i < tensor_proto.tensor_shape().dim_size(); i++) {
+            shape.emplace_back(tensor_proto.tensor_shape().dim(i).size());
+        }
+
+        // Make shared blob
+        // - hardcoded precision for now
+        // - not validated for buffer overflow and precision
+        InferenceEngine::TensorDesc description{InferenceEngine::Precision::I8, shape, InferenceEngine::Layout::ANY};
+        map[name] = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)(tensor_proto.tensor_content().data()));
+
+        SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name: {}): blob with name [{}] has been prepared", getName(), name);
+    }
+
+    return StatusCode::OK;
+}
+
+}  // namespace ovms

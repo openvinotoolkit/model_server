@@ -91,7 +91,7 @@ void configure_logger(const std::string log_level, const std::string log_path) {
         if (log_level == "DEBUG") {
             serving_logger->set_level(spdlog::level::debug);
             serving_logger->flush_on(spdlog::level::trace);
-        } else if (log_level =="ERROR") {
+        } else if (log_level == "ERROR") {
             serving_logger->set_level(spdlog::level::err);
             serving_logger->flush_on(spdlog::level::err);
         }

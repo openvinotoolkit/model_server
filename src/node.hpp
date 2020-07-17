@@ -15,23 +15,50 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+#include <unordered_map>
 #include <vector>
+
+#include <inference_engine.hpp>
 
 #include "status.hpp"
 
 namespace ovms {
+using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+using BlobNames = std::vector<std::string>;
 
 class Node {
 protected:
+    std::string node_name;
+
     std::vector<Node*> previous;
     std::vector<Node*> next;
 
     size_t finished_dependencies_count = 0;
 
-public:
-    virtual Status execute() = 0;
+    // Blobs waiting for inference to happen
+    std::unordered_map<std::string, BlobMap> input_blobs;
 
-    virtual void addDependency(Node& node) { this->previous.emplace_back(&node); }
+    // List of required previous node outputs
+    std::unordered_map<std::string, BlobNames> required_blob_names;
+
+public:
+    Node(const std::string node_name) :
+        node_name(node_name) {
+    }
+
+    const std::string& getName() const { return this->node_name; }
+
+    virtual Status execute() = 0;
+    virtual Status fetchResults(BlobMap& map) = 0;
+
+    void setInputs(const Node& dependency, BlobMap& inputs);
+
+    virtual void addDependency(Node& node, const BlobNames& required_blob_names) {
+        this->previous.emplace_back(&node);
+        this->required_blob_names[node.getName()] = required_blob_names;
+    }
+
     virtual void addDependant(Node& node) { this->next.emplace_back(&node); }
 
     void increaseFinishedDependencyCount() {

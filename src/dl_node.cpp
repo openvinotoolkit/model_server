@@ -14,3 +14,27 @@
 // limitations under the License.
 //*****************************************************************************
 #include "dl_node.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include "prediction_service_utils.hpp"
+
+namespace ovms {
+
+Status DLNode::execute() {
+    // Start inference asynchronously
+    return StatusCode::OK;
+}
+
+Status DLNode::fetchResults(BlobMap& map) {
+    /*
+        for each blob in inferrequest {
+            map[blob.name] = blob
+        }
+
+        SPDLOG_INFO("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), blob.name);
+    */
+    return StatusCode::OK;
+}
+
+}  // namespace ovms
