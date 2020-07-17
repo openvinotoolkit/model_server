@@ -40,6 +40,7 @@ class Attribute:
     def as_dict(self):
         result_dict = {
             "tag": self.value,
+            "confidence": self.confidence
         }
         return result_dict
 
