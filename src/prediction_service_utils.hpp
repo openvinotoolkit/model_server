@@ -28,23 +28,11 @@ namespace ovms {
 
 const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream()) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
-
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-};
-
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
+=======
+>>>>>>> Add PipelineMessage class
 Status getModelInstance(ModelManager& manager,
     const std::string& modelName,
     model_version_t modelVersionId,
@@ -57,8 +45,6 @@ Status inference(
     ModelInstance& modelVersion,
     const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
-
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,
     size_t requestedBatchSize,

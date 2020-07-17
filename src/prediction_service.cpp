@@ -26,6 +26,7 @@
 #include "tensorflow/core/framework/tensor.h"
 
 #include "get_model_metadata_impl.hpp"
+#include "modelinstancepredictrequestshandlescountguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"

@@ -29,6 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "modelconfig.hpp"
+#include "modelinstancepredictrequestshandlescountguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "status.hpp"
@@ -38,7 +39,6 @@ namespace ovms {
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
-class ModelInstancePredictRequestsHandlesCountGuard;
 /**
      * @brief This class contains all the information about inference engine model
      */
@@ -406,20 +406,5 @@ public:
     const Status validate(const tensorflow::serving::PredictRequest* request);
 
     static const int WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS = 100;
-};
-
-class ModelInstancePredictRequestsHandlesCountGuard {
-public:
-    ModelInstancePredictRequestsHandlesCountGuard() = delete;
-    ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) :
-        modelInstance(modelInstance) {
-        modelInstance.increasePredictRequestsHandlesCount();
-    }
-    ~ModelInstancePredictRequestsHandlesCountGuard() {
-        modelInstance.decreasePredictRequestsHandlesCount();
-    }
-
-private:
-    ModelInstance& modelInstance;
 };
 }  // namespace ovms

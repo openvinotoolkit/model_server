@@ -25,6 +25,7 @@
 #include <inference_engine.hpp>
 #include <stdlib.h>
 
+#include "../executinstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "test_utils.hpp"

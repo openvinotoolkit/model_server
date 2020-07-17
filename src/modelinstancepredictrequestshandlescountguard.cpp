@@ -13,42 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "modelinstancepredictrequestshandlescountguard.hpp"
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "dl_node.hpp"
-#include "entry_node.hpp"
-#include "exit_node.hpp"
-#include "pipelinemessage.hpp"
+#include "modelinstance.hpp"
 
 namespace ovms {
+ModelInstancePredictRequestsHandlesCountGuard::ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance) :
+    modelInstance(modelInstance) {
+    modelInstance.increasePredictRequestsHandlesCount();
+}
 
-class Pipeline {
-    std::vector<std::unique_ptr<Node>> nodes;
-
-    EntryNode& entry;
-    ExitNode& exit;
-
-public:
-    Pipeline(EntryNode& entry, ExitNode& exit) :
-        entry(entry),
-        exit(exit) {}
-
-    void push(std::unique_ptr<Node> node) {
-        nodes.emplace_back(std::move(node));
-    }
-
-    EntryNode& getEntry() const { return this->entry; }
-    ExitNode& getExit() const { return this->exit; }
-
-    static void connect(Node& from, Node& to, const BlobNames& required_blob_names) {
-        from.addDependant(to);
-        to.addDependency(from, required_blob_names);
-    }
-};
-
+ModelInstancePredictRequestsHandlesCountGuard::~ModelInstancePredictRequestsHandlesCountGuard() {
+    modelInstance.decreasePredictRequestsHandlesCount();
+}
 }  // namespace ovms

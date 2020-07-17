@@ -15,40 +15,20 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "dl_node.hpp"
-#include "entry_node.hpp"
-#include "exit_node.hpp"
-#include "pipelinemessage.hpp"
+#include "ovinferrequestsqueue.hpp"
 
 namespace ovms {
-
-class Pipeline {
-    std::vector<std::unique_ptr<Node>> nodes;
-
-    EntryNode& entry;
-    ExitNode& exit;
-
-public:
-    Pipeline(EntryNode& entry, ExitNode& exit) :
-        entry(entry),
-        exit(exit) {}
-
-    void push(std::unique_ptr<Node> node) {
-        nodes.emplace_back(std::move(node));
+struct ExecutingStreamIdGuard {
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
+        inferRequestsQueue_(inferRequestsQueue),
+        id_(inferRequestsQueue_.getIdleStream()) {}
+    ~ExecutingStreamIdGuard() {
+        inferRequestsQueue_.returnStream(id_);
     }
+    int getId() { return id_; }
 
-    EntryNode& getEntry() const { return this->entry; }
-    ExitNode& getExit() const { return this->exit; }
-
-    static void connect(Node& from, Node& to, const BlobNames& required_blob_names) {
-        from.addDependant(to);
-        to.addDependency(from, required_blob_names);
-    }
+private:
+    ovms::OVInferRequestsQueue& inferRequestsQueue_;
+    const int id_;
 };
-
-}  // namespace ovms
+}  //  namespace ovms

@@ -17,7 +17,9 @@
 #include "prediction_service_utils.hpp"
 
 #include "deserialization.hpp"
+#include "executinstreamidguard.hpp"
 #include "modelinstance.hpp"
+#include "modelinstancepredictrequestshandlescountguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
 

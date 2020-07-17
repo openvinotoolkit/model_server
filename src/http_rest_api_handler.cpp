@@ -25,6 +25,7 @@
 
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
+#include "modelinstancepredictrequestshandlescountguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
