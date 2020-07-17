@@ -29,7 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "modelconfig.hpp"
-#include "modelinstancepredictrequestshandlescountguard.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "status.hpp"
@@ -384,7 +384,7 @@ public:
          * 
          * @return Status
          */
-    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuardPtr);
+    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& predictHandlesCounterGuardPtr);
 
     /**
          * @brief Unloads model version
@@ -396,12 +396,12 @@ public:
          * @brief Wait for model to change to AVAILABLE state
          *
          * @param waitForModelLoadedTimeoutMilliseconds
-         * @param predictHandlesCounterGuard
+         * @param modelInstanceUnloadGuard
          *
          * @return Status
          */
     Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
-        std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard);
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
 

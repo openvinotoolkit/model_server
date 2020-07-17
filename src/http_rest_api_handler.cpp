@@ -25,7 +25,7 @@
 
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
-#include "modelinstancepredictrequestshandlescountguard.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -135,13 +135,13 @@ Status HttpRestApiHandler::processPredictRequest(
 
     std::shared_ptr<ModelInstance> modelInstance;
 
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(
         ModelManager::getInstance(),
         model_name,
         model_version.value_or(0),
         modelInstance,
-        modelInstancePredictRequestsHandlesCountGuard);
+        modelInstanceUnloadGuard);
 
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance failed. {}", status.string());

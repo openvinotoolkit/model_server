@@ -24,6 +24,8 @@
 #include "entry_node.hpp"
 #include "exit_node.hpp"
 #include "pipelinemessage.hpp"
+#include "status.hpp"
+#include "threadsafequeue.hpp"
 
 namespace ovms {
 
@@ -49,6 +51,10 @@ public:
         from.addDependant(to);
         to.addDependency(from, required_blob_names);
     }
+    Status execute();
+
+private:
+    ThreadSafeQueue<PipelineMessage> messageQueue;
 };
 
 }  // namespace ovms

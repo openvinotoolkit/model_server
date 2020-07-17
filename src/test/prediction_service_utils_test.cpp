@@ -41,8 +41,8 @@ public:
 TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
     MockModelManagerWith1Model manager;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, "SOME", 0, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, "SOME", 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << "Should fail with no model with such name registered";
 }
 
@@ -60,8 +60,8 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
     model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, config.getName(), 2, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, config.getName(), 2, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING) << "Should fail with no model with such name registered";
 }
 
@@ -104,8 +104,8 @@ TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLo
     versionsToRetire->emplace_back(0);
     model->retireVersions(versionsToRetire);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
@@ -126,8 +126,8 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersion0ShouldReturnModelVersio
     versionsToRetire->emplace_back(0);
     model->retireVersions(versionsToRetire);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
@@ -227,8 +227,8 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
         config.getName(), ovms::ModelInstance::WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS / 4);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance->getStatus().getState());
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
@@ -251,8 +251,8 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelWithModelInstanceLoadedWaitInLoadingState->getDefaultModelInstance()->getStatus().getState());
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuardPtr;
-    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = ovms::getModelInstance(manager, config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     SPDLOG_ERROR("State:{}", (int)modelInstance->getStatus().getState());
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance->getStatus().getState()) << "State:" << (int)modelInstance->getStatus().getState();
     SPDLOG_ERROR("State:{}", (int)modelInstance->getStatus().getState());

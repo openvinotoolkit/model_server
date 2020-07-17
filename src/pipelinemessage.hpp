@@ -18,7 +18,7 @@
 #include <utility>
 
 #include "executinstreamidguard.hpp"
-#include "modelinstancepredictrequestshandlescountguard.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -27,23 +27,23 @@ public:
     PipelineMessage(Node& node,
         ovms::StatusCode statusCode,
         std::unique_ptr<ovms::ExecutingStreamIdGuard> executinStreamIdGuard,
-        std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard) :
+        std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard) :
         node(node),
         statusCode(statusCode),
         executingStreamIdGuard(std::move(executingStreamIdGuard)),
-        modelInstancePredictRequestsHandlesCountGuard(std::move(modelInstancePredictRequestsHandlesCountGuard)) {}
+        modelInstanceUnloadGuard(std::move(modelInstanceUnloadGuard)) {}
     PipelineMessage(PipelineMessage&) = delete;
     PipelineMessage(PipelineMessage&& rhs) :
         node(rhs.node),
         statusCode(std::move(rhs.statusCode)),
         executingStreamIdGuard(std::move(rhs.executingStreamIdGuard)),
-        modelInstancePredictRequestsHandlesCountGuard(std::move(rhs.modelInstancePredictRequestsHandlesCountGuard)) {}
+        modelInstanceUnloadGuard(std::move(rhs.modelInstanceUnloadGuard)) {}
     PipelineMessage operator=(PipelineMessage&) = delete;
 
 private:
     Node& node;
     ovms::StatusCode statusCode;
     std::unique_ptr<ovms::ExecutingStreamIdGuard> executingStreamIdGuard;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 };
 }  //  namespace ovms

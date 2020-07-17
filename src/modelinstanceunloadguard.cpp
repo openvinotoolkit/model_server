@@ -13,18 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "modelinstanceunloadguard.hpp"
+
+#include "modelinstance.hpp"
 
 namespace ovms {
-class ModelInstance;
+ModelInstanceUnloadGuard::ModelInstanceUnloadGuard(ModelInstance& modelInstance) :
+    modelInstance(modelInstance) {
+    modelInstance.increasePredictRequestsHandlesCount();
+}
 
-class ModelInstancePredictRequestsHandlesCountGuard {
-public:
-    ModelInstancePredictRequestsHandlesCountGuard() = delete;
-    ModelInstancePredictRequestsHandlesCountGuard(ModelInstance& modelInstance);
-    ~ModelInstancePredictRequestsHandlesCountGuard();
-
-private:
-    ModelInstance& modelInstance;
-};
+ModelInstanceUnloadGuard::~ModelInstanceUnloadGuard() {
+    modelInstance.decreasePredictRequestsHandlesCount();
+}
 }  // namespace ovms
