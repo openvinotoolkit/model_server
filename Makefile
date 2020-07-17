@@ -111,6 +111,10 @@ sdl-check: venv
 ifneq ($(shell find . -type f -name 'Dockerfile.*' | xargs grep ADD | wc -l), 0)
 	$(error Replace COPY with ADD in dockerfiles)
 endif
+	@echo "Checking python files..."
+ifneq ($(shell bandit src/*.py example_client/*.py | grep "No issues identified." | wc -l), 1)
+        $(error Run bandit on src/*.py and example_client/*.py to fix issues.)
+endif
 
 clang-format: venv
 	@echo "Formating files with clang-format.."
