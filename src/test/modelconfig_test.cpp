@@ -20,7 +20,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../modelconfig.hpp"
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "../status.hpp"
+
+#include "test_utils.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
@@ -198,4 +203,194 @@ TEST(ModelConfig, mappingOutputs) {
 
     EXPECT_EQ(in, "input");
     EXPECT_EQ(empty, "");
+}
+
+TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), false);
+    EXPECT_EQ(config.getMappingOutputs().empty(), false);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "inputs":{
+            "key":"value1"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    std::unordered_map<std::string, std::string> expectedInputs = {
+            { "key", "value1"}
+    };
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), false);
+    EXPECT_EQ(config.getMappingInputs(), expectedInputs);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    std::unordered_map<std::string, std::string> expectedOutputs = {
+            { "key", "value2"}
+    };
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), true);
+    EXPECT_EQ(config.getMappingOutputs(), expectedOutputs);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenAdditionalObjectInConfig) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2"
+        },
+       "object":{
+            "key":"value3"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), false);
+    EXPECT_EQ(config.getMappingOutputs().empty(), false);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenInputsIsNotAnObject) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "inputs":["Array", "is", "not", "an", "object"],
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), true);
+    EXPECT_EQ(config.getMappingOutputs().empty(), false);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenOutputsIsNotAnObject) {
+    ovms::ModelConfig config;
+
+    const char* json = R"({
+       "inputs":{
+            "key":"value"
+        },
+       "outputs":["Array", "is", "not", "an", "object"]
+    })";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(json, filename);
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), false);
+    EXPECT_EQ(config.getMappingOutputs().empty(), true);
+    EXPECT_EQ(ret, ovms::StatusCode::OK);
+}
+
+TEST(ModelConfig, parseModelMappingWhenConfigIsNotJson) {
+    ovms::ModelConfig config;
+
+    const char* invalidJson = "asdasdasd";
+
+    std::string tmp_dir = "/tmp";
+    int16_t version = 0;
+    config.setBasePath(tmp_dir);
+    config.setVersion(version);
+    std::string path = tmp_dir + "/" + std::to_string(version);
+    std::filesystem::create_directories(path);
+
+    std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
+    createConfigFileWithContent(invalidJson, filename);
+
+    auto ret = config.parseModelMapping();
+    EXPECT_EQ(config.getMappingInputs().empty(), true);
+    EXPECT_EQ(config.getMappingOutputs().empty(), true);
+    EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
 }

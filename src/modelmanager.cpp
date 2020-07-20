@@ -24,6 +24,7 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
@@ -33,6 +34,7 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "s3filesystem.hpp"
+#include "schema.hpp"
 
 namespace ovms {
 
@@ -91,23 +93,25 @@ Status ModelManager::start(const std::string& jsonFilename) {
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     spdlog::info("Loading configuration from {}", jsonFilename);
 
-    rapidjson::Document doc;
     std::ifstream ifs(jsonFilename.c_str());
-    // Perform some basic checks on the config file
     if (!ifs.good()) {
         spdlog::error("File is invalid {}", jsonFilename);
         return StatusCode::FILE_INVALID;
     }
 
+    rapidjson::Document configJson;
     rapidjson::IStreamWrapper isw(ifs);
-    if (doc.ParseStream(isw).HasParseError()) {
+    if (configJson.ParseStream(isw).HasParseError()) {
         spdlog::error("Configuration file is not a valid JSON file.");
         return StatusCode::JSON_INVALID;
     }
 
-    // TODO validate json against schema
-    const auto itr = doc.FindMember("model_config_list");
-    if (itr == doc.MemberEnd() || !itr->value.IsArray()) {
+    if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA) != StatusCode::OK) {
+        return StatusCode::JSON_INVALID;
+    }
+
+    const auto itr = configJson.FindMember("model_config_list");
+    if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         spdlog::error("Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }

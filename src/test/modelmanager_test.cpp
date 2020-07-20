@@ -22,19 +22,14 @@
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 
+#include "test_utils.hpp"
+
 using testing::_;
 using testing::ContainerEq;
 using testing::Return;
 using testing::ReturnRef;
 
 namespace {
-// returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
-    std::ofstream configFile{filename};
-    configFile << content << std::endl;
-    return filename;
-}
-
 const char* config_1_model = R"({
    "model_config_list": [
     {

@@ -33,6 +33,7 @@
 #include "model_version_policy.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
+#include "schema.hpp"
 
 namespace ovms {
 
@@ -687,7 +688,6 @@ public:
          * @return Status 
          */
     Status parseModelMapping() {
-        rapidjson::Document doc;
         SPDLOG_DEBUG("Parsing model:{} mapping from path:{}", getName(), getPath());
         mappingInputs.clear();
         mappingOutputs.clear();
@@ -699,27 +699,29 @@ public:
             return StatusCode::FILE_INVALID;
         }
 
+        rapidjson::Document doc;
         rapidjson::IStreamWrapper isw(ifs);
         if (doc.ParseStream(isw).HasParseError()) {
+            spdlog::error("Configuration file is not a valid JSON file.");
             return StatusCode::JSON_INVALID;
         }
 
-        // Process inputs
-        const auto itr = doc.FindMember("inputs");
-        if (itr == doc.MemberEnd() || !itr->value.IsObject()) {
+        if (validateJsonAgainstSchema(doc, MODELS_MAPPING_INPUTS_SCHEMA) != StatusCode::OK) {
             spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
         } else {
+            // Process inputs
+            const auto itr = doc.FindMember("inputs");
             for (const auto& key : itr->value.GetObject()) {
                 SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
                 mappingInputs[key.name.GetString()] = key.value.GetString();
             }
         }
 
-        // Process outputs
-        const auto it = doc.FindMember("outputs");
-        if (it == doc.MemberEnd() || !it->value.IsObject()) {
+        if (validateJsonAgainstSchema(doc, MODELS_MAPPING_OUTPUTS_SCHEMA) != StatusCode::OK) {
             spdlog::warn("Couldn't load outputs object from file {}", path.c_str());
         } else {
+            // Process outputs
+            const auto it = doc.FindMember("outputs");
             for (const auto& key : it->value.GetObject()) {
                 SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
                 mappingOutputs[key.name.GetString()] = key.value.GetString();
@@ -730,16 +732,11 @@ public:
     }
 
     /**
-         * @brief  Parses all settings from a JSON node
-         * 
-         * @return Status 
-         */
+     * @brief  Parses all settings from a JSON node
+        * 
+        * @return Status 
+        */
     Status parseNode(const rapidjson::Value& v) {
-        if (!v.HasMember("name") || !v.HasMember("base_path")) {
-            spdlog::error("There was an error parsing json config - missing required parameter.");
-            return StatusCode::JSON_INVALID;
-        }
-
         this->setName(v["name"].GetString());
         this->setBasePath(v["base_path"].GetString());
 
