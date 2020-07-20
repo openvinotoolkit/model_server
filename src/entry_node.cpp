@@ -19,7 +19,7 @@
 
 namespace ovms {
 
-Status EntryNode::fetchResults(BlobMap& map) {
+Status EntryNode::fetchResults(BlobMap& outputs) {
     for (auto& kv : this->request->inputs()) {
         const auto& name = kv.first;
         const auto& tensor_proto = kv.second;
@@ -34,7 +34,7 @@ Status EntryNode::fetchResults(BlobMap& map) {
         // - hardcoded precision for now
         // - not validated for buffer overflow and precision
         InferenceEngine::TensorDesc description{InferenceEngine::Precision::I8, shape, InferenceEngine::Layout::ANY};
-        map[name] = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)(tensor_proto.tensor_content().data()));
+        outputs[name] = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)(tensor_proto.tensor_content().data()));
 
         SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name: {}): blob with name [{}] has been prepared", getName(), name);
     }

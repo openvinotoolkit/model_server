@@ -19,26 +19,34 @@
 
 #include <spdlog/spdlog.h>
 
+#include "status.hpp"
+
 namespace ovms {
 
-void Node::setInputs(const Node& dependency, BlobMap& inputs) {
-    auto& map = this->input_blobs[dependency.getName()];
+Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
+    const auto& mapping_for_dependency = this->blob_names_mapping.at(dependency.getName());
 
-    // This node had no dependency
-    if (this->required_blob_names.count(dependency.getName()) == 0) {
-        // Possibly some kind of error?
-        return;
-    }
+    for (const auto& pair : mapping_for_dependency) {
+        const auto& dependency_output_name = pair.first;
+        const auto& current_node_input_name = pair.second;
 
-    const auto& names = this->required_blob_names[dependency.getName()];
-
-    // Set only inputs that are required by this node
-    for (const auto& kv : inputs) {
-        if (std::find(names.cbegin(), names.cend(), kv.first) != names.cend()) {
-            SPDLOG_INFO("Node::setInputs: setting required input for {} from {}, input name: {}", getName(), dependency.getName(), kv.first);
-            map[kv.first] = kv.second;
+        auto it = inputs.find(dependency_output_name);
+        if (it == inputs.end()) {
+            SPDLOG_ERROR("Node::setInputs: error setting required input for {} from {}: dependency is missing output name {}",
+                getName(),
+                dependency.getName(),
+                dependency_output_name);
+            return StatusCode::UNKNOWN_ERROR;
         }
+        SPDLOG_INFO("Node::setInputs: setting required input for {} from {}, input name: {}, dependency output name: {}",
+            getName(),
+            dependency.getName(),
+            current_node_input_name,
+            dependency_output_name);
+        this->input_blobs[current_node_input_name] = it->second;
     }
+
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

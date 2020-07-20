@@ -37,7 +37,7 @@ public:
 
     Status execute() override;
 
-    Status fetchResults(BlobMap& map) override;
+    Status fetchResults(BlobMap& outputs) override;
 };
 
 }  // namespace ovms

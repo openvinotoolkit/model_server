@@ -47,9 +47,9 @@ public:
     EntryNode& getEntry() const { return this->entry; }
     ExitNode& getExit() const { return this->exit; }
 
-    static void connect(Node& from, Node& to, const BlobNames& required_blob_names) {
+    static void connect(Node& from, Node& to, const InputPairs& blob_names_mapping) {
         from.addDependant(to);
-        to.addDependency(from, required_blob_names);
+        to.addDependency(from, blob_names_mapping);
     }
     Status execute();
 

@@ -22,24 +22,20 @@ namespace ovms {
 Status ExitNode::fetchResults(BlobMap&) {
     // Serialize results to proto
     for (const auto& kv : this->input_blobs) {
-        const auto& map = kv.second;
+        const auto& output_name = kv.first;
+        auto& blob = kv.second;
 
-        for (const auto& entry : map) {
-            const auto& output_name = entry.first;
-            auto& blob = entry.second;
+        // Hardcoded precision for now
+        tensorflow::TensorProto& proto = (*this->response->mutable_outputs())[output_name];
+        proto.set_dtype(tensorflow::DataType::DT_INT8);
 
-            // Hardcoded precision for now
-            tensorflow::TensorProto& proto = (*this->response->mutable_outputs())[output_name];
-            proto.set_dtype(tensorflow::DataType::DT_INT8);
-
-            auto description = blob->getTensorDesc();
-            for (int dim : description.getDims()) {
-                proto.mutable_tensor_shape()->add_dim()->set_size(dim);
-            }
-            proto.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
-
-            SPDLOG_INFO("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
+        auto description = blob->getTensorDesc();
+        for (int dim : description.getDims()) {
+            proto.mutable_tensor_shape()->add_dim()->set_size(dim);
         }
+        // proto.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+
+        SPDLOG_INFO("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
     }
 
     return StatusCode::OK;

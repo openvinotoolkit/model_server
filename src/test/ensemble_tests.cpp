@@ -37,7 +37,7 @@ TEST(Ensemble, OneModel) {
     image.mutable_tensor_shape()->add_dim()->set_size(2);
     image.mutable_tensor_shape()->add_dim()->set_size(3);
 
-    (*request.mutable_inputs())["image"] = image;
+    (*request.mutable_inputs())["raw_image"] = image;
 
     // Most basic configuration, just process resnet
 
@@ -50,8 +50,8 @@ TEST(Ensemble, OneModel) {
 
     Pipeline pipeline(*input, *output);
 
-    pipeline.connect(*input, *model, {"image"});
-    pipeline.connect(*model, *output, {"probability"});
+    pipeline.connect(*input, *model, {{"raw_image", "resnet_input"}});
+    pipeline.connect(*model, *output, {{"resnet_output", "probability_vector"}});
 
     Node* input_ptr = input.get();
     Node* model_ptr = model.get();
@@ -61,19 +61,19 @@ TEST(Ensemble, OneModel) {
     pipeline.push(std::move(model));
     pipeline.push(std::move(output));
 
-    BlobMap map;
+    BlobMap blobs;
     input_ptr->execute();
-    input_ptr->fetchResults(map);
+    input_ptr->fetchResults(blobs);
 
-    model_ptr->setInputs(*input_ptr, map);
+    model_ptr->setInputs(*input_ptr, blobs);
     model_ptr->execute();
-    map.clear();
-    model_ptr->fetchResults(map);
+    blobs.clear();
+    model_ptr->fetchResults(blobs);
 
-    output_ptr->setInputs(*model_ptr, map);
+    output_ptr->setInputs(*model_ptr, blobs);
     output_ptr->execute();
-    map.clear();
-    model_ptr->fetchResults(map);
+    blobs.clear();
+    output_ptr->fetchResults(blobs);
 
     // ResponseProto ready
 }

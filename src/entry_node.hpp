@@ -31,10 +31,10 @@ public:
 
     Status execute() override { return StatusCode::OK; }
 
-    Status fetchResults(BlobMap& map) override;
+    Status fetchResults(BlobMap& outputs) override;
 
     // Entry nodes have no dependency
-    void addDependency(Node&, const BlobNames&) override {
+    void addDependency(Node&, const InputPairs&) override {
         throw "This node cannot have dependency";
     }
 };

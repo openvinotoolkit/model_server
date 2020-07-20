@@ -17,6 +17,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <inference_engine.hpp>
@@ -24,42 +25,44 @@
 #include "status.hpp"
 
 namespace ovms {
+
 using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
 using BlobNames = std::vector<std::string>;
+using InputPairs = std::vector<std::pair<std::string, std::string>>;
 
 class Node {
 protected:
     std::string node_name;
 
-    std::vector<Node*> previous;
-    std::vector<Node*> next;
+    std::vector<std::reference_wrapper<Node>> previous;
+    std::vector<std::reference_wrapper<Node>> next;
 
     size_t finished_dependencies_count = 0;
 
-    // Blobs waiting for inference to happen
-    std::unordered_map<std::string, BlobMap> input_blobs;
+    // Blobs ready and waiting for execution
+    std::unordered_map<std::string, InferenceEngine::Blob::Ptr> input_blobs;
 
-    // List of required previous node outputs
-    std::unordered_map<std::string, BlobNames> required_blob_names;
+    // Input/Output name mapping and list of required inputs from previous nodes
+    std::unordered_map<std::string, InputPairs> blob_names_mapping;
 
 public:
-    Node(const std::string node_name) :
+    Node(const std::string& node_name) :
         node_name(node_name) {
     }
 
     const std::string& getName() const { return this->node_name; }
 
     virtual Status execute() = 0;
-    virtual Status fetchResults(BlobMap& map) = 0;
+    virtual Status fetchResults(BlobMap& outputs) = 0;
 
-    void setInputs(const Node& dependency, BlobMap& inputs);
+    Status setInputs(const Node& dependency, BlobMap& inputs);
 
-    virtual void addDependency(Node& node, const BlobNames& required_blob_names) {
-        this->previous.emplace_back(&node);
-        this->required_blob_names[node.getName()] = required_blob_names;
+    virtual void addDependency(Node& node, const InputPairs& blob_names_mapping) {
+        this->previous.emplace_back(node);
+        this->blob_names_mapping[node.getName()] = blob_names_mapping;
     }
 
-    virtual void addDependant(Node& node) { this->next.emplace_back(&node); }
+    virtual void addDependant(Node& node) { this->next.emplace_back(node); }
 
     void increaseFinishedDependencyCount() {
         finished_dependencies_count++;

@@ -26,14 +26,19 @@ Status DLNode::execute() {
     return StatusCode::OK;
 }
 
-Status DLNode::fetchResults(BlobMap& map) {
+Status DLNode::fetchResults(BlobMap& outputs) {
     /*
         for each blob in inferrequest {
-            map[blob.name] = blob
+            outputs[blob.name] = blob
         }
 
         SPDLOG_INFO("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), blob.name);
     */
+
+    // Fake output for now
+    InferenceEngine::SizeVector shape{1, 1000};
+    InferenceEngine::TensorDesc description{InferenceEngine::Precision::I8, shape, InferenceEngine::Layout::ANY};
+    outputs["resnet_output"] = InferenceEngine::make_shared_blob<int8_t>(description);
     return StatusCode::OK;
 }
 

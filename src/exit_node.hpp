@@ -34,7 +34,7 @@ public:
     // It serializes its received input blobs to proto in ::fetchResults
     Status execute() override { return StatusCode::OK; }
 
-    Status fetchResults(BlobMap& map) override;
+    Status fetchResults(BlobMap& outputs) override;
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {
