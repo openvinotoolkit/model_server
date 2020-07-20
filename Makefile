@@ -111,6 +111,12 @@ sdl-check: venv
 ifneq ($(shell find . -type f -name 'Dockerfile.*' | xargs grep ADD | wc -l), 0)
 	$(error Replace COPY with ADD in dockerfiles)
 endif
+ifneq ($(shell grep -rl "docker run" . | xargs grep "docker run" | grep ":shared" | wc -l), 1)
+	$(error Do not use shared mount in docker files.)
+endif
+ifneq ($(shell grep -rl "bind-propagation=shared" | wc -l), 1)
+	$(error Do not use shared mount in docker files.)
+endif
 
 clang-format: venv
 	@echo "Formating files with clang-format.."
