@@ -77,7 +77,7 @@ Config& Config::parse(int argc, char** argv) {
                 "MODEL_PATH")
             ("batch_size",
                 "sets models batchsize, int value or auto. This parameter will be ignored if shape is set",
-                cxxopts::value<size_t>()->default_value("0"),
+                cxxopts::value<std::string>()->default_value("0"),
                 "BATCH_SIZE")
             ("shape",
                 "sets models shape (model must support reshaping). If set, batch_size parameter is ignored",

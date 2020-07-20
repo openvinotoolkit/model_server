@@ -53,7 +53,7 @@ public:
 
 class TestUnloadModel : public ::testing::Test {};
 
-TEST_F(TestUnloadModel, SuccesfullUnload) {
+TEST_F(TestUnloadModel, SuccessfulUnload) {
     ovms::ModelInstance modelInstance;
     // TODO dirty hack to avoid initializing config
     setenv("NIREQ", "1", 1);
@@ -177,7 +177,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         "NOT_USED_NAME",
         modelPath,
         "CPU",    // backend
-        1,        // batchsize
+        "1",      // batchsize
         1,        // NIREQ
         version,  // version
     };
@@ -209,7 +209,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         "NOT_USED_NAME",
         modelPath,
         "CPU",    // backend
-        1,        // batchsize
+        "1",      // batchsize
         1,        // NIREQ
         version,  // version
     };
@@ -219,7 +219,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
 
-TEST_F(TestLoadModel, SuccesfullLoad) {
+TEST_F(TestLoadModel, SuccessfulLoad) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance;
@@ -231,7 +231,7 @@ TEST_F(TestLoadModel, SuccesfullLoad) {
 
 class TestReloadModel : public ::testing::Test {};
 
-TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoaded) {
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance;
@@ -242,7 +242,7 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoaded) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloaded) {
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
     ovms::ModelInstance modelInstance;
     // TODO dirty hack to avoid initializing config
     setenv("NIREQ", "1", 1);
@@ -253,7 +253,7 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloaded) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
@@ -263,11 +263,25 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
     std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, predictHandlesCounterGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloadedWithNewBatchSize) {
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
+    ovms::ModelInstance modelInstance;
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.parseShapeParameter("{\"b\": \"auto\"}");
+    std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
+    // TODO dirty hack to avoid initializing config
+    setenv("NIREQ", "1", 1);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
@@ -279,6 +293,22 @@ TEST_F(TestReloadModel, SuccesfullReloadFromAlreadyUnloadedWithNewBatchSize) {
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
     std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
+    ovms::ModelInstance modelInstance;
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.parseShapeParameter("auto");
+    std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
+    // TODO dirty hack to avoid initializing config
+    setenv("NIREQ", "1", 1);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    modelInstance.unloadModel();
+    ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }

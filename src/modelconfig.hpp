@@ -20,7 +20,9 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -37,12 +39,21 @@
 
 namespace ovms {
 
+enum Mode { FIXED,
+    AUTO };
 using shape_t = std::vector<size_t>;
-using shapes_map_t = std::unordered_map<std::string, shape_t>;
+
+struct ShapeInfo {
+    Mode shapeMode = FIXED;
+    shape_t shape;
+};
+
+using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
 
+const std::string DEFAULT_INPUT_NAME = "DEFAULT_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 /**
@@ -66,6 +77,11 @@ private:
     std::string backend;
 
     /**
+         * @brief Batching mode
+         */
+    Mode batchingMode;
+
+    /**
          * @brief Batch size
          */
     size_t batchSize;
@@ -84,11 +100,6 @@ private:
          * @brief Plugin config
          */
     plugin_config_t pluginConfig;
-
-    /**
-         * @brief Shape for single input
-         */
-    shape_t shape;
 
     /**
          * @brief Layout for single input
@@ -142,29 +153,29 @@ public:
          * @param name 
          * @param basePath 
          * @param backend 
-         * @param batchSize 
+         * @param configBatchSize 
          * @param nireq 
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
         const std::string& backend = "CPU",
-        size_t batchSize = 0,
+        const std::string& configBatchSize = "0",
         uint64_t nireq = 1,
         model_version_t version = 0) :
         name(name),
         basePath(basePath),
         backend(backend),
-        batchSize(batchSize),
         modelVersionPolicy(std::make_shared<LatestModelVersionPolicy>()),
         nireq(nireq),
         pluginConfig({}),
-        shape({}),
         layout(""),
         shapes({}),
         layouts({}),
         version(version),
         mappingInputs({}),
-        mappingOutputs({}) {}
+        mappingOutputs({}) {
+        setBatchingParams(configBatchSize);
+    }
 
     /**
          * @brief Get the name 
@@ -230,6 +241,15 @@ public:
     }
 
     /**
+         * @brief Get the batching mode
+         * 
+         * @return ovms::Mode 
+         */
+    Mode getBatchingMode() const {
+        return this->batchingMode;
+    }
+
+    /**
          * @brief Get the batch size 
          * 
          * @return size_t 
@@ -239,12 +259,73 @@ public:
     }
 
     /**
+         * @brief Set the batching mode
+         * 
+         * @param batchingMode 
+         */
+    void setBatchingMode(Mode batchingMode) {
+        this->batchingMode = batchingMode;
+    }
+
+    /**
          * @brief Set the batch size
          * 
          * @param batchSize 
          */
-    void setBatchSize(const size_t batchSize) {
+    void setBatchSize(size_t batchSize) {
         this->batchSize = batchSize;
+    }
+
+    /**
+         * @brief Set batching mode to FIXED and batch size to value provided in a parameter. 
+         * 
+         * @param configBatchSize 
+         */
+    void setBatchingParams(size_t configBatchSize) {
+        setBatchingMode(FIXED);
+        setBatchSize(configBatchSize);
+    }
+
+    /**
+         * @brief Extracts batching mode and batch size value from string provided in a parameter.
+         * 
+         * @param configBatchSize 
+         */
+    void setBatchingParams(const std::string& configBatchSize) {
+        auto [batchingMode, effectiveBatchSize] = extractBatchingParams(configBatchSize);
+        setBatchingMode(batchingMode);
+        setBatchSize(effectiveBatchSize);
+    }
+
+    /**
+         * @brief Creates a copy of current config, but with batch size specified in a parameter
+         * 
+         * @param newBatchSize
+         */
+    ModelConfig copyConfigWithNewBatchSize(size_t newBatchSize) {
+        ModelConfig copiedConfig = *this;
+        copiedConfig.setBatchSize(newBatchSize);
+        return copiedConfig;
+    }
+
+    /**
+         * @brief Extract batching mode and effective batch size from string.
+         * 
+         * @param configBatchSize 
+         */
+    std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize) {
+        Mode batchingMode = FIXED;
+        size_t effectiveBatchSize = 0;
+        if (configBatchSize == "auto") {
+            batchingMode = AUTO;
+        } else {
+            try {
+                effectiveBatchSize = std::stoi(configBatchSize);
+            } catch (const std::invalid_argument& e) {
+                spdlog::error("Wrong batch size parameter provided. Model batch size will be set to default.");
+            }
+        }
+        return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
     }
 
     /**
@@ -407,6 +488,13 @@ public:
         return parsePluginConfig(node);
     }
 
+    /**
+         * @brief Parses value from json and extracts shapes info
+         * 
+         * @param rapidjson::Value& node
+         * 
+         * @return status
+         */
     Status parseShapeParameter(const rapidjson::Value& node) {
         if (!node.IsObject()) {
             return StatusCode::SHAPE_WRONG_FORMAT;
@@ -417,20 +505,26 @@ public:
             if (!it->value.IsString()) {
                 return StatusCode::SHAPE_WRONG_FORMAT;
             }
-            shape_t shape;
-            auto status = parseShape(shape, it->value.GetString());
+            ShapeInfo shapeInfo;
+            auto status = parseShape(shapeInfo, it->value.GetString());
             if (!status.ok()) {
                 return status;
             }
-            shapes[it->name.GetString()] = shape;
+            shapes[it->name.GetString()] = shapeInfo;
         }
         setShapes(shapes);
 
         return StatusCode::OK;
     }
 
+    /**
+         * @brief Parses value from string and extracts shapes info
+         * 
+         * @param string
+         * 
+         * @return status
+         */
     Status parseShapeParameter(const std::string& command) {
-        this->shape.clear();
         this->shapes.clear();
 
         if (command.empty()) {
@@ -438,13 +532,13 @@ public:
         }
 
         // parse as string
-        if (command.front() == shapeLeft) {
-            shape_t shape;
-            auto status = parseShape(shape, command);
+        if (command.front() == shapeLeft || command == "auto") {
+            ShapeInfo shapeInfo;
+            auto status = parseShape(shapeInfo, command);
             if (!status.ok()) {
                 return status;
             }
-            setShape(shape);
+            this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
             return StatusCode::OK;
         }
 
@@ -461,23 +555,66 @@ public:
     }
 
     /**
-         * @brief Get the shape
+         * @brief Returns copy of the current config with new shapes
          * 
-         * @return const shape_t& 
+         * @param shapes_map_t newShapes
+         * 
+         * @return ModelConfig
          */
-    const shape_t& getShape() const {
-        return this->shape;
+    ModelConfig copyConfigWithNewShapes(shapes_map_t newShapes) {
+        ModelConfig copiedConfig = *this;
+        copiedConfig.setShapes(newShapes);
+        return copiedConfig;
     }
 
     /**
-         * @brief Set the shape
+         * @brief Returns copy of the current config with new shapes
          * 
-         * @param shape 
+         * @param std::map<std::string, shape_t> requestShapes
+         * 
+         * @return ModelConfig
          */
-    void setShape(const shape_t& shape) {
-        this->shape.clear();
-        this->shapes.clear();
-        this->shape.assign(shape.begin(), shape.end());
+    ModelConfig copyConfigWithNewShapes(std::map<std::string, shape_t> requestShapes) {
+        ModelConfig copiedConfig = *this;
+        copiedConfig.setShapesFromRequest(requestShapes);
+        return copiedConfig;
+    }
+
+    /**
+         * @brief Parses shapes from inference request and sets them as new shapes for network inputs
+         * 
+         * @param std::map<std::string, shape_t> requestShapes
+         * 
+         */
+    void setShapesFromRequest(std::map<std::string, shape_t> requestShapes) {
+        if (requestShapes.size() == 1) {
+            const auto& name = requestShapes.begin()->first;
+            auto newShape = requestShapes.begin()->second;
+            auto shapeInfoIt = this->shapes.find(name);
+            if (shapeInfoIt == this->shapes.end())
+                shapeInfoIt = this->shapes.find(DEFAULT_INPUT_NAME);
+            shapeInfoIt->second.shape = newShape;
+        } else {
+            for (auto& it : requestShapes) {
+                const auto& name = it.first;
+                auto newShape = it.second;
+                this->shapes.find(name)->second.shape = newShape;
+            }
+        }
+    }
+
+    /**
+         * @brief Returns true if any input shape specified in shapes map is in AUTO mode
+         * 
+         * @return bool
+         */
+    bool anyShapeSetToAuto() const {
+        for (auto& it : getShapes()) {
+            auto shapeInfo = it.second;
+            if (shapeInfo.shapeMode == AUTO)
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -496,18 +633,6 @@ public:
          */
     void setShapes(const shapes_map_t& shapes) {
         this->shapes = shapes;
-        this->shape.clear();
-    }
-
-    /**
-         * @brief Legacy python mode: set the shape from the string representation
-         * 
-         * @param shapes 
-         */
-    Status setShape(const std::string& shape) {
-        this->shape.clear();
-        this->shapes.clear();
-        return parseShape(this->shape, shape);
     }
 
     /**
@@ -517,7 +642,12 @@ public:
          * @param str
          * @return Status
          */
-    static inline Status parseShape(shape_t& shape, const std::string& str) {
+    static inline Status parseShape(ShapeInfo& shapeInfo, const std::string& str) {
+        if (str == "auto") {
+            shapeInfo.shapeMode = AUTO;
+            return StatusCode::OK;
+        }
+
         std::string s = str;
         erase_spaces(s);
 
@@ -532,10 +662,11 @@ public:
         s.erase(s.begin());
 
         auto tokens = tokenize(s, shapeDelimeter);
-        shape.clear();
-        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
+        shapeInfo.shape.clear();
+        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeInfo.shape),
             [](const std::string& str) { return std::stoi(str); });
 
+        shapeInfo.shapeMode = FIXED;
         return StatusCode::OK;
     }
 
@@ -545,9 +676,8 @@ public:
          * @param name 
          * @param shape 
          */
-    void addShape(const std::string& name, const shape_t& shape) {
-        this->shape.clear();
-        this->shapes[name] = shape;
+    void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
+        this->shapes[name] = shapeInfo;
     }
 
     /**
@@ -676,13 +806,6 @@ public:
     }
 
     /**
-         * @brief Checks whether user requested reshape by specifying input(s) shape
-         */
-    bool isReshapeRequested() const {
-        return shape.size() > 0 || shapes.size() > 0;
-    }
-
-    /**
          * @brief  Parses mapping_config.json for mapping input/outputs in the model
          * 
          * @return Status 
@@ -745,9 +868,9 @@ public:
             if (v["batch_size"].IsString()) {
                 // Although batch size is in, in legacy python version it was string
                 // Temporary, until validated with JSON schema
-                this->setBatchSize(std::max<uint32_t>(stou32(v["batch_size"].GetString()).value_or(1), 1));
+                this->setBatchingParams(std::max<uint32_t>(stou32(v["batch_size"].GetString()).value_or(1), 1));
             } else {
-                this->setBatchSize(v["batch_size"].GetUint64());
+                this->setBatchingParams(v["batch_size"].GetUint64());
             }
         }
         if (v.HasMember("target_device"))
@@ -760,32 +883,34 @@ public:
         if (v.HasMember("shape")) {
             // Legacy format as string
             if (v["shape"].IsString()) {
-                if (!this->setShape(v["shape"].GetString()).ok()) {
+                ShapeInfo shapeInfo;
+                if (!parseShape(shapeInfo, v["shape"].GetString()).ok()) {
                     spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                 }
+                this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
             } else {
                 if (v["shape"].IsArray()) {
                     // Shape for all inputs
-                    shape_t shape;
+                    ShapeInfo shapeInfo;
                     for (auto& sh : v["shape"].GetArray()) {
-                        shape.push_back(sh.GetUint64());
+                        shapeInfo.shape.push_back(sh.GetUint64());
                     }
-                    this->setShape(shape);
+                    this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
                 } else {
                     // Map of shapes
                     for (auto& s : v["shape"].GetObject()) {
-                        shape_t shape;
+                        ShapeInfo shapeInfo;
                         // check if legacy format is used
                         if (s.value.IsString()) {
-                            if (!ModelConfig::parseShape(shape, s.value.GetString()).ok()) {
+                            if (!ModelConfig::parseShape(shapeInfo, s.value.GetString()).ok()) {
                                 spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
                             }
                         } else {
                             for (auto& sh : s.value.GetArray()) {
-                                shape.push_back(sh.GetUint64());
+                                shapeInfo.shape.push_back(sh.GetUint64());
                             }
                         }
-                        this->addShape(s.name.GetString(), shape);
+                        this->addShape(s.name.GetString(), shapeInfo);
                     }
                 }
             }
@@ -819,6 +944,15 @@ public:
             modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
         }
 
+        bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
+        bool shapeSet = (getShapes().size() > 0);
+
+        spdlog::debug("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+        if (batchSizeSet && shapeSet) {
+            spdlog::warn("Both shape and batch size have been defined. Batch size parameter will be ignored.");
+            setBatchingMode(FIXED);
+            setBatchSize(0);
+        }
         return StatusCode::OK;
     }
 };

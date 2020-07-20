@@ -19,11 +19,13 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include <inference_engine.hpp>
 
+#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "modelconfig.hpp"
@@ -204,12 +206,12 @@ private:
          *
          * @return status
          */
-    Status loadModelImpl(const ModelConfig& config, const size_t predictRequestedBatchSize = 0);
+    Status loadModelImpl(const ModelConfig& config);
 
     /**
          * @brief Configures batchsize
          */
-    void configureBatchSize(const ModelConfig& config, const size_t predictRequestedBatchSize = 0);
+    void configureBatchSize(const ModelConfig& config);
 
 public:
     /**
@@ -287,7 +289,16 @@ public:
          * @return batch size
          */
     virtual size_t getBatchSize() const {
-        return batchSize;
+        return network->getBatchSize();
+    }
+
+    /**
+         * @brief Gets model config
+         *
+         * @return model config
+         */
+    virtual const ModelConfig& getModelConfig() const {
+        return config;
     }
 
     /**
@@ -345,14 +356,15 @@ public:
     virtual Status reloadModel(const ModelConfig& config);
 
     /**
-         * @brief Reloads model version with different batch size, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
+         * @brief Reloads model version with different batch size or shape, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
          *
-         * @param batchSize batch size
+         * @param batchSize new batch size
+         * @param shape new shape
          * @param predictHandlesCounterGuard predictHandlesCounterGuardPtr
-         *
+         * 
          * @return Status
          */
-    virtual Status reloadModel(size_t batchSize, std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuardPtr);
+    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuardPtr);
 
     /**
          * @brief Unloads model version
@@ -370,6 +382,22 @@ public:
          */
     Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard);
+
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput,
+        const Mode& batchingMode);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
 

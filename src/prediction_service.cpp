@@ -79,7 +79,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     //     return status.grpc();
     // }
 
-    status = inference(*modelInstance, request, response);
+    status = inference(*modelInstance, request, response, modelInstancePredictRequestsHandlesCountGuard);
     if (!status.ok()) {
         return status.grpc();
     }

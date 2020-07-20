@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <map>
 #include "prediction_service_utils.hpp"
 
 #include "deserialization.hpp"
@@ -27,6 +28,25 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 namespace ovms {
+
+size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request) {
+    auto& requestInput = request->inputs().begin()->second;  // assuming same batch size for all inputs
+    return static_cast<size_t>(requestInput.tensor_shape().dim(0).size());
+}
+
+std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request) {
+    std::map<std::string, shape_t> requestShapes;
+    for (auto& it : request->inputs()) {
+        shape_t requestShape;
+        std::string name = it.first;
+        auto& requestInput = it.second;
+        for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+            requestShape.push_back(requestInput.tensor_shape().dim(i).size());
+        }
+        requestShapes[name] = std::move(requestShape);
+    }
+    return requestShapes;
+}
 
 Status getModelInstance(ovms::ModelManager& manager,
     const std::string& modelName,
@@ -72,16 +92,16 @@ Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const in
 
 Status inference(
     ModelInstance& modelVersion,
-    const PredictRequest* request_proto,
-    PredictResponse* response_proto) {
+    const PredictRequest* requestProto,
+    PredictResponse* responseProto,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     Timer timer;
     using std::chrono::microseconds;
 
-    auto status = modelVersion.validate(request_proto);
-    if (!status.ok()) {
-        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
+    auto status = modelVersion.validate(requestProto);
+    status = reloadModelIfRequired(status, modelVersion, requestProto, modelInstancePredictRequestsHandlesCountGuardPtr);
+    if (!status.ok())
         return status;
-    }
 
     timer.start("get infer request");
     ovms::OVInferRequestsQueue& inferRequestsQueue = modelVersion.getInferRequestsQueue();
@@ -90,15 +110,15 @@ Status inference(
     InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
     timer.stop("get infer request");
     spdlog::debug("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request_proto, modelVersion.getInputsInfo(), inferRequest);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, modelVersion.getInputsInfo(), inferRequest);
     timer.stop("deserialize");
     if (!status.ok())
         return status;
     spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
@@ -108,15 +128,15 @@ Status inference(
     if (!status.ok())
         return status;
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
-    status = serializePredictResponse(inferRequest, modelVersion.getOutputsInfo(), response_proto);
+    status = serializePredictResponse(inferRequest, modelVersion.getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;
     spdlog::debug("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        request_proto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     return StatusCode::OK;
 }
@@ -128,10 +148,36 @@ Status assureModelInstanceLoadedWithProperBatchSize(
     if (modelInstance.getBatchSize() != requestedBatchSize) {
         SPDLOG_INFO("Model:{} version:{} loaded with different batch size:{} than requested:{}",
             modelInstance.getName(), modelInstance.getVersion(), modelInstance.getBatchSize(), requestedBatchSize);
-        return modelInstance.reloadModel(requestedBatchSize, modelInstancePredictRequestsHandlesCountGuardPtr);
+        return modelInstance.reloadModel(requestedBatchSize, {}, modelInstancePredictRequestsHandlesCountGuardPtr);
     }
     SPDLOG_INFO("Model:{} version:{} loaded with requested batch size:{}",
         modelInstance.getName(), modelInstance.getVersion(), modelInstance.getBatchSize());
     return ovms::StatusCode::OK;
+}
+
+Status reloadModelIfRequired(
+    Status validationStatus,
+    ModelInstance& modelInstance,
+    const PredictRequest* requestProto,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    Status status = validationStatus;
+    if (status.batchSizeChangeRequired()) {
+        status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelInstancePredictRequestsHandlesCountGuardPtr);
+        if (!status.ok()) {
+            SPDLOG_INFO("Model instance reload failed. {}", status.string());
+            return status;
+        }
+    } else if (status.reshapeRequired()) {
+        status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelInstancePredictRequestsHandlesCountGuardPtr);
+        if (!status.ok()) {
+            SPDLOG_INFO("Model instance reload failed. {}", status.string());
+            return status;
+        }
+    } else if (!status.ok()) {
+        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
+        return status;
+    } else {
+        return status;
+    }
 }
 }  // namespace ovms

@@ -14,8 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
@@ -40,6 +42,9 @@ private:
     const int id_;
 };
 
+size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
+std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
+
 Status getModelInstance(ModelManager& manager,
     const std::string& modelName,
     model_version_t modelVersionId,
@@ -50,11 +55,18 @@ Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const in
 
 Status inference(
     ModelInstance& modelVersion,
-    const tensorflow::serving::PredictRequest* request_proto,
-    tensorflow::serving::PredictResponse* response_proto);
+    const tensorflow::serving::PredictRequest* requestProto,
+    tensorflow::serving::PredictResponse* responseProto,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
 
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,
     size_t requestedBatchSize,
+    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+
+Status reloadModelIfRequired(
+    Status validationStatus,
+    ModelInstance& modelInstance,
+    const tensorflow::serving::PredictRequest* requestProto,
     std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
 }  // namespace ovms

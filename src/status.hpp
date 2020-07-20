@@ -42,6 +42,8 @@ enum class StatusCode {
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
     NO_MODEL_VERSION_AVAILABLE, /*!< No model version found in path */
     RESHAPE_ERROR,              /*!< Impossible to perform reshape */
+    RESHAPE_REQUIRED,           /*!< Model instance needs to be reloaded with new shape */
+    BATCHSIZE_CHANGE_REQUIRED,  /*!< Model instance needs to be reloaded with new batch size */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
@@ -140,6 +142,14 @@ public:
 
     const StatusCode getCode() const {
         return this->code;
+    }
+
+    bool batchSizeChangeRequired() const {
+        return code == StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+    }
+
+    bool reshapeRequired() const {
+        return code == StatusCode::RESHAPE_REQUIRED;
     }
 
     bool operator==(const Status& status) const {

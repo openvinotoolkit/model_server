@@ -201,10 +201,11 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferRequestJustBeforePredict) {
         });
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard1;
-    ASSERT_EQ(getModelInstance(manager, config.getName(), config.getVersion(), modelInstance, modelInstancePredictRequestsHandlesCountGuard1), ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    ASSERT_EQ(getModelInstance(manager, config.getName(), config.getVersion(), modelInstance, modelInstancePredictRequestsHandlesCountGuard),
+        ovms::StatusCode::OK);
 
-    std::thread t2([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard1]() { modelInstance->reloadModel(newBatchSize, modelInstancePredictRequestsHandlesCountGuard1); });
+    std::thread t2([modelInstance, newBatchSize, &modelInstancePredictRequestsHandlesCountGuard]() { modelInstance->reloadModel(newBatchSize, {}, modelInstancePredictRequestsHandlesCountGuard); });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     releaseWaitBeforePerformInference.set_value();
     t2.join();

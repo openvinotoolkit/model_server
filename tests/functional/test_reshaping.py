@@ -38,7 +38,6 @@ fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 class TestModelReshaping:
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
         _, ports = start_server_face_detection_model_auto_shape
@@ -68,7 +67,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, FaceDetection.name, stub)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -102,7 +100,6 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
-    @pytest.mark.skip(reason="not implemented yet")
     def test_multi_local_model_reshaping_auto(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -113,7 +110,7 @@ class TestModelReshaping:
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'], FaceDetection.dtype)
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'], True,
-                                    FaceDetection.name, stub)
+                                    "face_detection_auto", stub)
 
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
@@ -133,7 +130,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, model_name, stub)
 
-    @pytest.mark.skip(reason="not implemented yet")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -143,7 +139,7 @@ class TestModelReshaping:
 
         for shape in auto_shapes:
             imgs = np.zeros(shape['in'], FaceDetection.dtype)
-            rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
+            rest_url = get_predict_url(model="face_detection_auto", port=ports["rest_port"])
             self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 

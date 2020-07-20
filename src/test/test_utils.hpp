@@ -30,7 +30,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
     std::filesystem::current_path().u8string() + "/src/test/dummy",
     "CPU",  // backend
-    1,      // batchsize
+    "1",      // batchsize
     1,      // NIREQ
     0       // model_version unuesed since version are read from path
 };

@@ -52,7 +52,7 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,      // batchsize
+        "1",    // batchsize
         1,      // NIREQ
         0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
@@ -122,7 +122,7 @@ TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLo
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,      // batchsize
+        "1",    // batchsize
         1,      // NIREQ
         0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
@@ -144,7 +144,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersion0ShouldReturnModelVersio
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,      // batchsize
+        "1",    // batchsize
         1,      // NIREQ
         0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
@@ -247,7 +247,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,      // batchsize
+        "1",    // batchsize
         1,      // NIREQ
         0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
@@ -269,7 +269,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
         "dummy",
         std::filesystem::current_path().u8string() + "/src/test/dummy",
         "CPU",  // backend
-        1,      // batchsize
+        "1",    // batchsize
         1,      // NIREQ
         0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
     };
