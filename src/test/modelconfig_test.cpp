@@ -252,9 +252,13 @@ TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     createConfigFileWithContent(json, filename);
 
+    std::unordered_map<std::string, std::string> expectedInputs = {
+            { "key", "value1"}
+    };
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
-    EXPECT_EQ(config.getMappingOutputs().empty(), true);
+    EXPECT_EQ(config.getMappingInputs(), expectedInputs);
     EXPECT_EQ(ret, ovms::StatusCode::OK);
 }
 
@@ -277,9 +281,13 @@ TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
     std::string filename = path + "/" + ovms::MAPPING_CONFIG_JSON;
     createConfigFileWithContent(json, filename);
 
+    std::unordered_map<std::string, std::string> expectedOutputs = {
+            { "key", "value2"}
+    };
+
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), true);
-    EXPECT_EQ(config.getMappingOutputs().empty(), false);
+    EXPECT_EQ(config.getMappingOutputs(), expectedOutputs);
     EXPECT_EQ(ret, ovms::StatusCode::OK);
 }
 
