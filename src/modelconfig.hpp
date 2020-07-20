@@ -29,9 +29,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
-#include <rapidjson/schema.h>
-#include <rapidjson/error/error.h>
-#include <rapidjson/error/en.h>
 
 #include "model_version_policy.hpp"
 #include "status.hpp"

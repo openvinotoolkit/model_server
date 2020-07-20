@@ -233,7 +233,7 @@ TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
     EXPECT_EQ(ret, ovms::StatusCode::OK);
 }
 
-TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
+TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
     ovms::ModelConfig config;
 
     const char* json = R"({
@@ -258,7 +258,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
     EXPECT_EQ(ret, ovms::StatusCode::OK);
 }
 
-TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
+TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
     ovms::ModelConfig config;
 
     const char* json = R"({
