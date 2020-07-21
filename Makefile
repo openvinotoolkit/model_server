@@ -124,13 +124,6 @@ endif
 	fi
 	@rm bandit.txt
 
-	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "bandit example_client/*.py > bandit.txt"
-	@if ! grep -FRq "No issues identified." bandit.txt; then\
-		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
-	fi
-	@rm bandit.txt
-
 clang-format: venv
 	@echo "Formating files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
