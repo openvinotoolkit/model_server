@@ -88,34 +88,26 @@ configuration file is [here](ams_models/vehicle_detection_adas_model.json)
 Below is a sample of the model output:
 ```json
 {
-   "subtype" : "vehicleDetection",
-   "entities" : [
-      {
-         "box" : {
-            "h" : 0.10686594247818,
-            "t" : 0.336242735385895,
-            "w" : 0.130945563316345,
-            "l" : 0.789495408535004
-         },
-         "tag" : {
-            "confidence" : 0.999798119068146,
-            "value" : "vehicle"
-         }
-      },
-      {
-         "box" : {
-            "h" : 0.143958985805511,
-            "l" : 0.640124976634979,
-            "t" : 0.308264225721359,
-            "w" : 0.159151077270508
-         },
-         "tag" : {
-            "value" : "vehicle",
-            "confidence" : 0.572816431522369
-         }
-      },
-    ],
-   "type" : "entity"
+  "inferences": [
+    {
+      "type": "entity",
+      "subtype": "vehicleDetection",
+      "entity": [
+        {
+          "tag": {
+            "value": "vehicle",
+            "confidence": 0.9723889827728271
+          },
+          "box": {
+            "l": 0.14129230380058289,
+            "t": 0.29160431027412415,
+            "w": 0.6850716173648834,
+            "h": 0.5349170863628387
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -139,16 +131,22 @@ Below is a sample of such model:
     "inferences": [
       {
         "type": "classification",
-        "subtype": "type",
+        "subtype": "color",
         "classification": {
-          "tag": "truck"
+          "tag": {
+            "value": "gray",
+            "confidence": 0.6284224987030029
+          }
         }
       },
       {
         "type": "classification",
-        "subtype": "color",
+        "subtype": "type",
         "classification": {
-          "tag": "gray"
+          "tag": {
+            "value": "truck",
+            "confidence": 0.9994522929191589
+          }
         }
       }
     ]
