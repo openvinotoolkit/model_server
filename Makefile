@@ -118,9 +118,11 @@ ifneq ($(shell grep -rl "bind-propagation=shared" | wc -l), 1)
 	$(error Do not use shared mount in docker files.)
 endif
 	@echo "Checking python files..."
-ifneq ($(shell bandit src/*.py example_client/*.py | grep "No issues identified." | wc -l), 1)
-        $(error Run bandit on src/*.py and example_client/*.py to fix issues.)
-endif
+	@. $(ACTIVATE); bash -c "bandit example_client/*.py > bandit.txt"
+	@if ! grep -FRq "No issues identified." bandit.txt; then\
+		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
+	fi
+	@rm bandit.txt
 
 clang-format: venv
 	@echo "Formating files with clang-format.."
