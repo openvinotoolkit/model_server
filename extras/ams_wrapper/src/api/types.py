@@ -39,7 +39,8 @@ class Attribute:
 
     def as_dict(self):
         result_dict = {
-            "tag": self.value,
+            "value": self.value,
+            "confidence": self.confidence
         }
         return result_dict
 
@@ -86,7 +87,9 @@ class SingleClassification:
         result_dict = {
             "type": self.type_name,
             "subtype": self.subtype_name,
-            "classification": self.attributes[0].as_dict()
+            "classification": {
+            	"tag": attribute.as_dict() for attribute in self.attributes
+            }
         }
         return result_dict
 
@@ -127,8 +130,14 @@ class Entity(ResultType):
 
     def as_dict(self):
         result_dict = {
-            "type": self.type_name,
-            "subtype": self.subtype_name,
-            "entities": [entity.as_dict() for entity in self.entities]
+            "inferences": [
+	    	{
+	            "type": self.type_name,
+	            "subtype": self.subtype_name,
+                    "entity": [entity.as_dict()
+                                    for entity in self.entities]
+                }
+	    ]
         }
         return result_dict
+
