@@ -21,7 +21,7 @@ namespace ovms {
 
 Status ExitNode::fetchResults(BlobMap&) {
     // Serialize results to proto
-    for (const auto& kv : this->input_blobs) {
+    for (const auto& kv : this->inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
 

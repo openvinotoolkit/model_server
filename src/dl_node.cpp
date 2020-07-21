@@ -17,28 +17,72 @@
 
 #include <spdlog/spdlog.h>
 
+#include "executinstreamidguard.hpp"
+#include "pipelinemessage.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
 
 Status DLNode::execute() {
     // Start inference asynchronously
+    auto status = getModelInstance(ModelManager::getInstance(),
+        this->modelName,
+        this->modelVersion.value_or(0),
+        this->model,
+        this->modelUnloadGuard);
+
+    if (!status.ok()) {
+        SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
+        return status;
+    }
+
+    // TODO: Validate [this->inputBlobs] against [model]
+
+    // Acquire infer request from pool
+    auto& ir_queue = this->model->getInferRequestsQueue();
+    this->streamIdGuard = std::make_unique<ExecutingStreamIdGuard>(ir_queue);
+    auto& infer_request = ir_queue.getInferRequest(this->streamIdGuard->getId());
+
+    // Prepare inference request, fill with input blobs
+    for (const auto& kv : this->inputBlobs) {
+        infer_request.SetBlob(kv.first, kv.second);
+    }
+
+    infer_request.SetCompletionCallback([this]() {
+        // After inference is completed, input blobs are not needed anymore
+        this->inputBlobs.clear();
+        // TODO: queue.push(this);
+    });
+
+    infer_request.StartAsync();
+
     return StatusCode::OK;
 }
 
 Status DLNode::fetchResults(BlobMap& outputs) {
-    /*
-        for each blob in inferrequest {
-            outputs[blob.name] = blob
+    // ::execute needs to be executed before ::fetchResults
+    if (this->model == nullptr) {
+        SPDLOG_INFO("Calling DLNode::fetchResults failed because execution failed (Node: {})", getName());
+        return StatusCode::UNKNOWN_ERROR;
+    }
+
+    // Get infer request corresponding to this node model
+    auto& infer_request = this->model->getInferRequestsQueue().getInferRequest(this->streamIdGuard->getId());
+
+    // Fill outputs map with result blobs. Fetch only those that are required in following nodes.
+    for (const auto& node : this->next) {
+        for (const auto& pair : node.get().getMappingByDependency(*this)) {
+            const auto& output_name = pair.first;
+            outputs[output_name] = infer_request.GetBlob(output_name);
+            SPDLOG_ERROR("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
+    }
 
-        SPDLOG_INFO("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), blob.name);
-    */
+    // After results are fetched, model and inference request are not needed anymore
+    this->streamIdGuard.reset();
+    this->model.reset();
+    this->modelUnloadGuard.reset();
 
-    // Fake output for now
-    InferenceEngine::SizeVector shape{1, 1000};
-    InferenceEngine::TensorDesc description{InferenceEngine::Precision::I8, shape, InferenceEngine::Layout::ANY};
-    outputs["resnet_output"] = InferenceEngine::make_shared_blob<int8_t>(description);
     return StatusCode::OK;
 }
 

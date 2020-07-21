@@ -32,44 +32,48 @@ using InputPairs = std::vector<std::pair<std::string, std::string>>;
 
 class Node {
 protected:
-    std::string node_name;
+    std::string nodeName;
 
     std::vector<std::reference_wrapper<Node>> previous;
     std::vector<std::reference_wrapper<Node>> next;
 
-    size_t finished_dependencies_count = 0;
+    size_t finishedDependenciesCount = 0;
 
     // Blobs ready and waiting for execution
-    std::unordered_map<std::string, InferenceEngine::Blob::Ptr> input_blobs;
+    std::unordered_map<std::string, InferenceEngine::Blob::Ptr> inputBlobs;
 
     // Input/Output name mapping and list of required inputs from previous nodes
-    std::unordered_map<std::string, InputPairs> blob_names_mapping;
+    std::unordered_map<std::string, InputPairs> blobNamesMapping;
 
 public:
-    Node(const std::string& node_name) :
-        node_name(node_name) {
+    Node(const std::string& nodeName) :
+        nodeName(nodeName) {
     }
 
-    const std::string& getName() const { return this->node_name; }
+    const std::string& getName() const { return this->nodeName; }
 
     virtual Status execute() = 0;
     virtual Status fetchResults(BlobMap& outputs) = 0;
 
     Status setInputs(const Node& dependency, BlobMap& inputs);
 
-    virtual void addDependency(Node& node, const InputPairs& blob_names_mapping) {
+    virtual void addDependency(Node& node, const InputPairs& blobNamesMapping) {
         this->previous.emplace_back(node);
-        this->blob_names_mapping[node.getName()] = blob_names_mapping;
+        this->blobNamesMapping[node.getName()] = blobNamesMapping;
     }
 
     virtual void addDependant(Node& node) { this->next.emplace_back(node); }
 
+    const InputPairs& getMappingByDependency(const Node& dependency) {
+        return blobNamesMapping.at(dependency.getName());
+    }
+
     void increaseFinishedDependencyCount() {
-        finished_dependencies_count++;
+        finishedDependenciesCount++;
     }
 
     bool isReady() const {
-        return finished_dependencies_count == previous.size();
+        return finishedDependenciesCount == previous.size();
     }
 };
 

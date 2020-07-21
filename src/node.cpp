@@ -24,12 +24,15 @@
 namespace ovms {
 
 Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
-    const auto& mapping_for_dependency = this->blob_names_mapping.at(dependency.getName());
+    // mapping for dependency - keeps mapping between dependency output name and this node input name
+    const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
 
+    // assign all input blobs from inputs that are required by this node for future inference
     for (const auto& pair : mapping_for_dependency) {
         const auto& dependency_output_name = pair.first;
         const auto& current_node_input_name = pair.second;
 
+        // possibly incorrectly constructed pipeline - required input missing from previous node
         auto it = inputs.find(dependency_output_name);
         if (it == inputs.end()) {
             SPDLOG_ERROR("Node::setInputs: error setting required input for {} from {}: dependency is missing output name {}",
@@ -43,7 +46,7 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
-        this->input_blobs[current_node_input_name] = it->second;
+        this->inputBlobs[current_node_input_name] = it->second;
     }
 
     return StatusCode::OK;

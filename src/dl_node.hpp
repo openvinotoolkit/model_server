@@ -15,24 +15,31 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 
+#include "executinstreamidguard.hpp"
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "node.hpp"
 
 namespace ovms {
 
 class DLNode : public Node {
-    std::string model_name;
-    std::optional<model_version_t> model_version;
+    std::string modelName;
+    std::optional<model_version_t> modelVersion;
+
+    std::shared_ptr<ModelInstance> model;
+    std::unique_ptr<ExecutingStreamIdGuard> streamIdGuard;
+    std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
 public:
-    DLNode(const std::string& node_name, const std::string& model_name, std::optional<model_version_t> model_version) :
-        Node(node_name),
-        model_name(model_name),
-        model_version(model_version) {
+    DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion) :
+        Node(nodeName),
+        modelName(modelName),
+        modelVersion(modelVersion) {
     }
 
     Status execute() override;
