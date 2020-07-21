@@ -34,25 +34,23 @@ def test_single_entity():
 
 def test_entity():
     expected_dict = {
-        "type": "entity",
-        "subtype": "vehicleDetection",
-        "entities": [
-            {
-                "tag": {
-                    "value": "car",
-                    "confidence": 0.97
-                },
-                "box": {"l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0}
-            },
-            {
-                "tag": {
-                    "value": "bike",
-                    "confidence": 0.94
-                },
-                "box": {"l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0}
-            },
-        ]
-    }
+                        'inferences': [
+                            {
+                                'type': 'entity', 
+                                'subtype': 'vehicleDetection', 
+                                'entity': [
+                                    {
+                                        'tag': {'value': 'car', 'confidence': 0.97}, 
+                                        'box': {'l': 1.0, 't': 2.0, 'w': 3.0, 'h': 4.0}
+                                    },
+                                    {
+                                        'tag': {'value': 'bike', 'confidence': 0.94}, 
+                                        'box': {'l': 0.0, 't': 0.0, 'w': 0.0, 'h': 0.0}
+                                    }
+                                ]
+                            }
+                        ]
+                    }
 
     entities = [
         SingleEntity(Tag("car", 0.97), Rectangle(1.0, 2.0, 3.0, 4.0)),
