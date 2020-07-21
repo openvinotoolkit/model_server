@@ -73,24 +73,30 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
 
 @pytest.mark.parametrize("inference_output,expected_response", [
     (MOCK_INFERENCE_OUTPUT,
-     {
-         "inferences": [
-             {
-                 "type": "classification",
-                 "subtype": "color",
-                 "classification": {
-                     "tag": "yellow"
-                 }
-             },
-             {
-                 "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             }
-         ]
-     }
+        {
+            "inferences": [
+                {
+                    "type": "classification",
+                    "subtype": "color", 
+                    "classification": {
+                        "tag": {
+                            "value": "black", 
+                            "confidence": 0.05
+                        }
+                    }
+                }, 
+                {
+                    "type": "classification", 
+                    "subtype": "type", 
+                    "classification": {
+                        "tag": {
+                            "value": "truck", 
+                            "confidence": 0.1
+                        }
+                    }
+                }
+            ]
+        }
      )])
 def test_postprocess_inference_output(inference_output, expected_response, fake_output_config):
     model = ClassificationAttributes(endpoint=None, ovms_connector=None, input_configs=None,
@@ -103,22 +109,28 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
 @pytest.mark.parametrize("inference_output,expected_response,top_k", [
     (MOCK_INFERENCE_OUTPUT,
      {
-         "inferences": [
-             {
-                 "type": "classification",
-                 "subtype": "color",
-                 "classification": {
-                     "tag": "yellow"
-                 }
-             },
-             {
-                 "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             }
-         ]
+        "inferences": [
+            {
+                "type": "classification",
+                "subtype": "color", 
+                "classification": {
+                    "tag": {
+                        "value": "yellow", 
+                        "confidence": 0.3
+                    }
+                }
+            }, 
+            {
+                "type": "classification", 
+                "subtype": "type", 
+                "classification": {
+                    "tag": {
+                        "value": "van", 
+                        "confidence": 0.5
+                    }
+                }
+            }
+        ]
      },
      1
      )])
@@ -135,22 +147,28 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
 @pytest.mark.parametrize("inference_output,expected_response,confidence_threshold", [
     (MOCK_INFERENCE_OUTPUT,
      {
-         "inferences": [
-             {
-                 "type": "classification",
-                 "subtype": "color",
-                 "classification": {
-                     "tag": "yellow"
-                 }
-             },
-             {
-                 "type": "classification",
-                 "subtype": "type",
-                 "classification": {
-                     "tag": "van"
-                 }
-             }
-         ]
+        "inferences": [
+            {
+                "type": "classification",
+                "subtype": "color", 
+                "classification": {
+                    "tag": {
+                        "value": "blue", 
+                        "confidence": 0.2
+                    }
+                }
+            }, 
+            {
+                "type": "classification", 
+                "subtype": "type", 
+                "classification": {
+                    "tag": {
+                        "value": "bus", 
+                        "confidence": 0.2
+                    }
+                }
+            }
+        ]
      },
      0.2
      )])
