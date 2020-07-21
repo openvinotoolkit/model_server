@@ -190,23 +190,22 @@ class TestAmsInference:
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
-        print(response_json)
         # highest_probability = 0.0
         # highest_value = ""
         # attribute_name = ""
 
-        highest_value = response_json["inferences"][0]["classification"]["tag"]
+        highest_value = response_json["inferences"][0]["classification"]["tag"]["value"]
 
         assert highest_value == "red"
-        #        assert attribute_name == "color"
+        #assert attribute_name == "color"
 
         # highest_probability = 0.0
         # highest_value = ""
         # attribute_name = ""
 
-        highest_value = response_json["inferences"][1]["classification"]["tag"]
+        highest_value = response_json["inferences"][1]["classification"]["tag"]["value"]
         assert highest_value == "truck"
-    #        assert attribute_name == "type"
+        #assert attribute_name == "type"
 
     def test_vehicleDetection(self, start_ams_service, object_detection_image_two_entities):
         with open(object_detection_image_two_entities, mode='rb') as image_file:
@@ -224,13 +223,14 @@ class TestAmsInference:
         assert response.headers.get('Content-Type') == 'application/json'
 
         response_json = response.json()
+        print(response_json)
 
         highest_probability = 0.0
         highest_box = dict()
         tag_value = ""
         detections_count = 0
 
-        for detection in response_json["entities"]:
+        for detection in response_json["inferences"][0]["entity"]:
             detections_count += 1
 
             if detection["tag"]["confidence"] > highest_probability:
@@ -265,7 +265,7 @@ class TestAmsInference:
         response_json = response.json()
 
         detection = max(
-            response_json['entities'], key=lambda entity: entity['tag']['confidence'])
+            response_json["inferences"][0]['entity'], key=lambda entity: entity['tag']['confidence'])
 
         assert detection['tag']['confidence'] >= 0.98
         assert detection['tag']['value'] == 'face'
@@ -295,7 +295,7 @@ class TestAmsInference:
         response_json = response.json()
 
         detection = max(
-            response_json['entities'], key=lambda entity: entity['tag']['confidence'])
+            response_json["inferences"][0]['entity'], key=lambda entity: entity['tag']['confidence'])
 
         assert detection['tag']['confidence'] >= 0.99
         assert detection['tag']['value'] == 'pedestrian'
