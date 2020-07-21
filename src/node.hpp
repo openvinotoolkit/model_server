@@ -67,13 +67,11 @@ public:
     const InputPairs& getMappingByDependency(const Node& dependency) {
         return blobNamesMapping.at(dependency.getName());
     }
-
-    void increaseFinishedDependencyCount() {
-        finishedDependenciesCount++;
-    }
-
     bool isReady() const {
         return finishedDependenciesCount == previous.size();
+    }
+    const std::vector<std::reference_wrapper<Node>>& getNextNodes() {
+        return next;
     }
 };
 

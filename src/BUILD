@@ -46,7 +46,6 @@ cc_library(
         "ovinferrequestsqueue.hpp",
         "pipeline.cpp",
         "pipeline.hpp",
-        "pipelinemessage.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",

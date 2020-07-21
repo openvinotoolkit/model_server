@@ -14,57 +14,78 @@
 // limitations under the License.
 //*****************************************************************************
 #include "pipeline.hpp"
+
+#include <algorithm>
+#include <map>
+#include <string>
+#include <utility>
+
+#include "threadsafequeue.hpp"
+
 namespace ovms {
+std::map<const std::string, bool> Pipeline::prepareStatusMap() const {
+    // void Pipeline::prepareStatusMap() const {
+    std::map<const std::string, bool> nameFlagMap;
+    for (const auto& node : nodes) {
+        nameFlagMap.emplace(std::make_pair(node->getName(), false));
+    }
+    return std::move(nameFlagMap);
+}
+
 Status Pipeline::execute() {
-    // before event loop
-    // deserialize to OV Blobs
-    // event loop
-    // trigger first Node
-
-    // ovms::Status status = entry.execute();
-    // if(!status.ok()) {
-    //     SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-    //         pipeline.getName(), node.getName(), status.string());
-    //     return status;
-    // }
-    // // first node will triger first message
-    // while (true)
-    // {
-    //     ovms::Message message{messageQueue.waitAndPull()};
-    //     status = message.getStatus();
-    //     if(!status.ok()) {
-    //         SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-    //             pipeline.getName(), node.getName(), status.string());
-    //         //cannot return need to check if any infer is in progress
-    //     }
-    //     auto finishedNode = message.getNode();
-    //     std::map<string, OV:Blob> finishedNodeOutputBlobMap;
-    //     status = finishedNode->getResultsAndClearInputs(std::move(message), finishedNodeOutputBlobMap);
-    //     if (!status.ok()) {
-    //         SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-    //             pipeline.getName(), node.getName(), status.string());
-    //         //cannot return need to check if any infer is in progress
-    //     }
-    //     // either this or use pipeline vector of std::atomic/int to keep
-    //     auto& finishedNodeDependants = finishedNode.getDependants();
-    //     for (auto& dependant : finishedNodeDependants) {
-    //         dependant.setInputs(finishedNode.getName(), finishedNodeOutputBlobMap);
-    //     finishedNodeBlobs.clear();
-    //     for (auto& dependant : finishedNodeDependants) {
-
-    //         dependant.executeIfReady();
-    //         status = dependant.execute();
-    //         if (!status.ok()) {
-    //             SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-    //                 pipeline.getName(), dependant.getName(), status.string());
-    //         //cannot return need to check if any infer is in progress
-    //         }
-    //     }
-    // need to extrac which node finished then unblock further infers by destroying message
-    // }
-
-    // after event loop
-    // serialize to TFProto
-    return StatusCode::OK;
+    ThreadSafeQueue<std::reference_wrapper<Node>> finishedNodeQueue;
+    bool errorOccured = false;
+    auto started{prepareStatusMap()};
+    auto finished{prepareStatusMap()};
+    started.at(entry.getName()) = true;
+    ovms::Status status = entry.execute();  // first node will triger first message
+    if (!status.ok()) {
+        SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
+            getName(), entry.getName(), status.string());
+        return status;
+    }
+    while (true) {
+        auto& finishedNode = finishedNodeQueue.waitAndPull().get();
+        BlobMap finishedNodeOutputBlobMap;
+        status = finishedNode.fetchResults(finishedNodeOutputBlobMap);
+        finished.at(finishedNode.getName()) = true;
+        if (!status.ok()) {
+            errorOccured = true;
+            SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
+                getName(), finishedNode.getName(), status.string());
+        }
+        if (errorOccured) {
+            if (finished == started) {
+                break;
+            } else {  // will wait for all triggered async inferences to finish
+                continue;
+            }
+        }
+        if (std::all_of(finished.begin(), finished.end(), [](auto pair) { return pair.second; })) {
+            break;
+        }
+        auto& nextNodesFromFinished = finishedNode.getNextNodes();
+        for (auto& nextNode : nextNodesFromFinished) {
+            nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
+        }
+        finishedNodeOutputBlobMap.clear();
+        for (auto& nextNode : nextNodesFromFinished) {
+            if (nextNode.get().isReady()) {
+                started.at(nextNode.get().getName()) = true;
+                status = nextNode.get().execute();
+                if (!status.ok()) {
+                    errorOccured = true;
+                    SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
+                        getName(), nextNode.get().getName(), status.string());
+                }
+            }
+        }
+    }
+    if (errorOccured) {
+        // TODO decide what status code it should be - either previous failure
+        // or general PIPELINE_FAILED since previous issue was already reported
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    return std::move(status);
 }
 }  // namespace ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -23,20 +24,19 @@
 #include "dl_node.hpp"
 #include "entry_node.hpp"
 #include "exit_node.hpp"
-#include "pipelinemessage.hpp"
 #include "status.hpp"
-#include "threadsafequeue.hpp"
 
 namespace ovms {
 
 class Pipeline {
     std::vector<std::unique_ptr<Node>> nodes;
-
+    const std::string name;
     EntryNode& entry;
     ExitNode& exit;
 
 public:
     Pipeline(EntryNode& entry, ExitNode& exit) :
+        name("name"),
         entry(entry),
         exit(exit) {}
 
@@ -51,10 +51,15 @@ public:
         from.addDependant(to);
         to.addDependency(from, blobNamesMapping);
     }
+
     Status execute();
+    const std::string& getName() const {
+        return name;
+    }
 
 private:
-    ThreadSafeQueue<PipelineMessage> messageQueue;
+    // TODO consider creating id for each node and using vector<bool>
+    std::map<const std::string, bool> prepareStatusMap() const;
 };
 
 }  // namespace ovms

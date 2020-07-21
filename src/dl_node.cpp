@@ -18,7 +18,6 @@
 #include <spdlog/spdlog.h>
 
 #include "executinstreamidguard.hpp"
-#include "pipelinemessage.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
