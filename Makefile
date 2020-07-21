@@ -116,8 +116,8 @@ ifneq ($(shell grep -rl "docker run" . | xargs grep "docker run" | grep ":shared
 endif
 ifneq ($(shell grep -rl "bind-propagation=shared" | wc -l), 1)
 	$(error Do not use shared mount in docker files.)
+endif
 	@echo "Checking python files..."
-        @. $(ACTIVATE); 
 ifneq ($(shell bandit src/*.py example_client/*.py | grep "No issues identified." | wc -l), 1)
         $(error Run bandit on src/*.py and example_client/*.py to fix issues.)
 endif
