@@ -1,0 +1,9 @@
+FROM centos:7.8.2003
+
+RUN yum install -y curl openssl ca-certificates libxml2 numactl-libs && yum clean all && cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+
+RUN mkdir /ovms/
+COPY ovms.tar.gz /
+RUN tar -xf ovms.tar.gz && rm ovms.tar.gz
+RUN /ovms/bin/./ovms --help
+ENTRYPOINT ["/ovms/bin/ovms"]

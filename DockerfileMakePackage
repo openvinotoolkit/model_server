@@ -32,13 +32,15 @@ RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --remo
 RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /ovms
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libgcc' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
+#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libgcc' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libssl' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libcrypto' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libusb' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
 RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libboost' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libnuma' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
+#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libnuma' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
+
+RUN cp -v /ovms/release_files/license.txt /ovms_release/
 
 RUN ls -lahR /ovms_release/
 

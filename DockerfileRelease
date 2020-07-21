@@ -1,14 +1,31 @@
-ARG PKG_IMAGE
+#
+#
+#
+#   WARNING
+#
+#           THIS FILE IS CURRENTLY NOT BEING USED.
+#
+#           We'll use it again, after we'll get a green light
+#           for shipping docker images to customers.
+#
+#
+#
+#
+#
+
+
+
+
+ARG PKG_IMAGE 
 ARG DIST_IMAGE
 
 FROM $PKG_IMAGE as prepare_pkg
-
 
 RUN ls -lahR /ovms
 
 FROM $DIST_IMAGE
 
-RUN yum install -y curl openssl ca-certificates && yum clean all && cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+RUN yum install -y curl openssl ca-certificates libxml2 libxml2 numactl-libs && yum clean all && cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 RUN mkdir /ovms/
 COPY --from=prepare_pkg ovms.tar.gz /
