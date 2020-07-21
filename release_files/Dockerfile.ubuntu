@@ -1,0 +1,12 @@
+FROM ubuntu:18.04
+
+WORKDIR /
+COPY ovms.tar.gz /
+
+RUN tar -xf ovms.tar.gz
+RUN apt update -y && apt install -y libxml2 libgssapi-krb5-2 ca-certificates openssl libnuma1
+
+RUN /ovms/bin/./ovms --help
+
+ENTRYPOINT ["/ovms/bin/ovms"]
+

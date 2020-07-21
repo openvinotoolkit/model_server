@@ -114,6 +114,7 @@ RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 COPY src/ /ovms/src/
+COPY release_files/ /ovms/release_files/
 
 ##### WORKAROUND: libHDDL* links with old protobuf version. Disabling:
 RUN rm -rf /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libHDDLPlugin.so \
