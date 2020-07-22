@@ -166,7 +166,7 @@ Status HttpRestApiHandler::processPredictRequest(
     }
 
     tensorflow::serving::PredictResponse response_proto;
-    status = inference(*modelInstance, &request_proto, &response_proto, modelInstancePredictRequestsHandlesCountGuard);
+    status = inference(*modelInstance, &request_proto, &response_proto, modelInstanceUnloadGuard);
     if (!status.ok()) {
         return status;
     }

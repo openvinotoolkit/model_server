@@ -276,7 +276,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
     setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
     EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
@@ -308,7 +308,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> predictHandlesCounterGuard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
     EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }

@@ -31,8 +31,6 @@ const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
-=======
->>>>>>> Add PipelineMessage class
 Status getModelInstance(ModelManager& manager,
     const std::string& modelName,
     model_version_t modelVersionId,
@@ -45,6 +43,8 @@ Status inference(
     ModelInstance& modelVersion,
     const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,
     size_t requestedBatchSize,

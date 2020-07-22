@@ -96,7 +96,7 @@ Status inference(
     ModelInstance& modelVersion,
     const PredictRequest* requestProto,
     PredictResponse* responseProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     Timer timer;
     using std::chrono::microseconds;
 
@@ -147,7 +147,7 @@ Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
     const PredictRequest* requestProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
         status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelInstancePredictRequestsHandlesCountGuardPtr);
