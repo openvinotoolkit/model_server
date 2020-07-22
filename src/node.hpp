@@ -23,6 +23,7 @@
 #include <inference_engine.hpp>
 
 #include "status.hpp"
+#include "threadsafequeue.hpp"
 
 namespace ovms {
 
@@ -52,7 +53,7 @@ public:
 
     const std::string& getName() const { return this->nodeName; }
 
-    virtual Status execute() = 0;
+    virtual Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) = 0;
     virtual Status fetchResults(BlobMap& outputs) = 0;
 
     Status setInputs(const Node& dependency, BlobMap& inputs);

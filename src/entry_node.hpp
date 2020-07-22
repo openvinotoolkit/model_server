@@ -29,7 +29,10 @@ public:
         Node("entry"),
         request(request) {}
 
-    Status execute() override { return StatusCode::OK; }
+    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {
+        notifyEndQueue.push(*this);
+        return StatusCode::OK;
+    }
 
     Status fetchResults(BlobMap& outputs) override;
 

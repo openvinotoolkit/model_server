@@ -71,30 +71,11 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
     pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
 
-    Node* input_ptr = input.get();
-    Node* model_ptr = model.get();
-    Node* output_ptr = output.get();
-
     pipeline.push(std::move(input));
     pipeline.push(std::move(model));
     pipeline.push(std::move(output));
 
-    // Event loop simulation
-    BlobMap blobs;
-    input_ptr->execute();
-    blobs.clear();
-    input_ptr->fetchResults(blobs);
-
-    model_ptr->setInputs(*input_ptr, blobs);
-    blobs.clear();
-    model_ptr->execute();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Simulate event loop wait for inference to happen
-    model_ptr->fetchResults(blobs);
-
-    output_ptr->setInputs(*model_ptr, blobs);
-    blobs.clear();
-    output_ptr->execute();
-    output_ptr->fetchResults(blobs);
+    pipeline.execute();
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
 
@@ -111,7 +92,6 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     // Most basic configuration, just process single dummy model request
 
     const int N = 10;
-
     // input      dummy x N      output
     //  O------->O->O...O->O------->O
 
@@ -144,31 +124,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     for (auto& dummy_node : dummy_nodes) {
         pipeline.push(std::move(dummy_node));
     }
-
-    // Event loop simulation
-    BlobMap blobs;
-    input_ptr->execute();
-    blobs.clear();
-    input_ptr->fetchResults(blobs);
-
-    dummy_node_ptr[0]->setInputs(*input_ptr, blobs);
-    blobs.clear();
-    dummy_node_ptr[0]->execute();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Simulate event loop wait for inference to happen
-    dummy_node_ptr[0]->fetchResults(blobs);
-
-    for (int i = 1; i < N; i++) {
-        dummy_node_ptr[i]->setInputs(*(dummy_node_ptr[i - 1]), blobs);
-        blobs.clear();
-        dummy_node_ptr[i]->execute();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Simulate event loop wait for inference to happen
-        dummy_node_ptr[i]->fetchResults(blobs);
-    }
-
-    output_ptr->setInputs(*(dummy_node_ptr[N - 1]), blobs);
-    blobs.clear();
-    output_ptr->execute();
-    output_ptr->fetchResults(blobs);
+    pipeline.execute();
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
 

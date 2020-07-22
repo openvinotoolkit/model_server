@@ -45,7 +45,7 @@ public:
         modelManager(modelManager) {
     }
 
-    Status execute() override;
+    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override;
 
     Status fetchResults(BlobMap& outputs) override;
 

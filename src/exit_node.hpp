@@ -32,7 +32,10 @@ public:
 
     // Exit node does not have execute logic.
     // It serializes its received input blobs to proto in ::fetchResults
-    Status execute() override { return StatusCode::OK; }
+    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {
+        notifyEndQueue.push(*this);
+        return StatusCode::OK;
+    }
 
     Status fetchResults(BlobMap& outputs) override;
 

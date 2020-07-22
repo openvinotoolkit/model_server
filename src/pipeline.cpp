@@ -38,7 +38,7 @@ Status Pipeline::execute() {
     auto started{prepareStatusMap()};
     auto finished{prepareStatusMap()};
     started.at(entry.getName()) = true;
-    ovms::Status status = entry.execute();  // first node will triger first message
+    ovms::Status status = entry.execute(finishedNodeQueue);  // first node will triger first message
     if (!status.ok()) {
         SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
             getName(), entry.getName(), status.string());
@@ -72,7 +72,7 @@ Status Pipeline::execute() {
         for (auto& nextNode : nextNodesFromFinished) {
             if (nextNode.get().isReady()) {
                 started.at(nextNode.get().getName()) = true;
-                status = nextNode.get().execute();
+                status = nextNode.get().execute(finishedNodeQueue);
                 if (!status.ok()) {
                     errorOccured = true;
                     SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",

@@ -22,7 +22,7 @@
 
 namespace ovms {
 
-Status DLNode::execute() {
+Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) {
     // Start inference asynchronously
     auto status = getModelInstance(
         this->modelManager,
@@ -64,11 +64,11 @@ Status DLNode::execute() {
         infer_request.SetBlob(kv.first, kv.second);
     }
 
-    infer_request.SetCompletionCallback([this]() {
+    infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
         SPDLOG_INFO("Completion callback received for node name: {}", this->getName());
         // After inference is completed, input blobs are not needed anymore
         this->inputBlobs.clear();
-        // TODO: queue.push(this);
+        notifyEndQueue.push(*this);
     });
 
     SPDLOG_INFO("Starting infer async for node name: {}", getName());
