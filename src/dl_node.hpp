@@ -23,6 +23,7 @@
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "modelmanager.hpp"
 #include "node.hpp"
 
 namespace ovms {
@@ -30,21 +31,25 @@ namespace ovms {
 class DLNode : public Node {
     std::string modelName;
     std::optional<model_version_t> modelVersion;
+    ModelManager& modelManager;
 
     std::shared_ptr<ModelInstance> model;
     std::unique_ptr<ExecutingStreamIdGuard> streamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
 public:
-    DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion) :
+    DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         Node(nodeName),
         modelName(modelName),
-        modelVersion(modelVersion) {
+        modelVersion(modelVersion),
+        modelManager(modelManager) {
     }
 
     Status execute() override;
 
     Status fetchResults(BlobMap& outputs) override;
+
+    Status validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info);
 };
 
 }  // namespace ovms

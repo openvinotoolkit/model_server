@@ -33,17 +33,6 @@
 using testing::Each;
 using testing::Eq;
 
-class ConstructorEnabledModelManager : public ovms::ModelManager {
-public:
-    ConstructorEnabledModelManager() :
-        ModelManager() {}
-    ~ConstructorEnabledModelManager() {
-        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-        models.clear();
-        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-    }
-};
-
 class TestPredict : public ::testing::Test {
 public:
     void SetUp() {

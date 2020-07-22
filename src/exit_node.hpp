@@ -40,6 +40,8 @@ public:
     void addDependant(Node& node) override {
         throw "This node cannot have dependant";
     }
+
+    Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);
 };
 
 }  // namespace ovms

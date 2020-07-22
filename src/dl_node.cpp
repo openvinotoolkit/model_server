@@ -24,7 +24,8 @@ namespace ovms {
 
 Status DLNode::execute() {
     // Start inference asynchronously
-    auto status = getModelInstance(ModelManager::getInstance(),
+    auto status = getModelInstance(
+        this->modelManager,
         this->modelName,
         this->modelVersion.value_or(0),
         this->model,
@@ -35,7 +36,23 @@ Status DLNode::execute() {
         return status;
     }
 
-    // TODO: Validate [this->inputBlobs] against [model]
+    // TODO: If precision does not match, create new blob with proper precision
+
+    // Validate each blob against its OV tensor info
+    const auto& inputsInfo = this->model->getInputsInfo();
+    for (const auto& kv : this->inputBlobs) {
+        const auto& name = kv.first;
+        auto& blob = kv.second;
+
+        if (inputsInfo.count(name) == 0) {
+            return StatusCode::INVALID_MISSING_INPUT;
+        }
+
+        status = validate(blob, *inputsInfo.at(name));
+        if (!status.ok()) {
+            return status;
+        }
+    }
 
     // Acquire infer request from pool
     auto& ir_queue = this->model->getInferRequestsQueue();
@@ -48,11 +65,13 @@ Status DLNode::execute() {
     }
 
     infer_request.SetCompletionCallback([this]() {
+        SPDLOG_INFO("Completion callback received for node name: {}", this->getName());
         // After inference is completed, input blobs are not needed anymore
         this->inputBlobs.clear();
         // TODO: queue.push(this);
     });
 
+    SPDLOG_INFO("Starting infer async for node name: {}", getName());
     infer_request.StartAsync();
 
     return StatusCode::OK;
@@ -81,6 +100,18 @@ Status DLNode::fetchResults(BlobMap& outputs) {
     this->streamIdGuard.reset();
     this->model.reset();
     this->modelUnloadGuard.reset();
+
+    return StatusCode::OK;
+}
+
+Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info) {
+    if (info.getPrecision() != blob->getTensorDesc().getPrecision()) {
+        return StatusCode::INVALID_PRECISION;
+    }
+
+    if (info.getShape() != blob->getTensorDesc().getDims()) {
+        return StatusCode::INVALID_SHAPE;
+    }
 
     return StatusCode::OK;
 }

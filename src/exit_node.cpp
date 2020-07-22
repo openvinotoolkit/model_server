@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "tensorflow/core/framework/tensor.h"
+
 namespace ovms {
 
 Status ExitNode::fetchResults(BlobMap&) {
@@ -25,18 +27,56 @@ Status ExitNode::fetchResults(BlobMap&) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
 
-        // Hardcoded precision for now
-        tensorflow::TensorProto& proto = (*this->response->mutable_outputs())[output_name];
-        proto.set_dtype(tensorflow::DataType::DT_INT8);
-
-        auto description = blob->getTensorDesc();
-        for (int dim : description.getDims()) {
-            proto.mutable_tensor_shape()->add_dim()->set_size(dim);
+        auto& proto = (*this->response->mutable_outputs())[output_name];
+        auto status = serialize(blob, proto);
+        if (!status.ok()) {
+            return status;
         }
-        // proto.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
 
         SPDLOG_INFO("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
     }
+
+    return StatusCode::OK;
+}
+
+Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto) {
+    // Set size
+    for (size_t dim : blob->getTensorDesc().getDims()) {
+        proto.mutable_tensor_shape()->add_dim()->set_size(dim);
+    }
+
+    // Set precision
+    switch (blob->getTensorDesc().getPrecision()) {
+    case InferenceEngine::Precision::FP32:
+        proto.set_dtype(tensorflow::DataTypeToEnum<float>::value);
+        break;
+    case InferenceEngine::Precision::I32:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);
+        break;
+    case InferenceEngine::Precision::I16:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
+        break;
+    case InferenceEngine::Precision::U8:
+        proto.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value);
+        break;
+    case InferenceEngine::Precision::I8:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
+        break;
+    case InferenceEngine::Precision::U16:
+        proto.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value);  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
+        break;
+    case InferenceEngine::Precision::FP16:
+        proto.set_dtype(tensorflow::DataTypeToEnum<float>::value);  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
+        break;
+    case InferenceEngine::Precision::I64:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);  // Manually tested that OV I64 = TF int32_t
+        break;
+    default:
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
+
+    // Set content
+    proto.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
 
     return StatusCode::OK;
 }

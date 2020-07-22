@@ -37,6 +37,9 @@ public:
     void addDependency(Node&, const InputPairs&) override {
         throw "This node cannot have dependency";
     }
+
+    // Deserialize proto to blob
+    static Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
 };
 
 }  // namespace ovms
