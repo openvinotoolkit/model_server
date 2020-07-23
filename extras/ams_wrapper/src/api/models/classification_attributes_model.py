@@ -19,7 +19,7 @@ import json
 from src.logger import get_logger
 from src.api.models.model import Model
 from src.api.models.model_config import ModelOutputConfiguration
-from src.api.types import Attribute, SingleClassification, Classification
+from src.api.types import Tag, SingleClassification, Classification
 
 logger = get_logger(__name__)
 
@@ -31,7 +31,7 @@ class ClassificationAttributes(Model):
         classifications = []
 
         for output_name in self.labels.keys():
-            attributes = []
+            tags = []
             highest_prob = 0.0
 
             if output_name not in inference_output:
@@ -58,24 +58,25 @@ class ClassificationAttributes(Model):
                     highest_prob = probability
 
                 if is_softmax or is_softmax is None:
-                    attribute = Attribute(class_name, probability)
+                    tag = Tag(class_name, probability)
                 else:
                     value = probability * value_multiplier
-                    attribute = Attribute(class_name, value)
+                    tag = Tag(class_name, value)
 
-                attributes.append(attribute)
+                tags.append(tag)
 
-            attributes.sort(key=lambda attr: attr.confidence, reverse=True)
+            tags.sort(key=lambda attr: attr.confidence, reverse=True)
             if current_conf.top_k_results:
-                attributes = attributes[:current_conf.top_k_results]
+                tags = tags[:current_conf.top_k_results]
             if current_conf.confidence_threshold:
-                attributes = [attr for attr in attributes
-                              if attr.confidence >= current_conf.confidence_threshold]
-            classification = SingleClassification(subtype_name=output_name, attributes=attributes)
-            classifications.append(classification)
+                tags = [attr for attr in tags
+                        if attr.confidence >= current_conf.confidence_threshold]
+            if len(tags) != 0:
+                for tag in tags:
+                    classification = SingleClassification(subtype_name=output_name, tag=tag)
+                    classifications.append(classification)
 
         model_classification = Classification(classifications=classifications)
-
         response = json.dumps(model_classification.as_dict())
 
         return response
