@@ -34,11 +34,12 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
+        notifyEndQueue.push(*this);
         return status;
     }
-
     status = prepareInputsAndModelForInference();
     if (!status.ok()) {
+        notifyEndQueue.push(*this);
         return status;
     }
 
@@ -51,7 +52,7 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
     for (const auto& kv : this->inputBlobs) {
         infer_request.SetBlob(kv.first, kv.second);
     }
-
+    SPDLOG_INFO("Setting completion callback for node name: {}", this->getName());
     infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
         SPDLOG_INFO("Completion callback received for node name: {}", this->getName());
         // After inference is completed, input blobs are not needed anymore

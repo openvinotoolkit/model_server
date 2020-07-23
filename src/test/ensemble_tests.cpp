@@ -20,6 +20,7 @@
 #include "../pipeline.hpp"
 #define DEBUG
 #include "../timer.hpp"
+#include "../status.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -30,7 +31,9 @@ class EnsembleFlowTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Prepare manager
-        setenv("NIREQ", "10", 1);
+        setenv("NIREQ", "200", 1);
+        // TODO above should be set to eg 2-3-4 when problem with parallel execution on the same
+        // model will be resolved in model ensemble
 
         // Prepare request
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
@@ -47,8 +50,8 @@ protected:
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
     std::string dummyInputName = "b";
     std::string dummyOutputName = "a";
-    std::string customPipelineInputName = "custom_dummy_input";
-    std::string customPipelineOutputName = "custom_dummy_output";
+    const std::string customPipelineInputName = "custom_dummy_input";
+    const std::string customPipelineOutputName = "custom_dummy_output";
 
     std::vector<float> requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
 };
@@ -344,4 +347,146 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     float* expected_output = responseData.data();
 
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH * WIDTH * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ParallelDummyModels) {
+    // Most basic configuration, just process single dummy model request
+    // TODO For now will fail if NIREQ < N * threads
+    const int N = 200;
+    /* input      dummy x N      output
+        O---------->O------------->O
+        ...        ...            /\
+        L---------->O-------------_|
+    */
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto output = std::make_unique<ExitNode>(&response);
+    Pipeline pipeline(*input, *output);
+    std::unique_ptr<DLNode> dummy_nodes[N];
+
+    for (int i = 0; i < N; i++) {
+        dummy_nodes[i] = std::make_unique<DLNode>("dummy_node_" + std::to_string(i), dummyModelName, requestedModelVersion, managerWithDummyModel);
+        pipeline.connect(*input, *(dummy_nodes[i]), {{customPipelineInputName + std::to_string(i), dummyInputName}});
+        pipeline.connect(*(dummy_nodes[i]), *output, {{dummyOutputName, customPipelineOutputName + std::to_string(i)}});
+        pipeline.push(std::move(dummy_nodes[i]));
+    }
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(output));
+
+    // Prepare request
+    std::vector<float> requestDataT(N * DUMMY_MODEL_INPUT_SIZE);
+    for (int i = 0; i < N; ++i) {
+        std::transform(requestData.begin(),
+            requestData.end(),
+            requestDataT.begin() + DUMMY_MODEL_INPUT_SIZE * i,
+            [i](int x) { return x + i; });
+    }
+    for (int i = 0; i < N; i++) {
+        tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName + std::to_string(i)];
+        proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        proto.mutable_tensor_content()->assign((char*)(requestDataT.data() + i * DUMMY_MODEL_INPUT_SIZE),
+                                               DUMMY_MODEL_INPUT_SIZE * sizeof(float));
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.mutable_tensor_shape()->add_dim()->set_size(10);
+    }
+    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+    for (int i = 0; i < N; i++) {
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName + std::to_string(i)), 1);
+    }
+    auto responseData = requestDataT;
+    std::transform(requestDataT.begin(), requestDataT.end(), requestDataT.begin(), [](float& v) { return v + 1.0; });
+
+    float* expected_output = requestDataT.data();
+    for (int i = 0; i < N; i++) {
+        float* actual_output = (float*)response.outputs().at(customPipelineOutputName + std::to_string(i)).tensor_content().data();
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output + i * DUMMY_MODEL_OUTPUT_SIZE, DUMMY_MODEL_OUTPUT_SIZE * sizeof(float)));
+    }
+}
+
+TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
+    // Most basic configuration, just process single dummy model request
+
+    // input   dummy(fail in setInputs)    output
+    //  O------->O------->O
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
+}
+
+TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
+    // Most basic configuration, just process single dummy model request
+
+    // input   dummy(fail in execute)    output
+    //  O------->O------->O
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
+}
+
+class DLNodeFailInFetch : public DLNode {
+public:
+    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
+        DLNode(nodeName, modelName, modelVersion, modelManager) {}
+    ovms::Status fetchResults(BlobMap&) override {
+        return StatusCode::UNKNOWN_ERROR;
+    }
+};
+
+TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
+    // Most basic configuration, just process single dummy model request
+
+    // input   dummy(fail in fetch)    output
+    //  O------->O------->O
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    auto status = pipeline.execute();
+    EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
 }

@@ -32,12 +32,34 @@ std::map<const std::string, bool> Pipeline::prepareStatusMap() const {
     return std::move(nameFlagMap);
 }
 
+void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newFailStatus) {
+    if (earlierStatusCode.ok()) {
+        earlierStatusCode = newFailStatus;
+    }
+}
+
+#define IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE \
+    if (!firstErrorStatus.ok()) {                                                       \
+        if (finishedExecute == startedExecute) {                                        \
+            break;                                                                      \
+        } else {                                                                        \
+            continue;                                                                   \
+        }                                                                               \
+    }
+
+#define CHECK_AND_LOG_ERROR(NODE)                                   \
+    if (!status.ok()) {                                             \
+        setFailIfNotFailEarlier(firstErrorStatus, status);          \
+        SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}", \
+            getName(), NODE.getName(), status.string());            \
+    }
+
 Status Pipeline::execute() {
     ThreadSafeQueue<std::reference_wrapper<Node>> finishedNodeQueue;
-    bool errorOccured = false;
-    auto started{prepareStatusMap()};
-    auto finished{prepareStatusMap()};
-    started.at(entry.getName()) = true;
+    ovms::Status firstErrorStatus{ovms::StatusCode::OK};
+    auto startedExecute{prepareStatusMap()};
+    auto finishedExecute{prepareStatusMap()};
+    startedExecute.at(entry.getName()) = true;
     ovms::Status status = entry.execute(finishedNodeQueue);  // first node will triger first message
     if (!status.ok()) {
         SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
@@ -45,47 +67,34 @@ Status Pipeline::execute() {
         return status;
     }
     while (true) {
+        SPDLOG_DEBUG("Pipeline:{} before get message:", getName());
         auto& finishedNode = finishedNodeQueue.waitAndPull().get();
+        SPDLOG_DEBUG("Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
+        finishedExecute.at(finishedNode.getName()) = true;
+        IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
         BlobMap finishedNodeOutputBlobMap;
         status = finishedNode.fetchResults(finishedNodeOutputBlobMap);
-        finished.at(finishedNode.getName()) = true;
-        if (!status.ok()) {
-            errorOccured = true;
-            SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-                getName(), finishedNode.getName(), status.string());
-        }
-        if (errorOccured) {
-            if (finished == started) {
-                break;
-            } else {  // will wait for all triggered async inferences to finish
-                continue;
-            }
-        }
-        if (std::all_of(finished.begin(), finished.end(), [](auto pair) { return pair.second; })) {
+        CHECK_AND_LOG_ERROR(finishedNode)
+        IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
+        if (std::all_of(finishedExecute.begin(), finishedExecute.end(), [](auto pair) { return pair.second; })) {
             break;
         }
         auto& nextNodesFromFinished = finishedNode.getNextNodes();
         for (auto& nextNode : nextNodesFromFinished) {
-            nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
+            status = nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
+            CHECK_AND_LOG_ERROR(nextNode.get())
+            IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
         }
         finishedNodeOutputBlobMap.clear();
         for (auto& nextNode : nextNodesFromFinished) {
             if (nextNode.get().isReady()) {
-                started.at(nextNode.get().getName()) = true;
+                startedExecute.at(nextNode.get().getName()) = true;
                 status = nextNode.get().execute(finishedNodeQueue);
-                if (!status.ok()) {
-                    errorOccured = true;
-                    SPDLOG_INFO("Executing pipeline:{} node:{} failed with:{}",
-                        getName(), nextNode.get().getName(), status.string());
-                }
+                CHECK_AND_LOG_ERROR(nextNode.get())
+                IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             }
         }
     }
-    if (errorOccured) {
-        // TODO decide what status code it should be - either previous failure
-        // or general PIPELINE_FAILED since previous issue was already reported
-        return StatusCode::UNKNOWN_ERROR;
-    }
-    return std::move(status);
+    return firstErrorStatus;
 }
 }  // namespace ovms
