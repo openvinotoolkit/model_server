@@ -78,8 +78,8 @@ class Motion(ResultType):
 
 
 class SingleClassification:
-    def __init__(self, subtype_name: str, attributes: List[Attribute]):
-        self.attributes = attributes
+    def __init__(self, subtype_name: str, tag: Tag):
+        self.tag = tag
         self.type_name = "classification"
         self.subtype_name = subtype_name
 
@@ -88,7 +88,7 @@ class SingleClassification:
             "type": self.type_name,
             "subtype": self.subtype_name,
             "classification": {
-            	"tag": attribute.as_dict() for attribute in self.attributes
+                "tag": self.tag.as_dict()
             }
         }
         return result_dict
@@ -122,22 +122,27 @@ class SingleEntity:
         return result_dict
 
 
-class Entity(ResultType):
-    def __init__(self, subtype_name: str, entities: List[SingleEntity]):
+class Entity:
+    def __init__(self, subtype_name: str, entity: SingleEntity):
         self.type_name = "entity"
         self.subtype_name = subtype_name
+        self.entity = entity
+
+    def as_dict(self):
+        result_dict = {
+                "type": self.type_name,
+                "subtype": self.subtype_name,
+                "entity": self.entity.as_dict()
+        }
+        return result_dict
+
+
+class Detection(ResultType):
+    def __init__(self, entities: List[Entity]):
         self.entities = entities
 
     def as_dict(self):
         result_dict = {
-            "inferences": [
-	    	{
-	            "type": self.type_name,
-	            "subtype": self.subtype_name,
-                    "entity": [entity.as_dict()
-                                    for entity in self.entities]
-                }
-	    ]
+            "inferences": [entity.as_dict() for entity in self.entities]
         }
         return result_dict
-
