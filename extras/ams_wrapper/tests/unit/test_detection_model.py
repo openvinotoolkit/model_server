@@ -60,40 +60,26 @@ def fake_output_config() -> Dict[str, ModelOutputConfiguration]:
 
 @pytest.mark.parametrize("inference_output,expected_response", [
                         (MOCK_INFERENCE_OUTPUT,
-                          {
-                            "inferences": [
-                              {
-                                "type": "entity", 
-                                "subtype": None, 
-                                "entity": [
-                                  {
-                                    "tag": {
-                                      "value": "vehicle", 
-                                      "confidence": 0.97
-                                    }, 
-                                    "box": {
-                                      "l": 0.17, 
-                                      "t": 0.15,
-                                      "w": 0.32999999999999996,
-                                      "h": 0.5499999999999999
-                                    }
-                                  },
-                                  {
-                                    "tag": {
-                                      "value": "vehicle", 
-                                      "confidence": 0.46
-                                    },
-                                    "box": {
-                                      "l": 0.12, 
-                                      "t": 0.11, 
-                                      "w": 0.48,
-                                      "h": 0.39
-                                    }
-                                  }
-                                ]
+                         {
+                          "inferences": [
+                            {
+                              "type": "entity",
+                              "subtype": None,
+                              "entity": {
+                                "tag": {"value": "vehicle", "confidence": 0.97},
+                                "box": {"l": 0.17, "t": 0.15, "w": 0.32999999999999996, "h": 0.5499999999999999}
+                                }
+                            },
+                            {
+                              "type": "entity",
+                              "subtype": None,
+                              "entity": {
+                                "tag": {"value": "vehicle", "confidence": 0.46},
+                                "box": {"l": 0.12, "t": 0.11, "w": 0.48, "h": 0.39}
                               }
-                            ]
-                          }
+                            }
+                          ]
+                         }
                          )])
 def test_postprocess_inference_output(inference_output, expected_response, fake_output_config):
     model = DetectionModel(endpoint=None, ovms_connector=None, input_configs=None,
@@ -105,19 +91,17 @@ def test_postprocess_inference_output(inference_output, expected_response, fake_
 @pytest.mark.parametrize("inference_output,expected_response,top_k", [
                         (MOCK_INFERENCE_OUTPUT,
                          {
-                            "inferences": [
-                              {
-                                "type": "entity", 
-                                "subtype": None,
-                                "entity": [
-                                  {
-                                    "tag": {"value": "vehicle", "confidence": 0.97},
-                                    "box": {"l": 0.17, "t": 0.15, "w": 0.32999999999999996, "h": 0.5499999999999999}
-                                  }
-                                ]
-                              }
-                            ]
-                          },
+                          "inferences": [
+                            {
+                              "type": "entity",
+                              "subtype": None,
+                              "entity": {
+                                "tag": {"value": "vehicle", "confidence": 0.97},
+                                "box": {"l": 0.17, "t": 0.15, "w": 0.32999999999999996, "h": 0.5499999999999999}
+                                }
+                            }
+                          ]
+                         },
                          1
                          )])
 def test_postprocess_inference_output_top_k(inference_output, expected_response, top_k, fake_output_config):
@@ -130,20 +114,18 @@ def test_postprocess_inference_output_top_k(inference_output, expected_response,
 
 @pytest.mark.parametrize("inference_output,expected_response,confidence_threshold", [
                         (MOCK_INFERENCE_OUTPUT,
-                        {
+                         {
                           "inferences": [
                             {
-                              "type": "entity", 
+                              "type": "entity",
                               "subtype": None,
-                              "entity": [
-                                {
-                                  "tag": {"value": "vehicle", "confidence": 0.97},
-                                  "box": {"l": 0.17, "t": 0.15, "w": 0.32999999999999996, "h": 0.5499999999999999}
+                              "entity": {
+                                "tag": {"value": "vehicle", "confidence": 0.97},
+                                "box": {"l": 0.17, "t": 0.15, "w": 0.32999999999999996, "h": 0.5499999999999999}
                                 }
-                              ]
                             }
                           ]
-                        },
+                         },
                          0.5
                          )])
 def test_postprocess_inference_output_confidence_threshold(inference_output, expected_response,
