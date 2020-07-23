@@ -88,27 +88,25 @@ configuration file is [here](ams_models/vehicle_detection_adas_model.json)
 Below is a sample of the model output:
 ```json
 {
-  "inferences": [
-    {
-      "type": "entity",
-      "subtype": "vehicleDetection",
-      "entity": [
-        {
+    "inferences": [
+      {
+        "type": "entity",
+        "subtype": "vehicleDetection",
+        "entity": {
           "tag": {
             "value": "vehicle",
-            "confidence": 0.9723889827728271
+            "confidence": 0.15077224373817444
           },
           "box": {
-            "l": 0.14129230380058289,
-            "t": 0.29160431027412415,
-            "w": 0.6850716173648834,
-            "h": 0.5349170863628387
+            "l": 0,
+            "t": 0.25023195147514343,
+            "w": 0.853949785232544,
+            "h": 0.7095241844654083
           }
         }
-      ]
-    }
-  ]
-}
+      }
+    ]
+ }
 ```
 
 ### Classification models
