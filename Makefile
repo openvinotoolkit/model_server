@@ -170,6 +170,20 @@ endif
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.centos . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+
+test_checksec: 
+	@echo "Running checksec on ovms binary..."
+	@docker create -ti --name checksec-tmp ovms-pkg:latest bash
+	@docker cp checksec-tmp:/ovms_release/bin/ovms /tmp
+	@docker rm -f checksec-tmp
+	@checksec --file=/tmp/ovms --format=csv > checksec.txt
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH" checksec.txt; then\
+ 		error Run checksec on ovms binary and fix issues.;\
+	fi
+	@rm -f checksec.txt
+	@rm -f /tmp/ovms
+	@echo "Checksec check success."
+
 test_perf: venv
 	@echo "Dropping test container if exist"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true

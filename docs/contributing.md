@@ -104,3 +104,21 @@ Do not use a using-directive to make all names from a namespace available.
 // Forbidden -- This pollutes the namespace.
 using namespace foo;
 ```
+
+### Clang Format
+
+Always run make clang-format command before you submit changes.
+
+Prerequisites: apt-get install clang-format-6.0
+
+### Compiler security flags
+
+Always run make test-checksec command before you submit changes.
+
+Prerequisites: dpkg -i http://archive.ubuntu.com/ubuntu/pool/universe/c/checksec/checksec_2.1.0-1_all.deb
+
+### Docker and Python files check
+
+Always run make sdl-check command before you submit changes.
+
+Prerequisites: pip3 install bandit
