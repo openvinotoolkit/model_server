@@ -12,15 +12,28 @@ pipeline {
             }
           }
         }
+
         stage('style check') {
             steps {
                 sh 'make style'
             }
         }
 
+        stage('sdl check') {
+            steps {
+                sh 'make sdl-check'
+            }
+        }
+
         stage('docker build') {
             steps {
                 sh 'make docker_build'
+            }
+        }
+
+        stage('checksec test') {
+            steps {
+                sh 'make test_checksec'
             }
         }
 
