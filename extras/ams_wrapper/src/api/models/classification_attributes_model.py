@@ -71,12 +71,13 @@ class ClassificationAttributes(Model):
             if current_conf.confidence_threshold:
                 tags = [attr for attr in tags
                         if attr.confidence >= current_conf.confidence_threshold]
-            if len(tags) != 0:
+            if not tags:
+                response = None
+            else:
                 for tag in tags:
                     classification = SingleClassification(subtype_name=output_name, tag=tag)
                     classifications.append(classification)
-
-        model_classification = Classification(classifications=classifications)
-        response = json.dumps(model_classification.as_dict())
+                model_classification = Classification(classifications=classifications)
+                response = json.dumps(model_classification.as_dict())
 
         return response
