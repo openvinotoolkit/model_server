@@ -134,5 +134,3 @@ RUN ./bazel-bin/src/./ovms
 COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
-
-ENTRYPOINT ["./bazel-bin/src/ovms"]
