@@ -43,7 +43,7 @@ const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 std::string shapeToString(const shape_t& shape) {
     std::ostringstream oss;
     oss << "(";
-    int i = 0;
+    size_t i = 0;
     for (; i < shape.size() - 1; i++) {
         oss << shape[i] << ",";
     }

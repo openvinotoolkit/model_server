@@ -87,6 +87,9 @@ cc_binary(
         "-lssl",
         "-lcrypto"
     ],
+    copts = [
+        "-Wconversion"
+    ],
     deps = [
         "//src:ovms_lib"
     ]
