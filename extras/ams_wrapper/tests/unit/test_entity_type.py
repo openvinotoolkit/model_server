@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from src.api.types import Tag, Rectangle, SingleEntity, Entity
+from src.api.types import Tag, Rectangle, SingleEntity, Entity, Detection
 
 
 def test_single_entity():
@@ -33,30 +33,35 @@ def test_single_entity():
 
 
 def test_entity():
+    detections = []
+    entities = []
     expected_dict = {
-        "type": "entity",
-        "subtype": "vehicleDetection",
-        "entities": [
+        'inferences': [
             {
-                "tag": {
-                    "value": "car",
-                    "confidence": 0.97
-                },
-                "box": {"l": 1.0, "t": 2.0, "w": 3.0, "h": 4.0}
+                'type': 'entity',
+                'subtype': 'vehicleDetection',
+                'entity': {
+                    'tag': {'value': 'car', 'confidence': 0.97},
+                    'box': {'l': 1.0, 't': 2.0, 'w': 3.0, 'h': 4.0}
+                    }
             },
             {
-                "tag": {
-                    "value": "bike",
-                    "confidence": 0.94
-                },
-                "box": {"l": 0.0, "t": 0.0, "w": 0.0, "h": 0.0}
-            },
+                'type': 'entity',
+                'subtype': 'vehicleDetection',
+                'entity': {
+                    'tag': {'value': 'bike', 'confidence': 0.94},
+                    'box': {'l': 0.0, 't': 0.0, 'w': 0.0, 'h': 0.0}
+                    }
+            }
         ]
     }
-
-    entities = [
+    detections = [
         SingleEntity(Tag("car", 0.97), Rectangle(1.0, 2.0, 3.0, 4.0)),
         SingleEntity(Tag("bike", 0.94), Rectangle(0.0, 0.0, 0.0, 0.0)),
     ]
-    entity = Entity("vehicleDetection", entities)
-    assert expected_dict == entity.as_dict()
+    for detection in detections:
+        entity = Entity(subtype_name="vehicleDetection", entity=detection)
+        entities.append(entity)
+    model_detection = Detection(entities=entities)
+    print(model_detection.as_dict())
+    assert expected_dict == model_detection.as_dict()
