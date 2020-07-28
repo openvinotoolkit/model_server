@@ -18,6 +18,8 @@
 
 #include "../modelconfig.hpp"
 #include "../pipeline.hpp"
+#define DEBUG
+#include "../timer.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -28,9 +30,7 @@ class EnsembleFlowTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Prepare manager
-        setenv("NIREQ", "2", 1);
-        ModelConfig config = DUMMY_MODEL_CONFIG;
-        managerWithDummyModel.reloadModelWithVersions(config);
+        setenv("NIREQ", "10", 1);
 
         // Prepare request
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
@@ -39,8 +39,6 @@ protected:
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
         proto.mutable_tensor_shape()->add_dim()->set_size(10);
     }
-
-    ConstructorEnabledModelManager managerWithDummyModel;
 
     PredictRequest request;
     PredictResponse response;
@@ -61,6 +59,10 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     // input   dummy    output
     //  O------->O------->O
 
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
     // Configure pipeline
     auto input = std::make_unique<EntryNode>(&request);
     auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
@@ -78,11 +80,17 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.execute();
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 10 * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
 
     auto responseData = requestData;
     std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
 
-    float* actual_output = (float*)response.outputs().at(customPipelineOutputName).tensor_content().data();
+    float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
 
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 10 * sizeof(float)));
@@ -91,9 +99,16 @@ TEST_F(EnsembleFlowTest, DummyModel) {
 TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     // Most basic configuration, just process single dummy model request
 
-    const int N = 10;
+    Timer timer;
+    timer.start("prepare pipeline");
+
+    const int N = 100;
     // input      dummy x N      output
     //  O------->O->O...O->O------->O
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
     auto input = std::make_unique<EntryNode>(&request);
@@ -112,27 +127,221 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
         pipeline.connect(*(dummy_nodes[i]), *(dummy_nodes[i + 1]), {{dummyOutputName, dummyInputName}});
     }
 
-    Node* input_ptr = input.get();
-    Node* output_ptr = output.get();
-    Node* dummy_node_ptr[N];
-    for (int i = 0; i < N; i++) {
-        dummy_node_ptr[i] = dummy_nodes[i].get();
-    }
-
     pipeline.push(std::move(input));
     pipeline.push(std::move(output));
     for (auto& dummy_node : dummy_nodes) {
         pipeline.push(std::move(dummy_node));
     }
-    pipeline.execute();
 
+    timer.stop("prepare pipeline");
+    timer.start("pipeline::execute");
+    pipeline.execute();
+    timer.stop("pipeline::execute");
+
+    timer.start("compare results");
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 10 * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
 
     auto responseData = requestData;
     std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0 * N; });
 
-    float* actual_output = (float*)response.outputs().at(customPipelineOutputName).tensor_content().data();
+    float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
 
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, sizeof(expected_output)));
+    timer.stop("compare results");
+
+
+    std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>("prepare pipeline") / 1000 << "ms\n";
+    std::cout << "pipeline::execute: " << timer.elapsed<std::chrono::microseconds>("pipeline::execute") / 1000 << "ms\n";
+    std::cout << "compare results: " << timer.elapsed<std::chrono::microseconds>("compare results") / 1000 << "ms\n";
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
+    // Scenario
+
+    // input(3x10)   dummy(1x10), change batch size    output(3x10)
+    //  O-------------------------->O----------------------->O
+
+    // input 3x10
+    // dummy is 1x10, perform model batch size change to 3x10
+    // process dummy
+    // check if output is 3x10
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(3);
+    std::vector<float> requestData = {
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,  // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    ModelConfig dynamicBatchConfig = DUMMY_MODEL_CONFIG;
+    dynamicBatchConfig.setBatchingParams("auto");
+    ConstructorEnabledModelManager managerWithDynamicBatchDummyModel;
+    managerWithDynamicBatchDummyModel.reloadModelWithVersions(dynamicBatchConfig);
+
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    pipeline.execute();
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), 3 * 10 * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 3);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 3 * 10 * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
+    // Scenario
+
+    // input(1x5)      dummy(1x10), reshape            output(1x5)
+    //  O---------------------->O--------------------------->O
+
+    // input 1x5
+    // dummy is 1x10, perform model reshape to 1x5
+    // process dummy
+    // check if output is 1x5
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
+    std::vector<float> requestData = {
+        -5, -4, -3, -2, -1,  // batch 1
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    ModelConfig dynamicShapeConfig = DUMMY_MODEL_CONFIG;
+    dynamicShapeConfig.setBatchSize(0);  // = not specified in --batch_size parameter
+    dynamicShapeConfig.parseShapeParameter("auto");
+    ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
+    managerWithDynamicShapeDummyModel.reloadModelWithVersions(dynamicShapeConfig);
+
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    pipeline.execute();
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 5 * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 5);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 1 * 5 * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
+    // Scenario
+
+    // input(3x500)   dummy(1x10), reshape, change batch size    output(3x500)
+    //  O------------------------------>O----------------------------->O
+
+    // input 3x500
+    // dummy is 1x10, perform model batch size change to 3x500
+    // process dummy
+    // check if output is 3x500
+
+    const int BATCH = 3;
+    const int WIDTH = 500;
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH);
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
+    std::vector<float> requestData;
+    for (int i = 0; i < BATCH; i++) {  // batch size
+        for (int j = 0; j < WIDTH; j++) {  // width
+            requestData.push_back((i+1) * (j+1));
+            /*
+            1.0, 2.0, 3.0, ..., 500.0,
+            2.0, 4.0, 6.0, ..., 1000.0,
+            3.0, 6.0, 9.0, ..., 1500.0
+            */
+        }
+    }
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.parseShapeParameter("auto");
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    auto input = std::make_unique<EntryNode>(&request);
+    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+    auto output = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input, *output);
+
+    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input));
+    pipeline.push(std::move(model));
+    pipeline.push(std::move(output));
+
+    pipeline.execute();
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), BATCH * WIDTH * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH * WIDTH * sizeof(float)));
 }

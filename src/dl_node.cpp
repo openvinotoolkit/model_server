@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "dl_node.hpp"
+#include <map>
 
 #include <spdlog/spdlog.h>
 
+#include "dl_node.hpp"
 #include "executinstreamidguard.hpp"
 #include "prediction_service_utils.hpp"
 
@@ -36,22 +37,9 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
         return status;
     }
 
-    // TODO: If precision does not match, create new blob with proper precision
-
-    // Validate each blob against its OV tensor info
-    const auto& inputsInfo = this->model->getInputsInfo();
-    for (const auto& kv : this->inputBlobs) {
-        const auto& name = kv.first;
-        auto& blob = kv.second;
-
-        if (inputsInfo.count(name) == 0) {
-            return StatusCode::INVALID_MISSING_INPUT;
-        }
-
-        status = validate(blob, *inputsInfo.at(name));
-        if (!status.ok()) {
-            return status;
-        }
+    status = prepareInputsAndModelForInference();
+    if (!status.ok()) {
+        return status;
     }
 
     // Acquire infer request from pool
@@ -80,19 +68,20 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 Status DLNode::fetchResults(BlobMap& outputs) {
     // ::execute needs to be executed before ::fetchResults
     if (this->model == nullptr) {
-        SPDLOG_INFO("Calling DLNode::fetchResults failed because execution failed (Node: {})", getName());
+        SPDLOG_ERROR("Calling DLNode::fetchResults failed because execution failed (Node: {})", getName());
         return StatusCode::UNKNOWN_ERROR;
     }
 
     // Get infer request corresponding to this node model
     auto& infer_request = this->model->getInferRequestsQueue().getInferRequest(this->streamIdGuard->getId());
+    infer_request.Wait(InferenceEngine::IInferRequest::RESULT_READY);
 
     // Fill outputs map with result blobs. Fetch only those that are required in following nodes.
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
             outputs[output_name] = infer_request.GetBlob(output_name);
-            SPDLOG_ERROR("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
+            SPDLOG_INFO("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
     }
 
@@ -109,8 +98,78 @@ Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo
         return StatusCode::INVALID_PRECISION;
     }
 
+    // If batch size differes, check if remaining dimensionsa re equal
+    if (info.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
+        // If remaining dimensions are equal, it is invalid batch size
+        if (std::equal(info.getShape().begin() + 1, info.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {
+            return StatusCode::INVALID_BATCH_SIZE;
+        } else {
+            // Otherwise whole shape is incorrect
+            return StatusCode::INVALID_SHAPE;
+        }
+    }
+
     if (info.getShape() != blob->getTensorDesc().getDims()) {
         return StatusCode::INVALID_SHAPE;
+    }
+
+    return StatusCode::OK;
+}
+
+Status DLNode::prepareInputsAndModelForInference() {
+    size_t requestedBatchSize = 0;
+    std::map<std::string, shape_t> requestedReshapes;
+
+    // Validate each blob against its OV tensor info
+    const auto& inputsInfo = this->model->getInputsInfo();
+    for (const auto& kv : this->inputBlobs) {
+        const auto& name = kv.first;
+        auto& blob = kv.second;
+
+        if (inputsInfo.count(name) == 0) {
+            return StatusCode::INVALID_MISSING_INPUT;
+        }
+
+        auto& inputInfo = *inputsInfo.at(name);
+
+        auto status = validate(blob, inputInfo);
+        if (status.ok()) {
+            continue;
+        }
+
+        // If precision is incorrect, perform conversion
+        if (status == StatusCode::INVALID_PRECISION) {
+            // TODO: Create new blob with proper precision
+            return status;
+        }
+
+        // If batch size is incorrect, perform network batch size change if allowed (mode=auto)
+        if (status == StatusCode::INVALID_BATCH_SIZE) {
+            if (this->model->getModelConfig().getBatchingMode() != Mode::AUTO) {
+                return status;
+            }
+            requestedBatchSize = blob->getTensorDesc().getDims()[0];
+        }
+
+        // If shape is incorrect, perform reshape if allowed (mode=auto)
+        if (status == StatusCode::INVALID_SHAPE) {
+            if (!this->model->getModelConfig().isShapeAuto(name)) {
+                return status;
+            }
+            requestedReshapes[name] = blob->getTensorDesc().getDims();
+        }
+    }
+
+    if (requestedReshapes.size() > 0) {
+        auto status = this->model->reloadModel(0, requestedReshapes, this->modelUnloadGuard);
+        if (!status.ok()) {
+            return status;
+        }
+    } else if (requestedBatchSize > 0) {
+        auto status = this->model->reloadModel(requestedBatchSize, {}, this->modelUnloadGuard);
+        if (!status.ok()) {
+            return status;
+        }
     }
 
     return StatusCode::OK;

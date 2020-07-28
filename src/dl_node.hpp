@@ -50,6 +50,14 @@ public:
     Status fetchResults(BlobMap& outputs) override;
 
     Status validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info);
+
+    /**
+     * @brief
+     * Prepare inputs - if required, perform precision conversion
+     * Prepare model - if required, perform model reload with new batch size and/or shape
+     * Possibly abort pipeline execution if unable to do the preparation
+     */
+    Status prepareInputsAndModelForInference();
 };
 
 }  // namespace ovms
