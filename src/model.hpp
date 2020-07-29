@@ -155,7 +155,7 @@ public:
     Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config);
 
     /**
-         * @brief Retires versions of ModelInstances
+         * @brief Retires versions of Model
          *
          * @param config model configuration
          *
@@ -164,7 +164,12 @@ public:
     Status retireVersions(std::shared_ptr<model_versions_t> versions);
 
     /**
-         * @brief Reloads retired versions of ModelInstances
+         * @brief Retires all versions of Model
+         */
+    void retireAllVersions();
+
+    /**
+         * @brief Reloads versions of Model
          *
          * @param config model configuration
          *

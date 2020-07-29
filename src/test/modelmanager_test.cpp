@@ -21,7 +21,7 @@
 
 #include "../model.hpp"
 #include "../modelmanager.hpp"
-
+#include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
 using testing::_;
@@ -36,7 +36,8 @@ const char* config_1_model = R"({
       "config": {
         "name": "resnet",
         "base_path": "/tmp/models/dummy1",
-        "target_device": "CPU"
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
       }
    }]
 })";
@@ -47,17 +48,22 @@ const char* config_2_models = R"({
       "config": {
         "name": "resnet",
         "base_path": "/tmp/models/dummy1",
-        "target_device": "CPU"
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
       }
     },
     {
       "config": {
         "name": "alpha",
         "base_path": "/tmp/models/dummy2",
-        "target_device": "CPU"
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
       }
     }]
 })";
+
+const std::string FIRST_MODEL_NAME = "resnet";
+const std::string SECOND_MODEL_NAME = "alpha";
 
 const std::string model_1_path = "/tmp/models/dummy1/1";
 const std::string model_2_path = "/tmp/models/dummy2/2";
@@ -197,7 +203,7 @@ TEST(ModelManager, StartFromFile) {
     modelMock.reset();
 }
 
-TEST(ModelManager, ConfigReloading) {
+TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
@@ -225,6 +231,74 @@ TEST(ModelManager, ConfigReloading) {
     EXPECT_EQ(models, 2);
     manager.join();
     modelMock.reset();
+}
+
+class MockVersionReader : public ovms::IVersionReader {
+public:
+    MockVersionReader() = default;
+    ~MockVersionReader() {}
+    ovms::Status readAvailableVersions(ovms::model_versions_t& versions) override {
+        versions.resize(toRegister.size());
+        std::copy(toRegister.begin(), toRegister.end(), versions.begin());
+        return ovms::StatusCode::OK;
+    };
+    void registerVersionToLoad(ovms::model_version_t version) {
+        toRegister.emplace_back(version);
+    }
+
+private:
+    std::vector<ovms::model_version_t> toRegister;
+};
+
+std::shared_ptr<MockVersionReader> mockVersionReader;
+
+class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
+public:
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+        return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
+    }
+
+protected:
+    std::shared_ptr<ovms::IVersionReader> getVersionReader(const std::string& path) override {
+        return mockVersionReader;
+    }
+};
+
+TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJson) {
+    std::filesystem::create_directories(model_1_path);
+    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(config_2_models, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManagerWithModelInstancesJustChangingStates manager;
+    mockVersionReader = std::make_shared<MockVersionReader>();
+    mockVersionReader->registerVersionToLoad(1);
+    mockVersionReader->registerVersionToLoad(2);
+    auto status = manager.start(fileToReload);
+    auto models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(SLEEP_TIME_S);
+    models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    for (auto& nameModel : models) {
+        for (auto& versionModelInstance : nameModel.second->getModelVersions()) {
+            ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
+        }
+    }
+    // we remove SECOND_MODEL from config file and expect to have all versions of it retired
+    createConfigFileWithContent(config_1_model, fileToReload);
+    std::this_thread::sleep_for(SLEEP_TIME_S);
+    models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {
+        EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
+    }
+    for (auto& versionModelInstance : manager.getModels().at(SECOND_MODEL_NAME)->getModelVersions()) {
+        EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState());
+    }
+    manager.join();
+    mockVersionReader.reset();
 }
 
 class MockModelInstanceInState : public ovms::ModelInstance {
