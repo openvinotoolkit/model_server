@@ -18,6 +18,7 @@
 
 #include "../modelconfig.hpp"
 #include "../pipeline.hpp"
+#include "../pipeline_factory.hpp"
 #define DEBUG
 #include "../timer.hpp"
 #include "../status.hpp"
@@ -489,4 +490,271 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
 
     auto status = pipeline.execute();
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Nodes
+    // entry   dummy_node    exit
+    //  O--------->O---------->O
+    //           dummy
+    //          default
+    // Models/Versions
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry (customPipelineInputName) O--------->O dummy node (dummyInputName)
+    connections["dummy_node"] = {
+        {"entry", {{customPipelineInputName, dummyInputName}}}
+    };
+
+    // dummy node (dummyOutputNameName) O--------->O exit (customPipelineOutputName)
+    connections["exit"] = {
+        {"dummy_node", {{dummyOutputName, customPipelineOutputName}}}
+    };
+
+    // Create pipeline definition
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections), StatusCode::OK);
+
+    std::unique_ptr<Pipeline> pipeline;
+
+    // Create pipeline out of created definition
+    ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, managerWithDummyModel), StatusCode::OK);
+
+    // Execute pipeline
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    // Validate response
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+
+    auto responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)response.outputs().at(customPipelineOutputName).tensor_content().data();
+    float* expected_output = responseData.data();
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, DUMMY_MODEL_OUTPUT_SIZE * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
+    // Prepare manager
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    //                 Nodes
+    //              dummy_node_N
+    //         .-------->O----------v
+    //  entry O--------->O---------->O exit
+    //         *-------->O----------^
+    //                dummy
+    //               default
+    //           Models/Versions
+
+    // These parameters currently have constraint due to issue found
+    // PARALLEL_DUMMY_NODES * PARALLEL_SIMULATED_REQUEST_COUNT <= nireq
+    // https://jira.devtools.intel.com/browse/CVS-35859
+    const int PARALLEL_DUMMY_NODES = 3;
+    const int PARALLEL_SIMULATED_REQUEST_COUNT = 30;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
+        info.emplace_back(NodeKind::DL, "dummy_node_" + std::to_string(i), "dummy");
+    }
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
+         // entry (customPipelineInputName) O--------->O dummy_node_N (dummyInputName)
+        connections["dummy_node_" + std::to_string(i)] = {
+            {"entry", {{customPipelineInputName, dummyInputName}}}
+        };
+    }
+
+    // dummy_node_0 (dummyOutputNameName) O---------v
+    // dummy_node_1 (dummyOutputNameName) O--------->O exit (output_0, output_1, output_N)
+    // dummy_node_N (dummyOutputNameName) O---------^
+    auto& exitConnections = connections["exit"];
+    for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
+        exitConnections["dummy_node_" + std::to_string(i)] = {{dummyOutputName, "output_" + std::to_string(i)}};
+    }
+
+    // Create pipeline definition
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections), StatusCode::OK);
+
+    auto run = [&]() {
+        std::unique_ptr<Pipeline> pipeline;
+        PredictResponse response_local;
+
+        // Create pipeline out of created definition
+        ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response_local, managerWithDummyModel), StatusCode::OK);
+
+        // Execute pipeline
+        ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+        // Validate response
+        ASSERT_EQ(response_local.outputs_size(), PARALLEL_DUMMY_NODES);
+
+        auto responseData = requestData;
+        std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+        size_t expectedContentSize = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+
+        for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
+            std::string outputName = "output_" + std::to_string(i);
+            ASSERT_EQ(response_local.outputs().count(outputName), 1);
+            const auto& tensor = response_local.outputs().at(outputName);
+            ASSERT_EQ(tensor.tensor_content().size(), expectedContentSize);
+            float* actual_output = (float*)tensor.tensor_content().data();
+            float* expected_output = responseData.data();
+
+            EXPECT_EQ(0, std::memcmp(actual_output, expected_output, expectedContentSize));
+        }
+    };
+
+    std::vector<std::promise<void>> promises(PARALLEL_SIMULATED_REQUEST_COUNT);
+    std::vector<std::thread> threads;
+
+    for (int n = 0; n < PARALLEL_SIMULATED_REQUEST_COUNT; n++) {
+        threads.emplace_back(std::thread([&promises, n, &run]() {
+            promises[n].get_future().get();
+            run();
+        }));
+    }
+
+    // Sleep to allow all threads to initialize
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    for (auto& promise : promises) {
+        promise.set_value();
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NameDuplicate) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    connections["dummy_node"] = {
+        {"entry", {{customPipelineInputName, dummyInputName}}}
+    };
+
+    connections["exit"] = {
+        {"dummy_node", {{dummyOutputName, customPipelineOutputName}}}
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, connections), StatusCode::OK);
+    EXPECT_EQ(factory.createDefinition("pipeline", {}, {}), StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry1"},
+        {NodeKind::ENTRY, "entry2"},
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}), StatusCode::OK);
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::EXIT, "exit1"},
+        {NodeKind::EXIT, "exit2"},
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}), StatusCode::OK);
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry"},
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}), StatusCode::OK);
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::EXIT, "exit"},
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}), StatusCode::OK);
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
+    PipelineFactory factory;
+
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+}
+
+TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
+    PipelineFactory factory;
+
+    std::vector<NodeInfo> info {
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}), StatusCode::OK);
+    PredictRequest request;
+    PredictResponse response;
+    std::unique_ptr<Pipeline> pipeline;
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
 }

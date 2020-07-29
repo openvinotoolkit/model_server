@@ -33,7 +33,7 @@ Status ExitNode::fetchResults(BlobMap&) {
             return status;
         }
 
-        SPDLOG_INFO("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
+        SPDLOG_DEBUG("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
     }
 
     return StatusCode::OK;

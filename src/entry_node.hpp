@@ -22,10 +22,10 @@
 namespace ovms {
 
 class EntryNode : public Node {
-    tensorflow::serving::PredictRequest* request;
+    const tensorflow::serving::PredictRequest* request;
 
 public:
-    EntryNode(tensorflow::serving::PredictRequest* request) :
+    EntryNode(const tensorflow::serving::PredictRequest* request) :
         Node("entry"),
         request(request) {}
 
@@ -38,7 +38,7 @@ public:
 
     // Entry nodes have no dependency
     void addDependency(Node&, const InputPairs&) override {
-        throw "This node cannot have dependency";
+        throw std::logic_error("This node cannot have dependency");
     }
 
     // Deserialize proto to blob

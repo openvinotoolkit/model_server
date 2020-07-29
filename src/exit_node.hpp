@@ -41,7 +41,7 @@ public:
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {
-        throw "This node cannot have dependant";
+        throw std::logic_error("This node cannot have dependant");
     }
 
     Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);

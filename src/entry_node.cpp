@@ -29,8 +29,12 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
+            if (outputs.count(output_name) == 1) {
+                continue;
+            }
+
             if (request->inputs().count(output_name) == 0) {
-                SPDLOG_ERROR("EntryNode::fetchResults (deserialization) (Node name {}): missing input proto name: {} in request", getName(), output_name);
+                SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name {}): missing input proto name: {} in request", getName(), output_name);
                 return StatusCode::INVALID_MISSING_INPUT;
             }
 
@@ -39,13 +43,13 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             InferenceEngine::Blob::Ptr blob;
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
-                SPDLOG_ERROR("EntryNode::fetchResults error (deserialization) (Node name {}) (Input name {}): {}", getName(), output_name, status.string());
+                SPDLOG_INFO("EntryNode::fetchResults error (deserialization) (Node name {}) (Input name {}): {}", getName(), output_name, status.string());
                 return status;
             }
 
             outputs[output_name] = blob;
 
-            SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
+            SPDLOG_DEBUG("EntryNode::fetchResults (deserialization) (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
     }
 

@@ -128,6 +128,13 @@ enum class StatusCode {
     REST_PROTO_TO_STRING_ERROR,          /*!< Error while parsing ResponseProto to JSON string */
     REST_UNSUPPORTED_PRECISION,          /*!< Unsupported conversion from tensor_content to _val container */
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,
+
+    PIPELINE_DEFINITION_ALREADY_EXIST,
+    PIPELINE_MULTIPLE_ENTRY_NODES,
+    PIPELINE_MULTIPLE_EXIT_NODES,
+    PIPELINE_MISSING_ENTRY_OR_EXIT,
+    PIPELINE_DEFINITION_NAME_MISSING,
+    PIPELINE_NODE_NAME_DUPLICATE,
 };
 
 class Status {

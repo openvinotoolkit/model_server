@@ -35,13 +35,13 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
         // possibly incorrectly constructed pipeline - required input missing from previous node
         auto it = inputs.find(dependency_output_name);
         if (it == inputs.end()) {
-            SPDLOG_ERROR("Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
+            SPDLOG_INFO("Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
                 getName(),
                 dependency.getName(),
                 dependency_output_name);
             return StatusCode::INVALID_MISSING_INPUT;
         }
-        SPDLOG_INFO("Node::setInputs: setting required input for (Node name {}) from (Node name {}), input name: {}, dependency output name: {}",
+        SPDLOG_DEBUG("Node::setInputs: setting required input for (Node name {}) from (Node name {}), input name: {}, dependency output name: {}",
             getName(),
             dependency.getName(),
             current_node_input_name,

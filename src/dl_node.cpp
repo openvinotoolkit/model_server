@@ -52,15 +52,15 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
     for (const auto& kv : this->inputBlobs) {
         infer_request.SetBlob(kv.first, kv.second);
     }
-    SPDLOG_INFO("Setting completion callback for node name: {}", this->getName());
+    SPDLOG_DEBUG("Setting completion callback for node name: {}", this->getName());
     infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
-        SPDLOG_INFO("Completion callback received for node name: {}", this->getName());
+        SPDLOG_DEBUG("Completion callback received for node name: {}", this->getName());
         // After inference is completed, input blobs are not needed anymore
         this->inputBlobs.clear();
         notifyEndQueue.push(*this);
     });
 
-    SPDLOG_INFO("Starting infer async for node name: {}", getName());
+    SPDLOG_DEBUG("Starting infer async for node name: {}", getName());
     infer_request.StartAsync();
 
     return StatusCode::OK;
@@ -69,7 +69,7 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 Status DLNode::fetchResults(BlobMap& outputs) {
     // ::execute needs to be executed before ::fetchResults
     if (this->model == nullptr) {
-        SPDLOG_ERROR("Calling DLNode::fetchResults failed because execution failed (Node: {})", getName());
+        SPDLOG_INFO("Calling DLNode::fetchResults failed because execution failed (Node: {})", getName());
         return StatusCode::UNKNOWN_ERROR;
     }
 
@@ -82,7 +82,7 @@ Status DLNode::fetchResults(BlobMap& outputs) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
             outputs[output_name] = infer_request.GetBlob(output_name);
-            SPDLOG_INFO("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
+            SPDLOG_DEBUG("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
     }
 
