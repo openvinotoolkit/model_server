@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import time
+from typing import List
 
 import docker
 from retry.api import retry_call
@@ -24,6 +26,7 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
+TERMINAL_STATUSES = ["exited"]
 
 
 class Docker:
@@ -66,8 +69,7 @@ class Docker:
                                                     volumes=volumes_dict,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container)
-
-        self.ensure_container_status(status=CONTAINER_STATUS_RUNNING)
+        self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
@@ -87,14 +89,21 @@ class Docker:
         container = self.client.containers.get(self.container.id)
         return container.status
 
-    def ensure_status(self, status):
+    def ensure_status(self, status, terminal_statuses=None):
         current_status = self.get_container_status()
+        if terminal_statuses is not None and current_status in terminal_statuses:
+            raise RuntimeError("Received terminal status '{}' for container {}".format(current_status,
+                                                                                       self.container_name))
         assert current_status == status, \
             "Not expected status for container {} found. \n " \
             "Expected: {}, \n " \
             "received: {}".format(self.container.name, status, self.container.status)
 
-    def ensure_container_status(self, status: str = CONTAINER_STATUS_RUNNING):
-        container_status = {"status": status}
-        return retry_call(self.ensure_status, fkwargs=container_status,
+    def ensure_container_status(self, status: str = CONTAINER_STATUS_RUNNING,
+                                terminal_statuses: List[str] = None):
+        container_statuses = {"status": status}
+        if terminal_statuses:
+            container_statuses["terminal_statuses"] = terminal_statuses
+        time.sleep(1)
+        return retry_call(self.ensure_status, fkwargs=container_statuses,
                           exceptions=AssertionError, **Docker.GETTING_STATUS_RETRY)
