@@ -37,6 +37,7 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
         notifyEndQueue.push(*this);
         return status;
     }
+
     status = prepareInputsAndModelForInference();
     if (!status.ok()) {
         notifyEndQueue.push(*this);
@@ -48,20 +49,44 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
     this->streamIdGuard = std::make_unique<ExecutingStreamIdGuard>(ir_queue);
     auto& infer_request = ir_queue.getInferRequest(this->streamIdGuard->getId());
 
-    // Prepare inference request, fill with input blobs
-    for (const auto& kv : this->inputBlobs) {
-        infer_request.SetBlob(kv.first, kv.second);
-    }
-    SPDLOG_DEBUG("Setting completion callback for node name: {}", this->getName());
-    infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
-        SPDLOG_DEBUG("Completion callback received for node name: {}", this->getName());
-        // After inference is completed, input blobs are not needed anymore
-        this->inputBlobs.clear();
+    try {
+        // Prepare inference request, fill with input blobs
+        for (const auto& kv : this->inputBlobs) {
+            infer_request.SetBlob(kv.first, kv.second);
+        }
+        // OV implementation the InferenceEngineException is not
+        // a base class for all other exceptions thrown from OV.
+        // OV can throw exceptions derived from std::logic_error.
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
         notifyEndQueue.push(*this);
-    });
+        return status;
+    } catch (std::logic_error& e) {
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
+        notifyEndQueue.push(*this);
+        return status;
+    }
 
-    SPDLOG_DEBUG("Starting infer async for node name: {}", getName());
-    infer_request.StartAsync();
+
+    try {
+        SPDLOG_DEBUG("Setting completion callback for node name: {}", this->getName());
+        infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
+            SPDLOG_DEBUG("Completion callback received for node name: {}", this->getName());
+            // After inference is completed, input blobs are not needed anymore
+            this->inputBlobs.clear();
+            notifyEndQueue.push(*this);
+        });
+
+        SPDLOG_DEBUG("Starting infer async for node name: {}", getName());
+        infer_request.StartAsync();
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("StartAsync or setting completion callback caught an exception {}: {}", status.string(), e.what());
+        notifyEndQueue.push(*this);
+        return status;
+    }
 
     return StatusCode::OK;
 }
@@ -75,13 +100,33 @@ Status DLNode::fetchResults(BlobMap& outputs) {
 
     // Get infer request corresponding to this node model
     auto& infer_request = this->model->getInferRequestsQueue().getInferRequest(this->streamIdGuard->getId());
-    infer_request.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+
+    // Wait for blob results
+    auto ov_status = infer_request.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+    if (ov_status != InferenceEngine::StatusCode::OK) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("Async infer failed: {}; OV StatusCode: {}", status.string(), ov_status);
+        return status;
+    }
 
     // Fill outputs map with result blobs. Fetch only those that are required in following nodes.
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            outputs[output_name] = infer_request.GetBlob(output_name);
+
+            // Multiple next nodes can have the same dependency, do not prepare the same blob multiple times
+            if (outputs.count(output_name) == 1) {
+                continue;
+            }
+
+            try {
+                outputs[output_name] = infer_request.GetBlob(output_name);
+            } catch (const InferenceEngine::details::InferenceEngineException& e) {
+                Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
+                SPDLOG_ERROR("DLNode::fetchResults (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
+                return status;
+            }
+
             SPDLOG_DEBUG("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
     }
@@ -99,7 +144,7 @@ Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo
         return StatusCode::INVALID_PRECISION;
     }
 
-    // If batch size differes, check if remaining dimensionsa re equal
+    // If batch size differes, check if remaining dimensions are equal
     if (info.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
         // If remaining dimensions are equal, it is invalid batch size
         if (std::equal(info.getShape().begin() + 1, info.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {

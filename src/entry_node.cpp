@@ -83,33 +83,47 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
 
     // description.setLayout();  // Layout info is stored in model instance. If we find out it is required, then need to be set right before inference.
 
-    switch (proto.dtype()) {
-    case tensorflow::DataType::DT_FLOAT:
-        description.setPrecision(InferenceEngine::Precision::FP32);
-        blob = InferenceEngine::make_shared_blob<float>(description, (float*)proto.tensor_content().data());
-        break;
-    case tensorflow::DataType::DT_UINT8:
-        description.setPrecision(InferenceEngine::Precision::U8);
-        blob = InferenceEngine::make_shared_blob<uint8_t>(description, (uint8_t*)proto.tensor_content().data());
-        break;
-    case tensorflow::DataType::DT_INT8:
-        description.setPrecision(InferenceEngine::Precision::I8);
-        blob = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)proto.tensor_content().data());
-        break;
-    case tensorflow::DataType::DT_INT16:
-        description.setPrecision(InferenceEngine::Precision::I16);
-        blob = InferenceEngine::make_shared_blob<int16_t>(description, (int16_t*)proto.tensor_content().data());
-        break;
-    case tensorflow::DataType::DT_INT32:
-        description.setPrecision(InferenceEngine::Precision::I32);
-        blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
-        break;
-    case tensorflow::DataType::DT_HALF:    // TODO: Data is in proto.half_val container, need to convert
-    case tensorflow::DataType::DT_UINT16:  // TODO: Data is in proto.int_val container, need to convert
-    case tensorflow::DataType::DT_INT64:   // Unsupported due to 0% precision observed for resnet
-    default:
-        return StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+    try {
+        switch (proto.dtype()) {
+        case tensorflow::DataType::DT_FLOAT:
+            description.setPrecision(InferenceEngine::Precision::FP32);
+            blob = InferenceEngine::make_shared_blob<float>(description, (float*)proto.tensor_content().data());
+            break;
+        case tensorflow::DataType::DT_UINT8:
+            description.setPrecision(InferenceEngine::Precision::U8);
+            blob = InferenceEngine::make_shared_blob<uint8_t>(description, (uint8_t*)proto.tensor_content().data());
+            break;
+        case tensorflow::DataType::DT_INT8:
+            description.setPrecision(InferenceEngine::Precision::I8);
+            blob = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)proto.tensor_content().data());
+            break;
+        case tensorflow::DataType::DT_INT16:
+            description.setPrecision(InferenceEngine::Precision::I16);
+            blob = InferenceEngine::make_shared_blob<int16_t>(description, (int16_t*)proto.tensor_content().data());
+            break;
+        case tensorflow::DataType::DT_INT32:
+            description.setPrecision(InferenceEngine::Precision::I32);
+            blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
+            break;
+        case tensorflow::DataType::DT_HALF:    // TODO: Data is in proto.half_val container, need to convert
+        case tensorflow::DataType::DT_UINT16:  // TODO: Data is in proto.int_val container, need to convert
+        case tensorflow::DataType::DT_INT64:   // Unsupported due to 0% precision observed for resnet
+        default: {
+            Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+            SPDLOG_INFO(status.string());
+            return status;
+        }
+        }
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("EntryNode::deserialize: exception thrown from make_shared_blob; {}; exception message: {}", status.string(), e.what());
+        return status;
+    } catch (std::logic_error& e) {
+        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_ERROR("EntryNode::deserialize: exception thrown from make_shared_blob; {}; exception message: {}", status.string(), e.what());
+        return status;
     }
+
 
     return StatusCode::OK;
 }

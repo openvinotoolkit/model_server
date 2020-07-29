@@ -48,6 +48,7 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
             dependency_output_name);
         this->inputBlobs[current_node_input_name] = it->second;
     }
+
     finishedDependenciesCount++;
     return StatusCode::OK;
 }
