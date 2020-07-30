@@ -87,35 +87,6 @@ public:
 
 std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 
-class MockVersionReader : public ovms::IVersionReader {
-public:
-    MockVersionReader() = default;
-    ~MockVersionReader() {}
-    ovms::Status readAvailableVersions(ovms::model_versions_t& versions) override {
-        versions.resize(toRegister.size());
-        std::copy(toRegister.begin(), toRegister.end(), versions.begin());
-        return ovms::StatusCode::OK;
-    };
-    void registerVersionToLoad(ovms::model_version_t version) {
-        toRegister.emplace_back(version);
-    }
-
-private:
-    std::vector<ovms::model_version_t> toRegister;
-};
-
-std::shared_ptr<MockVersionReader> mockVersionReader;
-
-class ModelManagerWithModelInstanceFakeLoad : public ovms::ModelManager {
-public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
-        return modelWithModelInstanceFakeLoad;
-    }
-    std::shared_ptr<ovms::IVersionReader> getVersionReader(const std::string& path) override {
-        return mockVersionReader;
-    }
-};
-
 TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config{

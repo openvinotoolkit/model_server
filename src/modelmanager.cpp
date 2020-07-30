@@ -24,7 +24,6 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
-
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
@@ -127,6 +126,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
     configFilename = jsonFilename;
+    std::set<std::string> modelsInConfigFile;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
@@ -134,8 +134,30 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             return status;
         }
         reloadModelWithVersions(modelConfig);
+        modelsInConfigFile.emplace(modelConfig.getName());
     }
+    retireModelsRemovedFromConfigFile(modelsInConfigFile);
     return StatusCode::OK;
+}
+
+void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile) {
+    std::set<std::string> modelsCurrentlyLoaded;
+    for (auto& nameModelPair : getModels()) {
+        modelsCurrentlyLoaded.insert(nameModelPair.first);
+    }
+    std::vector<std::string> modelsToUnloadAllVersions(getModels().size());
+    auto it = std::set_difference(
+        modelsCurrentlyLoaded.begin(), modelsCurrentlyLoaded.end(),
+        modelsExistingInConfigFile.begin(), modelsExistingInConfigFile.end(),
+        modelsToUnloadAllVersions.begin());
+    modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
+    for (auto& modelName : modelsToUnloadAllVersions) {
+        try {
+            models.at(modelName)->retireAllVersions();
+        } catch (const std::out_of_range& e) {
+            SPDLOG_ERROR("Unknown error occured when tried to retire all versions of model:{}", modelName);
+        }
+    }
 }
 
 void ModelManager::watcher(std::future<void> exit) {

@@ -18,6 +18,7 @@
 #include <future>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -79,6 +80,13 @@ private:
          * @brief An exit signal to notify watcher thread to exit
          */
     std::promise<void> exit;
+
+    /**
+         * @brief Retires models non existing in config file
+         *
+         * @param modelsExistingInConfigFile
+         */
+    void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
 public:
     /**

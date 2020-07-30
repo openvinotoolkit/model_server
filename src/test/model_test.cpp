@@ -20,55 +20,19 @@
 
 #include "../model.hpp"
 #include "test_utils.hpp"
-
-namespace {
-class MockModelInstanceChangingStates : public ovms::ModelInstance {
-    static const ovms::model_version_t UNUSED_VERSION = 987789;
-
-public:
-    MockModelInstanceChangingStates() {
-        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, ovms::ModelVersionState::START);
-    }
-    virtual ~MockModelInstanceChangingStates() {}
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
-        version = config.getVersion();
-        status.setAvailable();
-        return ovms::StatusCode::OK;
-    }
-    ovms::Status reloadModel(const ovms::ModelConfig& config) override {
-        version = config.getVersion();
-        status.setAvailable();
-        return ovms::StatusCode::OK;
-    }
-    void unloadModel() override {
-        status.setEnd();
-    }
-};
-
-class MockModel : public ovms::Model {
-public:
-    MockModel() :
-        Model("UNUSED_NAME") {}
-    virtual ~MockModel() {}
-
-protected:
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
-        return std::move(std::make_shared<MockModelInstanceChangingStates>());
-    }
-};
+#include "mockmodelinstancechangingstates.hpp"
 
 class ModelDefaultVersions : public ::testing::Test {};
-}  //  namespace
 
 TEST_F(ModelDefaultVersions, DefaultVersionNullWhenNoVersionAdded) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_EQ(nullptr, defaultInstance);
 }
 
 TEST_F(ModelDefaultVersions, DefaultVersionNullWhenVersionRetired) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -81,7 +45,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionNullWhenVersionRetired) {
 }
 
 TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnValidWhen1Added) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -94,7 +58,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnValidWhen1Added) {
 }
 
 TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighest) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -111,7 +75,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighest) {
 }
 
 TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -134,7 +98,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
 }
 
 TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloaded) {
-    MockModel mockModel;
+    MockModelWithInstancesJustChangingStates mockModel;
     std::shared_ptr<ovms::model_versions_t> versionsToChange = std::make_shared<ovms::model_versions_t>();
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;

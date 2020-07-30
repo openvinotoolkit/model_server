@@ -75,6 +75,14 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
     return StatusCode::OK;
 }
 
+void Model::retireAllVersions() {
+    for (const auto versionModelInstancePair : modelVersions) {
+        spdlog::info("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        versionModelInstancePair.second->unloadModel();
+        updateDefaultVersion();
+    }
+}
+
 Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
     Status status;
     for (const auto version : *versionsToReload) {
