@@ -141,20 +141,6 @@ Status inference(
     return StatusCode::OK;
 }
 
-Status assureModelInstanceLoadedWithProperBatchSize(
-    ModelInstance& modelInstance,
-    size_t requestedBatchSize,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
-    if (modelInstance.getBatchSize() != requestedBatchSize) {
-        SPDLOG_INFO("Model:{} version:{} loaded with different batch size:{} than requested:{}",
-            modelInstance.getName(), modelInstance.getVersion(), modelInstance.getBatchSize(), requestedBatchSize);
-        return modelInstance.reloadModel(requestedBatchSize, {}, modelInstancePredictRequestsHandlesCountGuardPtr);
-    }
-    SPDLOG_INFO("Model:{} version:{} loaded with requested batch size:{}",
-        modelInstance.getName(), modelInstance.getVersion(), modelInstance.getBatchSize());
-    return ovms::StatusCode::OK;
-}
-
 Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,

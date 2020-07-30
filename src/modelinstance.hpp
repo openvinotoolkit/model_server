@@ -187,6 +187,8 @@ private:
          */
     std::recursive_mutex loadingMutex;
 
+    Status checkShapesAmbiguity(const ModelConfig& config);
+
     /**
          * @brief Internal method for loading inputs
          *
@@ -208,10 +210,28 @@ private:
          */
     Status loadModelImpl(const ModelConfig& config);
 
+    Status handleAnonymousShape(ModelConfig& config);
+
     /**
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config);
+
+     const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput,
+        const Mode& batchingMode);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
 public:
     /**
@@ -382,22 +402,6 @@ public:
          */
     Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& predictHandlesCounterGuard);
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput,
-        const Mode& batchingMode);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
 

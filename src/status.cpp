@@ -38,7 +38,10 @@ const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::st
         {grpc::StatusCode::INTERNAL, "Plugin config is in wrong format"}},
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT,
         {grpc::StatusCode::INTERNAL, "Model version policy is in wrong format"}},
-
+    {StatusCode::RESHAPE_ERROR,
+        {grpc::StatusCode::INTERNAL, "Model reshape failed"}},
+    {StatusCode::AMBIGUOUS_SHAPE_PARAM,
+        {grpc::StatusCode::INTERNAL, "Anonymous fixed shape is invalid for models with multiple inputs"}},
     {StatusCode::MODEL_MISSING,
         {grpc::StatusCode::NOT_FOUND, "Model with requested name and/or version is not found"}},
     {StatusCode::MODEL_NAME_MISSING,

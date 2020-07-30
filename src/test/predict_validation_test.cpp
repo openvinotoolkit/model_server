@@ -19,7 +19,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "test_utils.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -32,6 +34,7 @@ class PredictValidation : public ::testing::Test {
     public:
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(size_t, getBatchSize, (), (const, override));
+        MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
     };
 
     std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
@@ -40,6 +43,7 @@ class PredictValidation : public ::testing::Test {
 protected:
     NiceMock<MockModelInstance> instance;
     tensorflow::serving::PredictRequest request;
+    ovms::ModelConfig modelConfig{"model_name", "model_path"};
 
     void SetUp() override {
         tensors = tensor_desc_map_t({
@@ -59,32 +63,17 @@ protected:
 
         ON_CALL(instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));
         ON_CALL(instance, getBatchSize()).WillByDefault(Return(1));
+        ON_CALL(instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
-        auto& inputA = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
-        inputA.set_dtype(tensorflow::DataType::DT_FLOAT);
-        *inputA.mutable_tensor_content() = std::string(1 * 3 * 224 * 224 * 4, '1');
-        inputA.mutable_tensor_shape()->add_dim()->set_size(1);
-        inputA.mutable_tensor_shape()->add_dim()->set_size(3);
-        inputA.mutable_tensor_shape()->add_dim()->set_size(224);
-        inputA.mutable_tensor_shape()->add_dim()->set_size(224);
-
-        auto& inputB = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
-        inputB.set_dtype(tensorflow::DataType::DT_UINT8);
-        *inputB.mutable_tensor_content() = std::string(1 * 3 * 62 * 62 * 1, '1');
-        inputB.mutable_tensor_shape()->add_dim()->set_size(1);
-        inputB.mutable_tensor_shape()->add_dim()->set_size(3);
-        inputB.mutable_tensor_shape()->add_dim()->set_size(62);
-        inputB.mutable_tensor_shape()->add_dim()->set_size(62);
-
-        auto& inputC = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
-        inputC.set_dtype(tensorflow::DataType::DT_INT64);
-        *inputC.mutable_tensor_content() = std::string(1 * 6 * 128 * 128 * 16 * 8, '1');
-        inputC.mutable_tensor_shape()->add_dim()->set_size(1);
-        inputC.mutable_tensor_shape()->add_dim()->set_size(6);
-        inputC.mutable_tensor_shape()->add_dim()->set_size(128);
-        inputC.mutable_tensor_shape()->add_dim()->set_size(128);
-        inputC.mutable_tensor_shape()->add_dim()->set_size(16);
-
+        request = preparePredictRequest(
+        {
+            {"Input_FP32_1_3_224_224_NHWC",
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 224, 224}, tensorflow::DataType::DT_FLOAT}},
+            {"Input_U8_1_3_62_62_NCHW",
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 62, 62}, tensorflow::DataType::DT_UINT8}},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 6, 128, 128, 16}, tensorflow::DataType::DT_INT64}},
+        });
         // U16 uses int_val instead of tensor_content so it needs separate test
         auto& inputD = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
         inputD.set_dtype(tensorflow::DataType::DT_UINT16);
@@ -148,6 +137,21 @@ TEST_F(PredictValidation, RequestWrongBatchSize) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
+TEST_F(PredictValidation, RequestWrongBatchSizeAuto) {
+    modelConfig.setBatchingParams("auto");
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(10);  // dim(0) is batch size
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
+}
+
+TEST_F(PredictValidation, RequestValidBatchSizeAuto) {
+    modelConfig.setBatchingParams("auto");
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
 TEST_F(PredictValidation, RequestWrongShapeValues) {
     auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
@@ -157,6 +161,114 @@ TEST_F(PredictValidation, RequestWrongShapeValues) {
 
     auto status = instance.validate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesTwoInputsOneWrong) {  // one input fails validation, request denied
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
+
+    auto& input2 = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
+    input2.mutable_tensor_shape()->mutable_dim(0)->set_size(2);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesAuto) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesAutoTwoInputs) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\", \"Input_U16_1_2_8_4_NCHW\": \"auto\"}");
+
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
+
+    auto& input2 = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(2);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(16);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(8);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesAutoNoNamedInput) {
+    modelConfig.parseShapeParameter("auto");
+
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
+
+    auto& input2 = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(2);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(16);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(8);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesAutoFirstDim) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(2);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(3);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(62);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(62);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(PredictValidation, RequestValidShapeValuesTwoInputsFixed) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\", \"Input_U16_1_2_8_4_NCHW\": \"(1,2,8,4)\"}");
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(PredictValidation, RequestWrongShapeValuesFixed) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\"}");
+
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(1);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(4);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+TEST_F(PredictValidation, RequestWrongShapeValuesFixedFirstDim) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\"}");
+
+    auto& input = (*request.mutable_inputs())["Input_U8_1_3_62_62_NCHW"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(2);
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(3);
+    input.mutable_tensor_shape()->mutable_dim(2)->set_size(62);
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(62);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(PredictValidation, RequestIncorrectContentSize) {

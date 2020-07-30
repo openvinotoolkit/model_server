@@ -44,6 +44,7 @@ enum class StatusCode {
     RESHAPE_ERROR,              /*!< Impossible to perform reshape */
     RESHAPE_REQUIRED,           /*!< Model instance needs to be reloaded with new shape */
     BATCHSIZE_CHANGE_REQUIRED,  /*!< Model instance needs to be reloaded with new batch size */
+    AMBIGUOUS_SHAPE_PARAM,  /*!< Fixed no named shape param defined for model with multiple inputs */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
