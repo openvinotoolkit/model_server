@@ -23,12 +23,6 @@ Run build on shared machine with extra makefile flags:
 OVMS_CPP_DOCKER_IMAGE=rr_ovms OVMS_CPP_CONTAINTER_PORT=9278 make docker_build
 ```
 
-Build using a non-default OS docker image:
-
-```bash
-make BASE_OS=clearlinux OVMS_CPP_DOCKER_IMAGE=my-ovms-clearlinux-image
-```
-
 Build, without using a docker cache:
 
 ```bash
@@ -36,17 +30,69 @@ make NO_DOCKER_CACHE=true
 ```
 
 ### Debugging in docker (using `gdb`)  
+
+First of all, if possible, try building a whole project in a debug mode:
+```
+$ make docker_build BAZEL_BUILD_TYPE=dbg
+```
+
 Run container:
 ```
 $ docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" --entrypoint bash ovms-build:latest
 ```
-In container install and run `gdb`, recompile ovms with debug symbols:
+Recompile ovms with debug symbols (it's better to use makefile parameter `BAZEL_BUILD_TYPE=dbg`, which will build dependencies in a debug mode too):
 ```
-[root@72dc3b874772 ovms]# yum -y install gdb
 [root@72dc3b874772 ovms]# bazel build //src:ovms -c dbg
 [root@72dc3b874772 ovms]# gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /model
 ```
 
+For unit test debugging, use:
+```
+gdb --args ./bazel-bin/src/./ovms_test --gtest_filter='OvmsConfigTest.emptyInput'
+```
+
+Remember to enable fork follow mode when debugging forking tests:
+```
+# (in gdb cli)
+set follow-fork-mode child
+```
+
+#### Debugging functional tests:
+
+You should use ovms-build image for debugging, as it has all the necessary tools preinstalled.
+Change ENTRYPOINT line in Dockerfile.centos to the following, and issue `make docker_build BAZEL_BUILD_TYPE=dbg`:
+```
+ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo 'Server started on port'; sleep 100000"]
+```
+
+Build project in a debug mode:
+```
+make docker_build BAZEL_BUILD_TYPE=dbg
+```
+
+In terminal 1, tests tests. Adjust `TEST_PATH` to point to test you want to debug:
+```
+TEST_PATH=tests/functional/test_batching.py::TestBatchModelInference::test_run_inference_rest IMAGE=ovms-build:latest make test_functional
+```
+
+Now, in terminal 2, find out ID/hash of a running docker container:
+```
+docker ps
+```
+
+Using that ID, exec a new bash shell into this container and start gdb. Please note that params to OVMS should match ones passed in test code.
+```
+docker exec -ti HASH bash
+[root@898d55a2aa56 src]# cd /ovms/bazel-bin/src/ ; gdb --args ./ovms  --model_name age_gender --model_path /opt/ml/age_gender --port 9000 --rest_port 5500 --log_level TRACE
+```
+
+Now, in terminal 3, kill sleep process that is preventing tests execution start (tests are waiting for stdout text "Server started on port"), using docker container hash:
+```
+docker exec -ti HASH bash
+[root@898d55a2aa56 src]# killall sleep
+```
+
+In terminal 1 you should be able to debug this particular test execution.
 
 ## OVMS testing
 
