@@ -18,13 +18,17 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <vector>
+#include <tuple>
 
 #include <inference_engine.hpp>
 
 #include "../tensorinfo.hpp"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
+using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -51,6 +55,24 @@ static ovms::tensor_map_t prepareTensors(
             kv.second);
     }
     return result;
+}
+
+static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs){
+    tensorflow::serving::PredictRequest request;
+    for (auto const& it : requestInputs){
+        auto& name = it.first;
+        auto [ shape, dtype ] = it.second;
+
+        auto& input = (*request.mutable_inputs())[name];
+        input.set_dtype(dtype);
+        size_t numberOfElements = 1;
+        for (auto const& dim : shape){
+            input.mutable_tensor_shape()->add_dim()->set_size(dim);
+            numberOfElements *= dim;
+        }
+        *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(dtype), '1');
+    }
+    return request;
 }
 
 static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {

@@ -62,6 +62,18 @@ std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape)
     return oss.str();
 }
 
+Status ModelInstance::checkShapesAmbiguity(const ModelConfig& config){
+    auto networkShapes = network->getInputShapes();
+    auto configShapes = config.getShapes();
+    // Return AMBIGUOUS_SHAPE_PARAM status code if fixed shape is specified
+    // for anonymous input and model has multiple inputs
+    if (configShapes.count(DEFAULT_INPUT_NAME)) {
+        if (configShapes.at(DEFAULT_INPUT_NAME).shapeMode == FIXED && networkShapes.size() > 1)
+            return StatusCode::AMBIGUOUS_SHAPE_PARAM;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::loadInputTensors(const ModelConfig& config) {
     auto networkShapes = network->getInputShapes();
     bool reshapeRequired = false;
@@ -85,13 +97,13 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config) {
         input->setLayout(layout);
 
         if (config.getShapes().size() > 0) {
-            // Shape for single named input
+            // Shape for named input
             if (config.getShapes().count(name)) {
                 if (config.getShapes().at(name).shape.size()) {
                     shape = config.getShapes().at(name).shape;
                 }
-                // Shape for single anonymous input
-            } else if (config.getShapes().count(DEFAULT_INPUT_NAME) && network->getInputsInfo().size() == 1) {
+            // Shape for anonymous input
+            } else if (config.getShapes().count(DEFAULT_INPUT_NAME)) {
                 if (config.getShapes().at(DEFAULT_INPUT_NAME).shape.size()) {
                     shape = config.getShapes().at(DEFAULT_INPUT_NAME).shape;
                 }
@@ -291,6 +303,27 @@ void ModelInstance::prepareInferenceRequestsQueue() {
         numberOfParallelInferRequests);
 }
 
+Status ModelInstance::handleAnonymousShape(ModelConfig& config) {
+    auto networkShapes = network->getInputShapes();
+    auto configShapes = config.getShapes();
+    if (configShapes.count(DEFAULT_INPUT_NAME)) {
+        //  Return AMBIGUOUS_SHAPE_PARAM status code if fixed shape is specified
+        //  for anonymous input and model has multiple inputs
+        if (configShapes.at(DEFAULT_INPUT_NAME).shapeMode == FIXED && networkShapes.size() > 1)
+            return StatusCode::AMBIGUOUS_SHAPE_PARAM;
+
+        //  For single fixed input or for any amount of inputs for default auto mode,
+        //  replace default key with models inputs names
+        if (networkShapes.size() > 0){
+            for (auto &it : networkShapes) {
+                config.addShape(it.first, configShapes.at(DEFAULT_INPUT_NAME));
+            }
+        }
+        config.removeShape(DEFAULT_INPUT_NAME);
+    }
+    return StatusCode::OK;
+}
+
 void ModelInstance::configureBatchSize(const ModelConfig& config) {
     batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
     network->setBatchSize(batchSize);
@@ -310,6 +343,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config) {
         status = StatusCode::OK;
         if (!this->network)
             status = loadOVCNNNetwork();
+        if (!status.ok()) {
+            return status;
+        }
+
+        status = handleAnonymousShape(const_cast<ModelConfig&>(config));
         if (!status.ok()) {
             return status;
         }
@@ -377,19 +415,19 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
     } else if (requestShapes.size() > 0) {
         newConfig = config.copyConfigWithNewShapes(requestShapes);
     } else {
+        spdlog::debug("Error: requested model:{} version:{} reload with no batchsize and shapes set.", getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
-
     ModelConfig oldConfig = config;
     // TODO make fail-safe old config store
     auto status = reloadModel(newConfig);
     if (!status.ok()) {
         spdlog::info("Failed to reload model:{} version:{} with error:{}. Reloading to previous configuration",
             getName(), getVersion(), status.string());
-        status = reloadModel(oldConfig);
-        if (!status.ok()) {
+        auto recoveryStatus = reloadModel(oldConfig);
+        if (!recoveryStatus.ok()) {
             spdlog::info("Failed to reload model:{} version:{} to previous configuration with error:{}",
-                getName(), getVersion(), status.string());
+                getName(), getVersion(), recoveryStatus.string());
         }
     } else {
         predictHandlesCounterGuard = std::make_unique<ModelInstancePredictRequestsHandlesCountGuard>(*this);
@@ -561,6 +599,7 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
     }
     return StatusCode::OK;
 }
+
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     // Network and request must have the same amount of inputs
     if (request->inputs_size() < 0 || getInputsInfo().size() != static_cast<size_t>(request->inputs_size())) {
@@ -582,18 +621,11 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
 
         auto& requestInput = it->second;
         Mode batchingMode = getModelConfig().getBatchingMode();
-        Mode shapeMode;
-        bool inputRequiresReload = false;
+        Mode shapeMode = FIXED;
+        if (getModelConfig().isShapeAuto(name))
+            shapeMode = AUTO;
 
-        if (getModelConfig().getShapes().size() == 0) {
-            shapeMode = FIXED;  // shape param not provided, validate shape by default
-        } else if (getInputsInfo().size() == 1 && getModelConfig().getShapes().count(DEFAULT_INPUT_NAME) == 1) {
-            auto shapeIt = getModelConfig().getShapes().find(DEFAULT_INPUT_NAME);
-            shapeMode = (shapeIt->second).shapeMode;
-        } else {
-            auto shapeIt = getModelConfig().getShapes().find(name);
-            shapeMode = (shapeIt->second).shapeMode;
-        }
+        bool inputRequiresReload = false;
 
         auto status = validatePrecision(*networkInput, requestInput);
         if (status != StatusCode::OK)

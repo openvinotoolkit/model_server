@@ -598,7 +598,8 @@ public:
             for (auto& it : requestShapes) {
                 const auto& name = it.first;
                 auto newShape = it.second;
-                this->shapes.find(name)->second.shape = newShape;
+                if (this->shapes.count(name))
+                    this->shapes.find(name)->second.shape = newShape;
             }
         }
     }
@@ -633,6 +634,23 @@ public:
          */
     void setShapes(const shapes_map_t& shapes) {
         this->shapes = shapes;
+    }
+
+
+    /**
+        * @brief Returns true if shape with certain name is in AUTO mode
+         * 
+         * @return bool
+         */
+    bool isShapeAuto(const std::string& name) const {
+        auto it = getShapes().find(name);
+        if (it == getShapes().end()) {
+            it = getShapes().find(DEFAULT_INPUT_NAME);
+        }
+        if (it == getShapes().end()) {
+            return false;
+        }
+        return it->second.shapeMode == Mode::AUTO;
     }
 
     /**
@@ -678,6 +696,10 @@ public:
          */
     void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
         this->shapes[name] = shapeInfo;
+    }
+
+    void removeShape(const std::string& name) {
+        this->shapes.erase(name);
     }
 
     /**

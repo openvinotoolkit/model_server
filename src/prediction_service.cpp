@@ -73,12 +73,6 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         return status.grpc();
     }
 
-    // status = assureModelInstanceLoadedWithProperBatchSize(*modelVersion, /*requestBatchSize*/, modelInstancePredictRequestsHandlesCountGuard1);
-    // if (!status.ok()) {
-    //     SPDLOG_INFO("Assuring modelInstance is loaded with proper meta parameters failed. {}", status.string());
-    //     return status.grpc();
-    // }
-
     status = inference(*modelInstance, request, response, modelInstancePredictRequestsHandlesCountGuard);
     if (!status.ok()) {
         return status.grpc();
