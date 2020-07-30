@@ -890,7 +890,7 @@ public:
             if (v["batch_size"].IsString()) {
                 // Although batch size is in, in legacy python version it was string
                 // Temporary, until validated with JSON schema
-                this->setBatchingParams(std::max<uint32_t>(stou32(v["batch_size"].GetString()).value_or(1), 1));
+                this->setBatchingParams(v["batch_size"].GetString());
             } else {
                 this->setBatchingParams(v["batch_size"].GetUint64());
             }

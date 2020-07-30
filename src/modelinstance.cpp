@@ -96,19 +96,9 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config) {
         }
         input->setLayout(layout);
 
-        if (config.getShapes().size() > 0) {
-            // Shape for named input
-            if (config.getShapes().count(name)) {
-                if (config.getShapes().at(name).shape.size()) {
-                    shape = config.getShapes().at(name).shape;
-                }
-            // Shape for anonymous input
-            } else if (config.getShapes().count(DEFAULT_INPUT_NAME)) {
-                if (config.getShapes().at(DEFAULT_INPUT_NAME).shape.size()) {
-                    shape = config.getShapes().at(DEFAULT_INPUT_NAME).shape;
-                }
-            } else {
-                return StatusCode::INTERNAL_ERROR;
+        if (config.getShapes().count(name)) {
+            if (config.getShapes().at(name).shape.size()) {
+                shape = config.getShapes().at(name).shape;
             }
         }
 
