@@ -7,7 +7,7 @@ In order to build OVMS image, ensure that you have already installed and configu
 - Docker
 - GNU make
 
-During a docker image build process, some packages are downloaded from the network via a distribution-official package manager, from a official source.
+During a docker image build process, some packages are downloaded from the network.
 
 NOTE: If necessary, ensure that you have a `http_proxy` and `https_proxy` environment variables set. Those are passed to a docker container during the build.
 
@@ -29,5 +29,5 @@ docker run --rm ovms:latest --help
 
 Usage information shall be displayed.
 
-For further information on how to use this container, please read usage documentation.
+For further information on how to use this container, please read [usage documentation](user-guide/README.md).
 
