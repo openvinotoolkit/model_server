@@ -353,7 +353,7 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
 
     // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> unload_guard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
 
     // Prepare request with 1x5 shape, expect reshape

@@ -619,22 +619,6 @@ public:
     }
 
     /**
-         * @brief Returns true if shape with certain name is in AUTO mode
-         * 
-         * @return bool
-         */
-    bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes().find(name);
-        if (it == getShapes().end()) {
-            it = getShapes().find(DEFAULT_INPUT_NAME);
-        }
-        if (it == getShapes().end()) {
-            return false;
-        }
-        return it->second.shapeMode == Mode::AUTO;
-    }
-
-    /**
          * @brief Get the shapes
          * 
          * @return const shapes_map_t& 
