@@ -21,10 +21,13 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from utils.cleanup import clean_hanging_docker_resources, get_docker_client
+from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
+    get_containers_with_tests_suffix, get_docker_client
 from utils.logger import get_logger
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
+from utils.parametrization import get_tests_suffix
+from config import test_dir, test_dir_cleanup
 
 logger = get_logger(__name__)
 
@@ -69,11 +72,25 @@ def create_grpc_channel():
 
 
 def pytest_configure():
-    clean_hanging_docker_resources()
+    # Perform initial configuration.
+    init_conf_logger = get_logger("init_conf")
+
+    container_names = get_containers_with_tests_suffix()
+    if container_names:
+        init_conf_logger.info("Possible conflicting container names: {} "
+                              "for given tests_suffix: {}".format(container_names, get_tests_suffix()))
 
 
 def pytest_unconfigure():
+    # Perform cleanup.
+    cleanup_logger = get_logger("cleanup")
+
+    cleanup_logger.info("Cleaning hanging docker resources with suffix: {}".format(get_tests_suffix()))
     clean_hanging_docker_resources()
+
+    if test_dir_cleanup:
+        cleanup_logger.info("Deleting test directory: {}".format(test_dir))
+        delete_test_directory()
 
 
 @pytest.hookimpl(hookwrapper=True)

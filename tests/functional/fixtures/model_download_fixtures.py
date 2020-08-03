@@ -18,6 +18,7 @@ import os
 
 import pytest
 import requests
+import shutil
 
 import config
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1
@@ -56,6 +57,19 @@ def models_downloader():
     models_paths = {}
     for model in models_to_download:
         for extension in model.download_extensions:
-            models_paths[model.name] = download_file(model.url, model.name, config.path_to_mount, extension,
+            models_paths[model.name] = download_file(model.url, model.name, config.path_to_mount_cache, extension,
                                                      str(model.version))
     return models_paths
+
+
+@pytest.fixture(autouse=True, scope="session")
+def copy_cached_models_to_test_dir(models_downloader):
+    cached_models_paths = models_downloader
+    os.makedirs(config.path_to_mount, exist_ok=True)
+
+    for model_name, cached_model_dir in cached_models_paths.items():
+        dest_model_dir = os.path.join(config.path_to_mount, model_name)
+
+        logger.info("Copying model {} from cache to {}".format(model_name, dest_model_dir))
+        if not os.path.exists(dest_model_dir):
+            shutil.copytree(cached_model_dir, dest_model_dir)

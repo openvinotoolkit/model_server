@@ -136,7 +136,11 @@ The following variables are available for customization:
 
 `IMAGE` - docker image name which should be used to run tests.
 
-`TEST_DIR` -  location where models and test data should be downloaded.
+`TEST_DIR_CACHE` -  location where models and test data should be downloaded.
+
+`TEST_DIR` -  location where models and test data will be copied to for use while running tests.
+
+`TEST_DIR_CLEANUP` - if set to `True`, directory under `TEST_DIR` will be removed after tests.
 
 `LOG_LEVEL` - set log level.
 

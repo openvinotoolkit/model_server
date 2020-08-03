@@ -16,16 +16,34 @@
 
 import docker
 from docker.errors import APIError
+import os
+import shutil
+
 from utils.parametrization import get_tests_suffix
+import config
 
 
 def get_docker_client():
     return docker.from_env()
 
 
+def get_containers_with_tests_suffix():
+    tests_suffix = get_tests_suffix()
+
+    client = get_docker_client()
+    containers = client.containers.list(all=True, ignore_removed=True)
+
+    detected_container_names = []
+    for container in containers:
+        if tests_suffix in container.name:
+            detected_container_names.append(container.name)
+    client.close()
+    return detected_container_names
+
+
 def clean_hanging_docker_resources():
     client = get_docker_client()
-    containers = client.containers.list(all=True)
+    containers = client.containers.list(all=True, ignore_removed=True)
     networks = client.networks.list()
     tests_suffix = get_tests_suffix()
     clean_hanging_containers(containers, tests_suffix)
@@ -68,3 +86,8 @@ def handle_cleanup_exception(docker_error):
         pass
     else:
         raise
+
+
+def delete_test_directory():
+    if os.path.exists(config.test_dir):
+        shutil.rmtree(config.test_dir)

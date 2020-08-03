@@ -16,6 +16,8 @@
 
 import os
 
+from utils.parametrization import generate_test_object_name
+
 try:
     # In user_config.py, user might export custom environment variables
     import user_config
@@ -25,8 +27,16 @@ except ImportError:
 """IMAGE - docker image name which should be used to run tests"""
 image = os.environ.get("IMAGE", "ovms:latest")
 
-"""TEST_DIR -  location where models and test data should be downloaded"""
-test_dir = os.environ.get("TEST_DIR", "/tmp/ovms_models")
+"""TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
+test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))
+
+"""TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
+test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
+
+"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed
+                      after tests execution"""
+test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
+test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
 artifacts_dir = os.environ.get("BUILD_LOGS", "")
@@ -44,6 +54,8 @@ ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 
 path_to_mount = os.path.join(test_dir, "saved_models")
+
+path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
 models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 

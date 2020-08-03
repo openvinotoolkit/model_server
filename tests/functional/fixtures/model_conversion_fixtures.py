@@ -16,6 +16,7 @@
 
 import os
 import pytest
+import shutil
 
 import config
 from fixtures.model_download_fixtures import download_file
@@ -31,7 +32,7 @@ def resnet_multiple_batch_sizes(get_docker_context):
     resnet_to_convert = [Resnet, ResnetBS4, ResnetBS8]
     converted_models = []
     tensorflow_model_path = download_file(model_url_base=Resnet.url, model_name=Resnet.name,
-                                          directory=os.path.join(config.test_dir, Resnet.local_conversion_dir),
+                                          directory=os.path.join(config.test_dir_cache, Resnet.local_conversion_dir),
                                           extension=Resnet.download_extensions[0],
                                           full_path=True)
 
@@ -41,7 +42,21 @@ def resnet_multiple_batch_sizes(get_docker_context):
         input_shape[1], input_shape[3] = input_shape[3], input_shape[1]
 
         converted_model = convert_model(get_docker_context, tensorflow_model_path,
-                                        config.path_to_mount + '/{}/{}'.format(resnet.name, resnet.version),
+                                        config.path_to_mount_cache + '/{}/{}'.format(resnet.name, resnet.version),
                                         resnet.name, input_shape)
         converted_models.append(converted_model)
+
     return converted_models
+
+
+@pytest.fixture(autouse=True, scope="session")
+def copy_cached_resnet_models(resnet_multiple_batch_sizes):
+    cached_resnet_models = resnet_multiple_batch_sizes
+
+    for cached_model_path_bin, _ in cached_resnet_models:
+        cached_model_dir = os.path.dirname(cached_model_path_bin)
+        dest_model_dir = cached_model_dir.replace(config.path_to_mount_cache, config.path_to_mount)
+
+        logger.info("Copying resnet model from cache to {}".format(dest_model_dir))
+        if not os.path.exists(dest_model_dir):
+            shutil.copytree(cached_model_dir, dest_model_dir)
