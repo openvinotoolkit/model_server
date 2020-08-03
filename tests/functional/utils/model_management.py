@@ -19,7 +19,7 @@ import shutil
 from pathlib import Path
 
 from utils.logger import get_logger
-from utils.parametrization import get_tests_suffix
+from utils.parametrization import get_tests_suffix, generate_test_object_name
 
 logger = get_logger(__name__)
 
@@ -67,7 +67,7 @@ def convert_model(client,
     ])
 
     client.containers.run(image=image,
-                          name='convert-model-{}'.format(get_tests_suffix()),
+                          name='convert-model-{}-{}'.format(get_tests_suffix(), generate_test_object_name(short=True)),
                           volumes=volumes,
                           user=user_id,
                           command=command,

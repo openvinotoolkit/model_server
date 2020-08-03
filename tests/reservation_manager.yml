@@ -1,9 +1,9 @@
 ---
 config:
   pool_range:
-    start: 30000
-    stop: 60000
-  pool_part_size: 1000
+    start: 10000
+    stop: 30000
+  pool_part_size: 600
   locks_dir: /tmp
   envs:
     ports_prefix: PORTS_PREFIX

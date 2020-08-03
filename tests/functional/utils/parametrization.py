@@ -15,6 +15,7 @@
 #
 
 import os
+import errno
 import re
 import socket
 from datetime import datetime
@@ -37,15 +38,47 @@ def get_ports_suffix():
     return suffix
 
 
+class TestsSuffix(metaclass=SingletonMeta):
+    string = None
+
+
 def get_tests_suffix():
-    return os.environ.get("TESTS_SUFFIX", "default")
+    tests_suffix = TestsSuffix()
+    if not tests_suffix.string:
+        tests_suffix.string = os.environ.get("TESTS_SUFFIX", generate_test_object_name(prefix="suffix"))
+    return tests_suffix.string
 
 
 def get_ports_for_fixture():
     ports_prefixes = get_ports_prefixes()
-    port_suffix = get_ports_suffix()
-    grpc_port = ports_prefixes["grpc_ports_prefix"]+port_suffix
-    rest_port = ports_prefixes["rest_ports_prefix"]+port_suffix
+
+    port_found = False
+    while not port_found:
+        port_suffix = get_ports_suffix()
+
+        grpc_port = ports_prefixes["grpc_ports_prefix"] + port_suffix
+        rest_port = ports_prefixes["rest_ports_prefix"] + port_suffix
+
+        location_grpc = ("", int(grpc_port))
+        location_rest = ("", int(rest_port))
+        try:
+            sock_grpc = socket.socket()
+            sock_grpc.bind(location_grpc)
+
+            sock_rest = socket.socket()
+            sock_rest.bind(location_rest)
+
+        except socket.error as e:
+            if e.errno != errno.EADDRINUSE:
+                raise Exception("Not expected exception found "
+                                "while getting ports for fixture {}:".format(e))
+            # Other error means address is in use and we must proceed
+            # to the next candidate
+            continue
+
+        # No exception raised - port is available.
+        port_found = True
+
     return grpc_port, rest_port
 
 
@@ -88,5 +121,3 @@ class ObjectName:
 def generate_test_object_name(short=False, prefix=None, separator="_"):
     name = ObjectName(short=short, prefix=prefix, separator=separator)
     return name.build()
-
-
