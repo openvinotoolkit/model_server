@@ -123,6 +123,28 @@ new_local_repository(
     path = "/awssdk",
 )
 
+# Azure Storage SDK
+new_local_repository(
+    name = "azure",
+    build_file = "@//third_party/azure:BUILD",
+    path = "/azure/azure-storage-cpp",
+)
+
+# Azure Storage SDK dependency - cpprest
+new_local_repository(
+    name = "cpprest",
+    build_file = "@//third_party/cpprest:BUILD",
+    path = "/azure/cpprestsdk",
+)
+
+# Boost (needed for Azure Storage SDK)
+
+new_local_repository(
+    name = "boost",
+    path = "/usr/local/lib/",
+    build_file = "@//third_party/boost:BUILD"
+)
+
 # Google Cloud SDK
 http_archive(
     name = "com_github_googleapis_google_cloud_cpp",
