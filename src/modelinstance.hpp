@@ -380,11 +380,11 @@ public:
          *
          * @param batchSize new batch size
          * @param shape new shape
-         * @param predictHandlesCounterGuard predictHandlesCounterGuardPtr
+         * @param unloadGuard unloadGuardPtr
          * 
          * @return Status
          */
-    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& predictHandlesCounterGuardPtr);
+    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
 
     /**
          * @brief Unloads model version

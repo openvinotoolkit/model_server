@@ -391,9 +391,9 @@ Status ModelInstance::reloadModel(const ModelConfig& config) {
     return loadModelImpl(config);
 }
 
-Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& predictHandlesCounterGuard) {
+Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
     // temporarily release current predictRequest lock on model loading
-    predictHandlesCounterGuard.reset();
+    unloadGuard.reset();
     // block concurrent requests for reloading/unloading - assure that after reload predict request
     // will block further requests for reloading/unloading until inference is performed
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
@@ -420,7 +420,7 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
                 getName(), getVersion(), recoveryStatus.string());
         }
     } else {
-        predictHandlesCounterGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
+        unloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
     }
     return status;
 }

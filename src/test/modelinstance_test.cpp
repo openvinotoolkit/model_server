@@ -262,8 +262,8 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
+    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
@@ -276,8 +276,8 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
     setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
+    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
@@ -292,8 +292,8 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
     modelInstance.unloadModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
+    EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
@@ -308,7 +308,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> predictHandlesCounterGuard;
-    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, predictHandlesCounterGuard), ovms::StatusCode::OK);
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
+    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
