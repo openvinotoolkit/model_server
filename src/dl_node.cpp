@@ -40,6 +40,7 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 
     status = prepareInputsAndModelForInference();
     if (!status.ok()) {
+        SPDLOG_DEBUG("DLNode::execute (Node name {}); error occurred during input/model preparation: {}", status.string());
         notifyEndQueue.push(*this);
         return status;
     }
@@ -59,12 +60,12 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
         // OV can throw exceptions derived from std::logic_error.
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
+        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::SetBlob: {}; exception message: {}", getName(), status.string(), e.what());
         notifyEndQueue.push(*this);
         return status;
     } catch (std::logic_error& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
+        SPDLOG_ERROR("DLNode::execute (Node name {}); error during InferRequest::SetBlob: {}; exception message: {}", getName(), status.string(), e.what());
         notifyEndQueue.push(*this);
         return status;
     }
@@ -186,15 +187,19 @@ Status DLNode::prepareInputsAndModelForInference() {
         // If precision is incorrect, perform conversion
         if (status == StatusCode::INVALID_PRECISION) {
             // TODO: Create new blob with proper precision
+            // https://jira.devtools.intel.com/browse/CVS-35616
             return status;
         }
 
-        // If batch size is incorrect, perform network batch size change if allowed (mode=auto)
+        // If batch size is incorrect, perform network batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
-            if (this->model->getModelConfig().getBatchingMode() != Mode::AUTO) {
+            if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
+                requestedBatchSize = blob->getTensorDesc().getDims()[0];
+            } else if (this->model->getModelConfig().isShapeAuto(name)) {
+                requestedReshapes[name] = blob->getTensorDesc().getDims();
+            } else {
                 return status;
             }
-            requestedBatchSize = blob->getTensorDesc().getDims()[0];
         }
 
         // If shape is incorrect, perform reshape if allowed (mode=auto)

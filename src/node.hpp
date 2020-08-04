@@ -41,7 +41,7 @@ protected:
     size_t finishedDependenciesCount = 0;
 
     // Blobs ready and waiting for execution
-    std::unordered_map<std::string, InferenceEngine::Blob::Ptr> inputBlobs;
+    BlobMap inputBlobs;
 
     // Input/Output name mapping and list of required inputs from previous nodes
     std::unordered_map<std::string, InputPairs> blobNamesMapping;

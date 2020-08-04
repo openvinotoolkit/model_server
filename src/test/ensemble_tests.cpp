@@ -68,18 +68,18 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     pipeline.execute();
 
@@ -115,24 +115,24 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
     std::unique_ptr<DLNode> dummy_nodes[N];
     for (int i = 0; i < N; i++) {
         dummy_nodes[i] = std::make_unique<DLNode>("dummy_node_" + std::to_string(i), dummyModelName, requestedModelVersion, managerWithDummyModel);
     }
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *(dummy_nodes[0]), {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*(dummy_nodes[N - 1]), *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *(dummy_nodes[0]), {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*(dummy_nodes[N - 1]), *output_node, {{dummyOutputName, customPipelineOutputName}});
     for (int i = 0; i < N - 1; i++) {
         pipeline.connect(*(dummy_nodes[i]), *(dummy_nodes[i + 1]), {{dummyOutputName, dummyInputName}});
     }
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(output_node));
     for (auto& dummy_node : dummy_nodes) {
         pipeline.push(std::move(dummy_node));
     }
@@ -192,18 +192,18 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
     managerWithDynamicBatchDummyModel.reloadModelWithVersions(dynamicBatchConfig);
 
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     pipeline.execute();
 
@@ -249,18 +249,18 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(dynamicShapeConfig);
 
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     pipeline.execute();
 
@@ -318,18 +318,90 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    pipeline.execute();
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), BATCH * WIDTH * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH * WIDTH * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0) {
+    // Scenario
+    // Shape is set to auto but only first dimension differs - change batch size via reshape
+
+    // input(20x10)   dummy(1x10), reshape    output(20x10)
+    //  O------------------------------>O----------------------------->O
+
+    // input 20x10
+    // dummy is 1x10, perform model reshape to 20x10
+    // process dummy
+    // check if output is 20x10
+
+    const int BATCH = 20;
+    const int WIDTH = 10;
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH);
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
+    std::vector<float> requestData;
+    for (int i = 0; i < BATCH; i++) {  // batch size
+        for (int j = 0; j < WIDTH; j++) {  // width
+            requestData.push_back((i+1) * (j+1));
+            /*
+            1.0, 2.0, 3.0, ..., 10.0,
+            2.0, 4.0, 6.0, ..., 20.0,
+            3.0, 6.0, 9.0, ..., 30.0,
+            ...
+            20.0, 40.0, ..., 200.0
+            */
+        }
+    }
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.parseShapeParameter("auto");
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+    auto output_node = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input_node, *output_node);
+
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     pipeline.execute();
 
@@ -363,19 +435,19 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto output = std::make_unique<ExitNode>(&response);
-    Pipeline pipeline(*input, *output);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto output_node = std::make_unique<ExitNode>(&response);
+    Pipeline pipeline(*input_node, *output_node);
     std::unique_ptr<DLNode> dummy_nodes[N];
 
     for (int i = 0; i < N; i++) {
         dummy_nodes[i] = std::make_unique<DLNode>("dummy_node_" + std::to_string(i), dummyModelName, requestedModelVersion, managerWithDummyModel);
-        pipeline.connect(*input, *(dummy_nodes[i]), {{customPipelineInputName + std::to_string(i), dummyInputName}});
-        pipeline.connect(*(dummy_nodes[i]), *output, {{dummyOutputName, customPipelineOutputName + std::to_string(i)}});
+        pipeline.connect(*input_node, *(dummy_nodes[i]), {{customPipelineInputName + std::to_string(i), dummyInputName}});
+        pipeline.connect(*(dummy_nodes[i]), *output_node, {{dummyOutputName, customPipelineOutputName + std::to_string(i)}});
         pipeline.push(std::move(dummy_nodes[i]));
     }
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(output_node));
 
     // Prepare request
     std::vector<float> requestDataT(N * DUMMY_MODEL_INPUT_SIZE);
@@ -416,18 +488,18 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
 }
@@ -441,18 +513,18 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
 }
@@ -475,18 +547,18 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input = std::make_unique<EntryNode>(&request);
-    auto model = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    auto output = std::make_unique<ExitNode>(&response);
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    Pipeline pipeline(*input, *output);
+    Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input, *model, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model, *output, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
+    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
 
-    pipeline.push(std::move(input));
-    pipeline.push(std::move(model));
-    pipeline.push(std::move(output));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
     auto status = pipeline.execute();
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
