@@ -86,7 +86,7 @@ ams_clean:
 
 test: $(ACTIVATE)
 	@echo "Executing functional tests..."
-	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/ --test_dir $(TEST_MODELS_DIR)
+	@. $(ACTIVATE); py.test $(TEST_DIRS)/functional/ --test_dir $(TEST_MODELS_DIR) --ignore=${TEST_DIRS}/functional/test_ams_inference.py  --ignore=${TEST_DIRS}/functional/ams_schemas.py --ignore=${TEST_DIRS}/functional/test_single_model_vehicle_attributes.py --ignore=${TEST_DIRS}/functional/test_single_model_vehicle.py
 
 test_local_only: $(ACTIVATE)
 	@echo "Executing functional tests with only local models..."
