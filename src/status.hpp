@@ -84,6 +84,8 @@ enum class StatusCode {
 
     UNKNOWN_ERROR,
 
+    NOT_IMPLEMENTED,
+
     // S3
     S3_BUCKET_NOT_FOUND, /*!< S3 Bucket not found  */
     S3_METADATA_FAIL,

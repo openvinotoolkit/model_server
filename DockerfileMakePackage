@@ -16,20 +16,32 @@ RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /ovms_release/lib/
 
-RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
+RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /openvino/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/ngraph/lib/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -type f -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_system.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_random.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_filesystem.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_thread.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_chrono.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_atomic.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_date_time.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_regex.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_log.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_log_setup.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /usr/local/lib/ -iname 'libboost_locale.so*' -exec cp -v {} /ovms_release/lib/ \;
+
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /openvino/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.so*'  -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/ngraph/lib/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/usb-ma2450.mvcmd /ovms_release/lib/
 
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 WORKDIR /ovms_release/bin
 RUN patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
-RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --remove-rpath  {}  \;
-RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
+RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
+RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /ovms
 #RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
