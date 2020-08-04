@@ -43,16 +43,16 @@ Status inference(
     ModelInstance& modelVersion,
     const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,
     size_t requestedBatchSize,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
 Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
     const tensorflow::serving::PredictRequest* requestProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 }  // namespace ovms

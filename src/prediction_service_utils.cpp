@@ -96,12 +96,12 @@ Status inference(
     ModelInstance& modelVersion,
     const PredictRequest* requestProto,
     PredictResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Timer timer;
     using std::chrono::microseconds;
 
     auto status = modelVersion.validate(requestProto);
-    status = reloadModelIfRequired(status, modelVersion, requestProto, modelInstancePredictRequestsHandlesCountGuardPtr);
+    status = reloadModelIfRequired(status, modelVersion, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
 
@@ -147,16 +147,16 @@ Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
     const PredictRequest* requestProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
-        status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelInstancePredictRequestsHandlesCountGuardPtr);
+        status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
         if (!status.ok()) {
             SPDLOG_INFO("Model instance reload failed. {}", status.string());
             return status;
         }
     } else if (status.reshapeRequired()) {
-        status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelInstancePredictRequestsHandlesCountGuardPtr);
+        status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
         if (!status.ok()) {
             SPDLOG_INFO("Model instance reload failed. {}", status.string());
             return status;
