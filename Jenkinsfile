@@ -74,7 +74,7 @@ pipeline {
         }
         stage('Push docker image clearlinux') {
             when{
-                branch 'docker_push_clearlinux'
+                branch 'master'
                 expression { env.REGISTRY_URL != null }
                 expression { env.IMAGE_NAME != null }
             }
