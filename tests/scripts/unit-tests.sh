@@ -7,7 +7,7 @@ LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/inference_engine/external
 LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64
 LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/ngraph/lib
 
-OPEN_VINO_DOCKER_IMAGE=openvino/ubuntu18_dev:2020.1
+OPEN_VINO_DOCKER_IMAGE=openvino/ubuntu18_dev:2020.4
 OVMS_TESTS_IMAGE="${OPEN_VINO_DOCKER_IMAGE}-ovms-tests"
 
 docker build \
