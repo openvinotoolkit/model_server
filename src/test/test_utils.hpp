@@ -25,6 +25,7 @@
 
 #include <inference_engine.hpp>
 
+#include "../modelmanager.hpp"
 #include "../tensorinfo.hpp"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
@@ -107,3 +108,14 @@ static std::string createConfigFileWithContent(const std::string& content, std::
     configFile.close();
     return filename;
 }
+
+class ConstructorEnabledModelManager : public ovms::ModelManager {
+public:
+    ConstructorEnabledModelManager() :
+        ovms::ModelManager() {}
+    ~ConstructorEnabledModelManager() {
+        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        models.clear();
+        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+    }
+};

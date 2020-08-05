@@ -17,7 +17,9 @@
 #include "prediction_service_utils.hpp"
 
 #include "deserialization.hpp"
+#include "executinstreamidguard.hpp"
 #include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
 
@@ -52,7 +54,7 @@ Status getModelInstance(ovms::ModelManager& manager,
     const std::string& modelName,
     ovms::model_version_t modelVersionId,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     SPDLOG_INFO("Requesting model:{}; version:{}.", modelName, modelVersionId);
 
     auto model = manager.findModelByName(modelName);
@@ -70,7 +72,7 @@ Status getModelInstance(ovms::ModelManager& manager,
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
-    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstancePredictRequestsHandlesCountGuardPtr);
+    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
 }
 
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
@@ -94,12 +96,12 @@ Status inference(
     ModelInstance& modelVersion,
     const PredictRequest* requestProto,
     PredictResponse* responseProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Timer timer;
     using std::chrono::microseconds;
 
     auto status = modelVersion.validate(requestProto);
-    status = reloadModelIfRequired(status, modelVersion, requestProto, modelInstancePredictRequestsHandlesCountGuardPtr);
+    status = reloadModelIfRequired(status, modelVersion, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
 
@@ -145,16 +147,16 @@ Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
     const PredictRequest* requestProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
-        status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelInstancePredictRequestsHandlesCountGuardPtr);
+        status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
         if (!status.ok()) {
             SPDLOG_INFO("Model instance reload failed. {}", status.string());
             return status;
         }
     } else if (status.reshapeRequired()) {
-        status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelInstancePredictRequestsHandlesCountGuardPtr);
+        status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
         if (!status.ok()) {
             SPDLOG_INFO("Model instance reload failed. {}", status.string());
             return status;

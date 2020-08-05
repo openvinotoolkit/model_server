@@ -25,23 +25,13 @@
 #include <inference_engine.hpp>
 #include <stdlib.h>
 
+#include "../executinstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
 using testing::Eq;
-
-class ConstructorEnabledModelManager : public ovms::ModelManager {
-public:
-    ConstructorEnabledModelManager() :
-        ModelManager() {}
-    ~ConstructorEnabledModelManager() {
-        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-        models.clear();
-        SPDLOG_INFO("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-    }
-};
 
 class TestPredict : public ::testing::Test {
 public:
@@ -181,7 +171,7 @@ void TestPredict::performPredict(const std::string modelName,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
     size_t batchSize = tensorProto.tensor_shape().dim(0).size();
@@ -194,7 +184,7 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before getModelInstance. Batch size: " << batchSize  << std::endl;
         waitBeforeGettingModelInstance->get();
     }
-    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstancePredictRequestsHandlesCountGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     if (waitBeforePerformInference) {
         std::cout << "Waiting before performInfernce." << std::endl;
@@ -204,7 +194,7 @@ void TestPredict::performPredict(const std::string modelName,
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(reloadModelIfRequired(validationStatus, *modelInstance, &request, modelInstancePredictRequestsHandlesCountGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(reloadModelIfRequired(validationStatus, *modelInstance, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     ovms::OVInferRequestsQueue& inferRequestsQueue = modelInstance->getInferRequestsQueue();
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
@@ -363,7 +353,7 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
 
     // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
-    std::unique_ptr<ovms::ModelInstancePredictRequestsHandlesCountGuard> unload_guard;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
 
     // Prepare request with 1x5 shape, expect reshape

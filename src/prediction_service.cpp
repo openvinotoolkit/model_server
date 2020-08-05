@@ -26,6 +26,7 @@
 #include "tensorflow/core/framework/tensor.h"
 
 #include "get_model_metadata_impl.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
@@ -48,9 +49,9 @@ namespace ovms {
 
 Status getModelInstance(const PredictRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
-    return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstancePredictRequestsHandlesCountGuardPtr);
+    return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
@@ -66,14 +67,14 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
 
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard> modelInstancePredictRequestsHandlesCountGuard;
-    auto status = getModelInstance(request, modelInstance, modelInstancePredictRequestsHandlesCountGuard);
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
         return status.grpc();
     }
 
-    status = inference(*modelInstance, request, response, modelInstancePredictRequestsHandlesCountGuard);
+    status = inference(*modelInstance, request, response, modelInstanceUnloadGuard);
     if (!status.ok()) {
         return status.grpc();
     }

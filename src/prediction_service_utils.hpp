@@ -28,20 +28,6 @@ namespace ovms {
 
 const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream()) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
-
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-};
-
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
@@ -49,7 +35,7 @@ Status getModelInstance(ModelManager& manager,
     const std::string& modelName,
     model_version_t modelVersionId,
     std::shared_ptr<ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
 
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
 
@@ -57,16 +43,16 @@ Status inference(
     ModelInstance& modelVersion,
     const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
 Status assureModelInstanceLoadedWithProperBatchSize(
     ModelInstance& modelInstance,
     size_t requestedBatchSize,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
 Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
     const tensorflow::serving::PredictRequest* requestProto,
-    std::unique_ptr<ModelInstancePredictRequestsHandlesCountGuard>& modelInstancePredictRequestsHandlesCountGuardPtr);
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 }  // namespace ovms
