@@ -28,9 +28,9 @@ CONFIG := "$(CONFIG)"
 ML_DIR := "$(MK_DIR)"
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
-OVMS_VERSION := "2020.3"
+OVMS_VERSION := "2020.4"
 DLDT_PACKAGE_URL := "$(dldt_package_url)"
-OV_SOURCE_BRANCH ?= "2020.3.0"
+OV_SOURCE_BRANCH ?= "2020.4"
 
 TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest

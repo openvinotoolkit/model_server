@@ -1,6 +1,6 @@
 FROM clearlinux as build
 
-ARG ov_source_branch=2020.3.0
+ARG ov_source_branch=2020.4
 
 # Stage for building TF serving API for Python 3.8
 RUN swupd bundle-add \
