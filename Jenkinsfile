@@ -72,6 +72,16 @@ pipeline {
                 sh './tests/scripts/functional-tests-ams.sh'
             }
         }
+        stage('Push docker image clearlinux') {
+            when{
+                branch 'master'
+                expression { env.REGISTRY_URL != null }
+                expression { env.IMAGE_NAME != null }
+            }
+            steps {
+                sh 'make docker_push_clearlinux'
+            }
+        }
     }
     post {
         always {

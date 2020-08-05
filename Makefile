@@ -160,3 +160,19 @@ docker_build_clearlinux:
 docker_run:
 	@echo "Starting the docker container with serving model"
 	@docker run --rm -d --name ie-serving-py-test-multi -v /tmp/test_models/saved_models/:/opt/ml:ro -p 9001:9001 -t $(DOCKER_OVMS_TAG) /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
+
+docker_push_clearlinux:
+ifeq "$(origin REGISTRY_URL)" "undefined"
+$(error Variable REGISTRY_URL is not defined)
+endif
+
+ifeq "$(origin IMAGE_NAME)" "undefined"
+$(error Variable IMAGE_NAME is not defined)
+endif
+
+	@$(eval IMAGE_TAG := $(shell git rev-parse --short HEAD)_clearlinux)
+	@echo "Setting image tag to: $(IMAGE_TAG)"
+	@$(eval FULL_IMAGE_NAME := $(REGISTRY_URL)/$(IMAGE_NAME):$(IMAGE_TAG))
+	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(FULL_IMAGE_NAME) .
+	@echo "Pushing image: $(FULL_IMAGE_NAME)"
+	@docker push $(FULL_IMAGE_NAME)
