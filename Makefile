@@ -34,6 +34,7 @@ OV_SOURCE_BRANCH ?= "2020.3.0"
 
 TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest
+DOCKER_CLEARLINUX_TAG ?= ie-serving-py:latest_clearlinux
 DOCKER_AMS_TAG ?= ams:latest
 
 REGISTRY_URL ?=
@@ -157,8 +158,8 @@ docker_build_clearlinux:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
-	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_CLEARLINUX_TAG) .
+	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_CLEARLINUX_TAG) .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
@@ -170,7 +171,7 @@ docker_push_clearlinux:
 	@$(eval IMAGE_TAG := $(shell git rev-parse --short HEAD)_clearlinux)
 	@echo "Setting image tag to: $(IMAGE_TAG)"
 	@$(eval FULL_IMAGE_NAME := $(REGISTRY_URL)/$(IMAGE_NAME):$(IMAGE_TAG))
-	@echo "Image name: $(FULL_IMAGE_NAME)"
-	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(FULL_IMAGE_NAME) .
+	@echo "Tagging image: $(DOCKER_CLEARLINUX_TAG) with: $(FULL_IMAGE_NAME)"
+	@docker tag $(DOCKER_CLEARLINUX_TAG) $(FULL_IMAGE_NAME)
 	@echo "Pushing image: $(FULL_IMAGE_NAME)"
 	@docker push $(FULL_IMAGE_NAME)
