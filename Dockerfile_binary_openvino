@@ -33,7 +33,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
         *openvino_toolkit_fpga_2019.2) \
             COMPONENTS='intel-openvino-full__noarch;intel-openvino-dldt-full__noarch;intel-openvino-setupvars__x86_64;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-gfx-driver__x86_64;intel-openvino-full-pset' \
             ;; \
-        *openvino_toolkit_p_2019.3* | *openvino_toolkit_p_2020.1* | *openvino_toolkit_p_2020.2*) \
+        *openvino_toolkit_p_2019.3* | *openvino_toolkit_p_2020.1* | *openvino_toolkit_p_2020.2* | *openvino_toolkit_p_2020.3* | *openvino_toolkit_p_2020.4*) \
             COMPONENTS='intel-openvino-base__noarch;intel-openvino-dldt-base__noarch;intel-openvino-setupvars__noarch;intel-openvino-eula__noarch;intel-openvino-ie-sdk-ubuntu-xenial__x86_64;intel-openvino-ie-bin-python-tools-ubuntu-xenial__x86_64;intel-openvino-ie-samples__x86_64;intel-openvino-ie-rt__x86_64;intel-openvino-ie-bin-3rd-debug__x86_64;intel-openvino-ie-rt-core-ubuntu-xenial__x86_64;intel-openvino-ie-rt-cpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-gpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-vpu-ubuntu-xenial__x86_64;intel-openvino-ie-rt-gna-ubuntu-xenial__x86_64;intel-openvino-ie-rt-hddl-ubuntu-xenial__x86_64;intel-openvino-omz-tools__x86_64;intel-openvino-docs__noarch;intel-openvino-gfx-driver-ubuntu-xenial__x86_64;intel-openvino-base-pset' \
             ;; \
         *openvino_toolkit_fpga_2019.3*) \
