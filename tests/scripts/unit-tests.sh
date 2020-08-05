@@ -34,6 +34,6 @@ docker run -t --rm \
     bash -c "
     set -ex;
     source /opt/intel/openvino/bin/setupvars.sh
-    make install;
-    make unit;
-    make coverage"
+    make install VIRTUALENV_DIR=/tmp/.venv;
+    make unit VIRTUALENV_DIR=/tmp/.venv;
+    make coverage VIRTUALENV_DIR=/tmp/.venv"
