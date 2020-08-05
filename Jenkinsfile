@@ -39,7 +39,7 @@ pipeline {
                     ]
                 }
             }
-        stage('functional tests') {
+        stage('functional tests part1') {
             parallel {
                 stage('functional tests bin') {
                     steps {
@@ -51,6 +51,10 @@ pipeline {
                         sh './tests/scripts/functional-tests-apt-ubuntu.sh'
                     }
                 }
+            }
+        }
+        stage('functional tests part2') {
+            parallel {
                 stage('functional tests openvino base') {
                     steps {
                         sh './tests/scripts/functional-tests-ov-base.sh'
