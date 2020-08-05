@@ -36,6 +36,9 @@ TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest
 DOCKER_AMS_TAG ?= ams:latest
 
+REGISTRY_URL ?=
+IMAGE_NAME ?=
+
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
 
@@ -162,17 +165,12 @@ docker_run:
 	@docker run --rm -d --name ie-serving-py-test-multi -v /tmp/test_models/saved_models/:/opt/ml:ro -p 9001:9001 -t $(DOCKER_OVMS_TAG) /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
 
 docker_push_clearlinux:
-ifeq "$(origin REGISTRY_URL)" "undefined"
-$(error Variable REGISTRY_URL is not defined)
-endif
-
-ifeq "$(origin IMAGE_NAME)" "undefined"
-$(error Variable IMAGE_NAME is not defined)
-endif
-
+	@if [ "$(REGISTRY_URL)" == "" ]; then echo ERROR: REGISTRY_URL not set; exit 1; fi;
+	@if [ "$(IMAGE_NAME)" == "" ]; then echo ERROR: IMAGE_NAME not set; exit 1; fi;
 	@$(eval IMAGE_TAG := $(shell git rev-parse --short HEAD)_clearlinux)
 	@echo "Setting image tag to: $(IMAGE_TAG)"
 	@$(eval FULL_IMAGE_NAME := $(REGISTRY_URL)/$(IMAGE_NAME):$(IMAGE_TAG))
-	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(FULL_IMAGE_NAME) .
+	@echo "Image name: $(FULL_IMAGE_NAME)"
+	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(FULL_IMAGE_NAME) .
 	@echo "Pushing image: $(FULL_IMAGE_NAME)"
 	@docker push $(FULL_IMAGE_NAME)
