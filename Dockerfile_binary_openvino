@@ -55,7 +55,9 @@ WORKDIR /ie-serving-py
 
 COPY start_server.sh setup.py version requirements.txt /ie-serving-py/
 ENV WRAPT_INSTALL_EXTENSIONS=false
-RUN virtualenv -p python3 .venv && . .venv/bin/activate && pip3 install -r requirements.txt --use-feature=2020-resolver
+RUN virtualenv -p python3 .venv && . .venv/bin/activate && \
+    pip3 install --upgrade pip==20.2.1 && \
+    pip3 install -r requirements.txt --use-feature=2020-resolver
 
 COPY ie_serving /ie-serving-py/ie_serving
 

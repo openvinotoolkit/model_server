@@ -48,10 +48,10 @@ venv: $(ACTIVATE)
 $(ACTIVATE): requirements.txt requirements-dev.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
+	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip==20.2.1
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt --use-feature=2020-resolver
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt --use-feature=2020-resolver
 	@touch $(ACTIVATE)
 
 install: $(ACTIVATE)
