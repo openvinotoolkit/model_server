@@ -39,8 +39,7 @@ public:
         ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
         const int initialBatchSize = 1;
         config.setBatchSize(initialBatchSize);
-        // TODO dirty hack to avoid initializing config
-        setenv("NIREQ", "2", 1);
+        config.setNireq(2);
     }
     void TearDown() {
         SPDLOG_ERROR("TEAR_DOWN");
@@ -72,7 +71,7 @@ public:
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         // TODO dirty hack to avoid initializing config
-        setenv("NIREQ", "20", 1);
+        config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
@@ -127,7 +126,7 @@ public:
     void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
         // TODO dirty hack to avoid initializing config
-        setenv("NIREQ", "20", 1);
+        config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
@@ -249,8 +248,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
         });
 
     config.setBatchingParams("auto");
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "2", 1);
+    config.setNireq(2);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
     std::promise<void> releaseWaitBeforePerformInferenceBs1, releaseWaitBeforeGetModelInstanceBs2;
@@ -286,8 +284,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
         });
 
     config.setBatchingParams("auto");
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "2", 1);
+    config.setNireq(2);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
     std::promise<void> releaseWaitBeforeGetModelInstanceBs1, releaseWaitBeforePerformInferenceBs2;

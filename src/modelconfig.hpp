@@ -46,6 +46,14 @@ using shape_t = std::vector<size_t>;
 struct ShapeInfo {
     Mode shapeMode = FIXED;
     shape_t shape;
+
+    bool operator==(const ShapeInfo& rhs) const {
+        return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
+    }
+
+    bool operator!=(const ShapeInfo& rhs) const {
+        return !(*this == rhs);
+    }
 };
 
 using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
@@ -70,6 +78,11 @@ private:
          * @brief Model uri path
          */
     std::string basePath;
+
+    /**
+         * @brief Model local destination path on disk after downloading from online storage
+         */
+    std::string localPath;
 
     /**
          * @brief Device backend
@@ -160,12 +173,14 @@ public:
         const std::string& basePath = "",
         const std::string& backend = "CPU",
         const std::string& configBatchSize = "0",
-        uint64_t nireq = 1,
-        model_version_t version = 0) :
+        uint64_t nireq = 0,
+        model_version_t version = 0,
+        const std::string& localPath = "") :
         name(name),
         basePath(basePath),
+        localPath(localPath),
         backend(backend),
-        modelVersionPolicy(std::make_shared<LatestModelVersionPolicy>()),
+        modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         pluginConfig({}),
         layout(""),
@@ -175,6 +190,70 @@ public:
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
+    }
+
+    bool isReloadRequired(const ModelConfig& rhs) const {
+        if (this->name != rhs.name) {
+            spdlog::debug("ModelConfig {} reload required due to name mismatch", this->name);
+            return true;
+        }
+        if (this->basePath != rhs.basePath) {
+            spdlog::debug("ModelConfig {} reload required due to original base path mismatch", this->name);
+            return true;
+        }
+        if (this->backend != rhs.backend) {
+            spdlog::debug("ModelConfig {} reload required due to target device mismatch", this->name);
+            return true;
+        }
+        if (this->batchingMode != rhs.batchingMode) {
+            spdlog::debug("ModelConfig {} reload required due to batching mode mismatch", this->name);
+            return true;
+        }
+        if (this->batchSize != rhs.batchSize) {
+            spdlog::debug("ModelConfig {} reload required due to batch size mismatch", this->name);
+            return true;
+        }
+        if (this->nireq != rhs.nireq) {
+            spdlog::debug("ModelConfig {} reload required due to nireq mismatch", this->name);
+            return true;
+        }
+        if (this->pluginConfig != rhs.pluginConfig) {
+            spdlog::debug("ModelConfig {} reload required due to plugin config mismatch", this->name);
+            return true;
+        }
+        if (this->layout != rhs.layout) {
+            spdlog::debug("ModelConfig {} reload required due to no named layout mismatch", this->name);
+            return true;
+        }
+        if (this->layouts != rhs.layouts) {
+            spdlog::debug("ModelConfig {} reload required due to named layout mismatch", this->name);
+            return true;
+        }
+
+        bool isShapeConfigurationEqual = true;
+        if (this->shapes.size() != rhs.shapes.size()) {
+            isShapeConfigurationEqual = false;
+        } else if (this->shapes.size() == 1) {
+            if (this->shapes.begin()->first != DEFAULT_INPUT_NAME && rhs.shapes.begin()->first != DEFAULT_INPUT_NAME) {
+                isShapeConfigurationEqual = false;
+            } else {
+                isShapeConfigurationEqual = this->shapes.begin()->second == rhs.shapes.begin()->second;
+            }
+        } else if (this->shapes.size() > 1) {
+            for (const auto& kv : this->shapes) {
+                if (rhs.shapes.count(kv.first) == 0 || rhs.shapes.at(kv.first) != kv.second) {
+                    isShapeConfigurationEqual = false;
+                    break;
+                }
+            }
+        }
+
+        if (!isShapeConfigurationEqual) {
+            spdlog::debug("ModelConfig {} reload required due to shape configuration mismatch", this->name);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -196,12 +275,12 @@ public:
     }
 
     /**
-         * @brief Get model path
+         * @brief Get local path to specific model version where .xml and .bin is located for loading
          * 
          * @return std::string
          * */
     const std::string getPath() const {
-        return getBasePath() + "/" + std::to_string(version);
+        return getLocalPath() + "/" + std::to_string(version);
     }
 
     /**
@@ -220,6 +299,24 @@ public:
          */
     void setBasePath(const std::string& basePath) {
         this->basePath = basePath;
+    }
+
+    /**
+         * @brief Get the local path
+         * 
+         * @return const std::string& 
+         */
+    const std::string& getLocalPath() const {
+        return this->localPath;
+    }
+
+    /**
+         * @brief Set the local path
+         * 
+         * @param localPath 
+         */
+    void setLocalPath(const std::string& localPath) {
+        this->localPath = localPath;
     }
 
     /**
@@ -888,8 +985,6 @@ public:
         // Check for optional parameters
         if (v.HasMember("batch_size")) {
             if (v["batch_size"].IsString()) {
-                // Although batch size is in, in legacy python version it was string
-                // Temporary, until validated with JSON schema
                 this->setBatchingParams(v["batch_size"].GetString());
             } else {
                 this->setBatchingParams(v["batch_size"].GetUint64());

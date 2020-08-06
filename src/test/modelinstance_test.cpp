@@ -55,9 +55,7 @@ class TestUnloadModel : public ::testing::Test {};
 
 TEST_F(TestUnloadModel, SuccessfulUnload) {
     ovms::ModelInstance modelInstance;
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
-    ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
+    ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
@@ -65,8 +63,6 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
 
 TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
     ovms::ModelInstance modelInstance;
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -76,8 +72,6 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
 
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
     ovms::ModelInstance modelInstance;
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -88,8 +82,6 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
 
 TEST_F(TestUnloadModel, CheckIfCanUnload) {
     MockModelInstance mockModelInstance;
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
     EXPECT_CALL(mockModelInstance, canUnloadInstance())
@@ -111,8 +103,6 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
     MockModelInstanceCheckingUnloadingState mockModelInstance;
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
     mockModelInstance.unloadModel();
@@ -132,8 +122,6 @@ protected:
 TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance;
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     // TODO we do validation before passing file to OV need to test that too. Hence INTERNAL_ERROR not FILE_INVALID
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
@@ -149,8 +137,6 @@ protected:
 TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance;
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
@@ -175,14 +161,13 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     }
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
-        modelPath,
+        modelPath,  // base path
         "CPU",    // backend
         "1",      // batchsize
         1,        // NIREQ
         version,  // version
+        modelPath,  // local path
     };
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     auto status = mockModelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
@@ -207,14 +192,13 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     }
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
-        modelPath,
+        modelPath,  // base path
         "CPU",    // backend
         "1",      // batchsize
         1,        // NIREQ
         version,  // version
+        modelPath,  // local path
     };
-    // dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     auto status = mockModelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
@@ -223,8 +207,6 @@ TEST_F(TestLoadModel, SuccessfulLoad) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance;
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
@@ -235,8 +217,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance;
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -244,8 +224,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
     ovms::ModelInstance modelInstance;
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     modelInstance.unloadModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
@@ -257,8 +235,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
@@ -272,8 +248,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("{\"b\": \"auto\"}");
     std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
@@ -285,8 +259,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();
@@ -302,8 +274,6 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("auto");
     std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
-    // TODO dirty hack to avoid initializing config
-    setenv("NIREQ", "1", 1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();

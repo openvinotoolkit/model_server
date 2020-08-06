@@ -32,7 +32,8 @@ class EnsembleFlowTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Prepare manager
-        setenv("NIREQ", "200", 1);
+        config = DUMMY_MODEL_CONFIG;
+        config.setNireq(200);
         // TODO above should be set to eg 2-3-4 when problem with parallel execution on the same
         // model will be resolved in model ensemble
 
@@ -43,6 +44,8 @@ protected:
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
         proto.mutable_tensor_shape()->add_dim()->set_size(10);
     }
+
+    ModelConfig config;
 
     PredictRequest request;
     PredictResponse response;
@@ -63,7 +66,6 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     // input   dummy    output
     //  O------->O------->O
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -110,7 +112,6 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     // input      dummy x N      output
     //  O------->O->O...O->O------->O
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -186,10 +187,9 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    ModelConfig dynamicBatchConfig = DUMMY_MODEL_CONFIG;
-    dynamicBatchConfig.setBatchingParams("auto");
+    config.setBatchingParams("auto");
     ConstructorEnabledModelManager managerWithDynamicBatchDummyModel;
-    managerWithDynamicBatchDummyModel.reloadModelWithVersions(dynamicBatchConfig);
+    managerWithDynamicBatchDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
     auto input_node = std::make_unique<EntryNode>(&request);
@@ -242,11 +242,10 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    ModelConfig dynamicShapeConfig = DUMMY_MODEL_CONFIG;
-    dynamicShapeConfig.setBatchSize(0);  // = not specified in --batch_size parameter
-    dynamicShapeConfig.parseShapeParameter("auto");
+    config.setBatchSize(0);  // = not specified in --batch_size parameter
+    config.parseShapeParameter("auto");
     ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
-    managerWithDynamicShapeDummyModel.reloadModelWithVersions(dynamicShapeConfig);
+    managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
     auto input_node = std::make_unique<EntryNode>(&request);
@@ -311,7 +310,6 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(0);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
@@ -383,7 +381,6 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(0);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
@@ -431,7 +428,6 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         ...        ...            /\
         L---------->O-------------_|
     */
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
@@ -484,7 +480,6 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
 
     // input   dummy(fail in setInputs)    output
     //  O------->O------->O
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
@@ -509,7 +504,6 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 
     // input   dummy(fail in execute)    output
     //  O------->O------->O
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
@@ -543,7 +537,6 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
 
     // input   dummy(fail in fetch)    output
     //  O------->O------->O
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
@@ -565,7 +558,6 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
 }
 
 TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -621,7 +613,6 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
 
 TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     // Prepare manager
-    ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
