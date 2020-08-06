@@ -271,7 +271,7 @@ In clearlinux based image, it is 2019.3 - to be upgraded later soon.
 ### Testing
 
 Running the tests requires python3.6 and docker installed (testing scripts are validated on ubuntu18.04).
-Account running the test must be in `docker` group.
+Account running the tests must be in a `docker` group.
 
 `make style` to run linter tests
 
