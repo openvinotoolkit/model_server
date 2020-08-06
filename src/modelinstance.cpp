@@ -283,8 +283,8 @@ Status ModelInstance::fetchModelFilepaths() {
     return StatusCode::OK;
 }
 
-void ModelInstance::prepareInferenceRequestsQueue() {
-    uint numberOfParallelInferRequests = getNumberOfParallelInferRequests();
+void ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
+    uint numberOfParallelInferRequests = config.getNireq() > 0 ? config.getNireq() : getNumberOfParallelInferRequests();
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
     spdlog::info("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
@@ -352,7 +352,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config) {
         if (!status.ok()) {
             return status;
         }
-        prepareInferenceRequestsQueue();
+        prepareInferenceRequestsQueue(config);
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);

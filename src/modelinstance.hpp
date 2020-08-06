@@ -123,7 +123,7 @@ protected:
     /**
          * @brief Prepares inferenceRequestsQueue
          */
-    void prepareInferenceRequestsQueue();
+    void prepareInferenceRequestsQueue(const ModelConfig& config);
 
     /**
          * @brief Fetch model file paths
@@ -149,6 +149,11 @@ protected:
          */
     std::condition_variable modelLoadedNotify;
 
+    /**
+         * @brief Holds currently loaded model configuration
+         */
+    ModelConfig config;
+
 private:
     /**
          * @brief Holds the information about inputs and it's parameters
@@ -159,11 +164,6 @@ private:
          * @brief Holds the information about outputs and it's parameters
          */
     tensor_map_t outputsInfo;
-
-    /**
-         * @brief Holds currently loaded model configuration
-         */
-    ModelConfig config;
 
     /**
          * @brief Holds model required file names

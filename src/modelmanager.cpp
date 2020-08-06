@@ -191,6 +191,7 @@ std::shared_ptr<IVersionReader> ModelManager::getVersionReader(const std::string
 }
 
 void ModelManager::getVersionsToChange(
+    const ModelConfig& newModelConfig,
     const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
     model_versions_t requestedVersions,
     std::shared_ptr<model_versions_t>& versionsToStartIn,
@@ -214,7 +215,7 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t> versionsToReload = std::make_shared<model_versions_t>();
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
-            if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded()) {
+            if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() || modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
@@ -280,7 +281,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         spdlog::error("Couldn't download model from {}", config.getBasePath());
         return sc;
     }
-    config.setBasePath(localPath);
+    config.setLocalPath(localPath);
     std::vector<model_version_t> requestedVersions;
     std::shared_ptr<IVersionReader> versionReader = getVersionReader(localPath);
     auto status = versionReader->readAvailableVersions(requestedVersions);
@@ -295,7 +296,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToRetire;
 
     auto model = getModelIfExistCreateElse(config.getName());
-    getVersionsToChange(model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     status = model->addVersions(versionsToStart, config);
     if (!status.ok()) {

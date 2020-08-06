@@ -31,13 +31,16 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
+const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
+
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
-    std::filesystem::current_path().u8string() + "/src/test/dummy",
+    dummy_model_location,  // base path
     "CPU",  // backend
     "1",      // batchsize
     1,      // NIREQ
-    0       // model_version unuesed since version are read from path
+    0,       // model_version unuesed since version are read from path
+    dummy_model_location,  // local path
 };
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";

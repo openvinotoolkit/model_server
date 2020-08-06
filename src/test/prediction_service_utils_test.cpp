@@ -48,15 +48,7 @@ TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
 
 TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config{
-        "dummy",
-        std::filesystem::current_path().u8string() + "/src/test/dummy",
-        "CPU",  // backend
-        "1",    // batchsize
-        1,      // NIREQ
-        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
-    };
-    setenv("NIREQ", "1", 1);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
@@ -89,15 +81,7 @@ std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 
 TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config{
-        "dummy",
-        std::filesystem::current_path().u8string() + "/src/test/dummy",
-        "CPU",  // backend
-        "1",    // batchsize
-        1,      // NIREQ
-        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
-    };
-    setenv("NIREQ", "1", 1);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
@@ -111,15 +95,7 @@ TEST_F(GetModelInstanceTest, WithRequested0VersionUnloadedShouldReturnModelNotLo
 
 TEST_F(GetModelInstanceTest, WithRequestedDefaultVersion0ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
-    ovms::ModelConfig config{
-        "dummy",
-        std::filesystem::current_path().u8string() + "/src/test/dummy",
-        "CPU",  // backend
-        "1",    // batchsize
-        1,      // NIREQ
-        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
-    };
-    setenv("NIREQ", "1", 1);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_shared<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
@@ -214,15 +190,7 @@ class ModelInstanceModelLoadedNotify : public ::testing::Test {};
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInNotReachingTimeoutShouldSuceed) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    ovms::ModelConfig config{
-        "dummy",
-        std::filesystem::current_path().u8string() + "/src/test/dummy",
-        "CPU",  // backend
-        "1",    // batchsize
-        1,      // NIREQ
-        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
-    };
-    setenv("NIREQ", "1", 1);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), ovms::ModelInstance::WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS / 4);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
@@ -236,15 +204,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInReachingTimeoutShouldReturnModelNotLoadedYet) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    ovms::ModelConfig config{
-        "dummy",
-        std::filesystem::current_path().u8string() + "/src/test/dummy",
-        "CPU",  // backend
-        "1",    // batchsize
-        1,      // NIREQ
-        0       // model_version UNUSED - 0 is taken from src/test/dummy/0 path
-    };
-    setenv("NIREQ", "1", 1);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     const auto MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS = 1.2 * ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS);

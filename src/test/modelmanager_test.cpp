@@ -28,6 +28,7 @@ using testing::_;
 using testing::ContainerEq;
 using testing::Return;
 using testing::ReturnRef;
+using testing::UnorderedElementsAre;
 
 namespace {
 const char* config_1_model = R"({
@@ -301,17 +302,19 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     mockVersionReader.reset();
 }
 
-class MockModelInstanceInState : public ovms::ModelInstance {
+class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInState(ovms::ModelVersionState state) {
+    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
+        config = modelConfig;
     }
 };
 
 std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
-    std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates) {
+    std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates,
+    const ovms::ModelConfig& modelConfig = ovms::ModelConfig{}) {
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> modelVersions;
     std::array<ovms::ModelVersionState, 5> states{
         ovms::ModelVersionState::START,
@@ -321,7 +324,7 @@ std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedM
         ovms::ModelVersionState::END};
     for (auto& state : states) {
         for (auto& version : initialVersionStates[state]) {
-            modelVersions[version] = std::make_shared<MockModelInstanceInState>(state);
+            modelVersions[version] = std::make_shared<MockModelInstanceInStateWithConfig>(state, modelConfig);
         }
     }
     return modelVersions;
@@ -344,6 +347,7 @@ public:
     std::shared_ptr<ovms::model_versions_t> versionsToRetire;
     std::shared_ptr<ovms::model_versions_t> versionsToReload;
     std::shared_ptr<ovms::model_versions_t> versionsToStart;
+    ovms::ModelConfig oldConfig;
 };
 
 TEST_F(ModelManagerVersionsReload, RetireOldAddNew) {
@@ -355,7 +359,7 @@ TEST_F(ModelManagerVersionsReload, RetireOldAddNew) {
     ovms::model_versions_t requestedVersions{2};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{2};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{1};
@@ -373,7 +377,7 @@ TEST_F(ModelManagerVersionsReload, NoVersionsChange) {
     ovms::model_versions_t requestedVersions{2, 3};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -391,7 +395,7 @@ TEST_F(ModelManagerVersionsReload, KeepOldAddNewNoRetired) {
     ovms::model_versions_t requestedVersions{1, 2, 3};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{3};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -409,7 +413,7 @@ TEST_F(ModelManagerVersionsReload, KeepOldAddNewWithRetiredVersions) {
     ovms::model_versions_t requestedVersions{2, 3, 4};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{4};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -427,7 +431,7 @@ TEST_F(ModelManagerVersionsReload, JustAddNewVersions) {
     ovms::model_versions_t requestedVersions{1, 2};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{1, 2};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -445,7 +449,7 @@ TEST_F(ModelManagerVersionsReload, JustRetireVersion) {
     ovms::model_versions_t requestedVersions{2, 3};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{1};
@@ -463,7 +467,7 @@ TEST_F(ModelManagerVersionsReload, ResurrectRetiredVersion) {
     ovms::model_versions_t requestedVersions{1, 2};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{1};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -481,7 +485,7 @@ TEST_F(ModelManagerVersionsReload, RessurectRetireAddAtTheSameTime) {
     ovms::model_versions_t requestedVersions{1, 3};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{3};
     ovms::model_versions_t expectedVersionsToReload{1};
     ovms::model_versions_t expectedVersionsToRetire{2};
@@ -499,7 +503,7 @@ TEST_F(ModelManagerVersionsReload, DontStartAlreadyStartingVersion) {
     ovms::model_versions_t requestedVersions{1};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -517,7 +521,7 @@ TEST_F(ModelManagerVersionsReload, DontStartAlreadyLoadingVersion) {
     ovms::model_versions_t requestedVersions{1};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -535,7 +539,7 @@ TEST_F(ModelManagerVersionsReload, DontRetireAlreadyUnloadingVersion) {
     ovms::model_versions_t requestedVersions{};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{};
@@ -552,7 +556,7 @@ TEST_F(ModelManagerVersionsReload, RetireLoadingVersion) {
     ovms::model_versions_t requestedVersions{};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{1};
@@ -570,7 +574,7 @@ TEST_F(ModelManagerVersionsReload, RetireStartingVersion) {
     ovms::model_versions_t requestedVersions{};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{};
     ovms::model_versions_t expectedVersionsToRetire{1};
@@ -588,11 +592,136 @@ TEST_F(ModelManagerVersionsReload, ReloadUnloadingVersion) {
     ovms::model_versions_t requestedVersions{1};
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
-    ovms::ModelManager::getVersionsToChange(mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
     ovms::model_versions_t expectedVersionsToReload{1};
     ovms::model_versions_t expectedVersionsToRetire{};
     EXPECT_THAT(expectedVersionsToStart, ContainerEq(*versionsToStart));
     EXPECT_THAT(expectedVersionsToReload, ContainerEq(*versionsToReload));
     EXPECT_THAT(expectedVersionsToRetire, ContainerEq(*versionsToRetire));
+}
+
+class ReloadAvailabileModelDueToConfigChange : public ::testing::Test {
+public:
+    ReloadAvailabileModelDueToConfigChange() {
+        versionsToRetire = std::make_shared<ovms::model_versions_t>();
+        versionsToReload = std::make_shared<ovms::model_versions_t>();
+        versionsToStart = std::make_shared<ovms::model_versions_t>();
+    }
+    void SetUp() {
+        initialVersions.clear();
+        versionsToRetire->clear();
+        versionsToReload->clear();
+        versionsToStart->clear();
+        initialVersions[ovms::ModelVersionState::START] = {1};
+        initialVersions[ovms::ModelVersionState::LOADING] = {2};
+        initialVersions[ovms::ModelVersionState::AVAILABLE] = {3};
+        initialVersions[ovms::ModelVersionState::UNLOADING] = {4};
+        initialVersions[ovms::ModelVersionState::END] = {5};
+    }
+
+    std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersions;
+    std::shared_ptr<ovms::model_versions_t> versionsToRetire;
+    std::shared_ptr<ovms::model_versions_t> versionsToReload;
+    std::shared_ptr<ovms::model_versions_t> versionsToStart;
+    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances;
+    ovms::model_versions_t requestedVersions{3};
+    ovms::ModelConfig config;
+};
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, SameConfig_ExpectNoReloads) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    ovms::ModelManager::getVersionsToChange(config, getMockedModelVersionInstances(initialVersions, config), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre());
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBasePathChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setBasePath("new/custom/path");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBackendChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setBackend("GPU");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBatchingModeChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setBatchingParams("auto");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBatchSizeChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setBatchingParams("20");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToNireqChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setNireq(50);
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToPluginConfigChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setPluginConfig({{"A", "B"}});
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToLayoutChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setLayout("NEW_LAYOUT");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToNamedLayoutChange) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setLayouts({{"A", "B"}});
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurationChange_Auto) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.parseShapeParameter("auto");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurationChange_NoNamed) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.parseShapeParameter("(1,3,224,224)");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToMultipleInputShapeChange) {
+    ovms::ModelConfig previouslyLoadedConfig = config;
+    previouslyLoadedConfig.setShapes({
+        {"A", {ovms::Mode::FIXED, {1, 3, 224, 224}}},
+        {"B", {ovms::Mode::FIXED, {1, 100}}}});
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, previouslyLoadedConfig);
+    ovms::ModelConfig newConfig = config;
+    newConfig.setShapes({
+        {"A", {ovms::Mode::FIXED, {3, 3, 224, 224}}},
+        {"B", {ovms::Mode::FIXED, {1, 100}}}});
+    ovms::ModelManager::getVersionsToChange(newConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurationChange_Named) {
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.setShapes({{"A", {ovms::Mode::FIXED, {1, 3, 224, 224}}}});
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

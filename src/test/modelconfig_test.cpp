@@ -303,7 +303,7 @@ TEST(ModelConfig, parseModelMappingWhenJsonMatchSchema) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -328,7 +328,7 @@ TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -357,7 +357,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -392,7 +392,7 @@ TEST(ModelConfig, parseModelMappingWhenAdditionalObjectInConfig) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -418,7 +418,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsIsNotAnObject) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -444,7 +444,7 @@ TEST(ModelConfig, parseModelMappingWhenOutputsIsNotAnObject) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);
@@ -465,7 +465,7 @@ TEST(ModelConfig, parseModelMappingWhenConfigIsNotJson) {
 
     std::string tmp_dir = "/tmp";
     int16_t version = 0;
-    config.setBasePath(tmp_dir);
+    config.setLocalPath(tmp_dir);
     config.setVersion(version);
     std::string path = tmp_dir + "/" + std::to_string(version);
     std::filesystem::create_directories(path);

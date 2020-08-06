@@ -220,11 +220,12 @@ public:
          * @param versionsToStartIn cointainer for versions to start
          */
     static void getVersionsToChange(
-        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
-        std::vector<model_version_t> requestedVersions,
-        std::shared_ptr<model_versions_t>& versionsToRetireIn,
-        std::shared_ptr<model_versions_t>& versionsToReloadIn,
-        std::shared_ptr<model_versions_t>& versionsToStartIn);
+         const ModelConfig& newModelConfig,
+         const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+         std::vector<model_version_t> requestedVersions,
+         std::shared_ptr<model_versions_t>& versionsToRetireIn,
+         std::shared_ptr<model_versions_t>& versionsToReloadIn,
+         std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     /**
          * @brief Watcher interval for checking changes in config
