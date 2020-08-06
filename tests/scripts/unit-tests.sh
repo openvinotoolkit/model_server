@@ -29,10 +29,11 @@ docker run -t --rm \
     -w /mnt/ovms \
     -e LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" \
     -e PYTHONPATH="${PYTHONPATH}" \
+    -u "$(id -u)" \
     "${OVMS_TESTS_IMAGE}" \
     bash -c "
     set -ex;
     source /opt/intel/openvino/bin/setupvars.sh
-    make install;
-    make unit;
-    make coverage"
+    make install VIRTUALENV_DIR=/tmp/.venv;
+    make unit VIRTUALENV_DIR=/tmp/.venv;
+    make coverage VIRTUALENV_DIR=/tmp/.venv"

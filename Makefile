@@ -34,7 +34,11 @@ OV_SOURCE_BRANCH ?= "2020.4"
 
 TEST_MODELS_DIR = /tmp/ovms_models
 DOCKER_OVMS_TAG ?= ie-serving-py:latest
+DOCKER_CLEARLINUX_TAG ?= ie-serving-py:latest_clearlinux
 DOCKER_AMS_TAG ?= ams:latest
+
+REGISTRY_URL ?=
+IMAGE_NAME ?=
 
 .PHONY: default install uninstall requirements \
 	venv test unit_test coverage style dist clean \
@@ -48,10 +52,10 @@ venv: $(ACTIVATE)
 $(ACTIVATE): requirements.txt requirements-dev.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
+	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip==20.2.1
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements.txt --use-feature=2020-resolver
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r requirements-dev.txt --use-feature=2020-resolver
 	@touch $(ACTIVATE)
 
 install: $(ACTIVATE)
@@ -154,9 +158,20 @@ docker_build_clearlinux:
 	@echo OpenVINO Model Server version: $(OVMS_VERSION) > version
 	@echo Git commit: `git rev-parse HEAD` >> version
 	@echo OpenVINO version: $(OVMS_VERSION) clearlinux >> version
-	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
-	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_OVMS_TAG) .
+	@echo docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_CLEARLINUX_TAG) .
+	@docker build -f Dockerfile_clearlinux --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" -t $(DOCKER_CLEARLINUX_TAG) .
 
 docker_run:
 	@echo "Starting the docker container with serving model"
 	@docker run --rm -d --name ie-serving-py-test-multi -v /tmp/test_models/saved_models/:/opt/ml:ro -p 9001:9001 -t $(DOCKER_OVMS_TAG) /ie-serving-py/start_server.sh ie_serving config --config_path /opt/ml/config.json --port 9001
+
+docker_push_clearlinux:
+	@if [ "$(REGISTRY_URL)" == "" ]; then echo ERROR: REGISTRY_URL not set; exit 1; fi;
+	@if [ "$(IMAGE_NAME)" == "" ]; then echo ERROR: IMAGE_NAME not set; exit 1; fi;
+	@$(eval IMAGE_TAG := $(shell git rev-parse --short HEAD)_clearlinux)
+	@echo "Setting image tag to: $(IMAGE_TAG)"
+	@$(eval FULL_IMAGE_NAME := $(REGISTRY_URL)/$(IMAGE_NAME):$(IMAGE_TAG))
+	@echo "Tagging image: $(DOCKER_CLEARLINUX_TAG) with: $(FULL_IMAGE_NAME)"
+	@docker tag $(DOCKER_CLEARLINUX_TAG) $(FULL_IMAGE_NAME)
+	@echo "Pushing image: $(FULL_IMAGE_NAME)"
+	@docker push $(FULL_IMAGE_NAME)
