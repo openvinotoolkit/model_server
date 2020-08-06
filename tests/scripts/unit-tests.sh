@@ -29,7 +29,7 @@ docker run -t --rm \
     -w /mnt/ovms \
     -e LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" \
     -e PYTHONPATH="${PYTHONPATH}" \
-    -u `id -u` \
+    -u "$(id -u)" \
     "${OVMS_TESTS_IMAGE}" \
     bash -c "
     set -ex;
