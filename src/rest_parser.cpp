@@ -106,7 +106,7 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray()) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber()) {
         // no named format
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
