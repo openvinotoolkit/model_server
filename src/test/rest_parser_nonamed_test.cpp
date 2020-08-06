@@ -58,17 +58,17 @@ TEST(RestParserNoNamed, RowOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
-TEST(RestParserNoNamed, RowOrder_1) {
-    RestParser parser(prepareTensors({{"my_input", {1}}}));
+TEST(RestParserNoNamed, RowOrder_5) {
+    RestParser parser(prepareTensors({{"my_input", {5}}}));
 
-    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[0]})"),
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[1,2,3,4,5]})"),
         StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::ROW);
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
-    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(1));
-    EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(0));
+    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(5));
+    EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(1, 2, 3, 4, 5));
 }
 
 TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
@@ -105,15 +105,15 @@ TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
-TEST(RestParserNoNamed, ColumnOrder_1) {
-    RestParser parser(prepareTensors({{"my_input", {1}}}));
+TEST(RestParserNoNamed, ColumnOrder_5) {
+    RestParser parser(prepareTensors({{"my_input", {5}}}));
 
-    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[0]})"),
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[1,2,3,4,5]})"),
         StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
-    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(1));
-    EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(0));
+    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(5));
+    EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(1, 2, 3, 4, 5));
 }
