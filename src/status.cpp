@@ -123,6 +123,16 @@ const net_http::HTTPStatusCode Status::http() const {
     case StatusCode::REST_NO_INPUTS_FOUND:
     case StatusCode::REST_COULD_NOT_PARSE_INPUT:
         return HTTPStatusCode::BAD_REQUEST;
+    case StatusCode::INVALID_BATCH_SIZE:
+    case StatusCode::INVALID_SHAPE:
+    case StatusCode::INVALID_SIGNATURE_DEF:
+    case StatusCode::INVALID_NO_OF_INPUTS:
+    case StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS:
+    case StatusCode::INVALID_PRECISION:
+    case StatusCode::INVALID_CONTENT_SIZE:
+    case StatusCode::INVALID_VALUE_COUNT:
+    case StatusCode::INVALID_MISSING_INPUT:
+        return HTTPStatusCode::BAD_REQUEST;
     default:
         return HTTPStatusCode::ERROR;
     }
