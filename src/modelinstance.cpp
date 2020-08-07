@@ -242,21 +242,29 @@ Status ModelInstance::loadOVCNNNetwork() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, backend, pluginConfig));
+    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, targetDevice, pluginConfig));
 }
 
-Status ModelInstance::loadOVExecutableNetwork(plugin_config_t pluginConfig) {
-    if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
-        uint ovBackendStreamsCount = getOVCPUThroughputStreams();
-        pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(ovBackendStreamsCount);
+plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
+    plugin_config_t pluginConfig = config.getPluginConfig();
+    // For CPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS depending on core count
+    if (config.isDeviceUsed("CPU")) {
+        if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
+            pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(getOVCPUThroughputStreams());
+        }
     }
+    return pluginConfig;
+}
+
+Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+    plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadExecutableNetworkPtr(pluginConfig);
     } catch (std::exception& e) {
         spdlog::error("Error:{}; occured during loading ExecutableNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
-    spdlog::info("Plugin config for device {}:", backend);
+    spdlog::info("Plugin config for device {}:", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
@@ -321,7 +329,7 @@ void ModelInstance::configureBatchSize(const ModelConfig& config) {
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config) {
     this->path = config.getPath();
-    this->backend = config.getBackend();
+    this->targetDevice = config.getTargetDevice();
     auto status = fetchModelFilepaths();
     if (!status.ok()) {
         return status;
@@ -348,7 +356,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config) {
             return status;
         }
         loadOutputTensors(config);
-        status = loadOVExecutableNetwork(config.getPluginConfig());
+        status = loadOVExecutableNetwork(config);
         if (!status.ok()) {
             return status;
         }
@@ -366,8 +374,8 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config) {
 
 Status ModelInstance::loadModel(const ModelConfig& config) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    spdlog::info("Loading model:{}, version:{}, from path:{}, with backend:{} ...",
-        config.getName(), config.getVersion(), config.getPath(), config.getBackend());
+    spdlog::info("Loading model: {}, version: {}, from path: {}, with target device: {} ...",
+        config.getName(), config.getVersion(), config.getPath(), config.getTargetDevice());
     if (config.getBatchingMode() == AUTO) {
         spdlog::info("Batch size mode for model {} is set to auto", config.getName());
     } else if (config.anyShapeSetToAuto()) {

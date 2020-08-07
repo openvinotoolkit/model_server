@@ -80,9 +80,9 @@ protected:
     ModelVersionStatus status;
 
     /**
-         * @brief A backend to run model
+         * @brief Target device to run model
          */
-    std::string backend;
+    std::string targetDevice;
 
     /**
          * @brief Model batch size
@@ -118,7 +118,7 @@ protected:
          *
          * @return Status
          */
-    Status loadOVExecutableNetwork(plugin_config_t pluginConfig);
+    Status loadOVExecutableNetwork(const ModelConfig& config);
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -295,12 +295,12 @@ public:
     }
 
     /**
-         * @brief Gets executing backend name
+         * @brief Gets executing target device name
          *
-         * @return backend name
+         * @return target device name
          */
-    const std::string& getBackend() {
-        return backend;
+    const std::string& getTargetDevice() {
+        return targetDevice;
     }
 
     /**
@@ -356,6 +356,13 @@ public:
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
+
+    /**
+         * @brief Combines plugin config from user with default config calculated at runtime
+         *
+         * @return plugin config
+         */
+    static plugin_config_t prepareDefaultPluginConfig(const ModelConfig& config);
 
     /**
          * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine

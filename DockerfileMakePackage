@@ -31,11 +31,11 @@ RUN find /usr/local/lib/ -iname 'libboost_log_setup.so*' -exec cp -v {} /ovms_re
 RUN find /usr/local/lib/ -iname 'libboost_locale.so*' -exec cp -v {} /ovms_release/lib/ \;
 
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /openvino/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.so*'  -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/ngraph/lib/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/usb-ma2450.mvcmd /ovms_release/lib/
 
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 WORKDIR /ovms_release/bin

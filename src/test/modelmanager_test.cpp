@@ -642,9 +642,9 @@ TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBasePathChange) 
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
 
-TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToBackendChange) {
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToTargetDeviceChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
-    config.setBackend("GPU");
+    config.setTargetDevice("GPU");
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

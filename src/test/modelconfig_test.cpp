@@ -41,9 +41,9 @@ TEST(ModelConfig, getters_setters) {
     auto path = config.getBasePath();
     EXPECT_EQ(path, "/path");
 
-    config.setBackend("GPU");
-    auto backend = config.getBackend();
-    EXPECT_EQ(backend, "GPU");
+    config.setTargetDevice("GPU");
+    auto device = config.getTargetDevice();
+    EXPECT_EQ(device, "GPU");
 
     config.setBatchSize(5);
     auto batchSize = config.getBatchSize();
@@ -477,4 +477,16 @@ TEST(ModelConfig, parseModelMappingWhenConfigIsNotJson) {
     EXPECT_EQ(config.getMappingInputs().empty(), true);
     EXPECT_EQ(config.getMappingOutputs().empty(), true);
     EXPECT_EQ(ret, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelConfig, isDeviceUsed) {
+    ovms::ModelConfig config;
+    config.setTargetDevice("GPU");
+    EXPECT_FALSE(config.isDeviceUsed("CPU"));
+    config.setTargetDevice("CPU");
+    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    config.setTargetDevice("HETERO:MYRIAD,CPU");
+    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    config.setTargetDevice("HETERO:MYRIAD,GPU");
+    EXPECT_FALSE(config.isDeviceUsed("CPU"));
 }
