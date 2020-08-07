@@ -44,6 +44,18 @@ namespace ovms {
                     }
                 }
             }
+        },
+        "node": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string"},
+                "model_name": {"type": "string"},
+                "version": {"type": "integer"},
+                "inputs": {"type": "array"},
+                "outputs": {"type": "array"}
+                }
         }
     },
     "type": "object",
@@ -51,7 +63,19 @@ namespace ovms {
     "properties": {"model_config_list": {
         "type": "array",
         "items": {"$ref": "#/definitions/model_config"}
-    }}
+    },
+    "pipeline_config_list": {
+        "type": "object",
+        "required": ["name","inputs", "outputs"],
+        "items": {
+            "name": {"type": "string"},
+            "inputs": {"type": "array"},
+            "outputs": {"type": "array"},
+            "nodes": {
+                "type": "array",
+                "items": {"$ref": "#/definitions/node"}
+            }
+    }}}
     })";
 
     const char *MODELS_MAPPING_INPUTS_SCHEMA = R"({

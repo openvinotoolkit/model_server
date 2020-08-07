@@ -21,6 +21,7 @@
 
 namespace ovms {
     extern const char *MODELS_CONFIG_SCHEMA;
+    extern const char *PIPELINE_DEFINITION_SCHEMA;
     extern const char *MODELS_MAPPING_INPUTS_SCHEMA;
     extern const char *MODELS_MAPPING_OUTPUTS_SCHEMA;
 
