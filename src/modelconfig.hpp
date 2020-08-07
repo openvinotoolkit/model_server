@@ -85,9 +85,9 @@ private:
     std::string localPath;
 
     /**
-         * @brief Device backend
+         * @brief Target device
          */
-    std::string backend;
+    std::string targetDevice;
 
     /**
          * @brief Batching mode
@@ -165,13 +165,13 @@ public:
          * 
          * @param name 
          * @param basePath 
-         * @param backend 
+         * @param targetDevice 
          * @param configBatchSize 
          * @param nireq 
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
-        const std::string& backend = "CPU",
+        const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
         model_version_t version = 0,
@@ -179,7 +179,7 @@ public:
         name(name),
         basePath(basePath),
         localPath(localPath),
-        backend(backend),
+        targetDevice(targetDevice),
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         pluginConfig({}),
@@ -201,7 +201,7 @@ public:
             spdlog::debug("ModelConfig {} reload required due to original base path mismatch", this->name);
             return true;
         }
-        if (this->backend != rhs.backend) {
+        if (this->targetDevice != rhs.targetDevice) {
             spdlog::debug("ModelConfig {} reload required due to target device mismatch", this->name);
             return true;
         }
@@ -320,21 +320,39 @@ public:
     }
 
     /**
-         * @brief Get the backend
+         * @brief Get the target device
          * 
          * @return const std::string& 
          */
-    const std::string& getBackend() const {
-        return this->backend;
+    const std::string& getTargetDevice() const {
+        return this->targetDevice;
     }
 
     /**
-         * @brief Set the backend
+         * @brief Set the target device
          * 
-         * @param backend 
+         * @param target device 
          */
-    void setBackend(const std::string& backend) {
-        this->backend = backend;
+    void setTargetDevice(const std::string& targetDevice) {
+        this->targetDevice = targetDevice;
+    }
+
+    /**
+         * @brief Checks if target device is heterogeneous and contains specific device
+         * 
+         * @param bool
+         */
+    bool isHeteroTargetDevice(const std::string& device) const {
+        return this->targetDevice.find("HETERO") != std::string::npos && this->targetDevice.find(device) != std::string::npos;
+    }
+
+    /**
+         * @brief Checks if given device name is used alone or as a part of multi device configuration
+         * 
+         * @param bool
+         */
+    bool isDeviceUsed(const std::string& device) const {
+        return this->targetDevice == device || this->isHeteroTargetDevice(device);
     }
 
     /**
@@ -991,7 +1009,7 @@ public:
             }
         }
         if (v.HasMember("target_device"))
-            this->setBackend(v["target_device"].GetString());
+            this->setTargetDevice(v["target_device"].GetString());
         if (v.HasMember("version"))
             this->setVersion(v["version"].GetInt64());
         if (v.HasMember("nireq"))

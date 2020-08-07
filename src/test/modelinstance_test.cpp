@@ -162,7 +162,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
         modelPath,  // base path
-        "CPU",    // backend
+        "CPU",    // target device
         "1",      // batchsize
         1,        // NIREQ
         version,  // version
@@ -193,7 +193,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
         modelPath,  // base path
-        "CPU",    // backend
+        "CPU",    // target device
         "1",      // batchsize
         1,        // NIREQ
         version,  // version
@@ -281,4 +281,34 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
     EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForCPU) {
+    ovms::ModelConfig config;
+    config.setTargetDevice("CPU");
+    config.setPluginConfig({});
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
+}
+
+TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForHeteroCPU) {
+    ovms::ModelConfig config;
+    config.setTargetDevice("HETERO:MYRIAD,CPU");
+    config.setPluginConfig({});
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
+}
+
+TEST(CpuThroughputStreamsNotSpecified, NotSetForNonCpuDevices) {
+    ovms::ModelConfig config;
+    config.setPluginConfig({});
+    config.setTargetDevice("MYRIAD");
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+    config.setTargetDevice("HDDL");
+    pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+    config.setTargetDevice("GPU");
+    pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }

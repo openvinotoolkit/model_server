@@ -36,7 +36,7 @@ const std::string dummy_model_location = std::filesystem::current_path().u8strin
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
     dummy_model_location,  // base path
-    "CPU",  // backend
+    "CPU",  // target device
     "1",      // batchsize
     1,      // NIREQ
     0,       // model_version unuesed since version are read from path
