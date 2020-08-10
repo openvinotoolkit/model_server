@@ -156,6 +156,83 @@ TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
+TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
+    const char* configWithPipelineDefinitionMatchSchema = R"({
+    "model_config_list": [
+    {
+        "config": {
+        "name": "alpha",
+        "base_path": "/tmp/models/dummy1"
+        }
+    },
+    {
+    "config": {
+    "name": "beta",
+    "base_path": "/tmp/models/dummy2"
+    }
+    }],
+    "pipeline_config_list": 
+    {
+    "name": "ensemble_name1", 
+    "inputs": ["in"], 
+    "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+    "nodes": [  
+    { 
+    "name": "alpha", 
+    "type": "DL Model", 
+    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
+    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+    }, 
+    { 
+    "name": "beta", 
+    "type": "DL Model",
+    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
+    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+    }]}})";
+
+    std::string configFile = "/tmp/ovms_config_file.json";
+    createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
+    const char* configWithOnlyPipelineDefinitionProvided = R"({
+    "pipeline_config_list": 
+    {
+    "name": "ensemble_name1", 
+    "inputs": ["in"], 
+    "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+    "nodes": [  
+    { 
+    "name": "alpha", 
+    "type": "DL Model", 
+    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
+    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+    }, 
+    { 
+    "name": "beta", 
+    "type": "DL Model",
+    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
+    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+    }]}})";
+
+    std::string configFile = "/tmp/ovms_config_file.json";
+    createConfigFileWithContent(configWithOnlyPipelineDefinitionProvided, configFile);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    auto status = manager.start(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    manager.join();
+    modelMock.reset();
+}
+
 TEST(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = "/tmp/test_model/";
 
