@@ -3,7 +3,7 @@ FROM centos:7.8.2003 as base_build
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"
 
-ARG ov_source_branch=2020.3.0
+ARG ov_source_branch=2020.4
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
@@ -95,7 +95,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses -Wno-error=redundant-move -Wno-error=pessimizing-move -Wno-error=deprecated-copy  " -DCMAKE_C_FLAGTS=" -Wno-error=parentheses -Wno-error=deprecated-copy  "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$(nproc --all)
 ################## END OF OPENVINO SOURCE BUILD ######################
 
