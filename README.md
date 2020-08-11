@@ -34,7 +34,7 @@ It will generate the image, tagged as `ovms:latest`, as well as a release packag
 The release package should work on a any linux machine with glibc >= one used by the build image.
 For debugging, an image with a suffix -build is also generated (i.e. ovms-build:latest).
 
-*Note:* Images include OpenVINO 2020.2 release. <br>
+*Note:* Images include OpenVINO 2020.4 release. <br>
 
 
 ## Running the Server
@@ -44,7 +44,7 @@ Start using OpenVINO Model Server in 5 Minutes or less:
 ```bash
 
 # Download model into a separate directory
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 
 # Start the container serving gRPC on port 9000
 docker run -d -v $(pwd)/model:/models/face-detection/1 -p 9000:9000 ger-registry-pre.caas.intel.com/ovms/model_server:latest --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG

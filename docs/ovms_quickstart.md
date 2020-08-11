@@ -20,13 +20,13 @@ make docker_build
 
 OpenVINO Model Server requires a trained model to be able to perform an inference. The model
 must be in IR format - a pair of files with .bin and .xml extensions. A model 
-can be downloaded from various sites in the Internet (for example from the [Open Model Zoo](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/) ) or converted from other formats - like TensorFlow, ONNX, Caffe or MXNet using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) which is a part of the OpenVINO Toolkit.
+can be downloaded from various sites in the Internet (for example from the [Open Model Zoo](https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/) ) or converted from other formats - like TensorFlow, ONNX, Caffe or MXNet using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) which is a part of the OpenVINO Toolkit.
 
-Let's use the face detection model available under the following [link](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/). 
+Let's use the face detection model available under the following [link](https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/). 
 
 Then download both components of the model to the `model` directory (for example using curl):
 ```
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
+curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 ```
 
 ### Start the Model Server Container

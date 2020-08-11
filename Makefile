@@ -49,8 +49,8 @@ endif
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 2020.3.0
-DLDT_PACKAGE_URL ?= http://registrationcenter-download.intel.com/akdlm/irc_nas/16670/l_openvino_toolkit_p_2020.3.194_online.tgz
+OV_SOURCE_BRANCH ?= 2020.4
+DLDT_PACKAGE_URL ?= http://registrationcenter-download.intel.com/akdlm/IRC_NAS/16803/l_openvino_toolkit_p_2020.4.287_online.tgz
 OV_USE_BINARY ?= 1
 
 # opt, dbg:
