@@ -78,7 +78,7 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
         int st = ms.getIdleStream();
         int rd = std::rand();
         tv[st] = rd;
-        std::mt19937_64 eng { std::random_device {}() };
+        std::mt19937_64 eng{std::random_device{}()};
         std::uniform_int_distribution<> dist{10, 50};  // mocked inference delay range in ms
         std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
         std::mutex mut;

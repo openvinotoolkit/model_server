@@ -62,7 +62,7 @@ std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape)
     return oss.str();
 }
 
-Status ModelInstance::checkShapesAmbiguity(const ModelConfig& config){
+Status ModelInstance::checkShapesAmbiguity(const ModelConfig& config) {
     auto networkShapes = network->getInputShapes();
     auto configShapes = config.getShapes();
     // Return AMBIGUOUS_SHAPE_PARAM status code if fixed shape is specified
@@ -312,8 +312,8 @@ Status ModelInstance::handleAnonymousShape(ModelConfig& config) {
 
         //  For single fixed input or for any amount of inputs for default auto mode,
         //  replace default key with models inputs names
-        if (networkShapes.size() > 0){
-            for (auto &it : networkShapes) {
+        if (networkShapes.size() > 0) {
+            for (auto& it : networkShapes) {
                 config.addShape(it.first, configShapes.at(DEFAULT_INPUT_NAME));
             }
         }
@@ -646,8 +646,8 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
 
         if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
             if (shapeMode == AUTO) {
-               resultStatus = StatusCode::RESHAPE_REQUIRED;
-               inputRequiresReload = true;
+                resultStatus = StatusCode::RESHAPE_REQUIRED;
+                inputRequiresReload = true;
             } else {
                 spdlog::debug("[Model:{} version{}] Invalid shape - expected: {}; actual: {}",
                     getName(), getVersion(), shapeToString(networkInput->getShape()), tensorShapeToString(requestInput.tensor_shape()));

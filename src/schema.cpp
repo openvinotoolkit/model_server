@@ -14,16 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <rapidjson/schema.h>
-#include <rapidjson/error/error.h>
-#include <rapidjson/error/en.h>
-
-#include <spdlog/spdlog.h>
-
 #include "schema.hpp"
 
+#include <rapidjson/error/en.h>
+#include <rapidjson/error/error.h>
+#include <rapidjson/schema.h>
+#include <rapidjson/stringbuffer.h>
+#include <spdlog/spdlog.h>
+
 namespace ovms {
-    const char *MODELS_CONFIG_SCHEMA = R"({
+const char* MODELS_CONFIG_SCHEMA = R"({
     "definitions": {
         "model_config": {
             "type": "object",
@@ -45,40 +45,45 @@ namespace ovms {
                 }
             }
         },
-        "node": {
+        "node_config": {
             "type": "object",
-            "required": ["name", "type"],
+            "required": ["name", "model_name"],
             "properties": {
                 "name": {"type": "string"},
-                "type": {"type": "string"},
                 "model_name": {"type": "string"},
-                "version": {"type": "integer"},
+                "type": {"type": "string"},
                 "inputs": {"type": "array"},
                 "outputs": {"type": "array"}
-                }
+            }
+        },
+        "pipeline_config": {
+            "type": "object",
+            "required": ["name", "nodes", "inputs", "outputs"],
+            "properties": {
+                "name": {"type": "string"},
+                "nodes": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/node_config"}},
+                "inputs": {"type": "array"},
+                "outputs": {"type": "array"}
+            }
         }
     },
     "type": "object",
     "required": ["model_config_list"],
-    "properties": {"model_config_list": {
-        "type": "array",
-        "items": {"$ref": "#/definitions/model_config"}
-    },
-    "pipeline_config_list": {
-        "type": "object",
-        "required": ["name","inputs", "outputs"],
-        "items": {
-            "name": {"type": "string"},
-            "inputs": {"type": "array"},
-            "outputs": {"type": "array"},
-            "nodes": {
-                "type": "array",
-                "items": {"$ref": "#/definitions/node"}
-            }
-    }}}
-    })";
+    "properties": {
+        "model_config_list": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/model_config"}
+        },
+        "pipelines_config_list": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/pipeline_config"}
+        }
+    }
+})";
 
-    const char *MODELS_MAPPING_INPUTS_SCHEMA = R"({
+const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
     "type": "object",
     "required": [
         "inputs"
@@ -90,7 +95,7 @@ namespace ovms {
     }
     })";
 
-    const char *MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
+const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
     "type": "object",
     "required": [
         "outputs"
@@ -102,22 +107,29 @@ namespace ovms {
     }
     })";
 
-    StatusCode validateJsonAgainstSchema(rapidjson::Document &json, const char *schema) {
-        rapidjson::Document schemaJson;
-        rapidjson::ParseResult parsingSucceeded = schemaJson.Parse(schema);
-        if (!parsingSucceeded) {
-            spdlog::error("JSON schema parse error: %s", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
-            return StatusCode::JSON_INVALID;
-        }
-        rapidjson::SchemaDocument parsedSchema(schemaJson);
-        rapidjson::SchemaValidator validator(parsedSchema);
-
-        if (!json.Accept(validator)) {
-            spdlog::error("JSON file does not match schema.");
-            return StatusCode::JSON_INVALID;
-        }
-
-        return StatusCode::OK;
+StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
+    rapidjson::Document schemaJson;
+    rapidjson::ParseResult parsingSucceeded = schemaJson.Parse(schema);
+    if (!parsingSucceeded) {
+        SPDLOG_ERROR("JSON schema parse error: {}, at: {}", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
+        return StatusCode::JSON_INVALID;
     }
+    rapidjson::SchemaDocument parsedSchema(schemaJson);
+    rapidjson::SchemaValidator validator(parsedSchema);
+
+    if (!json.Accept(validator)) {
+        rapidjson::StringBuffer sb;
+        validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
+        SPDLOG_ERROR("Invalid schema: {}", sb.GetString());
+        SPDLOG_ERROR("Invalid keyword: {}", validator.GetInvalidSchemaKeyword());
+        sb.Clear();
+        validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
+        SPDLOG_ERROR("Invalid document: {}", sb.GetString());
+        SPDLOG_ERROR("JSON file does not match schema. {}, at: {}", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
+        return StatusCode::JSON_INVALID;
+    }
+
+    return StatusCode::OK;
+}
 
 }  // namespace ovms

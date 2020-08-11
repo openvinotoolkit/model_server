@@ -217,7 +217,7 @@ private:
          */
     void configureBatchSize(const ModelConfig& config);
 
-     const Status validatePrecision(const ovms::TensorInfo& networkInput,
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
     const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,

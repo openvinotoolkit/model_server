@@ -69,7 +69,7 @@ const std::string SECOND_MODEL_NAME = "alpha";
 const std::string model_1_path = "/tmp/models/dummy1/1";
 const std::string model_2_path = "/tmp/models/dummy2/2";
 
-const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(ovms::ModelManager::WATCHER_INTERVAL_SEC + 1);
+const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(ovms::ModelManager::WATCHER_INTERVAL_SEC + 2);
 
 class MockModel : public ovms::Model {
 public:
@@ -158,37 +158,41 @@ TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
 
 TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     const char* configWithPipelineDefinitionMatchSchema = R"({
-    "model_config_list": [
-    {
-        "config": {
-        "name": "alpha",
-        "base_path": "/tmp/models/dummy1"
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "alpha",
+                    "base_path": "/tmp/models/dummy1"
+                }
+            },
+            {
+                "config": {
+                    "name": "beta",
+                    "base_path": "/tmp/models/dummy2"
+                }
+            }
+        ],
+        "pipeline_config_list": 
+        {
+            "name": "ensemble_name1", 
+            "inputs": ["in"], 
+            "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+            "nodes": [  
+                { 
+                    "name": "alpha", 
+                    "type": "DL Model", 
+                    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
+                    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+                }, 
+                { 
+                    "name": "beta", 
+                    "type": "DL Model",
+                    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
+                    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+                }
+            ]
         }
-    },
-    {
-    "config": {
-    "name": "beta",
-    "base_path": "/tmp/models/dummy2"
-    }
-    }],
-    "pipeline_config_list": 
-    {
-    "name": "ensemble_name1", 
-    "inputs": ["in"], 
-    "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
-    "nodes": [  
-    { 
-    "name": "alpha", 
-    "type": "DL Model", 
-    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
-    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
-    }, 
-    { 
-    "name": "beta", 
-    "type": "DL Model",
-    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
-    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
-    }]}})";
+    })";
 
     std::string configFile = "/tmp/ovms_config_file.json";
     createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
@@ -290,7 +294,6 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     MockModelManager manager;
     EXPECT_CALL(*modelMock, addVersion(_))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-
     auto status = manager.start(fileToReload);
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
@@ -299,12 +302,12 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
         std::this_thread::sleep_for(SLEEP_TIME_S);
     });
     t.join();
-
     createConfigFileWithContent(config_2_models, fileToReload);
     std::thread s([]() {
         std::this_thread::sleep_for(SLEEP_TIME_S);
     });
     s.join();
+    std::this_thread::sleep_for(SLEEP_TIME_S);
     models = manager.getModels().size();
     EXPECT_EQ(models, 2);
     manager.join();
@@ -784,13 +787,11 @@ TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurati
 
 TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToMultipleInputShapeChange) {
     ovms::ModelConfig previouslyLoadedConfig = config;
-    previouslyLoadedConfig.setShapes({
-        {"A", {ovms::Mode::FIXED, {1, 3, 224, 224}}},
+    previouslyLoadedConfig.setShapes({{"A", {ovms::Mode::FIXED, {1, 3, 224, 224}}},
         {"B", {ovms::Mode::FIXED, {1, 100}}}});
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, previouslyLoadedConfig);
     ovms::ModelConfig newConfig = config;
-    newConfig.setShapes({
-        {"A", {ovms::Mode::FIXED, {3, 3, 224, 224}}},
+    newConfig.setShapes({{"A", {ovms::Mode::FIXED, {3, 3, 224, 224}}},
         {"B", {ovms::Mode::FIXED, {1, 100}}}});
     ovms::ModelManager::getVersionsToChange(newConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));

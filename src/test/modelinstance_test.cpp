@@ -162,10 +162,10 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
         modelPath,  // base path
-        "CPU",    // target device
-        "1",      // batchsize
-        1,        // NIREQ
-        version,  // version
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        version,    // version
         modelPath,  // local path
     };
     auto status = mockModelInstance.loadModel(config);
@@ -193,10 +193,10 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     const ovms::ModelConfig config{
         "NOT_USED_NAME",
         modelPath,  // base path
-        "CPU",    // target device
-        "1",      // batchsize
-        1,        // NIREQ
-        version,  // version
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        version,    // version
         modelPath,  // local path
     };
     auto status = mockModelInstance.loadModel(config);
@@ -247,7 +247,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("{\"b\": \"auto\"}");
-    std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
+    std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
@@ -273,7 +273,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     ovms::ModelInstance modelInstance;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("auto");
-    std::map<std::string, ovms::shape_t> requestShapes = { {"b", {2, 10}} };
+    std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();

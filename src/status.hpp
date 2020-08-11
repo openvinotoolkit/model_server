@@ -44,7 +44,7 @@ enum class StatusCode {
     RESHAPE_ERROR,              /*!< Impossible to perform reshape */
     RESHAPE_REQUIRED,           /*!< Model instance needs to be reloaded with new shape */
     BATCHSIZE_CHANGE_REQUIRED,  /*!< Model instance needs to be reloaded with new batch size */
-    AMBIGUOUS_SHAPE_PARAM,  /*!< Fixed no named shape param defined for model with multiple inputs */
+    AMBIGUOUS_SHAPE_PARAM,      /*!< Fixed no named shape param defined for model with multiple inputs */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
@@ -130,6 +130,7 @@ enum class StatusCode {
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,
 
     PIPELINE_DEFINITION_ALREADY_EXIST,
+    PIPELINE_NODE_WRONG_KIND_CONFIGURATION,
     PIPELINE_MULTIPLE_ENTRY_NODES,
     PIPELINE_MULTIPLE_EXIT_NODES,
     PIPELINE_MISSING_ENTRY_OR_EXIT,

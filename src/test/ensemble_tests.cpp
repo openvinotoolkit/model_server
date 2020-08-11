@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <sstream>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -20,8 +22,10 @@
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
 #define DEBUG
-#include "../timer.hpp"
+#include <stdlib.h>
+
 #include "../status.hpp"
+#include "../timer.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -40,9 +44,56 @@ protected:
         // Prepare request
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        requestData = bs1requestData;
         proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
-        proto.mutable_tensor_shape()->add_dim()->set_size(10);
+        proto.mutable_tensor_shape()->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
+    }
+
+    void checkResponse(int seriesLength, int batchSize = 1) {
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+        const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+        ASSERT_EQ(output_proto.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), batchSize);
+        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), DUMMY_MODEL_OUTPUT_SIZE);
+
+        auto responseData = requestData;
+        std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+
+        float* actual_output = (float*)output_proto.tensor_content().data();
+        float* expected_output = responseData.data();
+        const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+            << readableError(expected_output, actual_output, dataLengthToCheck);
+    }
+
+    std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
+        std::stringstream ss;
+        for (int i = 0; i < size; ++i) {
+            if (actual_output[i] != expected_output[i]) {
+                ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
+                break;
+            }
+        }
+        return ss.str();
+    }
+
+    void performWrongPipelineConfigTest(const char* configFileContent) {
+        std::string fileToReload = "/tmp/ovms_config_file1.json";
+        createConfigFileWithContent(configFileContent, fileToReload);
+        ConstructorEnabledModelManager managerWithDummyModel;
+        setenv("NIREQ", "1", 1);
+        managerWithDummyModel.start(fileToReload);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+        std::unique_ptr<Pipeline> pipeline;
+        auto status = managerWithDummyModel.createPipeline(pipeline,
+            "pipeline1Dummy",
+            &request,
+            &response);
+        ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
+        managerWithDummyModel.join();
     }
 
     ModelConfig config;
@@ -52,20 +103,17 @@ protected:
 
     std::string dummyModelName = "dummy";
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
-    std::string dummyInputName = "b";
-    std::string dummyOutputName = "a";
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
 
-    std::vector<float> requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
+    std::vector<float> requestData;
+    const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
 };
 
 TEST_F(EnsembleFlowTest, DummyModel) {
     // Most basic configuration, just process single dummy model request
-
     // input   dummy    output
     //  O------->O------->O
-
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -75,31 +123,16 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     auto output_node = std::make_unique<ExitNode>(&response);
 
     Pipeline pipeline(*input_node, *output_node);
-
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-
-    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-    const auto& output_proto = response.outputs().at(customPipelineOutputName);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 10 * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
-    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
-
-    auto responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 10 * sizeof(float)));
+    const int dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
 }
 
 TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
@@ -125,11 +158,10 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     }
 
     Pipeline pipeline(*input_node, *output_node);
-
-    pipeline.connect(*input_node, *(dummy_nodes[0]), {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*(dummy_nodes[N - 1]), *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *(dummy_nodes[0]), {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*(dummy_nodes[N - 1]), *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
     for (int i = 0; i < N - 1; i++) {
-        pipeline.connect(*(dummy_nodes[i]), *(dummy_nodes[i + 1]), {{dummyOutputName, dummyInputName}});
+        pipeline.connect(*(dummy_nodes[i]), *(dummy_nodes[i + 1]), {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
     }
 
     pipeline.push(std::move(input_node));
@@ -144,23 +176,8 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
-    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-    const auto& output_proto = response.outputs().at(customPipelineOutputName);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 10 * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
-    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
-
-    auto responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0 * N; });
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, sizeof(expected_output)));
+    checkResponse(N);
     timer.stop("compare results");
-
 
     std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>("prepare pipeline") / 1000 << "ms\n";
     std::cout << "pipeline::execute: " << timer.elapsed<std::chrono::microseconds>("pipeline::execute") / 1000 << "ms\n";
@@ -179,9 +196,11 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
     // check if output is 3x10
 
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
-    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(3);
-    std::vector<float> requestData = {
-        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,  // batch 1
+    const int batchSize = 3;
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
+    requestData = {
+        // std::vector<float> requestData = {
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
         -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
         -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
     };
@@ -198,30 +217,16 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-
-    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-    const auto& output_proto = response.outputs().at(customPipelineOutputName);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), 3 * 10 * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 3);
-    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 10);
-
-    std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 3 * 10 * sizeof(float)));
+    const int seriallyConnectedDummyModels = 1;
+    checkResponse(seriallyConnectedDummyModels, batchSize);
 }
 
 TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
@@ -254,8 +259,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
@@ -291,16 +296,16 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     // process dummy
     // check if output is 3x500
 
-    const int BATCH = 3;
+    const int BATCH_SIZE = 3;
     const int WIDTH = 500;
 
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
-    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH);
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH_SIZE);
     proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
     std::vector<float> requestData;
-    for (int i = 0; i < BATCH; i++) {  // batch size
-        for (int j = 0; j < WIDTH; j++) {  // width
-            requestData.push_back((i+1) * (j+1));
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            requestData.push_back((i + 1) * (j + 1));
             /*
             1.0, 2.0, 3.0, ..., 500.0,
             2.0, 4.0, 6.0, ..., 1000.0,
@@ -322,21 +327,21 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
 
-    ASSERT_EQ(output_proto.tensor_content().size(), BATCH * WIDTH * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_content().size(), BATCH_SIZE * WIDTH * sizeof(float));
     ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH_SIZE);
     ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
 
     std::vector<float> responseData = requestData;
@@ -345,7 +350,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
 
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH * WIDTH * sizeof(float)));
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH_SIZE * WIDTH * sizeof(float)));
 }
 
 TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0) {
@@ -360,16 +365,16 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     // process dummy
     // check if output is 20x10
 
-    const int BATCH = 20;
+    const int BATCH_SIZE = 20;
     const int WIDTH = 10;
 
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
-    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH);
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH_SIZE);
     proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
-    std::vector<float> requestData;
-    for (int i = 0; i < BATCH; i++) {  // batch size
-        for (int j = 0; j < WIDTH; j++) {  // width
-            requestData.push_back((i+1) * (j+1));
+    requestData.clear();
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            requestData.push_back((i + 1) * (j + 1));
             /*
             1.0, 2.0, 3.0, ..., 10.0,
             2.0, 4.0, 6.0, ..., 20.0,
@@ -393,30 +398,17 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
 
-    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-    const auto& output_proto = response.outputs().at(customPipelineOutputName);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), BATCH * WIDTH * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH);
-    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
-
-    std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH * WIDTH * sizeof(float)));
+    const int seriallyConnectedDummyModels = 1;
+    checkResponse(seriallyConnectedDummyModels, BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowTest, ParallelDummyModels) {
@@ -438,8 +430,8 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
 
     for (int i = 0; i < N; i++) {
         dummy_nodes[i] = std::make_unique<DLNode>("dummy_node_" + std::to_string(i), dummyModelName, requestedModelVersion, managerWithDummyModel);
-        pipeline.connect(*input_node, *(dummy_nodes[i]), {{customPipelineInputName + std::to_string(i), dummyInputName}});
-        pipeline.connect(*(dummy_nodes[i]), *output_node, {{dummyOutputName, customPipelineOutputName + std::to_string(i)}});
+        pipeline.connect(*input_node, *(dummy_nodes[i]), {{customPipelineInputName + std::to_string(i), DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*(dummy_nodes[i]), *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName + std::to_string(i)}});
         pipeline.push(std::move(dummy_nodes[i]));
     }
     pipeline.push(std::move(input_node));
@@ -457,7 +449,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName + std::to_string(i)];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         proto.mutable_tensor_content()->assign((char*)(requestDataT.data() + i * DUMMY_MODEL_INPUT_SIZE),
-                                               DUMMY_MODEL_INPUT_SIZE * sizeof(float));
+            DUMMY_MODEL_INPUT_SIZE * sizeof(float));
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
         proto.mutable_tensor_shape()->add_dim()->set_size(10);
     }
@@ -489,8 +481,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
@@ -513,8 +505,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, std::string(DUMMY_MODEL_INPUT_NAME) + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
@@ -526,7 +518,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
-        DLNode(nodeName, modelName, modelVersion, modelManager) {}
+        DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
     ovms::Status fetchResults(BlobMap&) override {
         return StatusCode::UNKNOWN_ERROR;
     }
@@ -546,8 +538,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, dummyInputName}});
-    pipeline.connect(*model_node, *output_node, {{dummyOutputName, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
@@ -571,7 +563,7 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
     // Models/Versions
 
     // Simulate reading from pipeline_config.json
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"},
         {NodeKind::DL, "dummy_node", "dummy"},
         {NodeKind::EXIT, "exit"},
@@ -579,15 +571,13 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (dummyInputName)
+    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, dummyInputName}}}
-    };
+        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (dummyOutputNameName) O--------->O exit (customPipelineOutputName)
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
     connections["exit"] = {
-        {"dummy_node", {{dummyOutputName, customPipelineOutputName}}}
-    };
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections), StatusCode::OK);
@@ -599,16 +589,8 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
 
     // Execute pipeline
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-
-    // Validate response
-    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-
-    auto responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
-
-    float* actual_output = (float*)response.outputs().at(customPipelineOutputName).tensor_content().data();
-    float* expected_output = responseData.data();
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, DUMMY_MODEL_OUTPUT_SIZE * sizeof(float)));
+    const int dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
 }
 
 TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
@@ -634,7 +616,7 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     const int PARALLEL_SIMULATED_REQUEST_COUNT = 30;
 
     // Simulate reading from pipeline_config.json
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"},
         {NodeKind::EXIT, "exit"},
     };
@@ -646,18 +628,17 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
     for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
-         // entry (customPipelineInputName) O--------->O dummy_node_N (dummyInputName)
+        // entry (customPipelineInputName) O--------->O dummy_node_N (DUMMY_MODEL_INPUT_NAME)
         connections["dummy_node_" + std::to_string(i)] = {
-            {"entry", {{customPipelineInputName, dummyInputName}}}
-        };
+            {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
     }
 
-    // dummy_node_0 (dummyOutputNameName) O---------v
-    // dummy_node_1 (dummyOutputNameName) O--------->O exit (output_0, output_1, output_N)
-    // dummy_node_N (dummyOutputNameName) O---------^
+    // dummy_node_0 (DUMMY_MODEL_OUTPUT_NAME) O---------v
+    // dummy_node_1 (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (output_0, output_1, output_N)
+    // dummy_node_N (DUMMY_MODEL_OUTPUT_NAME) O---------^
     auto& exitConnections = connections["exit"];
     for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
-        exitConnections["dummy_node_" + std::to_string(i)] = {{dummyOutputName, "output_" + std::to_string(i)}};
+        exitConnections["dummy_node_" + std::to_string(i)] = {{DUMMY_MODEL_OUTPUT_NAME, "output_" + std::to_string(i)}};
     }
 
     // Create pipeline definition
@@ -718,7 +699,7 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NameDuplicate) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"},
         {NodeKind::DL, "dummy_node", "dummy"},
         {NodeKind::EXIT, "exit"},
@@ -727,12 +708,10 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NameDuplicate) {
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, dummyInputName}}}
-    };
+        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
     connections["exit"] = {
-        {"dummy_node", {{dummyOutputName, customPipelineOutputName}}}
-    };
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("pipeline", info, connections), StatusCode::OK);
     EXPECT_EQ(factory.createDefinition("pipeline", {}, {}), StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
@@ -741,7 +720,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NameDuplicate) {
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry1"},
         {NodeKind::ENTRY, "entry2"},
     };
@@ -750,13 +729,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::EXIT, "exit1"},
         {NodeKind::EXIT, "exit2"},
     };
@@ -765,13 +744,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"},
     };
 
@@ -779,13 +758,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::EXIT, "exit"},
     };
 
@@ -793,7 +772,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
@@ -802,13 +781,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
     PipelineFactory factory;
 
-    std::vector<NodeInfo> info {
+    std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"},
         {NodeKind::DL, "dummy_node", "dummy"},
         {NodeKind::DL, "dummy_node", "dummy"},
@@ -819,5 +798,463 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
+}
+
+const char* pipelineOneDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager managerWithDummyModel;
+    setenv("NIREQ", "1", 1);
+    managerWithDummyModel.start(fileToReload);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    std::unique_ptr<Pipeline> pipeline;
+    auto status = managerWithDummyModel.createPipeline(pipeline,
+        "pipeline1Dummy",
+        &request,
+        &response);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    const int dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
+    managerWithDummyModel.join();
+}
+
+//
+const char* pipelineOneDummyConfig2ParallelDummy = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                },
+                {
+                    "name": "dummyNode2",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output2"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                },
+                {"custom_dummy_output2": {"SourceNodeName": "dummyNode2",
+                                         "SourceNodeOutputName": "new_dummy_output2"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2ParallelDummy) {
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
+    ConstructorEnabledModelManager managerWithDummyModel;
+    setenv("NIREQ", "2", 1);
+    managerWithDummyModel.start(fileToReload);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    std::unique_ptr<Pipeline> pipeline;
+    auto status = managerWithDummyModel.createPipeline(pipeline,
+        "pipeline1Dummy",
+        &request,
+        &response);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    ASSERT_EQ(response.outputs().count(std::string(customPipelineOutputName) + "2"), 1);
+    // check 1st output
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+    const int batchSize = 1;
+    const int seriesLength = 1;
+    ASSERT_EQ(output_proto.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), batchSize);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), DUMMY_MODEL_OUTPUT_SIZE);
+
+    auto responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck);
+
+    // check 2nd output
+    const auto& output_proto2 = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto2.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto2.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto2.tensor_shape().dim(0).size(), batchSize);
+    ASSERT_EQ(output_proto2.tensor_shape().dim(1).size(), DUMMY_MODEL_OUTPUT_SIZE);
+
+    actual_output = (float*)output_proto2.tensor_content().data();
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck);
+    managerWithDummyModel.join();
+}
+
+const char* pipelineOneDummyConfigWrongNodeKind = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL modeloze Wrong kind",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithWrongNodeKind) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigWrongNodeKind);
+}
+
+const char* pipelineOneDummyConfigMissingNodeModelName = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeModelName) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeModelName);
+}
+
+const char* pipelineOneDummyConfigMissingNodeName = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeName) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeName);
+}
+
+const char* pipelineOneDummyConfigMissingNodeInputs = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeInputs) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeInputs);
+}
+
+const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeOutputs) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingNodeOutputs);
+}
+
+const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingPipelineOutputs) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingPipelineOutputs);
+}
+
+const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"SourceNodeName": "entry",
+                               "SourceNodeOutputName": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"ModelOutputName": "a",
+                         "OutputName": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
+                                         "SourceNodeOutputName": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+// There is no need at the moment to have inputs declared in pipeline inputs since those are taken anyway from input/output
+// mapping which is defined in following nodes (nodes that use anything directly from PredictRequest)
+TEST_F(EnsembleFlowTest, DISABLED_PipelineFactoryCreationWithMissingPipelineInputs) {
+    performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingPipelineInputs);
 }

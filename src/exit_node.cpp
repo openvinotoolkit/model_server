@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "exit_node.hpp"
 
+#include <string>
+
 #include <spdlog/spdlog.h>
 
 #include "tensorflow/core/framework/tensor.h"
@@ -26,10 +28,11 @@ Status ExitNode::fetchResults(BlobMap&) {
     for (const auto& kv : this->inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
-
+        SPDLOG_DEBUG("Serializing response from pipeline. Output name:{}", output_name);
         auto& proto = (*this->response->mutable_outputs())[output_name];
         auto status = serialize(blob, proto);
         if (!status.ok()) {
+            SPDLOG_INFO("Failed to serialize output:{} with error:{}", output_name, status.string());
             return status;
         }
 

@@ -19,11 +19,14 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <sstream>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#include <rapidjson/prettywriter.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
@@ -32,6 +35,8 @@
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
+#include "pipeline.hpp"
+#include "pipeline_factory.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 
@@ -98,45 +103,184 @@ Status ModelManager::start(const std::string& jsonFilename) {
     return StatusCode::OK;
 }
 
-Status ModelManager::loadConfig(const std::string& jsonFilename) {
-    spdlog::info("Loading configuration from {}", jsonFilename);
+void print(const rapidjson::Value& json) {
+    using namespace rapidjson;
+    StringBuffer sb;
+    PrettyWriter<StringBuffer> writer(sb);
+    json.Accept(writer);
+    auto str = sb.GetString();
+    SPDLOG_ERROR("ER:{}", str);
+}
 
-    std::ifstream ifs(jsonFilename.c_str());
-    if (!ifs.good()) {
-        spdlog::error("File is invalid {}", jsonFilename);
-        return StatusCode::FILE_INVALID;
+void processNodeInputs(const std::string nodeName, const rapidjson::Value::ConstMemberIterator& itro, pipeline_connections_t& connections) {
+    for (const auto& nodeInput : itro->value.GetArray()) {
+        // print(nodeInput);
+        for (const auto& objectNameValue : nodeInput.GetObject()) {
+            const std::string inputName = objectNameValue.name.GetString();
+            const std::string sourceNodeName = objectNameValue.value.GetObject()["SourceNodeName"].GetString();
+            const std::string sourceOutputName = objectNameValue.value.GetObject()["SourceNodeOutputName"].GetString();
+            SPDLOG_INFO("Creating node dependencies mapping entry. Node:{} input:{} <- SourceNode:{} output:{}",
+                nodeName, inputName, sourceNodeName, sourceOutputName);
+            if (connections.find(nodeName) == connections.end()) {
+                connections[nodeName] = {
+                    {sourceNodeName,
+                        {{sourceOutputName, inputName}}}};
+            } else {
+                connections[nodeName].insert({sourceNodeName,
+                    {{sourceOutputName, inputName}}});
+            }
+        }
     }
+}
 
-    rapidjson::Document configJson;
-    rapidjson::IStreamWrapper isw(ifs);
-    if (configJson.ParseStream(isw).HasParseError()) {
-        spdlog::error("Configuration file is not a valid JSON file.");
-        return StatusCode::JSON_INVALID;
+void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
+    for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
+        const std::string modelOutputName = nodeOutput.GetObject()["ModelOutputName"].GetString();
+        const std::string nodeOutputName = nodeOutput.GetObject()["OutputName"].GetString();
+        SPDLOG_INFO("Alliasing node:{} model_name:{} output:{}, under alias:{}",
+            nodeName, modelName, modelOutputName, nodeOutputName);
+        nodeOutputNameAlias[nodeOutputName] = modelOutputName;
     }
+}
 
-    if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA) != StatusCode::OK) {
-        return StatusCode::JSON_INVALID;
+void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory) {
+    const std::string pipelineName = pipelineConfig["name"].GetString();
+    SPDLOG_INFO("Reading pipeline:{} configuration", pipelineName);
+    auto itr2 = pipelineConfig.FindMember("nodes");
+    if (itr2 == pipelineConfig.MemberEnd() || !itr2->value.IsArray()) {
+        // TODO what if pipelines requires model not present in OVMS?
+        SPDLOG_ERROR("Pipeline:{} does not have valid nodes configuration", pipelineName);
+        return;
     }
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"}};
+    pipeline_connections_t connections;
+    for (const auto& nodeConfig : itr2->value.GetArray()) {
+        std::string nodeName;
+        if (nodeConfig.HasMember("name")) {
+            nodeName = nodeConfig["name"].GetString();
+        } else {
+            SPDLOG_ERROR("Pipeline:{} has wrong configuration. Missing field 'name' in node config. Schema validation failed", pipelineName);
+            return;
+        }
+        std::string modelName;
+        if (nodeConfig.HasMember("model_name")) {
+            modelName = nodeConfig["model_name"].GetString();
+        } else {
+            SPDLOG_ERROR("Pipeline:{} has wrong configuration. Missing field 'model_name' in node config. Schema validation failed", pipelineName);
+            return;
+        }
+        const std::string nodeKindStr = nodeConfig["type"].GetString();
+        auto nodeOutputsItr = nodeConfig.FindMember("outputs");
+        if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
+            SPDLOG_INFO("Pipeline:{} does not have valid outputs configuration", pipelineName);
+            return;
+        }
+        std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
+        processNodeOutputs(nodeOutputsItr, nodeName, modelName, nodeOutputNameAlias);
+        std::optional<model_version_t> modelVersion;
+        if (nodeConfig.HasMember("version")) {
+            modelVersion = nodeConfig["version"].GetUint64();
+        } else {
+            modelVersion = std::nullopt;
+        }
+        NodeKind nodeKind;
+        auto status = toNodeKind(nodeKindStr, nodeKind);
+        if (!status.ok()) {
+            SPDLOG_ERROR("There was error while parsing node kind:{}", nodeKindStr);
+            return;
+        }
+        SPDLOG_INFO("Creating node:{} type:{} model_name:{} modelVersion:{}",
+            nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
+        info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias}));
+        auto nodeInputItr = nodeConfig.FindMember("inputs");
+        if (nodeInputItr == nodeConfig.MemberEnd() || !nodeInputItr->value.IsArray()) {
+            SPDLOG_ERROR("Pipeline:{} does not have valid node inputs configuration", pipelineName);
+            return;
+        }
+        processNodeInputs(nodeName, nodeInputItr, connections);
+    }
+    const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
+    if (iteratorOutputs == configJson.MemberEnd() || !iteratorOutputs->value.IsArray()) {
+        SPDLOG_ERROR("Configuration file doesn't have outputs property for pipelineConfig:{}.", pipelineName);
+        return;
+    }
+    const std::string nodeName = "exit";
+    // pipeline outputs are node exit inputs
+    // TODO what if pipelines requires model not present in OVMS? CVS-34360
+    processNodeInputs(nodeName, iteratorOutputs, connections);
+    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, nodeName, "", std::nullopt, {})));
+    auto status = factory.createDefinition(pipelineName, info, connections);
+    if (!status.ok()) {
+        SPDLOG_WARN("Two pipelines with the same name:{} defined in config file. Ignoring the second definition", pipelineName);
+    }
+    pipelinesInConfigFile.insert(pipelineName);
+}
 
+Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
+    const auto itrp = configJson.FindMember("pipeline_config_list");
+    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
+        SPDLOG_INFO("Configuration file doesn't have pipelines property.");
+        return StatusCode::OK;
+    }
+    std::set<std::string> pipelinesInConfigFile;
+    for (const auto& pipelineConfig : itrp->value.GetArray()) {
+        // print(pipelineConfig);
+        processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory);
+    }
+    // retirePipelinesRemovedFromConfigFile(pipelinesInConfigFile); // TODO retire pipelines CVS-35859
+    // factory.dropDefinitionsOtherThan(pipelinesInConfigFile);
+    return ovms::StatusCode::OK;
+}
+
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
-        spdlog::error("Configuration file doesn't have models property.");
+        SPDLOG_ERROR("Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
-
     // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
-    configFilename = jsonFilename;
     std::set<std::string> modelsInConfigFile;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
-            return status;
+            SPDLOG_ERROR("Parsing model:{} config failed",
+                modelConfig.getName());
+            continue;
         }
         reloadModelWithVersions(modelConfig);
         modelsInConfigFile.emplace(modelConfig.getName());
     }
     retireModelsRemovedFromConfigFile(modelsInConfigFile);
+    return ovms::StatusCode::OK;
+}
+
+Status ModelManager::loadConfig(const std::string& jsonFilename) {
+    spdlog::info("Loading configuration from {}", jsonFilename);
+    std::ifstream ifs(jsonFilename.c_str());
+    if (!ifs.good()) {
+        SPDLOG_ERROR("File is invalid {}", jsonFilename);
+        return StatusCode::FILE_INVALID;
+    }
+    rapidjson::Document configJson;
+    rapidjson::IStreamWrapper isw(ifs);
+    if (configJson.ParseStream(isw).HasParseError()) {
+        SPDLOG_ERROR("Configuration file is not a valid JSON file.");
+        return StatusCode::JSON_INVALID;
+    }
+
+    if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA) != StatusCode::OK) {
+        SPDLOG_ERROR("Configuration file is not in valid configuration format");
+        return StatusCode::JSON_INVALID;
+    }
+    configFilename = jsonFilename;
+    Status status;
+    status = loadModelsConfig(configJson);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    status = loadPipelinesConfig(configJson);  // TODO not ignore the retcode
     return StatusCode::OK;
 }
 
@@ -161,10 +305,9 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 }
 
 void ModelManager::watcher(std::future<void> exit) {
-    spdlog::info("Started config watcher thread");
+    SPDLOG_INFO("Started config watcher thread");
     int64_t lastTime;
     struct stat statTime;
-
     stat(configFilename.c_str(), &statTime);
     lastTime = statTime.st_ctime;
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
@@ -173,7 +316,6 @@ void ModelManager::watcher(std::future<void> exit) {
         if (lastTime != statTime.st_ctime) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
-            spdlog::info("Model configuration changed");
         }
     }
     spdlog::info("Exited config watcher thread");

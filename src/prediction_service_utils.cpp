@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <map>
 #include "prediction_service_utils.hpp"
+
+#include <map>
 
 #include "deserialization.hpp"
 #include "executinstreamidguard.hpp"

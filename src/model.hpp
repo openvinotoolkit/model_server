@@ -141,8 +141,12 @@ public:
                 newDefaultVersion = version;
             }
         }
-        spdlog::info("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
         defaultVersion = newDefaultVersion;
+        if (newDefaultVersion) {
+            SPDLOG_INFO("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
+        } else {
+            SPDLOG_INFO("Model:{} will not have default version since no version is available.", getName());
+        }
     }
 
     /**
