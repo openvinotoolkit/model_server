@@ -1,26 +1,28 @@
 # Inference Server for Azure Media Services 
 
-OpenVINO™ Model Server for Azure Live Video Analytics (LVA) is an AI Extension used with LVA on 
-IoT Edge devices. It enables easy delegation of inference requests to OpenVINO in media analytics pipelines. 
+OpenVINO™ Model Server is an AI Extension used on IoT Edge devices together with [Live Video Analytics (LVA)](http://aka.ms/lva). 
+It enables easy delegation of inference requests to OpenVINO in media analytics pipelines. 
+
+A pre-built image of this server is available via the Azure Marketplace [here](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/intel_corporation.ovms?tab=Overview).
 
 The integration model is depicted below:
 ![archtecture](AI_extension.png)
 
-OpenVINO Model Server is running as a docker container and exposes an LVA REST API interface for 
-the pipeline applications. This interface supports a range of model categories and returns json response 
+OpenVINO Model Server is running as a docker container and exposes an REST API interface for 
+the pipeline applications that conforms to the HTTP extension [contract](https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/analyze-with-ai-your-choice-how-to#media-graph-http-extension-contract-definitions) specified for LVA. This interface supports a range of model categories and returns JSON response 
 including model metadata like attribute, labels or classes names. 
 
-Beside LVA REST API, the OVMS for LVA exposes also the complete OpenVINO Model Server REST and gRPC API,
- which could be used with arbitrary OpenVINO model. 
+Beside the REST API, the server also exposes the complete OpenVINO Model Server REST and gRPC API,
+ which could be used with an arbitrary OpenVINO model. 
 
-## LVA REST API
+## REST API 
 
-HTTP contract is defined as follows:
+The HTTP contract is defined as follows:
 * OpenVINO Model Server acts as the HTTP server 
 * LVA acts as the HTTP client
 
 
-| POST        | http://hostname/<endpoint_name> |
+| POST        | http://hostname:port/<endpoint_name> |
 | ------------- |-------------|
 | Accept      | application/json, */* |
 | Authorization     | None |
@@ -28,10 +30,18 @@ HTTP contract is defined as follows:
 |User-Agent|Azure Media Services|
 |Body |Image bytes, binary encoded in one of the supported content types |
 
+The `endpoint_name` defines the model you want to apply to the image. The allowed values are:
+* vehicleDetection
+* vehicleClassification
+* personVehicleBikeDetection
+* faceDetection
+
+See below for more details about these models.
+
 Example:
 
 ```bash
-POST http://localhost:5000/vehicle-detection HTTP/1.1
+POST http://localhost:5000/vehicleDetection HTTP/1.1
 Host: localhost:5000
 x-ms-client-request-id: d6050cd4-c9f2-42d3-9adc-53ba7e440f17
 Content-Type: image/bmp
@@ -41,7 +51,7 @@ Content-Length: 519222
 
 ```
 
-*Note:* Depending on the model configuration, input image resolution needs to match the model expected size or
+*Note:* Depending on the model configuration, input image resolution needs to match the model's expected size or
 it will be resized automatically. 
 
 Response:
