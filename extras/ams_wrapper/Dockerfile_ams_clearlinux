@@ -94,7 +94,7 @@ COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py
 COPY --from=build /tmp/pip/tensorflow_serving_api-*.whl .
 RUN virtualenv --system-site-packages -p python3 .venv && \
     . .venv/bin/activate && \
-    pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
+    pip3 install --no-cache-dir tensorflow_serving_api-*.whl --no-deps && \
     pip3 install --no-cache-dir -r requirements_clearlinux.txt
 RUN rm tensorflow_serving_api-*.whl
 
