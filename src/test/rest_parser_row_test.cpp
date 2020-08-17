@@ -406,8 +406,8 @@ TEST(RestParserRow, NamedInstanceNotAnObject) {
 TEST(RestParserRow, CouldNotDetectNamedOrNoNamed) {
     RestParser parser;
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, 5, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[2, 5, 6]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
 TEST(RestParserRow, NoInstancesFound) {
