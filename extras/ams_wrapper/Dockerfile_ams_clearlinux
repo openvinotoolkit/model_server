@@ -94,7 +94,7 @@ COPY start_server.sh setup.py version requirements_clearlinux.txt /ie-serving-py
 COPY --from=build /tmp/pip/tensorflow_serving_api-*.whl .
 RUN virtualenv --system-site-packages -p python3 .venv && \
     . .venv/bin/activate && \
-    pip3 install --no-cache-dir tensorflow_serving_api-*.whl && \
+    pip3 install --no-cache-dir tensorflow_serving_api-*.whl --no-deps && \
     pip3 install --no-cache-dir -r requirements_clearlinux.txt
 RUN rm tensorflow_serving_api-*.whl
 
@@ -116,7 +116,7 @@ COPY extras/ams_wrapper/src /ams_wrapper/src
 COPY extras/ams_wrapper/tests/invalid_startup /ams_wrapper/tests/invalid_startup
 COPY extras/ams_models /opt/ams_models
 
-RUN . .venv/bin/activate && pip3 --no-cache-dir install . && chmod +x /ams_wrapper/start_ams.py
+RUN . .venv/bin/activate && pip3 --no-cache-dir install . --no-deps && chmod +x /ams_wrapper/start_ams.py
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/inference-engine:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib:/usr/local/lib/inference-engine/python_api/python3.8:/usr/local/lib/inference-engine/python_api/python3.8/openvino/inference_engine
