@@ -24,63 +24,153 @@
 
 namespace ovms {
 const char* MODELS_CONFIG_SCHEMA = R"({
-    "definitions": {
-        "model_config": {
+	"definitions": {
+		"model_config": {
+			"type": "object",
+			"required": ["config"],
+			"properties": {
+				"config": {
+					"type": "object",
+					"required": ["name", "base_path"],
+					"properties": {
+						"name": {
+							"type": "string"
+						},
+						"base_path": {
+							"type": "string"
+						},
+						"batch_size": {
+							"type": ["integer", "string"]
+						},
+						"model_version_policy": {
+							"type": "object"
+						},
+						"shape": {
+							"type": ["object", "string"]
+						},
+						"nireq": {
+							"type": "integer"
+						},
+						"target_device": {
+							"type": "string"
+						},
+						"plugin_config": {
+							"type": "object"
+						}
+					}
+				},
+				"additionalProperties": false
+			}
+		},
+		"source_node_names": {
+			"type": "object",
+			"required": ["SourceNodeName", "SourceNodeOutputName"],
+			"properties": {
+				"SourceNodeName": {
+					"type": "string"
+				},
+				"SourceNodeOutputName": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
+		},
+        "source_node": {
             "type": "object",
-            "required": ["config"],
-            "properties": {
-                "config": {
-                    "type": "object",
-                    "required": ["name", "base_path"],
-                    "properties": {
-                        "name": {"type": "string"},
-                        "base_path": {"type": "string"},
-                        "batch_size": {"type": ["integer", "string"]},
-                        "model_version_policy": {"type": "object"},
-                        "shape": {"type": ["object", "string"]},
-                        "nireq": {"type": "integer"},
-                        "target_device": {"type": "string"},
-                        "plugin_config": {"type": "object"}
-                    }
-                }
-            }
-        },
-        "node_config": {
-            "type": "object",
-            "required": ["name", "model_name"],
-            "properties": {
-                "name": {"type": "string"},
-                "model_name": {"type": "string"},
-                "type": {"type": "string"},
-                "inputs": {"type": "array"},
-                "outputs": {"type": "array"}
-            }
-        },
-        "pipeline_config": {
-            "type": "object",
-            "required": ["name", "nodes", "inputs", "outputs"],
-            "properties": {
-                "name": {"type": "string"},
-                "nodes": {
-                    "type": "array",
-                    "items": {"$ref": "#/definitions/node_config"}},
-                "inputs": {"type": "array"},
-                "outputs": {"type": "array"}
-            }
-        }
-    },
-    "type": "object",
-    "required": ["model_config_list"],
-    "properties": {
-        "model_config_list": {
-            "type": "array",
-            "items": {"$ref": "#/definitions/model_config"}
-        },
-        "pipelines_config_list": {
-            "type": "array",
-            "items": {"$ref": "#/definitions/pipeline_config"}
-        }
-    }
+            "additionalProperties" : {
+				"$ref": "#/definitions/source_node_names"
+			},
+			"minProperties": 1,
+  			"maxProperties": 1
+		},
+		"output_alias": {
+			"type": "object",
+			"required": ["ModelOutputName", "OutputName"],
+			"properties": {
+				"ModelOutputName": {
+					"type": "string"
+				},
+				"OutputName": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
+		},
+		"node_config": {
+			"type": "object",
+			"required": ["name", "model_name"],
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"model_name": {
+					"type": "string"
+				},
+				"type": {
+					"type": "string",
+					"enum": ["DL model", "Demultiplexer", "Batch dispatcher"]
+				},
+				"inputs": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/source_node"
+					}
+				},
+				"outputs": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/output_alias"
+					}
+				}
+			},
+			"additionalProperties": false
+		},
+		"pipeline_config": {
+			"type": "object",
+			"required": ["name", "nodes", "inputs", "outputs"],
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"nodes": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/node_config"
+					}
+				},
+				"inputs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"outputs": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/source_node"
+					}
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"type": "object",
+	"required": ["model_config_list"],
+	"properties": {
+		"model_config_list": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/model_config"
+			}
+		},
+		"pipeline_config_list": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/pipeline_config"
+			}
+		}
+	},
+	"additionalProperties": false
 })";
 
 const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
@@ -125,7 +215,6 @@ StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* sche
         sb.Clear();
         validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
         SPDLOG_ERROR("Invalid document: {}", sb.GetString());
-        SPDLOG_ERROR("JSON file does not match schema. {}, at: {}", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
         return StatusCode::JSON_INVALID;
     }
 

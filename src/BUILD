@@ -150,6 +150,7 @@ cc_test(
         "test/test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
+        "test/schema_test.cpp",
     ],
     data = [
         "test/dummy/0/dummy.xml",

@@ -860,7 +860,6 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     managerWithDummyModel.join();
 }
 
-//
 const char* pipelineOneDummyConfig2ParallelDummy = R"(
 {
     "model_config_list": [
