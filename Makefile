@@ -101,8 +101,10 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
-style: venv
+style: venv clang-format
 	@echo "Style-checking codebase..."
+	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
 sdl-check: venv
