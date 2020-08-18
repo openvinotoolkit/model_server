@@ -17,19 +17,29 @@
 
 namespace ovms {
 
+Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
+    if (str == DL_NODE_CONFIG_TYPE) {
+        nodeKind = NodeKind::DL;
+        return StatusCode::OK;
+    }
+    SPDLOG_ERROR("Unsupported node type:{}", str);
+    return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
+}
+
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
-                                  const tensorflow::serving::PredictRequest* request,
-                                  tensorflow::serving::PredictResponse* response,
-                                  ModelManager& manager) const {
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager) const {
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
 
-    EntryNode *entry = nullptr;
-    ExitNode *exit = nullptr;
-
+    EntryNode* entry = nullptr;
+    ExitNode* exit = nullptr;
     for (const auto& info : nodeInfos) {
         if (nodes.count(info.nodeName) == 1) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
+        SPDLOG_DEBUG("Creating pipeline:{}. Adding nodeName:{}, modelName:{}",
+            info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
             if (entry != nullptr) {
@@ -42,9 +52,10 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
         }
         case NodeKind::DL:
             nodes.insert(std::make_pair(info.nodeName, std::move(std::make_unique<DLNode>(info.nodeName,
-                                                                                          info.modelName,
-                                                                                          info.modelVersion,
-                                                                                          manager))));
+                                                           info.modelName,
+                                                           info.modelVersion,
+                                                           manager,
+                                                           info.outputNameAliases))));
             break;
         case NodeKind::EXIT: {
             if (exit != nullptr) {
@@ -59,36 +70,36 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             throw std::invalid_argument("unknown node kind");
         }
     }
-
-    if (!entry || !exit) {
+    if (!entry) {
+        SPDLOG_INFO("Pipeline:{} is missing entry node", pipelineName);
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
-
+    if (!exit) {
+        SPDLOG_INFO("Pipeline:{} is missing exit node", pipelineName);
+        return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
+    }
     for (const auto& kv : connections) {
-        const auto& dependantNode = nodes[kv.first];
+        const auto& dependantNode = nodes.at(kv.first);
         for (const auto& pair : kv.second) {
-            const auto& dependencyNode = nodes[pair.first];
+            const auto& dependencyNode = nodes.at(pair.first);
+            SPDLOG_DEBUG("Connecting from:{}, to:{}", dependencyNode->getName(), dependantNode->getName());
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
-
     pipeline = std::make_unique<Pipeline>(*entry, *exit);
-
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }
-
     return StatusCode::OK;
 }
 
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
-                                         const std::vector<NodeInfo>& nodeInfos,
-                                         const std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>& connections) {
+    const std::vector<NodeInfo>& nodeInfos,
+    const pipeline_connections_t& connections) {
     if (definitionExists(pipelineName)) {
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-
-    definitions[pipelineName] = std::make_unique<PipelineDefinition>(nodeInfos, connections);
+    definitions[pipelineName] = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
 
     // TODO: Call PipelineDefinition::validate method to check for one entry, one exit, acyclic, connected, no dead ends
     // https://jira.devtools.intel.com/browse/CVS-34360
@@ -97,15 +108,14 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
 }
 
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
-                               const std::string& name,
-                               tensorflow::serving::PredictRequest* request,
-                               tensorflow::serving::PredictResponse* response,
-                               ModelManager& manager) const {
+    const std::string& name,
+    tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager) const {
     if (!definitionExists(name)) {
+        SPDLOG_INFO("Pipeline with requested name:{} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
-
     return definitions.at(name)->create(pipeline, request, response, manager);
 }
-
 }  // namespace ovms

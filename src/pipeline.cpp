@@ -23,8 +23,20 @@
 #include "threadsafequeue.hpp"
 
 namespace ovms {
+
+void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs) {
+    if (spdlog::default_logger()->level() > spdlog::level::debug) {
+        return;
+    }
+    std::stringstream ss;
+    ss << "Links from:" << sourceNode << " to:" << nodeName << ":\n";
+    for (auto& pair : pairs) {
+        ss << "\t" << nodeName << "[" << pair.second << "]=" << sourceNode << "[" << pair.first << "]\n";
+    }
+    SPDLOG_DEBUG(ss.str());
+}
+
 std::map<const std::string, bool> Pipeline::prepareStatusMap() const {
-    // void Pipeline::prepareStatusMap() const {
     std::map<const std::string, bool> nameFlagMap;
     for (const auto& node : nodes) {
         nameFlagMap.emplace(std::make_pair(node->getName(), false));
@@ -55,6 +67,7 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
     }
 
 Status Pipeline::execute() {
+    SPDLOG_INFO("Started execution of pipeline:", getName());
     ThreadSafeQueue<std::reference_wrapper<Node>> finishedNodeQueue;
     ovms::Status firstErrorStatus{ovms::StatusCode::OK};
     auto startedExecute{prepareStatusMap()};
@@ -67,7 +80,7 @@ Status Pipeline::execute() {
         return status;
     }
     while (true) {
-        SPDLOG_DEBUG("Pipeline:{} before get message:", getName());
+        SPDLOG_DEBUG("Pipeline:{} before get message", getName());
         auto& finishedNode = finishedNodeQueue.waitAndPull().get();
         SPDLOG_DEBUG("Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
         finishedExecute.at(finishedNode.getName()) = true;
@@ -89,6 +102,7 @@ Status Pipeline::execute() {
         for (auto& nextNode : nextNodesFromFinished) {
             if (nextNode.get().isReady()) {
                 startedExecute.at(nextNode.get().getName()) = true;
+                SPDLOG_DEBUG("Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
                 status = nextNode.get().execute(finishedNodeQueue);
                 CHECK_AND_LOG_ERROR(nextNode.get())
                 IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE

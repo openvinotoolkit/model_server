@@ -15,9 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -25,9 +25,13 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "pipeline.hpp"
-#include "modelmanager.hpp"
+#include "status.hpp"
 
 namespace ovms {
+
+class ModelManager;
+
+using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>;
 
 enum class NodeKind {
     ENTRY,
@@ -35,37 +39,46 @@ enum class NodeKind {
     EXIT
 };
 
+const std::string DL_NODE_CONFIG_TYPE = "DL model";
+
+Status toNodeKind(const std::string& str, NodeKind& nodeKind);
+
 struct NodeInfo {
     NodeKind kind;
     std::string nodeName;
     std::string modelName;
     std::optional<model_version_t> modelVersion;
+    std::unordered_map<std::string, std::string> outputNameAliases;
 
     NodeInfo(NodeKind kind,
-             const std::string& nodeName,
-             const std::string& modelName = "",
-             std::optional<model_version_t> modelVersion = std::nullopt) :
+        const std::string& nodeName,
+        const std::string& modelName = "",
+        std::optional<model_version_t> modelVersion = std::nullopt,
+        std::unordered_map<std::string, std::string> outputNameAliases = {}) :
         kind(kind),
         nodeName(nodeName),
         modelName(modelName),
-        modelVersion(modelVersion) {}
+        modelVersion(modelVersion),
+        outputNameAliases(outputNameAliases) {}
 };
 
 class PipelineDefinition {
     std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
 public:
-    PipelineDefinition(const std::vector<NodeInfo>& nodeInfos,
-                       const std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>& connections) :
+    PipelineDefinition(const std::string& pipelineName,
+        const std::vector<NodeInfo>& nodeInfos,
+        const pipeline_connections_t& connections) :
+        pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections) {}
 
     Status create(std::unique_ptr<Pipeline>& pipeline,
-                  const tensorflow::serving::PredictRequest* request,
-                  tensorflow::serving::PredictResponse* response,
-                  ModelManager& manager) const;
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response,
+        ModelManager& manager) const;
 
     // TODO: validate method for one entry, one exit, acyclic, connected, no dead ends
     // https://jira.devtools.intel.com/browse/CVS-34360
@@ -76,18 +89,18 @@ class PipelineFactory {
 
 public:
     Status createDefinition(const std::string& pipelineName,
-                            const std::vector<NodeInfo>& nodeInfos,
-                            const std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>& connections);
+        const std::vector<NodeInfo>& nodeInfos,
+        const pipeline_connections_t& connections);
 
     bool definitionExists(const std::string& name) const {
         return definitions.count(name) == 1;
     }
 
     Status create(std::unique_ptr<Pipeline>& pipeline,
-                  const std::string& name,
-                  tensorflow::serving::PredictRequest* request,
-                  tensorflow::serving::PredictResponse* response,
-                  ModelManager& manager = ModelManager::getInstance()) const;
+        const std::string& name,
+        tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response,
+        ModelManager& manager) const;
 };
 
 }  // namespace ovms

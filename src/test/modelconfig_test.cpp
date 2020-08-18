@@ -19,12 +19,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "../status.hpp"
-
 #include "test_utils.hpp"
 
 using namespace testing;
@@ -208,28 +206,28 @@ TEST(ModelConfig, setShapesFromRequest) {
     ovms::ShapeInfo shapeInfo;
     shapeInfo.shapeMode = ovms::AUTO;
     shapeInfo.shape = {1, 2, 3, 4};
-    ovms::shapes_map_t shapes = { {"input", shapeInfo} };
+    ovms::shapes_map_t shapes = {{"input", shapeInfo}};
     config.setShapes(shapes);
 
-    std::map<std::string, ovms::shape_t> req1 { {"input", {10, 20, 30, 40}} };
+    std::map<std::string, ovms::shape_t> req1{{"input", {10, 20, 30, 40}}};
     config.setShapesFromRequest(req1);
     auto r_shapes = config.getShapes();
     EXPECT_THAT(r_shapes["input"].shape, ElementsAre(10, 20, 30, 40));
 
     shapeInfo.shapeMode = ovms::AUTO;
     shapeInfo.shape = {};
-    shapes = { {ovms::DEFAULT_INPUT_NAME, shapeInfo} };
+    shapes = {{ovms::DEFAULT_INPUT_NAME, shapeInfo}};
     config.setShapes(shapes);
 
-    std::map<std::string, ovms::shape_t> req2 { {"input", {100, 200, 300, 400}} };
+    std::map<std::string, ovms::shape_t> req2{{"input", {100, 200, 300, 400}}};
     config.setShapesFromRequest(req2);
     r_shapes = config.getShapes();
     EXPECT_THAT(r_shapes[ovms::DEFAULT_INPUT_NAME].shape, ElementsAre(100, 200, 300, 400));
 
-    shapes = { {"input1", shapeInfo}, {"input2", shapeInfo} };
+    shapes = {{"input1", shapeInfo}, {"input2", shapeInfo}};
     config.setShapes(shapes);
 
-    std::map<std::string, ovms::shape_t> req3 { {"input1", {1, 1, 1}}, {"input2", {2, 2, 2}} };
+    std::map<std::string, ovms::shape_t> req3{{"input1", {1, 1, 1}}, {"input2", {2, 2, 2}}};
     config.setShapesFromRequest(req3);
     r_shapes = config.getShapes();
     EXPECT_THAT(r_shapes["input1"].shape, ElementsAre(1, 1, 1));
@@ -337,8 +335,7 @@ TEST(ModelConfig, parseModelMappingWhenOutputsMissingInConfig) {
     createConfigFileWithContent(json, filename);
 
     std::unordered_map<std::string, std::string> expectedInputs = {
-            { "key", "value1"}
-    };
+        {"key", "value1"}};
 
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), false);
@@ -366,8 +363,7 @@ TEST(ModelConfig, parseModelMappingWhenInputsMissingInConfig) {
     createConfigFileWithContent(json, filename);
 
     std::unordered_map<std::string, std::string> expectedOutputs = {
-            { "key", "value2"}
-    };
+        {"key", "value2"}};
 
     auto ret = config.parseModelMapping();
     EXPECT_EQ(config.getMappingInputs().empty(), true);

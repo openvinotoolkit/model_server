@@ -19,8 +19,8 @@
 #include <gtest/gtest.h>
 
 #include "../model.hpp"
-#include "test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "test_utils.hpp"
 
 class ModelDefaultVersions : public ::testing::Test {};
 

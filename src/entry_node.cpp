@@ -37,9 +37,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
                 SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name {}): missing input proto name: {} in request", getName(), output_name);
                 return StatusCode::INVALID_MISSING_INPUT;
             }
-
             const auto& tensor_proto = request->inputs().at(output_name);
-
             InferenceEngine::Blob::Ptr blob;
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
@@ -123,7 +121,6 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
         SPDLOG_ERROR("EntryNode::deserialize: exception thrown from make_shared_blob; {}; exception message: {}", status.string(), e.what());
         return status;
     }
-
 
     return StatusCode::OK;
 }

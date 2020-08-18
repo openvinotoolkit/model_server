@@ -33,9 +33,9 @@
 #include <spdlog/spdlog.h>
 
 #include "model_version_policy.hpp"
+#include "schema.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
-#include "schema.hpp"
 
 namespace ovms {
 
@@ -437,7 +437,7 @@ public:
             try {
                 effectiveBatchSize = std::stoi(configBatchSize);
             } catch (const std::invalid_argument& e) {
-                spdlog::error("Wrong batch size parameter provided. Model batch size will be set to default.");
+                SPDLOG_ERROR("Wrong batch size parameter provided. Model batch size will be set to default.");
             }
         }
         return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
@@ -751,7 +751,6 @@ public:
         this->shapes = shapes;
     }
 
-
     /**
         * @brief Returns true if shape with certain name is in AUTO mode
          * 
@@ -962,12 +961,12 @@ public:
         rapidjson::Document doc;
         rapidjson::IStreamWrapper isw(ifs);
         if (doc.ParseStream(isw).HasParseError()) {
-            spdlog::error("Configuration file is not a valid JSON file.");
+            SPDLOG_ERROR("Configuration file is not a valid JSON file.");
             return StatusCode::JSON_INVALID;
         }
 
         if (validateJsonAgainstSchema(doc, MODELS_MAPPING_INPUTS_SCHEMA) != StatusCode::OK) {
-            spdlog::warn("Couldn't load inputs object from file {}", path.c_str());
+            SPDLOG_WARN("Couldn't load inputs object from file {}", path.c_str());
         } else {
             // Process inputs
             const auto itr = doc.FindMember("inputs");
@@ -978,7 +977,7 @@ public:
         }
 
         if (validateJsonAgainstSchema(doc, MODELS_MAPPING_OUTPUTS_SCHEMA) != StatusCode::OK) {
-            spdlog::warn("Couldn't load outputs object from file {}", path.c_str());
+            SPDLOG_WARN("Couldn't load outputs object from file {}", path.c_str());
         } else {
             // Process outputs
             const auto it = doc.FindMember("outputs");
@@ -1020,7 +1019,7 @@ public:
             if (v["shape"].IsString()) {
                 ShapeInfo shapeInfo;
                 if (!parseShape(shapeInfo, v["shape"].GetString()).ok()) {
-                    spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
+                    SPDLOG_ERROR("There was an error parsing shape {}", v["shape"].GetString());
                 }
                 this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
             } else {
@@ -1038,7 +1037,7 @@ public:
                         // check if legacy format is used
                         if (s.value.IsString()) {
                             if (!ModelConfig::parseShape(shapeInfo, s.value.GetString()).ok()) {
-                                spdlog::error("There was an error parsing shape {}", v["shape"].GetString());
+                                SPDLOG_ERROR("There was an error parsing shape {}", v["shape"].GetString());
                             }
                         } else {
                             for (auto& sh : s.value.GetArray()) {
@@ -1063,7 +1062,7 @@ public:
 
         if (v.HasMember("plugin_config")) {
             if (!parsePluginConfig(v["plugin_config"]).ok()) {
-                spdlog::error("Couldn't parse plugin config");
+                SPDLOG_ERROR("Couldn't parse plugin config");
             }
         }
 
@@ -1073,7 +1072,7 @@ public:
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             v["model_version_policy"].Accept(writer);
             if (!this->parseModelVersionPolicy(buffer.GetString()).ok()) {
-                spdlog::error("Couldn't parse model version policy");
+                SPDLOG_ERROR("Couldn't parse model version policy");
             }
         } else {
             modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();

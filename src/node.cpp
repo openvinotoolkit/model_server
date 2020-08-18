@@ -16,6 +16,7 @@
 #include "node.hpp"
 
 #include <algorithm>
+#include <sstream>
 
 #include <spdlog/spdlog.h>
 

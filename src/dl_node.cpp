@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "dl_node.hpp"
+
 #include <map>
 
 #include <spdlog/spdlog.h>
 
-#include "dl_node.hpp"
 #include "executinstreamidguard.hpp"
+#include "modelmanager.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
@@ -70,7 +72,6 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
         return status;
     }
 
-
     try {
         SPDLOG_DEBUG("Setting completion callback for node name: {}", this->getName());
         infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
@@ -83,12 +84,21 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
         SPDLOG_DEBUG("Starting infer async for node name: {}", getName());
         infer_request.StartAsync();
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-        SPDLOG_ERROR("StartAsync or setting completion callback caught an exception {}: {}", status.string(), e.what());
+        SPDLOG_INFO("Exception occured when started async inference or setting completion callback on node:{}, modelName:{}, error:{}",
+            getName(), modelName, e.what());
         notifyEndQueue.push(*this);
-        return status;
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    } catch (const std::exception& e) {
+        SPDLOG_INFO("Exception occured when started async inference or setting completion callback on node:{}, modelName:{}, error:{}",
+            getName(), modelName, e.what());
+        notifyEndQueue.push(*this);
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    } catch (...) {
+        SPDLOG_INFO("Unknown exception occured when started async or setting completion callback inference on node:{}, modelName:{}",
+            getName(), modelName);
+        notifyEndQueue.push(*this);
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }
-
     return StatusCode::OK;
 }
 
@@ -114,24 +124,24 @@ Status DLNode::fetchResults(BlobMap& outputs) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-
             // Multiple next nodes can have the same dependency, do not prepare the same blob multiple times
+            // TODO what if different following nodes expect different outputs but under the same name?
             if (outputs.count(output_name) == 1) {
                 continue;
             }
 
             try {
-                outputs[output_name] = infer_request.GetBlob(output_name);
+                auto aliasItr = nodeOutputNameAlias.find(output_name);
+                const std::string realModelOutputName = ((aliasItr != nodeOutputNameAlias.end()) ? (*aliasItr).second : output_name);
+                outputs[output_name] = infer_request.GetBlob(realModelOutputName);
             } catch (const InferenceEngine::details::InferenceEngineException& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_ERROR("DLNode::fetchResults (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
                 return status;
             }
-
             SPDLOG_DEBUG("DLNode::fetchResults (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
         }
     }
-
     // After results are fetched, model and inference request are not needed anymore
     this->streamIdGuard.reset();
     this->model.reset();
@@ -176,9 +186,7 @@ Status DLNode::prepareInputsAndModelForInference() {
         if (inputsInfo.count(name) == 0) {
             return StatusCode::INVALID_MISSING_INPUT;
         }
-
         auto& inputInfo = *inputsInfo.at(name);
-
         auto status = validate(blob, inputInfo);
         if (status.ok()) {
             continue;

@@ -20,10 +20,9 @@
 #include "status.hpp"
 
 namespace ovms {
-    extern const char *MODELS_CONFIG_SCHEMA;
-    extern const char *PIPELINE_DEFINITION_SCHEMA;
-    extern const char *MODELS_MAPPING_INPUTS_SCHEMA;
-    extern const char *MODELS_MAPPING_OUTPUTS_SCHEMA;
+extern const char* MODELS_CONFIG_SCHEMA;
+extern const char* MODELS_MAPPING_INPUTS_SCHEMA;
+extern const char* MODELS_MAPPING_OUTPUTS_SCHEMA;
 
-    StatusCode validateJsonAgainstSchema(rapidjson::Document &json, const char *schema);
+StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema);
 }  // namespace ovms

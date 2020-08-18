@@ -23,10 +23,13 @@
 #include <thread>
 #include <vector>
 
+#include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
 #include "directoryversionreader.hpp"
 #include "model.hpp"
+#include "pipeline.hpp"
+#include "pipeline_factory.hpp"
 
 namespace ovms {
 class IVersionReader;
@@ -47,6 +50,8 @@ protected:
          */
     std::map<std::string, std::shared_ptr<Model>> models;
 
+    PipelineFactory pipelineFactory;
+
 private:
     /**
          * @brief Private copying constructor
@@ -60,6 +65,9 @@ private:
          * @return Status 
          */
     Status loadConfig(const std::string& jsonFilename);
+
+    Status loadModelsConfig(rapidjson::Document& configJson);
+    Status loadPipelinesConfig(rapidjson::Document& configJson);
 
     /**
          * @brief Watcher thread for monitor changes in config
@@ -155,6 +163,13 @@ public:
         }
     }
 
+    Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
+        const std::string name,
+        tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response) {
+        return pipelineFactory.create(pipeline, name, request, response, *this);
+    }
+
     /**
          * @brief Starts model manager using provided config file
          * 
@@ -220,12 +235,12 @@ public:
          * @param versionsToStartIn cointainer for versions to start
          */
     static void getVersionsToChange(
-         const ModelConfig& newModelConfig,
-         const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
-         std::vector<model_version_t> requestedVersions,
-         std::shared_ptr<model_versions_t>& versionsToRetireIn,
-         std::shared_ptr<model_versions_t>& versionsToReloadIn,
-         std::shared_ptr<model_versions_t>& versionsToStartIn);
+        const ModelConfig& newModelConfig,
+        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+        std::vector<model_version_t> requestedVersions,
+        std::shared_ptr<model_versions_t>& versionsToRetireIn,
+        std::shared_ptr<model_versions_t>& versionsToReloadIn,
+        std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     /**
          * @brief Watcher interval for checking changes in config

@@ -18,31 +18,37 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "executinstreamidguard.hpp"
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
 #include "node.hpp"
 
 namespace ovms {
+
+class ModelManager;
 
 class DLNode : public Node {
     std::string modelName;
     std::optional<model_version_t> modelVersion;
     ModelManager& modelManager;
+    const std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
     std::shared_ptr<ModelInstance> model;
     std::unique_ptr<ExecutingStreamIdGuard> streamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
 public:
-    DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
+    DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
+        ModelManager& modelManager,
+        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}) :
         Node(nodeName),
         modelName(modelName),
         modelVersion(modelVersion),
-        modelManager(modelManager) {
+        modelManager(modelManager),
+        nodeOutputNameAlias(nodeOutputNameAlias) {
     }
 
     Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override;

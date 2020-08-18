@@ -66,14 +66,14 @@ protected:
         ON_CALL(instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
         request = preparePredictRequest(
-        {
-            {"Input_FP32_1_3_224_224_NHWC",
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 224, 224}, tensorflow::DataType::DT_FLOAT}},
-            {"Input_U8_1_3_62_62_NCHW",
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 62, 62}, tensorflow::DataType::DT_UINT8}},
-            {"Input_I64_1_6_128_128_16_NCDHW",
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 6, 128, 128, 16}, tensorflow::DataType::DT_INT64}},
-        });
+            {
+                {"Input_FP32_1_3_224_224_NHWC",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 224, 224}, tensorflow::DataType::DT_FLOAT}},
+                {"Input_U8_1_3_62_62_NCHW",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 62, 62}, tensorflow::DataType::DT_UINT8}},
+                {"Input_I64_1_6_128_128_16_NCDHW",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 6, 128, 128, 16}, tensorflow::DataType::DT_INT64}},
+            });
         // U16 uses int_val instead of tensor_content so it needs separate test
         auto& inputD = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
         inputD.set_dtype(tensorflow::DataType::DT_UINT16);
