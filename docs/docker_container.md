@@ -68,6 +68,10 @@ Usage:
                                 A comma separated list of arguments to be
                                 passed to the grpc server. (e.g.
                                 grpc.max_connection_age_ms=2000)
+      --file_system_poll_wait_seconds SECONDS
+                                Time interval between config and model versions 
+                                changes detection. Default is 1. Zero or negative
+                                value disables changes monitoring.
 
  multi model options:
       --config_path CONFIG_PATH
@@ -267,13 +271,29 @@ Served versions are updated online by monitoring file system changes in the mode
 will add new version to the serving list when new numerical subfolder with the model files is added. The default served version
 will be switched to the one with the highest number.
 When the model version is deleted from the file system, it will become unavailable on the server and it will release RAM allocation.
-Updates in the model version files will not be detected and they will not trigger changes in serving.
+Updates in the deployed model version files will not be detected and they will not trigger changes in serving.
 
 By default model server is detecting new and deleted versions in 1 second intervals. 
-The frequency can be changed by setting environment variable `FILE_SYSTEM_POLL_WAIT_SECONDS`.
+The frequency can be changed by setting a parameter `--file_system_poll_wait_seconds`.
 If set to negative or zero, updates will be disabled.
 
+## Updating configuration file
 
+OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications
+in runtime:
+* When new model is added to the configuration file `config.json`, OVMS will load and start serving the configured versions.
+It will also start monitoring for version changes in the configured model storage. If the new model has invalid configuration
+or it doesn't include any version, which can be successfully loaded, it will be ignored till next update in the configuration file is detected.
+
+* When a deployed model is deleted from `config.json`, it will be unloaded completely from OVMS after already started inference operations are completed.
+
+* OVMS can also detect changes in the configuration of deployed models. All model version will be reloaded when there is a change in
+batch_size, plugin_config, target_device, shape, model_version_policy or nireq parameters. When model path is changed, 
+all versions will be reloaded according to the model_version_policy.
+
+* In case the new `config.json` is invalid (not compliant with json schema), no changes will be applied to the served models.
+
+*Note:* changes in the config file are checked regularly with an internal defined by the parameter `--file_system_poll_wait_seconds`.
 
 ## Starting docker container with NCS
 
