@@ -153,20 +153,16 @@ Status reloadModelIfRequired(
     if (status.batchSizeChangeRequired()) {
         status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
         if (!status.ok()) {
-            SPDLOG_INFO("Model instance reload failed. {}", status.string());
-            return status;
+            SPDLOG_ERROR("Model instance reload failed. {}, {}.", status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
         status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
         if (!status.ok()) {
-            SPDLOG_INFO("Model instance reload failed. {}", status.string());
-            return status;
+            SPDLOG_ERROR("Model instance reload failed. {}, {}.", status.getCode(), status.string());
         }
     } else if (!status.ok()) {
-        SPDLOG_INFO("Validation of inferRequest failed. {}", status.string());
-        return status;
-    } else {
-        return status;
+        SPDLOG_INFO("Validation of inferRequest failed. {}, {}.", status.getCode(), status.string());
     }
+    return status;
 }
 }  // namespace ovms
