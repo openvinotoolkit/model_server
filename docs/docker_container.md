@@ -219,7 +219,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ovms:latest
 
 ## Batch Processing
 
-`batch_size` parameter is optional. By default is accepted the batch size derived from the model. It is set by the model optimizer tool.
+`batch_size` parameter is optional. By default, is accepted the batch size derived from the model. It is set by the model optimizer tool.
 When that parameter is set to numerical value, it is changing the model batch size at service start up. 
 It accepts also a value `auto` - this special phrase make the served model to set the batch size automatically based on the incoming data at run time.
 Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
@@ -297,13 +297,11 @@ all versions will be reloaded according to the model_version_policy.
 
 ## Starting docker container with NCS
 
-Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
-version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
-You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
-- `make docker_build ` 
+[Intel® Movidius™ Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
+plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
-Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
-rules:
+Neural Compute Stick 2 must be visible and accessible on host machine. 
+You may need to update [udev rules](https://linuxconfig.org/tutorial-on-how-to-write-basic-udev-rules-in-linux):
 <details>
 <summary><i>Updating udev rules</i></summary>
 </br>
@@ -326,8 +324,9 @@ rules:
 
 </details>
 </br>
+NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
-To start server with NCS you can use command similar to:
+To start OVMS with NCS you can use command similar to:
 
 ```
 docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
@@ -338,17 +337,98 @@ ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_d
 
 `-v /dev:/dev` mounts USB drives.
 
-A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
+A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO plugin 
 chooses to which one the model is loaded. 
 
-## User GPU for Inference execution
+## Using GPU for Inference execution
 
-TBD
+The [GPU plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_CL_DNN.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
+It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics.
+
+Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html).
+Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
+The command example is listed below:
+
+```
+docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 \
+ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+```
 
 ## Starting docker container with HDDL
 
-TBD
+Plugin for High-Density Deep Learning (HDDL) accelerators based on Intel Movidius Myriad VPUs.
+A prerequisite to using HDDL cards with OVMS is to start `hddldaemon`. It is one of the components of OpenVINO Toolkit installation.
+It can be started via commands:
+```
+/opt/intel/openvino/bin/setupvars.sh
+/opt/intel/openvino/deployment_tools/inference_engine/external/hddl/bin/hddldaemon -d
+```
+Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/2020.1/_docs_install_guides_installing_openvino_linux_ivad_vpu.html).
+
+To start server with HDDL you can use command similar to:
+```
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
+ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
+```
+
+`--device=/dev/ion:/dev/ion` mounts the HDDL accelerators character device.
+
+`-v /var/tmp:/var/tmp` enables communication with hddldaemon running on the host machine via a linux socket
+
+`--nireq 16` - adjust number of inference requests queue, if the default value is not optimal. Should be higher from the number of allocated VPUs. 
+Refer to [performance tuning guide](performance_tuning.md)
 
 ## Using Multi-Device Plugin
 
-TBD
+If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
+With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MULTI.html}.
+
+In order to use this feature in OpenVino™ Model Server, following steps are required:
+
+Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+```json
+{"model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/ml/resnet",
+      "batch_size": "1",
+      "target_device": "MULTI:MYRIAD,CPU"}
+   }]
+}
+```
+Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
+```
+docker run -d  --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
+ovms-py:latest --config_path /opt/ml/config.json --port 9001 
+```
+Or alternatively, when you are using just a single model, start OpenVINO™ Model Server using this command (config.json is not needed in this case):
+```
+docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
+ /dev:/dev -p 9001:9001 ovms:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+ ```
+After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
+Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
+
+## Using Heterogeneous Plugin
+
+[HETERO plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
+That way different parts of the DL network can split and executed on optimized devices.
+OpenVINO automatically divides the network to optimize the execution.
+
+Similarly to the MULTI plugin, Heterogenous plugin can be configured by using `--target_device` parameter using the pattern: `HETERO:<DEVICE_1>,<DEVICE_2>`.
+The order of devices defines their priority. The first one is the primary device while the second is the fallback.<br>
+Below is a config example using heterogeneous plugin with GPU as a primary device and CPU as a fallback.
+
+```json
+{"model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/ml/resnet",
+      "batch_size": "1",
+      "target_device": "HETERO:GPU,CPU"}
+   }]
+}
+```

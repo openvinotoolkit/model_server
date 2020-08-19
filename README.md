@@ -68,16 +68,13 @@ A more detailed description of the steps above can be found [here](docs/ovms_qui
 
 More complete guides to using Model Server in various scenarios can be found here:
 
-* [Models reposiotry configuration](docs/models_repository.md)
+* [Models repository configuration](docs/models_repository.md)
 
 * [Using a docker container](docs/docker_container.md)
 
 * [Landing on bare metal or virtual machine](docs/host.md)
 
-
-## Advanced Configuration
-
-[Performance tuning](docs/performance_tuning.md)
+* [Performance tuning](docs/performance_tuning.md)
 
 
 ## gRPC API Documentation
@@ -126,7 +123,7 @@ and [RESTful API](example_client/#rest-api-client-to-predict-function) with nump
 - [Deploy with Kubernetes](deploy)
 - [Jupyter notebook - REST API client for age-gender classification](example_client/REST_age_gender.ipynb)
 
-### Testing
+## Testing
 
 Learn more about tests in the [developer guide](docs/developer_guide.md)
 
