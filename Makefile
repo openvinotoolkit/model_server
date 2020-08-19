@@ -173,9 +173,9 @@ endif
 
 test_checksec: 
 	@echo "Running checksec on ovms binary..."
-	@docker create -ti --name checksec-tmp ovms-pkg:latest bash
-	@docker cp checksec-tmp:/ovms_release/bin/ovms /tmp
-	@docker rm -f checksec-tmp
+	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH" checksec.txt; then\
  		error Run checksec on ovms binary and fix issues.;\
@@ -196,6 +196,7 @@ test_perf: venv
 		--model_name resnet --model_path /models/resnet50 --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
 		--images_numpy_path tests/performance/imgs.npy \
 		--labels_numpy_path tests/performance/labels.npy \
 		--iteration 1000 \
@@ -216,6 +217,7 @@ test_perf_dummy_model: venv
 		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
 		--images_numpy_path tests/performance/dummy_input.npy \
 		--labels_numpy_path tests/performance/dummy_lbs.npy \
 		--iteration 10000 \
@@ -243,6 +245,7 @@ test_throughput: venv
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
 		--images_numpy_path imgs.npy \
 		--labels_numpy_path labels.npy \
 		--iteration 500 \
@@ -265,6 +268,7 @@ test_throughput_dummy_model: venv
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
 		--images_numpy_path dummy_input.npy \
 		--labels_numpy_path dummy_lbs.npy \
 		--iteration 10000 \

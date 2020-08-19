@@ -25,34 +25,6 @@ pipeline {
             }
         }
 
-        stage('docker build') {
-            steps {
-                sh 'make docker_build'
-            }
-        }
-
-        stage('checksec test') {
-            steps {
-                sh 'make test_checksec'
-            }
-        }
-
-        stage('latency test') {
-            steps {
-                lock("commit-pipeline-${env.NODE_NAME}-latency-test") {
-                    sh 'make test_perf'
-                }
-            }
-        }
-
-        stage('throughput test') {
-            steps {
-                lock("commit-pipeline-${env.NODE_NAME}-throughput-test") {
-                    sh 'make test_throughput'
-                }
-            }
-        }
-
         stage("Run smoke and regression tests on commit") {
           steps {
               sh """
