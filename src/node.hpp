@@ -74,6 +74,8 @@ public:
     const std::vector<std::reference_wrapper<Node>>& getNextNodes() {
         return next;
     }
+
+    static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs);
 };
 
 }  // namespace ovms

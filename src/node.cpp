@@ -24,6 +24,15 @@
 
 namespace ovms {
 
+void Node::printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs) {
+    std::stringstream ss;
+    ss << "Links from:" << sourceNode << " to:" << nodeName << ":\n";
+    for (auto& pair : pairs) {
+        ss << "\t" << nodeName << "[" << pair.second << "]=" << sourceNode << "[" << pair.first << "]\n";
+    }
+    SPDLOG_DEBUG(ss.str());
+}
+
 Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
     // mapping for dependency - keeps mapping between dependency output name and this node input name
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);

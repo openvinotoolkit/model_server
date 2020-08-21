@@ -47,6 +47,10 @@ public:
         return std::move(element);
     }
 
+    size_t size() {
+        return queue.size();
+    }
+
 private:
     std::mutex mtx;
     std::queue<T> queue;

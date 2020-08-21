@@ -20,6 +20,8 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <queue>
+#include <future>
 
 #include <inference_engine.hpp>
 
@@ -32,7 +34,7 @@ public:
     /**
     * @brief Allocating idle stream for execution
     */
-    int getIdleStream();
+    std::future<int> getIdleStream();
 
     /**
     * @brief Release stream after execution
@@ -79,10 +81,11 @@ protected:
     * @brief Vector representing OV streams and used for notification about completed inference operations
     */
     std::mutex front_mut;
-    std::condition_variable not_full_cond;
+    std::mutex queue_mutex;
     /**
      * 
      */
     std::vector<InferenceEngine::InferRequest> inferRequests;
+    std::queue<std::promise<int>> promises;
 };
 }  // namespace ovms
