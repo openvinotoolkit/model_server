@@ -25,4 +25,20 @@ index e7f96d98..905ab4e4 100644
 +        "//visibility:public"
      ],
  )
- 
+
+diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
+index a3b77b5..5e88ecf 100644
+--- a/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
++++ b/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
+@@ -104,7 +104,10 @@ bool EvHTTPServer::Initialize() {
+     NET_LOG(FATAL, "Failed to create evhttp.");
+     return false;
+   }
+-
++  std::size_t maxBodySize = 1024 * 1024 * 1024;
++  evhttp_set_max_body_size(ev_http_, maxBodySize);
++  std::size_t maxHeadersSize = 8 * 1024;
++  evhttp_set_max_headers_size(ev_http_, maxHeadersSize);
+   evhttp_set_gencb(ev_http_, &DispatchEvRequestFn, this);
+
+   return true;
