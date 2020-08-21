@@ -173,25 +173,29 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
             }
         ],
         "pipeline_config_list": 
-        {
-            "name": "ensemble_name1", 
-            "inputs": ["in"], 
-            "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
-            "nodes": [  
-                { 
-                    "name": "alpha", 
-                    "type": "DL Model", 
-                    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
-                    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
-                }, 
-                { 
-                    "name": "beta", 
-                    "type": "DL Model",
-                    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
-                    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
-                }
-            ]
-        }
+        [
+            {
+                "name": "ensemble_name1", 
+                "inputs": ["in"], 
+                "outputs": [{"a":{"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+                "nodes": [  
+                    { 
+                        "name": "alpha", 
+                        "model_name": "dummy",
+                        "type": "DL model", 
+                        "inputs": [{"a":{"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
+                        "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+                    }, 
+                    { 
+                        "name": "beta", 
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "inputs": [{"a":{"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
+                        "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+                    }
+                ]
+            }
+        ]
     })";
 
     std::string configFile = "/tmp/ovms_config_file.json";
