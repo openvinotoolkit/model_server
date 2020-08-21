@@ -37,14 +37,14 @@ TEST(OVInferRequestQueue, ShortQueue) {
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 3);
     int reqid;
-    reqid = inferRequestsQueue.getIdleStream();
+    reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 0);
-    reqid = inferRequestsQueue.getIdleStream();
+    reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 1);
-    reqid = inferRequestsQueue.getIdleStream();
+    reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 2);
     inferRequestsQueue.returnStream(0);
-    reqid = inferRequestsQueue.getIdleStream();
+    reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 0);
 }
 
@@ -61,12 +61,12 @@ TEST(OVInferRequestQueue, FullQueue) {
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 50);
     int reqid;
     for (int i = 0; i < 50; i++) {
-        reqid = inferRequestsQueue.getIdleStream();
+        reqid = inferRequestsQueue.getIdleStream().get();
     }
     timer.start("queue");
     std::thread th(&releaseStream, std::ref(inferRequestsQueue));
     th.detach();
-    reqid = inferRequestsQueue.getIdleStream();  // it should wait 1s for released request
+    reqid = inferRequestsQueue.getIdleStream().get();  // it should wait 1s for released request
     timer.stop("queue");
 
     EXPECT_GT(timer.elapsed<std::chrono::microseconds>("queue"), 1'000'000);
@@ -75,7 +75,7 @@ TEST(OVInferRequestQueue, FullQueue) {
 
 void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
     for (int i = 1; i <= 10; i++) {
-        int st = ms.getIdleStream();
+        int st = ms.getIdleStream().get();
         int rd = std::rand();
         tv[st] = rd;
         std::mt19937_64 eng{std::random_device{}()};
@@ -89,7 +89,7 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
 }
 
 TEST(OVInferRequestQueue, MultiThread) {
-    int nireq = 30;            // represnet queue size
+    int nireq = 10;            // represnet queue size
     int number_clients = 100;  // represent number of serving clients
     InferenceEngine::Core engine;
     InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
@@ -107,3 +107,41 @@ TEST(OVInferRequestQueue, MultiThread) {
     }
     // wait for all thread to complete successfully
 }
+
+TEST(OVInferRequestQueue, AsyncGetInferRequest) {
+    InferenceEngine::Core engine;
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
+    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    const int nireq = 1;
+    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
+
+    std::future<int> firstStreamRequest = inferRequestsQueue.getIdleStream();
+    std::future<int> secondStreamRequest = inferRequestsQueue.getIdleStream();
+
+    EXPECT_EQ(std::future_status::ready, firstStreamRequest.wait_for(std::chrono::microseconds(1)));
+    EXPECT_EQ(std::future_status::timeout, secondStreamRequest.wait_for(std::chrono::milliseconds(1)));
+
+    const int firstStreamId = firstStreamRequest.get();
+    inferRequestsQueue.returnStream(firstStreamId);
+    EXPECT_EQ(std::future_status::ready, secondStreamRequest.wait_for(std::chrono::microseconds(1)));
+    const int secondStreamId = secondStreamRequest.get();
+    EXPECT_EQ(firstStreamId, secondStreamId);
+}
+
+void releaseStreams2(ovms::OVInferRequestsQueue& queue, std::vector<int>& streamIds) {
+    std::cout << __FILE__ << ":" << __LINE__ << ": ER" << std::endl;
+    for (int& streamId : streamIds) {
+        queue.returnStream(streamId);
+    }
+}
+
+void getStreams2(ovms::OVInferRequestsQueue& queue, int counter, std::vector<int>& streamIds) {
+    std::vector<std::future<int>> streamIdsFutures;
+    while (counter--) {
+        streamIdsFutures.push_back(queue.getIdleStream());
+    }
+    for (auto& future : streamIdsFutures) {
+        streamIds.push_back(future.get());
+    }
+}
+

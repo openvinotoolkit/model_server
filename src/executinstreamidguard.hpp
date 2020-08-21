@@ -21,7 +21,7 @@ namespace ovms {
 struct ExecutingStreamIdGuard {
     ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream()) {}
+        id_(inferRequestsQueue_.getIdleStream().get()) {}
     ~ExecutingStreamIdGuard() {
         inferRequestsQueue_.returnStream(id_);
     }

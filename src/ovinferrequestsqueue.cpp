@@ -16,21 +16,36 @@
 
 #include "ovinferrequestsqueue.hpp"
 
-namespace ovms {
+#include <utility>
 
-int OVInferRequestsQueue::getIdleStream() {
+namespace ovms {
+std::future<int> OVInferRequestsQueue::getIdleStream() {
     int value;
+    std::promise<int> idleStreamPromise;
+    std::future<int> idleStreamFuture = idleStreamPromise.get_future();
     std::unique_lock<std::mutex> lk(front_mut);
-    if (streams[front_idx] < 0) {
-        not_full_cond.wait(lk, [this] { return streams[front_idx] >= 0; });
+    if (streams[front_idx] < 0) {  // we need to wait for any idle stream to be returned
+        std::unique_lock<std::mutex> queueLock(queue_mutex);
+        promises.push(std::move(idleStreamPromise));
+    } else {  // we can give idle stream right away
+        value = streams[front_idx];
+        streams[front_idx] = -1;  // negative value indicate consumed vector index
+        front_idx = (front_idx + 1) % streams.size();
+        lk.unlock();
+        idleStreamPromise.set_value(value);
     }
-    value = streams[front_idx];
-    streams[front_idx] = -1;  // negative value indicate consumed vector index
-    front_idx = (front_idx + 1) % streams.size();
-    return value;
+    return std::move(idleStreamFuture);
 }
 
 void OVInferRequestsQueue::returnStream(int streamID) {
+    std::unique_lock<std::mutex> lk(queue_mutex);
+    if (promises.size()) {
+        std::promise<int> promise = std::move(promises.front());
+        promises.pop();
+        lk.unlock();
+        promise.set_value(streamID);
+        return;
+    }
     std::uint32_t old_back = back_idx.load();
     while (!back_idx.compare_exchange_weak(
         old_back,
@@ -38,7 +53,6 @@ void OVInferRequestsQueue::returnStream(int streamID) {
         std::memory_order_relaxed)) {
     }
     streams[old_back] = streamID;
-    not_full_cond.notify_one();
 }
 
 }  // namespace ovms
