@@ -144,4 +144,3 @@ void getStreams2(ovms::OVInferRequestsQueue& queue, int counter, std::vector<int
         streamIds.push_back(future.get());
     }
 }
-

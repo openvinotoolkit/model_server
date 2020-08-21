@@ -17,11 +17,11 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <future>
 #include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
-#include <queue>
-#include <future>
 
 #include <inference_engine.hpp>
 
