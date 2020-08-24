@@ -14,7 +14,7 @@
     "outputs": [
         {
             "output_name": "detection_out",
-            "confidence_threshold": 0.5,
+            "confidence_threshold": 0.1,
             "classes": {
                 "background": 0.0,
                 "pedestrian": 1.0,
