@@ -46,6 +46,13 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             wget \
             which \
             devtoolset-8-gcc* \
+            boost-thread \
+            boost-system \
+            boost-filesystem \
+            boost-chrono \
+            boost-program-options \
+            boost-date-time \
+            boost-atomic \
             libxml2-devel \
             yum-utils \
             numactl-libs \
@@ -62,22 +69,28 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/infe
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && ./b2 cxxstd=17 install
+	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+		--with-random --with-thread --with-atomic --with-regex \
+		--with-log --with-locale \
+		install
+
 ####### Azure SDK
 WORKDIR /azure
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init && \
 	mkdir Release/build.release && cd Release/build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && \
-	make install
+	make --jobs=$(nproc --all) install
 RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && mkdir build.release && \
-	cd build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF  && make && make install
+	cd build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF  && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install
 ####### End of Azure SDK
 
 
 # GPU support:
 RUN yum install -y yum-plugin-copr
 RUN yum -y copr enable jdanecki/intel-opencl
-# RUN yum install -y intel-opencl
-# RUN yum install -y epel-release && yum install -y ocl-icd.x86_64
+RUN yum install -y intel-opencl
+RUN yum install -y epel-release && yum install -y ocl-icd.x86_64 clinfo flex intel-igc-core.x86_64 intel-igc-opencl.x86_64 intel-gmmlib.x86_64 intel-gmmlib-debuginfo.x86_64 intel-opencl-debuginfo.x86_64 intel-level-zero-gpu.x86_64 intel-gmmlib-debugsource.x86_64 intel-opencl-debugsource.x86_64 intel-level-zero-gpu-debuginfo.x86_64
 
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
@@ -89,18 +102,19 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-
+RUN ls
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
-# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=0 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$(nproc --all)
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
+
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     tar -zxf l_openvino_toolkit*.tgz && \
@@ -108,12 +122,13 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TE
     sed -i 's/decline/accept/g' silent.cfg && \
     ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=0 " ..
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$(nproc --all)
 RUN mv .deps/install/lib64 .deps/install/lib
 
@@ -129,16 +144,12 @@ RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/api
 COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/
 
-##### WORKAROUND: libHDDL* links with old protobuf version. Disabling:
-RUN rm -rf /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libHDDLPlugin.so \
-	   /opt/intel/openvino/deployment_tools/inference_engine/external/hddl
-
-
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN ./bazel-bin/src/./ovms
 
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  cp -r /openvino/bin/intel64/Release/lib/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-opt/bin/_solib_k8/*/
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ;  cp -r /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /root/.cache/bazel/_bazel_root/*/execroot/ovms/bazel-out/k8-${build_type}/bin/_solib_k8/*/
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /root/.cache/bazel/_bazel_root/ -iname '_U@*' -type d -exec cp -v -- /openvino/bin/intel64/Release/lib/plugins.xml '{}' ';'
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /root/.cache/bazel/_bazel_root/ -iname '_U@*' -type d -exec cp -v -- /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml '{}' ';'
+
 RUN ./bazel-bin/src/./ovms
 
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
