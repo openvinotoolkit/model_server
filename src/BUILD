@@ -78,7 +78,6 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
         "@rapidjson//:rapidjson",
-        "@openvino//:openvino",
         "@spdlog//:spdlog",
         "@cxxopts//:cxxopts",
         "@awssdk//:s3",
@@ -92,6 +91,7 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "@openvino//:openvino",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"

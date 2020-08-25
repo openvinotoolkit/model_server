@@ -1,0 +1,21 @@
+FROM ubuntu:18.04
+WORKDIR /
+COPY ovms.tar.gz /
+RUN tar -xf ovms.tar.gz
+RUN apt update -y && apt install -y libxml2 libgssapi-krb5-2 ca-certificates openssl libnuma1 libjson-c3 libboost-all-dev wget
+
+# OpenCL:
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ocl-icd-libopencl1 && \
+    rm -rf /var/lib/apt/lists/* && mkdir -vp /tmp/opencl && cd /tmp/opencl && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-gmmlib_20.2.2_amd64.deb && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-igc-core_1.0.4427_amd64.deb && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-igc-opencl_1.0.4427_amd64.deb && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-opencl_20.30.17454_amd64.deb && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-ocloc_20.30.17454_amd64.deb && \
+    wget https://github.com/intel/compute-runtime/releases/download/20.30.17454/intel-level-zero-gpu_0.8.17454_amd64.deb &&\
+    dpkg -i /tmp/opencl/*.deb && \
+    ldconfig && \
+    rm -rf /tmp/opencl
+
+ENTRYPOINT ["/ovms/bin/ovms"]
