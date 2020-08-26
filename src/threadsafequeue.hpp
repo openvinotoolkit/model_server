@@ -16,6 +16,7 @@
 #pragma once
 
 #include <condition_variable>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -39,12 +40,17 @@ public:
         signal.notify_one();
     }
 
-    T waitAndPull() {
+    std::optional<T> tryPull(const uint waitDurationMicroseconds) {
         std::unique_lock<std::mutex> lock(mtx);
-        signal.wait(lock, [this]() { return queue.size() > 0; });
-        T element = std::move(queue.front());
-        queue.pop();
-        return std::move(element);
+        if (signal.wait_for(lock,
+                std::chrono::microseconds(waitDurationMicroseconds),
+                [this]() { return queue.size() > 0; })) {
+            T element = std::move(queue.front());
+            queue.pop();
+            return std::optional<T>{std::move(element)};
+        } else {
+            return std::nullopt;
+        }
     }
 
     size_t size() {
