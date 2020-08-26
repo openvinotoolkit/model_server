@@ -54,6 +54,13 @@ Status getModelInstance(const PredictRequest* request,
     return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
 }
 
+Status getPipeline(const PredictRequest* request,
+    PredictResponse* response,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    ModelManager& manager = ModelManager::getInstance();
+    return getPipeline(manager, pipelinePtr, request, response);
+}
+
 grpc::Status ovms::PredictionServiceImpl::Predict(
     ServerContext* context,
     const PredictRequest* request,
@@ -66,15 +73,26 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         request->model_spec().version().value());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_INFO("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_spec().name());
+        status = getPipeline(request, response, pipelinePtr);
+    }
     if (!status.ok()) {
-        SPDLOG_INFO("Getting modelInstance failed. {}", status.string());
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return status.grpc();
     }
 
-    status = inference(*modelInstance, request, response, modelInstanceUnloadGuard);
+    if (pipelinePtr) {
+        status = pipelinePtr->execute();
+    } else {
+        status = inference(*modelInstance, request, response, modelInstanceUnloadGuard);
+    }
+
     if (!status.ok()) {
         return status.grpc();
     }

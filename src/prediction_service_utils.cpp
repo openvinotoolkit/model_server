@@ -76,6 +76,16 @@ Status getModelInstance(ovms::ModelManager& manager,
     return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
 }
 
+Status getPipeline(ovms::ModelManager& manager,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response) {
+
+    SPDLOG_INFO("Requesting pipeline: {};", request->model_spec().name());
+    auto status = manager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
+    return status;
+}
+
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest) {
     try {
         inferRequest.StartAsync();
@@ -122,7 +132,6 @@ Status inference(
         return status;
     spdlog::debug("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
-
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     timer.stop("prediction");

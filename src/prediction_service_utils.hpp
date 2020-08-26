@@ -37,6 +37,11 @@ Status getModelInstance(ModelManager& manager,
     std::shared_ptr<ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
 
+Status getPipeline(ModelManager& manager,
+    std::unique_ptr<Pipeline>& pipelinePtr,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response);
+
 Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
 
 Status inference(
