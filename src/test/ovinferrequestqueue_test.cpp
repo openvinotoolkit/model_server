@@ -127,20 +127,3 @@ TEST(OVInferRequestQueue, AsyncGetInferRequest) {
     const int secondStreamId = secondStreamRequest.get();
     EXPECT_EQ(firstStreamId, secondStreamId);
 }
-
-void releaseStreams2(ovms::OVInferRequestsQueue& queue, std::vector<int>& streamIds) {
-    std::cout << __FILE__ << ":" << __LINE__ << ": ER" << std::endl;
-    for (int& streamId : streamIds) {
-        queue.returnStream(streamId);
-    }
-}
-
-void getStreams2(ovms::OVInferRequestsQueue& queue, int counter, std::vector<int>& streamIds) {
-    std::vector<std::future<int>> streamIdsFutures;
-    while (counter--) {
-        streamIdsFutures.push_back(queue.getIdleStream());
-    }
-    for (auto& future : streamIdsFutures) {
-        streamIds.push_back(future.get());
-    }
-}

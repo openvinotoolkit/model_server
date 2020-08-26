@@ -34,14 +34,16 @@ using namespace ovms;
 using namespace tensorflow;
 using namespace tensorflow::serving;
 
+// TODO above should be set to eg 2-3-4 when problem with parallel execution on the same
+// model will be resolved in model ensemble CVS-
+const uint NIREQ = 200;
+
 class EnsembleFlowTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
-        config.setNireq(200);
-        // TODO above should be set to eg 2-3-4 when problem with parallel execution on the same
-        // model will be resolved in model ensemble
+        config.setNireq(NIREQ);
 
         // Prepare request
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
@@ -535,7 +537,11 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     float* expected_output = requestDataT.data();
     for (int i = 0; i < N; i++) {
         float* actual_output = (float*)response.outputs().at(customPipelineOutputName + std::to_string(i)).tensor_content().data();
-        EXPECT_EQ(0, std::memcmp(actual_output, expected_output + i * DUMMY_MODEL_OUTPUT_SIZE, DUMMY_MODEL_OUTPUT_SIZE * sizeof(float)));
+        const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+        const float* expected_output_address_to_check = expected_output + i * DUMMY_MODEL_OUTPUT_SIZE;
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output_address_to_check, dataLengthToCheck))
+            << "Comparison on node:" << i << " output failed" << std::endl
+            << readableError(expected_output_address_to_check, actual_output, DUMMY_MODEL_OUTPUT_SIZE);
     }
 }
 

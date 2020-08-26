@@ -42,6 +42,7 @@ cc_library(
         "model_service.cpp",
         "node.cpp",
         "node.hpp",
+        "nodestreamidguard.hpp",
         "ovinferrequestsqueue.cpp",
         "ovinferrequestsqueue.hpp",
         "pipeline.cpp",

@@ -25,6 +25,7 @@
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "node.hpp"
+#include "nodestreamidguard.hpp"
 
 namespace ovms {
 
@@ -37,7 +38,7 @@ class DLNode : public Node {
     const std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
     std::shared_ptr<ModelInstance> model;
-    std::unique_ptr<ExecutingStreamIdGuard> streamIdGuard;
+    std::unique_ptr<NodeStreamIdGuard> nodeStreamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
 public:
@@ -64,6 +65,11 @@ public:
      * Possibly abort pipeline execution if unable to do the preparation
      */
     Status prepareInputsAndModelForInference();
+
+private:
+    Status requestExecuteRequiredResources();
+    Status setInputsForInference(InferenceEngine::InferRequest& infer_request);
+    Status executeInference(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
 };
 
 }  // namespace ovms

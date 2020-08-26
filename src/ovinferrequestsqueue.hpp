@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <spdlog/spdlog.h>
 
 namespace ovms {
 /**

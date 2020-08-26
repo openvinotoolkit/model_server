@@ -79,35 +79,72 @@ Status Pipeline::execute() {
             getName(), entry.getName(), status.string());
         return status;
     }
+    std::vector<std::reference_wrapper<Node>> nodesWaitingForIdleInferenceStreamId;  // consider replacing with std::vector
+    // even though we can remove with random sequence it is probable that we will remove those in sequence
+    const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 500;
+    // process finished nodes and if no one is finished check if any node with deffered execution
+    // has necessary resources already
     while (true) {
-        SPDLOG_DEBUG("Pipeline:{} before get message", getName());
-        auto& finishedNode = finishedNodeQueue.waitAndPull().get();
-        SPDLOG_DEBUG("Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
-        finishedExecute.at(finishedNode.getName()) = true;
-        IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
-        BlobMap finishedNodeOutputBlobMap;
-        status = finishedNode.fetchResults(finishedNodeOutputBlobMap);
-        CHECK_AND_LOG_ERROR(finishedNode)
-        IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
-        if (std::all_of(finishedExecute.begin(), finishedExecute.end(), [](auto pair) { return pair.second; })) {
-            break;
-        }
-        auto& nextNodesFromFinished = finishedNode.getNextNodes();
-        for (auto& nextNode : nextNodesFromFinished) {
-            status = nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
-            CHECK_AND_LOG_ERROR(nextNode.get())
+        SPDLOG_DEBUG("Pipeline:{} waiting for message that node finished.", getName());
+        auto optionallyFinishedNode = finishedNodeQueue.tryPull(WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS);
+        if (optionallyFinishedNode) {
+            Node& finishedNode = optionallyFinishedNode.value().get();
+            SPDLOG_DEBUG("Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
+            finishedExecute.at(finishedNode.getName()) = true;
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
-        }
-        finishedNodeOutputBlobMap.clear();
-        for (auto& nextNode : nextNodesFromFinished) {
-            if (nextNode.get().isReady()) {
-                startedExecute.at(nextNode.get().getName()) = true;
-                SPDLOG_DEBUG("Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
-                status = nextNode.get().execute(finishedNodeQueue);
+            BlobMap finishedNodeOutputBlobMap;
+            SPDLOG_DEBUG("Fetching results of pipeline:{} node:{}", getName(), finishedNode.getName());
+            status = finishedNode.fetchResults(finishedNodeOutputBlobMap);
+            CHECK_AND_LOG_ERROR(finishedNode)
+            IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
+            if (std::all_of(finishedExecute.begin(), finishedExecute.end(), [](auto pair) { return pair.second; })) {
+                break;
+            }
+            auto& nextNodesFromFinished = finishedNode.getNextNodes();
+            for (auto& nextNode : nextNodesFromFinished) {
+                SPDLOG_DEBUG("setting pipeline:{} node:{} outputs as inputs for node:{}",
+                    getName(), finishedNode.getName(), nextNode.get().getName());
+                status = nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
                 CHECK_AND_LOG_ERROR(nextNode.get())
                 IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             }
+            finishedNodeOutputBlobMap.clear();
+            for (auto& nextNode : nextNodesFromFinished) {
+                if (nextNode.get().isReady()) {
+                    startedExecute.at(nextNode.get().getName()) = true;
+                    SPDLOG_DEBUG("Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
+                    status = nextNode.get().execute(finishedNodeQueue);
+                    if (status == StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET) {
+                        SPDLOG_DEBUG("Node:{} not ready for execution yet", nextNode.get().getName());
+                        nodesWaitingForIdleInferenceStreamId.push_back(nextNode.get());
+                        status = StatusCode::OK;
+                    }
+                    CHECK_AND_LOG_ERROR(nextNode.get())
+                    IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
+                }
+            }
+        } else {
+            // else scope could be executed always however it seems most reasonable at the time to
+            // free blocked inferRequests from exeuction first rather than free models for reloading
+            for (auto it = nodesWaitingForIdleInferenceStreamId.begin(); it != nodesWaitingForIdleInferenceStreamId.end();) {
+                auto& node = (*it).get();
+                SPDLOG_DEBUG("Trying to trigger node:{} execution", node.getName());
+                status = node.execute(finishedNodeQueue);
+                if (status.ok()) {
+                    SPDLOG_DEBUG("Node:{} ready yet:", node.getName());
+                    it = nodesWaitingForIdleInferenceStreamId.erase(it);
+                    continue;
+                }
+                it++;
+                if (status == StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET) {
+                    SPDLOG_DEBUG("Node:{} not ready for execution yet", node.getName());
+                    status = StatusCode::OK;
+                } else {
+                    CHECK_AND_LOG_ERROR(node)
+                }
+            }
         }
+        // TODO cleanup streamIds
     }
     return firstErrorStatus;
 }

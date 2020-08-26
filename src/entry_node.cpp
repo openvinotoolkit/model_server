@@ -39,6 +39,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             }
             const auto& tensor_proto = request->inputs().at(output_name);
             InferenceEngine::Blob::Ptr blob;
+            SPDLOG_DEBUG("Entry node deserializing:{}", output_name);
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
                 SPDLOG_INFO("EntryNode::fetchResults error (deserialization) (Node name {}) (Input name {}): {}", getName(), output_name, status.string());
@@ -56,7 +57,6 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
 
 Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {
     InferenceEngine::TensorDesc description;
-
     if (proto.tensor_content().size() == 0) {
         // TODO: https://jira.devtools.intel.com/browse/CVS-34457
         // Convert from proto.*_val to tensor_content

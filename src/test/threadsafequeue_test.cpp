@@ -52,6 +52,8 @@ TEST(TestThreadSafeQueue, PushElement) {
     queue.push(i);
 }
 
+const uint WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS = 10'000'000;
+
 TEST(TestThreadSafeQueue, SeveralElementsInFIFOOrder) {
     const std::vector<int> elements = {1, 2, 3, 4, 5, 6};
     ThreadSafeQueue<int> queue;
@@ -59,7 +61,7 @@ TEST(TestThreadSafeQueue, SeveralElementsInFIFOOrder) {
         queue.push(e);
     }
     for (auto& e : elements) {
-        EXPECT_EQ(e, queue.waitAndPull());
+        EXPECT_EQ(e, queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS));
     }
 }
 
@@ -67,7 +69,7 @@ TEST(TestThreadSafeQueue, DISABLED_NoElementsPushed) {
     // TODO handle timeout
     const std::vector<int> elements = {};
     ThreadSafeQueue<int> queue;
-    EXPECT_EQ(0, queue.waitAndPull());
+    EXPECT_EQ(0, queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS));
 }
 
 const uint ELEMENTS_TO_INSERT = 500;
@@ -85,7 +87,7 @@ void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal, std::v
     startSignal.get();
     uint counter = 0;
     while (counter < elementsToPull) {
-        consumed[counter] = queue.waitAndPull();
+        consumed[counter] = queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS).value();
         counter++;
     }
 }
@@ -94,7 +96,6 @@ TEST(TestThreadSafeQueue, SeveralThreadsAllElementsPresent) {
     using std::thread;
     using std::vector;
     const uint NUMBER_OF_PRODUCERS = 80;
-    const uint NUMBER_OF_CONSUMERS = 1;
 
     vector<thread> producers;
     vector<thread> consumers;
@@ -123,17 +124,5 @@ TEST(TestThreadSafeQueue, SeveralThreadsAllElementsPresent) {
     std::cout << std::endl;
     for (auto [key, counter] : counts) {
         EXPECT_EQ(NUMBER_OF_PRODUCERS, counter);
-    }
-}
-
-TEST(TestThreadSafeQueue, NonCopyableType) {
-    const std::vector<int> elements = {1, 2, 3, 4, 5, 6};
-    ThreadSafeQueue<NonCopyableInt> queue;
-    for (auto& e : elements) {
-        queue.push(std::move(NonCopyableInt(e)));
-    }
-    for (auto& e : elements) {
-        NonCopyableInt ncpyInt{queue.waitAndPull()};
-        EXPECT_EQ(NonCopyableInt(e), ncpyInt);
     }
 }
