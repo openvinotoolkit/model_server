@@ -74,13 +74,13 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 
     try {
         SPDLOG_DEBUG("Setting completion callback for node name: {}", this->getName());
-        infer_request.SetCompletionCallback([this, &notifyEndQueue]() {
+        infer_request.SetCompletionCallback([this, &notifyEndQueue, &infer_request]() {
             SPDLOG_DEBUG("Completion callback received for node name: {}", this->getName());
             // After inference is completed, input blobs are not needed anymore
             this->inputBlobs.clear();
             notifyEndQueue.push(*this);
+            infer_request.SetCompletionCallback([]() {});  // reset callback on infer request
         });
-
         SPDLOG_DEBUG("Starting infer async for node name: {}", getName());
         infer_request.StartAsync();
     } catch (const InferenceEngine::details::InferenceEngineException& e) {

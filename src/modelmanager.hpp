@@ -165,7 +165,7 @@ public:
 
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
         const std::string name,
-        tensorflow::serving::PredictRequest* request,
+        const tensorflow::serving::PredictRequest* request,
         tensorflow::serving::PredictResponse* response) {
         return pipelineFactory.create(pipeline, name, request, response, *this);
     }

@@ -24,6 +24,8 @@
 #define DEBUG
 #include <stdlib.h>
 
+#include "../modelinstance.hpp"
+#include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
 #include "test_utils.hpp"
@@ -133,6 +135,76 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.execute();
     const int dummySeriallyConnectedCount = 1;
     checkResponse(dummySeriallyConnectedCount);
+}
+
+TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    config.setNireq(1);
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    // Get dummy model instance
+    std::shared_ptr<ovms::ModelInstance> model;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    auto status = ovms::getModelInstance(managerWithDummyModel, dummyModelName, 0, model, unload_guard);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    // Prepare request for dummy model directly
+    tensorflow::serving::PredictRequest simpleModelRequest = preparePredictRequest(
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
+    std::vector<float> requestData{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
+    auto& input = (*simpleModelRequest.mutable_inputs())[DUMMY_MODEL_INPUT_NAME];
+    input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    tensorflow::serving::PredictResponse simpleModelResponse;
+    // Do the inference directly on dummy model before inference on pipeline
+    ASSERT_EQ(inference(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+
+    ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
+    auto& output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];
+    ASSERT_EQ(output_tensor.tensor_shape().dim_size(), 2);
+    EXPECT_EQ(output_tensor.tensor_shape().dim(0).size(), 1);
+    EXPECT_EQ(output_tensor.tensor_shape().dim(1).size(), 10);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_tensor.tensor_content().data();
+    float* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck);
+
+    // Configure pipeline
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    pipeline.execute();
+    const int dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
+
+    // Do the inference directly on dummy model after inference on pipeline
+    ASSERT_EQ(inference(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+
+    ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
+    output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];
+    ASSERT_EQ(output_tensor.tensor_shape().dim_size(), 2);
+    EXPECT_EQ(output_tensor.tensor_shape().dim(0).size(), 1);
+    EXPECT_EQ(output_tensor.tensor_shape().dim(1).size(), 10);
+
+    actual_output = (float*)output_tensor.tensor_content().data();
+    expected_output = responseData.data();
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck);
 }
 
 TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
