@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "pipeline_factory.hpp"
 
+#include "prediction_service_utils.hpp"
+
 namespace ovms {
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
@@ -93,16 +95,117 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     return StatusCode::OK;
 }
 
+Status PipelineDefinition::validate(ModelManager& manager) {
+    SPDLOG_DEBUG("Validation of pipeline definition started.");
+    for (auto& node : nodeInfos) {
+        std::unique_ptr<ModelInstanceUnloadGuard> nodeInstanceUnloadGuard;
+        std::shared_ptr<ModelInstance> nodeInstance;
+        tensor_map_t nodeInputs;
+        SPDLOG_ERROR("Validation of node{}", node.nodeName);
+
+        Status result;
+        if (node.kind == NodeKind::DL) {
+            result = getModelInstance(manager, node.modelName, node.modelVersion.value_or(0), nodeInstance,
+                nodeInstanceUnloadGuard);
+            if (!result.ok()) {
+                SPDLOG_ERROR("Validation of pipeline definition failed. Missing model:{} version:{}", node.modelName, node.modelVersion.value_or(0));
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+
+            auto& config = nodeInstance->getModelConfig();
+            if (config.getBatchingMode() == Mode::AUTO) {
+                SPDLOG_ERROR("Validation of pipeline definition failed. Node name {} used model name {} with dynamic batch size which is forbidden.", node.nodeName, node.modelName);
+                return StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER;
+            }
+
+            auto& shapes = config.getShapes();
+            for (auto& shape : shapes) {
+                if (shape.second.shapeMode == Mode::AUTO) {
+                    SPDLOG_ERROR("Validation of pipeline definition failed. Node name {} used model name {} with dynamic shape which is forbidden.", node.nodeName, node.modelName);
+                    return StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER;
+                }
+            }
+
+            nodeInputs = nodeInstance->getInputsInfo();
+        }
+
+        for (auto& connection : connections[node.nodeName]) {
+            std::unique_ptr<ModelInstanceUnloadGuard> sourceNodeInstanceUnloadGuard;
+            const std::string& sourceNodeName = connection.first;
+            auto pred = [sourceNodeName](const NodeInfo& nodeInfo) {
+                return nodeInfo.nodeName == sourceNodeName;
+            };
+
+            std::vector<NodeInfo>::iterator sourceNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), pred);
+            if (sourceNodeInfo == std::end(nodeInfos)) {
+                SPDLOG_ERROR("Validation of pipeline definition failed. For node:{} missing dependency node:{} ", node.nodeName, sourceNodeName);
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+
+            if (sourceNodeInfo->kind == NodeKind::DL) {
+                std::shared_ptr<ModelInstance> sourceNodeInstance;
+                result = getModelInstance(manager, sourceNodeInfo->modelName, 0, sourceNodeInstance,
+                    sourceNodeInstanceUnloadGuard);
+                if (!result.ok()) {
+                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing model:{} version:{}", sourceNodeInfo->modelName, sourceNodeInfo->modelVersion.value_or(0));
+                    return StatusCode::MODEL_MISSING;
+                }
+                const tensor_map_t& sourceNodeOutputs = sourceNodeInstance->getOutputsInfo();
+
+                if (connection.second.size() == 0) {
+                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing dependency mapping for node:{}", node.nodeName);
+                    return StatusCode::INVALID_MISSING_INPUT;
+                }
+
+                for (auto alias : connection.second) {
+                    std::string& dependencyOutputAliasName = alias.first;
+                    std::string dependencyOutputName;
+                    if (sourceNodeInfo->outputNameAliases.count(dependencyOutputAliasName)) {
+                        dependencyOutputName = sourceNodeInfo->outputNameAliases[dependencyOutputAliasName];
+                    } else {
+                        dependencyOutputName = dependencyOutputAliasName;
+                    }
+                    auto dependencyOutput = sourceNodeOutputs.find(dependencyOutputName);
+                    if (dependencyOutput == sourceNodeOutputs.end()) {
+                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing output:{} of model:{}", dependencyOutputName, sourceNodeInstance->getName());
+                        return StatusCode::INVALID_MISSING_INPUT;
+                    }
+
+                    if (node.kind != NodeKind::DL) {
+                        break;
+                    }
+                    std::string& inputName = alias.second;
+                    auto nodeInput = nodeInputs.find(inputName);
+                    if (nodeInput == nodeInputs.end()) {
+                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing input:{} of node:{}", inputName, node.nodeName);
+                        return StatusCode::INVALID_MISSING_INPUT;
+                    }
+                }
+            }
+        }
+    }
+
+    return StatusCode::OK;
+}
+
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,
-    const pipeline_connections_t& connections) {
+    const pipeline_connections_t& connections,
+    ModelManager& manager) {
     if (definitionExists(pipelineName)) {
+        SPDLOG_WARN("Two pipelines with the same name:{} defined in config file. Ignoring the second definition", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    definitions[pipelineName] = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
 
-    // TODO: Call PipelineDefinition::validate method to check for one entry, one exit, acyclic, connected, no dead ends
-    // https://jira.devtools.intel.com/browse/CVS-34360
+    Status validationResult = pipelineDefinition->validate(manager);
+    if (validationResult != StatusCode::OK) {
+        return validationResult;
+    }
+
+    definitions[pipelineName] = std::move(pipelineDefinition);
+    // TODO: Add check if pipeline graph is acyclic, connected, no dead ends
+    // https://jira.devtools.intel.com/browse/CVS-34361
 
     return StatusCode::OK;
 }

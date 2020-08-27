@@ -158,7 +158,7 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     }
 }
 
-void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory) {
+void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     SPDLOG_INFO("Reading pipeline:{} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
@@ -225,9 +225,9 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     // TODO what if pipelines requires model not present in OVMS? CVS-34360
     processNodeInputs(nodeName, iteratorOutputs, connections);
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, nodeName, "", std::nullopt, {})));
-    auto status = factory.createDefinition(pipelineName, info, connections);
+    auto status = factory.createDefinition(pipelineName, info, connections, manager);
     if (!status.ok()) {
-        SPDLOG_WARN("Two pipelines with the same name:{} defined in config file. Ignoring the second definition", pipelineName);
+        return;
     }
     pipelinesInConfigFile.insert(pipelineName);
 }
@@ -241,7 +241,7 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     std::set<std::string> pipelinesInConfigFile;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
         // print(pipelineConfig);
-        processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory);
+        processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
     }
     // retirePipelinesRemovedFromConfigFile(pipelinesInConfigFile); // TODO retire pipelines CVS-35859
     // factory.dropDefinitionsOtherThan(pipelinesInConfigFile);

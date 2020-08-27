@@ -80,6 +80,8 @@ public:
         tensorflow::serving::PredictResponse* response,
         ModelManager& manager) const;
 
+    Status validate(ModelManager& manager);
+
     // TODO: validate method for one entry, one exit, acyclic, connected, no dead ends
     // https://jira.devtools.intel.com/browse/CVS-34360
 };
@@ -90,7 +92,8 @@ class PipelineFactory {
 public:
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections);
+        const pipeline_connections_t& connections,
+        ModelManager& manager);
 
     bool definitionExists(const std::string& name) const {
         return definitions.count(name) == 1;
