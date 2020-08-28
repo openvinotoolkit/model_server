@@ -192,6 +192,25 @@ public:
         setBatchingParams(configBatchSize);
     }
 
+    void clear() {
+        name.clear();
+        basePath.clear();
+        localPath.clear();
+        targetDevice = "CPU";
+        batchingMode = Mode::FIXED;
+        batchSize = 0;
+        modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
+        nireq = 0;
+        pluginConfig.clear();
+        layout.clear();
+        shapes.clear();
+        layouts.clear();
+        version = 0;
+        mappingInputs.clear();
+        mappingOutputs.clear();
+        setBatchingParams("0");
+    }
+
     bool isReloadRequired(const ModelConfig& rhs) const {
         if (this->name != rhs.name) {
             spdlog::debug("ModelConfig {} reload required due to name mismatch", this->name);

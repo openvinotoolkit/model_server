@@ -30,8 +30,9 @@ namespace net_http = tensorflow::serving::net_http;
 enum class StatusCode {
     OK, /*!< Success */
 
-    PATH_INVALID, /*!< The provided path is invalid or doesn't exists */
-    FILE_INVALID, /*!< File not found or cannot open */
+    PATH_INVALID,     /*!< The provided path is invalid or doesn't exists */
+    FILE_INVALID,     /*!< File not found or cannot open */
+    FILESYSTEM_ERROR, /*!< Underlaying filesystem error */
     NETWORK_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */

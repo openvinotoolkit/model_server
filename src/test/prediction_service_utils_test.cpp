@@ -20,7 +20,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../directoryversionreader.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 #include "../prediction_service_utils.hpp"

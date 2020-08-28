@@ -7,7 +7,6 @@ cc_library(
         "config.hpp",
         "deserialization.cpp",
         "deserialization.hpp",
-        "directoryversionreader.hpp",
         "dl_node.cpp",
         "dl_node.hpp",
         "entry_node.cpp",

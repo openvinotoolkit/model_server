@@ -15,9 +15,14 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <set>
 #include <string>
+#include <vector>
 
+#include <spdlog/spdlog.h>
+
+#include "model_version_policy.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -102,7 +107,39 @@ public:
      * @param local_path 
      * @return StatusCode 
      */
-    virtual StatusCode downloadFileFolder(const std::string& path, std::string* local_path) = 0;
+    virtual StatusCode downloadFileFolder(const std::string& path, const std::string& local_path) = 0;
+
+    /**
+     * @brief Create a Temp Path
+     * 
+     * @param local_path 
+     * @return StatusCode 
+     */
+    static StatusCode createTempPath(std::string* local_path) {
+        std::string file_template = "/tmp/fileXXXXXX";
+        char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
+        if (tmp_folder == nullptr) {
+            spdlog::error("Failed to create local temp folder: {} {}", file_template, strerror(errno));
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+        std::filesystem::permissions(tmp_folder,
+            std::filesystem::perms::others_all | std::filesystem::perms::group_all,
+            std::filesystem::perm_options::remove);
+
+        *local_path = std::string(tmp_folder);
+
+        return StatusCode::OK;
+    }
+
+    /**
+     * @brief Download model versions
+     * 
+     * @param path 
+     * @param local_path 
+     * @param versions 
+     * @return StatusCode 
+     */
+    virtual StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) = 0;
 
     /**
      * @brief Delete a folder
@@ -111,6 +148,8 @@ public:
      * @return StatusCode 
      */
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
+
+    static const std::vector<std::string> acceptedFiles;
 };
 
 }  // namespace ovms

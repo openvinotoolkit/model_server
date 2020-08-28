@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "filesystem.hpp"
 #include "status.hpp"
@@ -100,7 +101,17 @@ public:
      * @param local_path 
      * @return StatusCode 
      */
-    StatusCode downloadFileFolder(const std::string& path, std::string* local_path) override;
+    StatusCode downloadFileFolder(const std::string& path, const std::string& local_path) override;
+
+    /**
+     * @brief Download selected model versions
+     * 
+     * @param path 
+     * @param local_path 
+     * @param versions 
+     * @return StatusCode 
+     */
+    StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) override;
 
     /**
      * @brief Delete a folder

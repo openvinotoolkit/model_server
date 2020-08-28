@@ -29,6 +29,7 @@
 #include <fstream>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <aws/core/Aws.h>
 #include <aws/core/auth/AWSCredentialsProvider.h>
@@ -38,6 +39,8 @@
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/ListObjectsRequest.h>
 #include <spdlog/spdlog.h>
+
+#include "stringutils.hpp"
 
 namespace ovms {
 
@@ -421,7 +424,7 @@ StatusCode S3FileSystem::readTextFile(const std::string& path, std::string* cont
     return StatusCode::OK;
 }
 
-StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string* local_path) {
+StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::string& local_path) {
     bool exists;
     auto status = fileExists(path, &exists);
     if (status != StatusCode::OK) {
@@ -447,19 +450,11 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
 
     bool is_dir = false;
     std::set<std::string> contents, files;
-    std::string file_template = "/tmp/fileXXXXXX";
     status = isDirectory(effective_path, &is_dir);
     if (status != StatusCode::OK) {
         return status;
     }
     if (is_dir) {
-        char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
-        if (tmp_folder == nullptr) {
-            spdlog::error("Failed to create local temp folder: {} {}", file_template, strerror(errno));
-            return StatusCode::FILE_INVALID;
-        }
-
-        *local_path = std::string(tmp_folder);
         status = getDirectoryContents(effective_path, &contents);
         if (status != StatusCode::OK) {
             return status;
@@ -468,7 +463,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
         for (auto iter = contents.begin(); iter != contents.end(); ++iter) {
             bool is_subdir;
             std::string s3_fpath = joinPath({effective_path, *iter});
-            std::string local_fpath = joinPath({*local_path, *iter});
+            std::string local_fpath = joinPath({local_path, *iter});
             status = isDirectory(s3_fpath, &is_subdir);
             if (status != StatusCode::OK) {
                 return status;
@@ -496,39 +491,36 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
         }
 
         for (auto iter = files.begin(); iter != files.end(); ++iter) {
-            std::string bucket, object;
-            status = parsePath(*iter, &bucket, &object);
-            if (status != StatusCode::OK) {
-                return status;
-            }
+            if (std::any_of(acceptedFiles.begin(), acceptedFiles.end(), [&iter](const std::string& x) {
+                    return iter->size() > 0 && endsWith(*iter, x);
+                })) {
+                std::string bucket, object;
+                status = parsePath(*iter, &bucket, &object);
+                if (status != StatusCode::OK) {
+                    return status;
+                }
 
-            // Send a request for the objects metadata
-            s3::Model::GetObjectRequest object_request;
-            object_request.SetBucket(bucket.c_str());
-            object_request.SetKey(object.c_str());
+                // Send a request for the objects metadata
+                s3::Model::GetObjectRequest object_request;
+                object_request.SetBucket(bucket.c_str());
+                object_request.SetKey(object.c_str());
 
-            auto get_object_outcome = client_.GetObject(object_request);
-            if (get_object_outcome.IsSuccess()) {
-                auto& retrieved_file =
-                    get_object_outcome.GetResultWithOwnership().GetBody();
-                std::string s3_removed_path = (*iter).substr(effective_path.size());
-                std::string local_file_path = joinPath({*local_path, s3_removed_path});
-                std::ofstream output_file(local_file_path.c_str(), std::ios::binary);
-                output_file << retrieved_file.rdbuf();
-                output_file.close();
-            } else {
-                spdlog::error("Failed to get object at {}", *iter);
-                return StatusCode::S3_FAILED_GET_OBJECT;
+                auto get_object_outcome = client_.GetObject(object_request);
+                if (get_object_outcome.IsSuccess()) {
+                    auto& retrieved_file =
+                        get_object_outcome.GetResultWithOwnership().GetBody();
+                    std::string s3_removed_path = (*iter).substr(effective_path.size());
+                    std::string local_file_path = joinPath({local_path, s3_removed_path});
+                    std::ofstream output_file(local_file_path.c_str(), std::ios::binary);
+                    output_file << retrieved_file.rdbuf();
+                    output_file.close();
+                } else {
+                    spdlog::error("Failed to get object at {}", *iter);
+                    return StatusCode::S3_FAILED_GET_OBJECT;
+                }
             }
         }
     } else {
-        int status = mkstemp(const_cast<char*>(file_template.c_str()));
-        if (status == -1) {
-            spdlog::error("Failed to create local temp file: {}", file_template);
-            return StatusCode::FILE_INVALID;
-        }
-
-        *local_path = file_template;
         std::string bucket, object;
         auto s = parsePath(effective_path, &bucket, &object);
         if (s != StatusCode::OK) {
@@ -543,7 +535,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
         auto get_object_outcome = client_.GetObject(object_request);
         if (get_object_outcome.IsSuccess()) {
             auto& retrieved_file = get_object_outcome.GetResultWithOwnership().GetBody();
-            std::ofstream output_file(local_path->c_str(), std::ios::binary);
+            std::ofstream output_file(local_path.c_str(), std::ios::binary);
             output_file << retrieved_file.rdbuf();
             output_file.close();
         } else {
@@ -553,6 +545,38 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, std::string
     }
 
     return StatusCode::OK;
+}
+
+StatusCode S3FileSystem::downloadModelVersions(const std::string& path,
+    std::string* local_path,
+    const std::vector<model_version_t>& versions) {
+    auto sc = createTempPath(local_path);
+    if (sc != StatusCode::OK) {
+        spdlog::error("Failed to create a temporary path {}", sc);
+        return sc;
+    }
+
+    StatusCode result = StatusCode::OK;
+    for (auto& ver : versions) {
+        std::string versionpath = path;
+        if (!endsWith(versionpath, "/")) {
+            versionpath.append("/");
+        }
+        versionpath.append(std::to_string(ver));
+        std::string lpath = *local_path;
+        if (!endsWith(lpath, "/")) {
+            lpath.append("/");
+        }
+        lpath.append(std::to_string(ver));
+        fs::create_directory(lpath);
+        auto status = downloadFileFolder(versionpath, lpath);
+        if (status != StatusCode::OK) {
+            result = status;
+            spdlog::error("Failed to download model version {}", versionpath);
+        }
+    }
+
+    return result;
 }
 
 StatusCode S3FileSystem::deleteFileFolder(const std::string& path) {

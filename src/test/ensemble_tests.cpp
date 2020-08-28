@@ -87,7 +87,7 @@ protected:
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
         setenv("NIREQ", "1", 1);
-        managerWithDummyModel.start(fileToReload);
+        managerWithDummyModel.startFromFile(fileToReload);
         std::this_thread::sleep_for(std::chrono::milliseconds(1100));
         std::unique_ptr<Pipeline> pipeline;
         auto status = managerWithDummyModel.createPipeline(pipeline,
@@ -918,7 +918,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     setenv("NIREQ", "1", 1);
-    managerWithDummyModel.start(fileToReload);
+    managerWithDummyModel.startFromFile(fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
@@ -993,7 +993,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     setenv("NIREQ", "2", 1);
-    managerWithDummyModel.start(fileToReload);
+    managerWithDummyModel.startFromFile(fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,

@@ -74,7 +74,13 @@ StatusCode AzureFileSystem::downloadFile(const std::string& remote_path,
 }
 
 StatusCode AzureFileSystem::downloadFileFolder(const std::string& path,
-    std::string* local_path) {
+    const std::string& local_path) {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+
+StatusCode AzureFileSystem::downloadModelVersions(const std::string& path,
+    std::string* local_path,
+    const std::vector<model_version_t>& versions) {
     return StatusCode::NOT_IMPLEMENTED;
 }
 

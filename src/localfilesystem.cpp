@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -29,6 +30,8 @@ namespace ovms {
 
 namespace fs = std::filesystem;
 constexpr uint64_t NANOS_PER_SECOND = 1000000000;
+
+const std::vector<std::string> FileSystem::acceptedFiles = {".bin", ".xml", "mapping_config.json"};
 
 StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
     try {
@@ -82,7 +85,7 @@ StatusCode LocalFileSystem::getDirectorySubdirs(const std::string& path, files_l
     try {
         for (const auto& entry : fs::directory_iterator(path)) {
             if (entry.is_directory()) {
-                subdirs->insert(entry.path().string());
+                subdirs->insert(entry.path().filename().string());
             }
         }
     } catch (fs::filesystem_error& e) {
@@ -124,14 +127,24 @@ StatusCode LocalFileSystem::readTextFile(const std::string& path, std::string* c
     return StatusCode::OK;
 }
 
-StatusCode LocalFileSystem::downloadFileFolder(const std::string& path, std::string* local_path) {
+StatusCode LocalFileSystem::downloadFileFolder(const std::string& path, const std::string& local_path) {
     // For LocalFileSystem there is no need to download
+    return StatusCode::OK;
+}
+
+StatusCode LocalFileSystem::downloadModelVersions(const std::string& path,
+    std::string* local_path,
+    const std::vector<model_version_t>& versions) {
     *local_path = path;
     return StatusCode::OK;
 }
 
 StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
-    // Since we're using an orignal folder, do nothing
+    std::error_code errorCode;
+    if (!std::filesystem::remove_all(path, errorCode)) {
+        return StatusCode::PATH_INVALID;
+    }
+
     return StatusCode::OK;
 }
 

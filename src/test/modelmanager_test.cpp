@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../localfilesystem.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
@@ -69,7 +70,7 @@ const std::string SECOND_MODEL_NAME = "alpha";
 const std::string model_1_path = "/tmp/models/dummy1/1";
 const std::string model_2_path = "/tmp/models/dummy2/2";
 
-const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(ovms::ModelManager::WATCHER_INTERVAL_SEC + 2);
+const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(3);
 
 class MockModel : public ovms::Model {
 public:
@@ -92,35 +93,35 @@ public:
 TEST(ModelManager, ConfigParseNoModels) {
     std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST(ModelManager, WrongConfigFile) {
     std::string configFile = "123/tmp/not_a_valid_file_name";
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
 TEST(ModelManager, ConfigParseEmpty) {
     std::string configFile = createConfigFileWithContent("\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST(ModelManager, ConfigNotAJson) {
     std::string configFile = createConfigFileWithContent("abcdfgh");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST(ModelManager, ConfigParseEmptyJson) {
     std::string configFile = createConfigFileWithContent("{}\n");
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -136,7 +137,7 @@ TEST(ModelManager, ConfigParseNodeConfigWithoutNameKey) {
 
     std::string configFile = createConfigFileWithContent(configWithoutNameKey);
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -152,7 +153,7 @@ TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
 
     std::string configFile = createConfigFileWithContent(configWithoutBasePathKey);
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -203,7 +204,7 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     manager.join();
     modelMock.reset();
@@ -235,7 +236,7 @@ TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    auto status = manager.start(configFile);
+    auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
     manager.join();
     modelMock.reset();
@@ -250,9 +251,9 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
 
     std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
     ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
 
-    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getInstance().getVersionReader(path);
-    auto status = versionReader->readAvailableVersions(versions);
+    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
 
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
@@ -267,8 +268,8 @@ TEST(ModelManager, ReadVersionsInvalidPath) {
     }
 
     std::vector<ovms::model_version_t> versions;
-    std::shared_ptr<ovms::IVersionReader> versionReader = ovms::ModelManager::getInstance().getVersionReader(path);
-    auto status = versionReader->readAvailableVersions(versions);
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
@@ -283,7 +284,7 @@ TEST(ModelManager, StartFromFile) {
     EXPECT_CALL(*modelMock, addVersion(_))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.start(fileToReload);
+    auto status = manager.startFromFile(fileToReload);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     manager.join();
     modelMock.reset();
@@ -298,7 +299,9 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     MockModelManager manager;
     EXPECT_CALL(*modelMock, addVersion(_))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.start(fileToReload);
+
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -318,11 +321,15 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     modelMock.reset();
 }
 
-class MockVersionReader : public ovms::IVersionReader {
+class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
-    MockVersionReader() = default;
-    ~MockVersionReader() {}
-    ovms::Status readAvailableVersions(ovms::model_versions_t& versions) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+        return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
+    }
+    ovms::Status readAvailableVersions(
+        std::shared_ptr<ovms::FileSystem>& fs,
+        const std::string& base,
+        ovms::model_versions_t& versions) override {
         versions.resize(toRegister.size());
         std::copy(toRegister.begin(), toRegister.end(), versions.begin());
         return ovms::StatusCode::OK;
@@ -335,20 +342,6 @@ private:
     std::vector<ovms::model_version_t> toRegister;
 };
 
-std::shared_ptr<MockVersionReader> mockVersionReader;
-
-class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
-public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
-        return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
-    }
-
-protected:
-    std::shared_ptr<ovms::IVersionReader> getVersionReader(const std::string& path) override {
-        return mockVersionReader;
-    }
-};
-
 TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJson) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
@@ -356,10 +349,10 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     createConfigFileWithContent(config_2_models, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManagerWithModelInstancesJustChangingStates manager;
-    mockVersionReader = std::make_shared<MockVersionReader>();
-    mockVersionReader->registerVersionToLoad(1);
-    mockVersionReader->registerVersionToLoad(2);
-    auto status = manager.start(fileToReload);
+    manager.registerVersionToLoad(1);
+    manager.registerVersionToLoad(2);
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
     auto models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -383,7 +376,6 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
         EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState());
     }
     manager.join();
-    mockVersionReader.reset();
 }
 
 class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
