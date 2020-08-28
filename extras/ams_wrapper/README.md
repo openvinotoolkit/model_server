@@ -1,19 +1,18 @@
-# Inference Server for Azure Media Services 
+# OpenVINO™ Model Server AI Extension
 
-OpenVINO™ Model Server for Azure Live Video Analytics (LVA) is an AI Extension used with LVA on 
-IoT Edge devices. It enables easy delegation of inference requests to OpenVINO in media analytics pipelines. 
+OpenVINO™ Model Server - AI Extension extends the results from Native OpenVINO™ Model Server to return inference results in json format. This helps platforms such as Live Video Analytics (LVA) for the Edge from Azure Media Services to delegate inference requests to OpenVINO in media analytics pipelines
 
 The integration model is depicted below:
 ![archtecture](AI_extension.png)
 
-OpenVINO Model Server is running as a docker container and exposes an LVA REST API interface for 
+OpenVINO Model Server -AI Extension is running as a docker container and exposes an AI_Extension REST API interface for 
 the pipeline applications. This interface supports a range of model categories and returns json response 
 including model metadata like attribute, labels or classes names. 
 
-Beside LVA REST API, the OVMS for LVA exposes also the complete OpenVINO Model Server REST and gRPC API,
- which could be used with arbitrary OpenVINO model. 
+Beside AI_Extension REST API, the OVMS - AI Extension exposes also the complete OpenVINO Model Server REST and gRPC API,
+which could be used with arbitrary OpenVINO model. 
 
-## LVA REST API
+## AI_Extension REST API
 
 HTTP contract is defined as follows:
 * OpenVINO Model Server acts as the HTTP server 
@@ -57,7 +56,7 @@ Response:
 
 ## Supported models categories
 
-Models configured in OpenVINO Model Server for LVA need to belong to one of defined categories. 
+Models configured in OpenVINO Model Server - AI Extension need to belong to one of defined categories. 
 The category defines what kind of data is in the model response and in what format. 
 See the category characteristics below to learn more about their requirements. 
 Each model needs to have an associated config file, which describes the included classes, 
@@ -128,7 +127,7 @@ which should be set to 1. `C` represents all classes defined in the model. Remai
 are ignored (if present, first index is used).
 
 Examples of such models are available in the [OpenVINO Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
-The following classification model is included in the OVMS docker image for LVA: 
+The following classification model is included in the OVMS - AI Extension docker image: 
 * vehicle-attributes-recognition - [vehicle-attributes-recognition-barrier-0039](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-attributes-recognition-barrier-0039)
 
 Model includes a configuration file in json format. See an example configuration file [here](../ams_models/vehicle_attributes_model.json)
@@ -155,36 +154,36 @@ Below is a sample of such model:
   }
 ```
 
-## Deployment and configuration of OpenVINO Inference Server for LVA    
+## Deployment and configuration of OpenVINO Inference Server - AI Extension    
 
-OpenVINO Inference Server for LVA includes two components which require proper configuration.
+OpenVINO Inference Server - AI Extension includes two components which require proper configuration.
 * OpenVINO Model Server - serves all models and executes inference operation
-* LVA REST API wrapper - translates LVA API, run pre and post processing operations, communicates with OVMS via localhost and gRPC interface.
+* AI_Extension REST API wrapper - translates LVA API, run pre and post processing operations, communicates with OVMS via localhost and gRPC interface.
 
 OpenVINO Model server requires file `/opt/ams_models/ovms_config.json` which is by default configured
 to use [4 exemplary models](../ams_models/ovms_config.json).
 
-LVA REST API wrapper requires model configuration files describing all enabled models.
+AI_Extension REST API wrapper requires model configuration files describing all enabled models.
 Models config files should be present in `/opt/ams_models/` folder. Model configuration files should have _model.json suffix.
-They include the mapping between ovms models from `ovms_config.json` and LVA REST API endpoint name.
+They include the mapping between ovms models from `ovms_config.json` and AI_Extension REST API endpoint name.
 
 Model files in OpenVINO Intermediate Representation format should be stored in the folders structure
 like defined on [OVMS documentation](../../docs/docker_container.md#preparing-the-models).
 
-Note: OVMS for LVA was tested for the models included in the docker image. 
+Note: OVMS - AI Extension was tested for the models included in the docker image. 
 It should be possible to swap the models if they have correspondent format and content of the inputs and outputs. 
 It is, however, not officially supported. 
 
 ## Target device selection for models: 
 
-By default, the OpenVINO Model Server for LVA is started, serving included models, using CPU as the target device executing the inference requests. 
-Besides CPU, OVMS for LVA is currently supporting 
+By default, the OpenVINO Model Server - AI Extension is started, serving included models, using CPU as the target device executing the inference requests. 
+Besides CPU, OVMS - AI Extension is currently supporting 
 [Myriad Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MYRIAD.html), 
 [GPU Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html)
 and [Heterogeneous Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HETERO.html). 
 
 It is possible to set the target device for each individual model by setting additional environment variable 
-OVMS_MODEL_DEVICES, or passing –ovms_model_devices parameter to OVMS for LVA, with a semicolon separated list of models with assigned target devices. 
+OVMS_MODEL_DEVICES, or passing –ovms_model_devices parameter to OVMS - AI Extension, with a semicolon separated list of models with assigned target devices. 
 Below is an example: 
 OVMS_MODEL_DEVICES='vehicle_detection_adas=CPU;vehicle_attributes=MYRIAD' 
 
@@ -194,10 +193,10 @@ Refer to the plugin documentation and examples from [OVMS documentation](../../d
 
 ## Starting docker container
 
-# OpenVINO Inference Server for LVA parameters
+# OpenVINO Inference Server - AI Extension parameters
  
 
-OpenVINO Model Server for LVA is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
+OpenVINO Model Server - AI Extension is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
 
 ```
 
