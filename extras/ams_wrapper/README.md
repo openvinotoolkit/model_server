@@ -1,4 +1,4 @@
-# OpenVINO™ Model Server AI Extension
+# OpenVINO™ Model Server - AI Extension
 
 OpenVINO™ Model Server - AI Extension extends the results from Native OpenVINO™ Model Server to return inference results in json format. This helps platforms such as Live Video Analytics (LVA) for the Edge from Azure Media Services to delegate inference requests to OpenVINO in media analytics pipelines
 
