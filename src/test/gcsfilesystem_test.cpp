@@ -84,7 +84,8 @@ void check_dir_recursive_download(const std::string& path,
     SPDLOG_TRACE("Checking GCS directory in a recursive way for {}", path);
     ovms::StatusCode status;
     std::string local_path_out;
-    status = fs->downloadFileFolder(path, &local_path_out);
+    FileSystem::createTempPath(&local_path_out);
+    status = fs->downloadFileFolder(path, local_path_out);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     SPDLOG_TRACE("Directory saved to {}", local_path_out);
 }

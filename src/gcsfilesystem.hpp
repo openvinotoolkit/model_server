@@ -17,6 +17,7 @@
 
 #include <regex>
 #include <string>
+#include <vector>
 
 #include "google/cloud/storage/client.h"
 
@@ -120,8 +121,17 @@ public:
    * @param local_path
    * @return StatusCode
    */
-    StatusCode downloadFileFolder(const std::string& path,
-        std::string* local_path) override;
+    StatusCode downloadFileFolder(const std::string& path, const std::string& local_path) override;
+
+    /**
+     * @brief Download selected model versions
+     * 
+     * @param path 
+     * @param local_path 
+     * @param versions 
+     * @return StatusCode 
+     */
+    StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) override;
 
     /**
    * @brief Delete a folder
@@ -133,40 +143,30 @@ public:
 
 private:
     /**
-   * @brief
-   *
-   * @param path
-   * @param bucket
-   * @param object
-   * @return StatusCode
-   */
+    * @brief
+    *
+    * @param path
+    * @param bucket
+    * @param object
+    * @return StatusCode
+    */
     StatusCode parsePath(const std::string& path, std::string* bucket,
         std::string* object);
 
     /**
-   *
-   * @brief
-   *
-   * @param remote_path
-   * @param local_path
-   */
+    *
+    * @brief
+    *
+    * @param remote_path
+    * @param local_path
+    */
     StatusCode downloadFile(const std::string& remote_path,
         const std::string& local_path);
 
     /**
-   * @brief Download a remote directory to a callee-provided local_path.
-   *
-   * @param path
-   * @param local_path
-   * @return StatusCode
-   */
-    StatusCode downloadFileFolderTo(const std::string& path,
-        const std::string& local_path);
-
-    /**
-   * @brief
-   *
-   */
+    * @brief
+    *
+    */
     google::cloud::storage::Client client_;
 };
 

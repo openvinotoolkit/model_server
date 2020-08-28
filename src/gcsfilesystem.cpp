@@ -29,8 +29,11 @@
 #include <fstream>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <spdlog/spdlog.h>
+
+#include "stringutils.hpp"
 
 namespace ovms {
 
@@ -369,25 +372,39 @@ StatusCode GCSFileSystem::downloadFile(const std::string& remote_path,
     return StatusCode::OK;
 }
 
-StatusCode GCSFileSystem::downloadFileFolder(const std::string& path,
-    std::string* local_path) {
-    char dir_name_buf[] = "/tmp/ovms_model_dir_XXXXXX";
-    char* ret = mkdtemp(dir_name_buf);
-    if (ret == nullptr) {
-        SPDLOG_ERROR("Failed to create local temp directory: {} error: {}",
-            dir_name_buf, strerror(errno));
-        return StatusCode::FILE_INVALID;
+StatusCode GCSFileSystem::downloadModelVersions(const std::string& path,
+    std::string* local_path,
+    const std::vector<model_version_t>& versions) {
+    auto sc = createTempPath(local_path);
+    if (sc != StatusCode::OK) {
+        spdlog::error("Failed to create a temporary path {}", sc);
+        return sc;
     }
-    std::string created_dir_name = dir_name_buf;
-    *local_path = created_dir_name;
-    SPDLOG_INFO(
-        "GCS: Downloading dir {} (recursive) and saving a new local path: {}",
-        path, created_dir_name);
-    return downloadFileFolderTo(path, created_dir_name);
+
+    StatusCode result = StatusCode::OK;
+    for (auto& ver : versions) {
+        std::string versionpath = path;
+        if (!endsWith(versionpath, "/")) {
+            versionpath.append("/");
+        }
+        versionpath.append(std::to_string(ver));
+        std::string lpath = *local_path;
+        if (!endsWith(lpath, "/")) {
+            lpath.append("/");
+        }
+        lpath.append(std::to_string(ver));
+        fs::create_directory(lpath);
+        auto status = downloadFileFolder(versionpath, lpath);
+        if (status != StatusCode::OK) {
+            result = status;
+            spdlog::error("Failed to download model version {}", versionpath);
+        }
+    }
+
+    return result;
 }
 
-StatusCode GCSFileSystem::downloadFileFolderTo(const std::string& path,
-    const std::string& local_path) {
+StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std::string& local_path) {
     SPDLOG_TRACE("GCS: Downloading dir {} and saving to {}", path, local_path);
     bool is_dir;
     auto status = this->isDirectory(path, &is_dir);
@@ -422,7 +439,7 @@ StatusCode GCSFileSystem::downloadFileFolderTo(const std::string& path,
             return status;
         }
         auto download_dir_status =
-            this->downloadFileFolderTo(remote_dir_path, local_dir_path);
+            this->downloadFileFolder(remote_dir_path, local_dir_path);
         if (download_dir_status != StatusCode::OK) {
             SPDLOG_ERROR("Unable to download directory from {} to {}",
                 remote_dir_path, local_dir_path);
@@ -431,16 +448,20 @@ StatusCode GCSFileSystem::downloadFileFolderTo(const std::string& path,
     }
 
     for (auto&& f : files) {
-        std::string remote_file_path = joinPath({path, f});
-        std::string local_file_path = joinPath({local_path, f});
-        SPDLOG_TRACE("Processing file {} from {} -> {}", f, remote_file_path,
-            local_file_path);
-        auto download_status =
-            this->downloadFile(remote_file_path, local_file_path);
-        if (download_status != StatusCode::OK) {
-            SPDLOG_ERROR("Unable to save file from {} to {}", remote_file_path,
+        if (std::any_of(acceptedFiles.begin(), acceptedFiles.end(), [&f](const std::string& x) {
+                return f.size() > 0 && endsWith(f, x);
+            })) {
+            std::string remote_file_path = joinPath({path, f});
+            std::string local_file_path = joinPath({local_path, f});
+            SPDLOG_TRACE("Processing file {} from {} -> {}", f, remote_file_path,
                 local_file_path);
-            return download_status;
+            auto download_status =
+                this->downloadFile(remote_file_path, local_file_path);
+            if (download_status != StatusCode::OK) {
+                SPDLOG_ERROR("Unable to save file from {} to {}", remote_file_path,
+                    local_file_path);
+                return download_status;
+            }
         }
     }
     return StatusCode::OK;

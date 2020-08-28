@@ -125,13 +125,36 @@ TEST(LocalFileSystem, GetDirectoryFiles) {
 TEST(LocalFileSystem, DownloadFileFolder) {
     ovms::LocalFileSystem lfs;
     std::string location;
-    auto status = lfs.downloadFileFolder("/path/to/download", &location);
+    auto status = lfs.downloadFileFolder("/path/to/download", location);
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(location, "/path/to/download");
 }
 
 TEST(LocalFileSystem, DestroyFileFolder) {
     ovms::LocalFileSystem lfs;
-    auto status = lfs.deleteFileFolder("/path/to/download");
+    bool exists = false;
+    auto status = lfs.fileExists("/tmp/structure/dir1", &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(exists, true);
+    status = lfs.deleteFileFolder("/tmp/structure/dir1");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    status = lfs.fileExists("/tmp/structure/dir1", &exists);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(exists, false);
+    status = lfs.deleteFileFolder("/tmp/structure/dir1");
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST(FileSystem, CreateTempFolder) {
+    std::string local_path;
+    namespace fs = std::filesystem;
+    auto sc = ovms::FileSystem::createTempPath(&local_path);
+    EXPECT_EQ(sc, ovms::StatusCode::OK);
+    std::cout << "Temp path:" << local_path << "\n";
+    bool status = fs::exists(local_path);
+    EXPECT_TRUE(status);
+    EXPECT_EQ(sc, ovms::StatusCode::OK);
+    fs::perms p = fs::status(local_path).permissions();
+    EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
+    EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
+    EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
 }

@@ -232,12 +232,21 @@ public:
     /**
         * @brief Get the plugin config
         *
-        * @return const std::string&f
+        * @return const std::string&
         */
     const std::string& grpcChannelArguments() {
         if (result->count("grpc_channel_arguments"))
             return result->operator[]("grpc_channel_arguments").as<std::string>();
         return empty;
+    }
+
+    /**
+     * @brief Get the filesystem pool wait time in seconds
+     * 
+     * @return uint 
+     */
+    uint filesystemPollWaitSeconds() {
+        return result->operator[]("file_system_poll_wait_seconds").as<uint>();
     }
 };
 }  // namespace ovms

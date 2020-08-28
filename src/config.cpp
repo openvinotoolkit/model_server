@@ -60,7 +60,11 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "LOG_PATH")
             ("grpc_channel_arguments",
                 "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
-                cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS");
+                cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
+            ("file_system_poll_wait_seconds",
+                "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
+                cxxopts::value<uint>()->default_value("1"),
+                "SECONDS");
         options->add_options("multi model")
             ("config_path",
                 "absolute path to json configuration file",

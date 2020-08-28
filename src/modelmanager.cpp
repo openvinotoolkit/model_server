@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 
 #include "config.hpp"
-#include "directoryversionreader.hpp"
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
@@ -42,17 +41,37 @@
 
 namespace ovms {
 
-const uint ModelManager::WATCHER_INTERVAL_SEC = 1;
+static uint watcherIntervalSec = 1;
+static bool watcherStarted = false;
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
-    // start manager using config file
-    if (config.configPath() != "") {
-        return start(config.configPath());
-    }
+    watcherIntervalSec = config.filesystemPollWaitSeconds();
 
-    // start manager using commandline parameters
-    ModelConfig modelConfig{
+    Status status;
+    if (config.configPath() != "") {
+        status = startFromFile(config.configPath());
+    } else {
+        status = startFromConfig();
+    }
+    startWatcher();
+
+    return status;
+}
+
+void ModelManager::startWatcher() {
+    if ((!watcherStarted) && (watcherIntervalSec > 0)) {
+        std::future<void> exitSignal = exit.get_future();
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        watcherStarted = true;
+        monitor = std::move(t);
+    }
+}
+
+Status ModelManager::startFromConfig() {
+    auto& config = ovms::Config::instance();
+
+    modelConfig = ModelConfig{
         config.modelName(),
         config.modelPath(),
         config.targetDevice(),
@@ -86,20 +105,16 @@ Status ModelManager::start() {
         modelConfig.setBatchingMode(FIXED);
         modelConfig.setBatchSize(0);
     }
+
     return reloadModelWithVersions(modelConfig);
 }
 
-Status ModelManager::start(const std::string& jsonFilename) {
+Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
     if (!status.ok()) {
         return status;
     }
-    if (!monitor.joinable()) {
-        std::future<void> exitSignal = exit.get_future();
-        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
-        monitor = std::move(t);
-        monitor.detach();
-    }
+
     return StatusCode::OK;
 }
 
@@ -242,7 +257,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
     std::set<std::string> modelsInConfigFile;
     for (const auto& configs : itr->value.GetArray()) {
-        ModelConfig modelConfig;
+        modelConfig.clear();
         auto status = modelConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             SPDLOG_ERROR("Parsing model:{} config failed",
@@ -311,25 +326,25 @@ void ModelManager::watcher(std::future<void> exit) {
     stat(configFilename.c_str(), &statTime);
     lastTime = statTime.st_ctime;
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-        std::this_thread::sleep_for(std::chrono::seconds(WATCHER_INTERVAL_SEC));
+        std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         stat(configFilename.c_str(), &statTime);
         if (lastTime != statTime.st_ctime) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
         }
+        reloadModelWithVersions(modelConfig);
     }
     spdlog::info("Exited config watcher thread");
 }
 
 void ModelManager::join() {
-    exit.set_value();
-    if (monitor.joinable()) {
-        monitor.join();
+    if (watcherStarted) {
+        exit.set_value();
+        if (monitor.joinable()) {
+            monitor.join();
+            watcherStarted = false;
+        }
     }
-}
-
-std::shared_ptr<IVersionReader> ModelManager::getVersionReader(const std::string& path) {
-    return std::make_shared<DirectoryVersionReader>(path);
 }
 
 void ModelManager::getVersionsToChange(
@@ -341,9 +356,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    spdlog::info("Currently registered versions count:{}", modelVersionsInstances.size());
+    spdlog::debug("Currently registered versions count:{}", modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        spdlog::info("version:{} state:{}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        spdlog::debug("version:{} state:{}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -414,23 +429,59 @@ std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
     return std::make_shared<LocalFileSystem>();
 }
 
-Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
-    auto fs = getFilesystem(config.getBasePath());
+Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {
+    files_list_t dirs;
+    auto status = fs->getDirectorySubdirs(base, &dirs);
+    if (status != StatusCode::OK) {
+        spdlog::error("Couldn't list directories in path: {}", base);
+        return status;
+    }
+
+    for (const auto& entry : dirs) {
+        try {
+            ovms::model_version_t version = std::stoll(entry);
+            versions.push_back(version);
+        } catch (const std::invalid_argument& e) {
+            spdlog::warn("Expected version directory to be in number format. Got:{}", entry);
+        } catch (const std::out_of_range& e) {
+            spdlog::error("Directory name is out of range for supported version format. Got:{}", entry);
+        }
+    }
+
+    if (0 == versions.size()) {
+        spdlog::error("No version found for model in path:{}", base);
+        return StatusCode::NO_MODEL_VERSION_AVAILABLE;
+    }
+
+    return StatusCode::OK;
+}
+
+StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
+    if (versions->size() == 0) {
+        return StatusCode::OK;
+    }
     std::string localPath;
     spdlog::info("Getting model from {}", config.getBasePath());
-    auto sc = fs->downloadFileFolder(config.getBasePath(), &localPath);
+    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *versions);
     if (sc != StatusCode::OK) {
         spdlog::error("Couldn't download model from {}", config.getBasePath());
         return sc;
     }
     config.setLocalPath(localPath);
+    spdlog::info("Model downloaded to {}", config.getLocalPath());
+
+    return StatusCode::OK;
+}
+
+Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
-    std::shared_ptr<IVersionReader> versionReader = getVersionReader(localPath);
-    auto status = versionReader->readAvailableVersions(requestedVersions);
+    auto status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
     if (!status.ok()) {
         return status;
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
+
     // TODO check if reload whole model when part of config changes (eg. CPU_THROUGHPUT_STREAMS)
     // right now assumes no need to reload model
     std::shared_ptr<model_versions_t> versionsToStart;
@@ -439,6 +490,8 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    downloadModels(fs, config, versionsToStart);
+    downloadModels(fs, config, versionsToReload);
 
     status = model->addVersions(versionsToStart, config);
     if (!status.ok()) {
@@ -461,6 +514,21 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             status.string());
         return status;
     }
+
+    if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
+        if (config.getLocalPath().compare(config.getBasePath())) {
+            LocalFileSystem lfs;
+            auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+            if (lfstatus != StatusCode::OK) {
+                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                    config.getLocalPath(),
+                    lfstatus);
+            } else {
+                spdlog::info("Model removed from {}", config.getLocalPath());
+            }
+        }
+    }
+
     return StatusCode::OK;
 }
 
