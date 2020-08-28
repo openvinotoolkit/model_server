@@ -98,7 +98,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"node_config": {
 			"type": "object",
-			"required": ["name", "model_name"],
+			"required": ["name", "model_name", "inputs", "outputs"],
 			"properties": {
 				"name": {
 					"type": "string"
@@ -109,6 +109,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"type": {
 					"type": "string",
 					"enum": ["DL model", "Demultiplexer", "Batch dispatcher"]
+				},
+				"version": {
+					"type": "integer"
 				},
 				"inputs": {
 					"type": "array",
