@@ -34,9 +34,7 @@ using namespace ovms;
 using namespace tensorflow;
 using namespace tensorflow::serving;
 
-// TODO above should be set to eg 2-3-4 when problem with parallel execution on the same
-// model will be resolved in model ensemble CVS-
-const uint NIREQ = 200;
+const uint NIREQ = 2;
 
 class EnsembleFlowTest : public ::testing::Test {
 protected:
@@ -487,7 +485,6 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
 
 TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     // Most basic configuration, just process single dummy model request
-    // TODO For now will fail if NIREQ < N * threads
     const int N = 200;
     /* input      dummy x N      output
         O---------->O------------->O
@@ -687,9 +684,6 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     //               default
     //           Models/Versions
 
-    // These parameters currently have constraint due to issue found
-    // PARALLEL_DUMMY_NODES * PARALLEL_SIMULATED_REQUEST_COUNT <= nireq
-    // https://jira.devtools.intel.com/browse/CVS-35859
     const int PARALLEL_DUMMY_NODES = 3;
     const int PARALLEL_SIMULATED_REQUEST_COUNT = 30;
 

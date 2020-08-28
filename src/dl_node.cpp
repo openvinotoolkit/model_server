@@ -21,6 +21,7 @@
 #include <spdlog/spdlog.h>
 
 #include "modelmanager.hpp"
+#include "ov_utils.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
 
@@ -171,7 +172,9 @@ Status DLNode::fetchResults(BlobMap& outputs) {
                 auto aliasItr = nodeOutputNameAlias.find(output_name);
                 const std::string realModelOutputName = ((aliasItr != nodeOutputNameAlias.end()) ? (*aliasItr).second : output_name);
                 SPDLOG_DEBUG("Getting blob from model:{}, inferRequestStreamId:{}, blobName:{}", modelName, streamId.value(), realModelOutputName);
-                outputs[output_name] = infer_request.GetBlob(realModelOutputName);
+                const auto blob = infer_request.GetBlob(realModelOutputName);
+                SPDLOG_DEBUG("Creating copy of blob from model:{}, inferRequestStreamId:{}, blobName:{}", modelName, streamId.value(), realModelOutputName);
+                outputs[output_name] = blobClone(blob);
             } catch (const InferenceEngine::details::InferenceEngineException& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_ERROR("DLNode::fetchResults (Node name {}); error during InferRequest::GetBlob: {}; exception message: {}", getName(), status.string(), e.what());
