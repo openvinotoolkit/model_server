@@ -41,11 +41,12 @@ enum class StatusCode {
     PLUGIN_CONFIG_WRONG_FORMAT,        /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT, /*!< Model version policy is in wrong format */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
-    NO_MODEL_VERSION_AVAILABLE, /*!< No model version found in path */
-    RESHAPE_ERROR,              /*!< Impossible to perform reshape */
-    RESHAPE_REQUIRED,           /*!< Model instance needs to be reloaded with new shape */
-    BATCHSIZE_CHANGE_REQUIRED,  /*!< Model instance needs to be reloaded with new batch size */
-    AMBIGUOUS_SHAPE_PARAM,      /*!< Fixed no named shape param defined for model with multiple inputs */
+    NO_MODEL_VERSION_AVAILABLE,        /*!< No model version found in path */
+    RESHAPE_ERROR,                     /*!< Impossible to perform reshape */
+    RESHAPE_REQUIRED,                  /*!< Model instance needs to be reloaded with new shape */
+    BATCHSIZE_CHANGE_REQUIRED,         /*!< Model instance needs to be reloaded with new batch size */
+    AMBIGUOUS_SHAPE_PARAM,             /*!< Fixed no named shape param defined for model with multiple inputs */
+    FORBIDDEN_MODEL_DYNAMIC_PARAMETER, /*!< Value of the provided param is forbidden */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
