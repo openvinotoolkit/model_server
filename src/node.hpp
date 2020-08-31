@@ -51,8 +51,6 @@ public:
         nodeName(nodeName) {
     }
 
-    virtual ~Node() = default;
-
     const std::string& getName() const { return this->nodeName; }
 
     virtual Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) = 0;
@@ -76,8 +74,6 @@ public:
     const std::vector<std::reference_wrapper<Node>>& getNextNodes() {
         return next;
     }
-    virtual void release() {}
-    virtual bool tryDisarmStreamIdGuard(const uint microseconds = 1) { return true; }
 
     static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs);
 };

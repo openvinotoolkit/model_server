@@ -66,21 +66,6 @@ public:
      */
     Status prepareInputsAndModelForInference();
 
-    bool tryDisarmStreamIdGuard(const uint microseconds = 1) override {
-        SPDLOG_INFO("Trying to disarm stream id guard of Node: {}", getName());
-        if (this->nodeStreamIdGuard == nullptr) {
-            return true;
-        }
-        return this->nodeStreamIdGuard->tryDisarm(microseconds);
-    }
-
-    void release() override {
-        SPDLOG_DEBUG("Releasing resources for node {}", getName());
-        this->nodeStreamIdGuard.reset();
-        this->model.reset();
-        this->modelUnloadGuard.reset();
-    }
-
 private:
     Status requestExecuteRequiredResources();
     Status setInputsForInference(InferenceEngine::InferRequest& infer_request);

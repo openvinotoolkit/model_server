@@ -82,7 +82,6 @@ Status Pipeline::execute() {
     std::vector<std::reference_wrapper<Node>> nodesWaitingForIdleInferenceStreamId;  // consider replacing with std::vector
     // even though we can remove with random sequence it is probable that we will remove those in sequence
     const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 500;
-    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 500;
     // process finished nodes and if no one is finished check if any node with deffered execution
     // has necessary resources already
     while (true) {
@@ -92,9 +91,6 @@ Status Pipeline::execute() {
             Node& finishedNode = optionallyFinishedNode.value().get();
             SPDLOG_DEBUG("Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
             finishedExecute.at(finishedNode.getName()) = true;
-            if (!firstErrorStatus.ok()) {
-                finishedNode.release();
-            }
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             BlobMap finishedNodeOutputBlobMap;
             SPDLOG_DEBUG("Fetching results of pipeline:{} node:{}", getName(), finishedNode.getName());
@@ -110,15 +106,13 @@ Status Pipeline::execute() {
                     getName(), finishedNode.getName(), nextNode.get().getName());
                 status = nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
                 CHECK_AND_LOG_ERROR(nextNode.get())
-                if (!firstErrorStatus.ok()) {
-                    break;
-                }
+                IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             }
             finishedNodeOutputBlobMap.clear();
             for (auto& nextNode : nextNodesFromFinished) {
                 if (nextNode.get().isReady()) {
-                    SPDLOG_DEBUG("Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
                     startedExecute.at(nextNode.get().getName()) = true;
+                    SPDLOG_DEBUG("Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
                     status = nextNode.get().execute(finishedNodeQueue);
                     if (status == StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET) {
                         SPDLOG_DEBUG("Node:{} not ready for execution yet", nextNode.get().getName());
@@ -126,31 +120,10 @@ Status Pipeline::execute() {
                         status = StatusCode::OK;
                     }
                     CHECK_AND_LOG_ERROR(nextNode.get())
-                    if (!firstErrorStatus.ok()) {
-                        break;
-                    }
+                    IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
                 }
             }
         } else {
-            // If error occurred, disarm stream id guards of all deferred nodes and exit
-            if (!firstErrorStatus.ok()) {
-                SPDLOG_DEBUG("Error occurred in pipeline, trying to disarm all stream id guards of all deferred nodes");
-                while (nodesWaitingForIdleInferenceStreamId.size() > 0) {
-                    SPDLOG_DEBUG("Trying to disarm {} remaining deferred nodes...", nodesWaitingForIdleInferenceStreamId.size());
-                    for (auto it = nodesWaitingForIdleInferenceStreamId.begin(); it != nodesWaitingForIdleInferenceStreamId.end();) {
-                        auto& node = (*it).get();
-                        if (node.tryDisarmStreamIdGuard(WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS)) {
-                            SPDLOG_DEBUG("Stream id guard disarm of node {} has succeeded", node.getName());
-                            it = nodesWaitingForIdleInferenceStreamId.erase(it);
-                        } else {
-                            it++;
-                        }
-                    }
-                }
-                SPDLOG_DEBUG("Disarming stream id guards of deferred nodes completed, pipeline can shut down");
-                break;
-            }
-
             // else scope could be executed always however it seems most reasonable at the time to
             // free blocked inferRequests from exeuction first rather than free models for reloading
             for (auto it = nodesWaitingForIdleInferenceStreamId.begin(); it != nodesWaitingForIdleInferenceStreamId.end();) {

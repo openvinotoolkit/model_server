@@ -184,7 +184,9 @@ Status DLNode::fetchResults(BlobMap& outputs) {
         }
     }
     // After results are fetched, model and inference request are not needed anymore
-    this->release();
+    this->nodeStreamIdGuard.reset();
+    this->model.reset();
+    this->modelUnloadGuard.reset();
     return StatusCode::OK;
 }
 
