@@ -1538,3 +1538,61 @@ const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
 TEST_F(EnsembleFlowTest, DISABLED_PipelineFactoryCreationWithMissingPipelineInputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingPipelineInputs);
 }
+
+TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFailed) {
+    // This test creates specific scenario where 3 parallel nodes are getting executed
+    // with nireq=1. The second node gets stream id ticket for inference and is deferred
+    // for execution later. Meanwhile error occurs in third parallel node (shape validation error).
+
+    // Expected result - have pipeline cancelled with proper error code
+
+    // Manger with dummy model and nireq=1
+    ConstructorEnabledModelManager managerWithDummyModel;
+    config.setNireq(1);
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto output_node = std::make_unique<ExitNode>(&response);
+
+    auto dummy_node_1 = std::make_unique<DLNode>("dummy_node_1", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto dummy_node_2 = std::make_unique<DLNode>("dummy_node_2", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto dummy_node_3 = std::make_unique<DLNode>("dummy_node_3", dummyModelName, requestedModelVersion, managerWithDummyModel);
+
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *dummy_node_1, {{"proto_input_1x10", DUMMY_MODEL_INPUT_NAME}});  // this node will start execution, reserve stream id
+    pipeline.connect(*input_node, *dummy_node_2, {{"proto_input_1x10", DUMMY_MODEL_INPUT_NAME}});  // this node will start execution, get ticker for stream id, defer to queue
+    pipeline.connect(*input_node, *dummy_node_3, {{"proto_input_1x5", DUMMY_MODEL_INPUT_NAME}});   // this node will fail at validation time
+    pipeline.connect(*dummy_node_1, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, "proto_output_1x10_A"}});
+    pipeline.connect(*dummy_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, "proto_output_1x10_B"}});
+    pipeline.connect(*dummy_node_3, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, "proto_output_1x5"}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(output_node));
+    pipeline.push(std::move(dummy_node_1));
+    pipeline.push(std::move(dummy_node_2));
+    pipeline.push(std::move(dummy_node_3));
+
+    request.Clear();
+
+    auto& proto_input_1x5 = (*request.mutable_inputs())["proto_input_1x5"];
+    auto& proto_input_1x10 = (*request.mutable_inputs())["proto_input_1x10"];
+
+    proto_input_1x5.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto_input_1x10.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    std::vector<float> data_1x5(5);
+    std::vector<float> data_1x10(10);
+    std::iota(data_1x5.begin(), data_1x5.end(), 0);    // 0, 1, 2, 3, 4
+    std::iota(data_1x10.begin(), data_1x10.end(), 5);  // 5, 6, ..., 14
+
+    proto_input_1x5.mutable_tensor_content()->assign((char*)data_1x5.data(), data_1x5.size() * sizeof(float));
+    proto_input_1x5.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto_input_1x5.mutable_tensor_shape()->add_dim()->set_size(data_1x5.size());
+
+    proto_input_1x10.mutable_tensor_content()->assign((char*)data_1x10.data(), data_1x10.size() * sizeof(float));
+    proto_input_1x10.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto_input_1x10.mutable_tensor_shape()->add_dim()->set_size(data_1x10.size());
+
+    EXPECT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+}
