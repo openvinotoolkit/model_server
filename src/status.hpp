@@ -58,6 +58,7 @@ enum class StatusCode {
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
     INVALID_MISSING_INPUT,          /*!< Missing one or more of inputs */
+    INVALID_MISSING_OUTPUT,         /*!< Missing one or more of outputs */
     INVALID_NO_OF_SHAPE_DIMENSIONS, /*!< Invalid number of shape dimensions */
     INVALID_BATCH_SIZE,             /*!< Input batch size other than required */
     INVALID_SHAPE,                  /*!< Invalid shape dimension number or dimension value */
@@ -139,6 +140,9 @@ enum class StatusCode {
     PIPELINE_DEFINITION_NAME_MISSING,
     PIPELINE_NODE_NAME_DUPLICATE,
     PIPELINE_STREAM_ID_NOT_READY_YET,
+    PIPELINE_CYCLE_FOUND,
+    PIPELINE_CONTAINS_UNCONNECTED_NODES,
+    PIPELINE_DEFINITION_MISSING_DEPENDENCY_MAPPING,
 };
 
 class Status {
