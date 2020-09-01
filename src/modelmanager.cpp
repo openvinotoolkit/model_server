@@ -162,29 +162,17 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     const std::string pipelineName = pipelineConfig["name"].GetString();
     SPDLOG_INFO("Reading pipeline:{} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
-    if (itr2 == pipelineConfig.MemberEnd() || !itr2->value.IsArray()) {
-        // TODO what if pipelines requires model not present in OVMS?
-        SPDLOG_ERROR("Pipeline:{} does not have valid nodes configuration", pipelineName);
-        return;
-    }
+
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry"}};
     pipeline_connections_t connections;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
-        if (nodeConfig.HasMember("name")) {
-            nodeName = nodeConfig["name"].GetString();
-        } else {
-            SPDLOG_ERROR("Pipeline:{} has wrong configuration. Missing field 'name' in node config. Schema validation failed", pipelineName);
-            return;
-        }
+        nodeName = nodeConfig["name"].GetString();
+
         std::string modelName;
-        if (nodeConfig.HasMember("model_name")) {
-            modelName = nodeConfig["model_name"].GetString();
-        } else {
-            SPDLOG_ERROR("Pipeline:{} has wrong configuration. Missing field 'model_name' in node config. Schema validation failed", pipelineName);
-            return;
-        }
+        modelName = nodeConfig["model_name"].GetString();
+
         const std::string nodeKindStr = nodeConfig["type"].GetString();
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
@@ -209,17 +197,9 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
             nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
         info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias}));
         auto nodeInputItr = nodeConfig.FindMember("inputs");
-        if (nodeInputItr == nodeConfig.MemberEnd() || !nodeInputItr->value.IsArray()) {
-            SPDLOG_ERROR("Pipeline:{} does not have valid node inputs configuration", pipelineName);
-            return;
-        }
         processNodeInputs(nodeName, nodeInputItr, connections);
     }
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
-    if (iteratorOutputs == configJson.MemberEnd() || !iteratorOutputs->value.IsArray()) {
-        SPDLOG_ERROR("Configuration file doesn't have outputs property for pipelineConfig:{}.", pipelineName);
-        return;
-    }
     const std::string nodeName = "exit";
     // pipeline outputs are node exit inputs
     // TODO what if pipelines requires model not present in OVMS? CVS-34360

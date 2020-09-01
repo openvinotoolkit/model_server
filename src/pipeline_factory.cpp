@@ -101,14 +101,14 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         std::unique_ptr<ModelInstanceUnloadGuard> nodeInstanceUnloadGuard;
         std::shared_ptr<ModelInstance> nodeInstance;
         tensor_map_t nodeInputs;
-        SPDLOG_ERROR("Validation of node{}", node.nodeName);
+        SPDLOG_DEBUG("Validation of node {}", node.nodeName);
 
         Status result;
         if (node.kind == NodeKind::DL) {
             result = getModelInstance(manager, node.modelName, node.modelVersion.value_or(0), nodeInstance,
                 nodeInstanceUnloadGuard);
             if (!result.ok()) {
-                SPDLOG_ERROR("Validation of pipeline definition failed. Missing model:{} version:{}", node.modelName, node.modelVersion.value_or(0));
+                SPDLOG_ERROR("Validation of pipeline definition failed. Missing model: {} version: {}", node.modelName, node.modelVersion.value_or(0));
                 return StatusCode::MODEL_NAME_MISSING;
             }
 
@@ -138,7 +138,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
 
             std::vector<NodeInfo>::iterator sourceNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), pred);
             if (sourceNodeInfo == std::end(nodeInfos)) {
-                SPDLOG_ERROR("Validation of pipeline definition failed. For node:{} missing dependency node:{} ", node.nodeName, sourceNodeName);
+                SPDLOG_ERROR("Validation of pipeline definition failed. For node: {} missing dependency node: {} ", node.nodeName, sourceNodeName);
                 return StatusCode::MODEL_NAME_MISSING;
             }
 
@@ -147,13 +147,13 @@ Status PipelineDefinition::validate(ModelManager& manager) {
                 result = getModelInstance(manager, sourceNodeInfo->modelName, 0, sourceNodeInstance,
                     sourceNodeInstanceUnloadGuard);
                 if (!result.ok()) {
-                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing model:{} version:{}", sourceNodeInfo->modelName, sourceNodeInfo->modelVersion.value_or(0));
+                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing model: {} version: {}", sourceNodeInfo->modelName, sourceNodeInfo->modelVersion.value_or(0));
                     return StatusCode::MODEL_MISSING;
                 }
                 const tensor_map_t& sourceNodeOutputs = sourceNodeInstance->getOutputsInfo();
 
                 if (connection.second.size() == 0) {
-                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing dependency mapping for node:{}", node.nodeName);
+                    SPDLOG_ERROR("Validation of pipeline definition failed. Missing dependency mapping for node: {}", node.nodeName);
                     return StatusCode::INVALID_MISSING_INPUT;
                 }
 
@@ -167,7 +167,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
                     }
                     auto dependencyOutput = sourceNodeOutputs.find(dependencyOutputName);
                     if (dependencyOutput == sourceNodeOutputs.end()) {
-                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing output:{} of model:{}", dependencyOutputName, sourceNodeInstance->getName());
+                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing output: {} of model: {}", dependencyOutputName, sourceNodeInstance->getName());
                         return StatusCode::INVALID_MISSING_INPUT;
                     }
 
@@ -177,7 +177,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
                     std::string& inputName = alias.second;
                     auto nodeInput = nodeInputs.find(inputName);
                     if (nodeInput == nodeInputs.end()) {
-                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing input:{} of node:{}", inputName, node.nodeName);
+                        SPDLOG_ERROR("Validation of pipeline definition failed. Missing input:{} of node: {}", inputName, node.nodeName);
                         return StatusCode::INVALID_MISSING_INPUT;
                     }
                 }

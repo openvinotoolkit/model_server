@@ -113,9 +113,9 @@ static std::string createConfigFileWithContent(const std::string& content, std::
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
-        SPDLOG_ERROR("Closing configFile failed");
+        SPDLOG_INFO("Closing configFile failed");
     } else {
-        SPDLOG_ERROR("Closing configFile succeed");
+        SPDLOG_INFO("Closing configFile succeed");
     }
     return filename;
 }
