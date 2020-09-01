@@ -26,6 +26,8 @@ const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::st
         {grpc::StatusCode::INTERNAL, "The provided base path is invalid or doesn't exists"}},
     {StatusCode::FILE_INVALID,
         {grpc::StatusCode::INTERNAL, "File not found or cannot open"}},
+    {StatusCode::NO_MODEL_VERSION_AVAILABLE,
+        {grpc::StatusCode::INTERNAL, "Not a single model version directory has valid numeric name"}},
     {StatusCode::NETWORK_NOT_LOADED,
         {grpc::StatusCode::INTERNAL, "Error while loading a network"}},
     {StatusCode::JSON_INVALID,
