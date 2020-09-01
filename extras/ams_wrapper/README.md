@@ -1,21 +1,21 @@
 # OpenVINO™ Model Server - AI Extension
 
-OpenVINO™ Model Server - AI Extension extends the results from Native OpenVINO™ Model Server to return inference results in json format. This helps platforms such as Live Video Analytics (LVA) for the Edge from Azure Media Services to delegate inference requests to OpenVINO in media analytics pipelines
+OpenVINO™ Model Server - AI Extension extends the results from Native OpenVINO™ Model Server to return inference results in json format. This helps platforms such as Live Video Analytics (LVA) for the Edge from Azure Media Services to delegate inference requests to OpenVINO™ toolkit in media analytics pipelines.
 
 The integration model is depicted below:
 ![archtecture](AI_extension.png)
 
-OpenVINO Model Server -AI Extension is running as a docker container and exposes an AI_Extension REST API interface for 
+OpenVINO™ Model Server - AI Extension  exposes an AI_Extension REST API interface for 
 the pipeline applications. This interface supports a range of model categories and returns json response 
 including model metadata like attribute, labels or classes names. 
 
-Beside AI_Extension REST API, the OVMS - AI Extension exposes also the complete OpenVINO Model Server REST and gRPC API,
-which could be used with arbitrary OpenVINO model. 
+Beside AI_Extension REST API, the OVMS - AI Extension also exposes the complete OpenVINO™ Model Server REST and gRPC API,
+which could be used with arbitrary model from OpenVINO™ toolkit - Open Model Zoo.  
 
 ## AI_Extension REST API
 
 HTTP contract is defined as follows:
-* OpenVINO Model Server acts as the HTTP server 
+* OpenVINO™ Model Server acts as the HTTP server 
 * LVA acts as the HTTP client
 
 
@@ -56,7 +56,7 @@ Response:
 
 ## Supported models categories
 
-Models configured in OpenVINO Model Server - AI Extension need to belong to one of defined categories. 
+Models configured in OpenVINO™ Model Server - AI Extension need to belong to one of defined categories. 
 The category defines what kind of data is in the model response and in what format. 
 See the category characteristics below to learn more about their requirements. 
 Each model needs to have an associated config file, which describes the included classes, 
@@ -74,7 +74,7 @@ format: [image_id, label, conf, x_min, y_min, x_max, y_max], where:
 - (x_min, y_min) - coordinates of the top left bounding box corner
 - (x_max, y_max) - coordinates of the bottom right bounding box corner.
 
-There are several Object Detection models available in the [OpenVINO Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html). 
+There are several Object Detection models available in the [Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html). 
 The Inference Server Docker image comes pre-built with the following Object Detection models: 
 
 * vehicle-detection - [vehicle-detection-adas-binary-0001](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-detection-adas-binary-0001)
@@ -126,7 +126,7 @@ Each output of the model should have the shape `[1, C , ...]`. First dimension r
 which should be set to 1. `C` represents all classes defined in the model. Remaining dimensions 
 are ignored (if present, first index is used).
 
-Examples of such models are available in the [OpenVINO Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
+Examples of such models are available in the [Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
 The following classification model is included in the OVMS - AI Extension docker image: 
 * vehicle-attributes-recognition - [vehicle-attributes-recognition-barrier-0039](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-attributes-recognition-barrier-0039)
 
@@ -154,13 +154,13 @@ Below is a sample of such model:
   }
 ```
 
-## Deployment and configuration of OpenVINO Inference Server - AI Extension    
+## Deployment and configuration of OpenVINO™ Model Server - AI Extension    
 
-OpenVINO Inference Server - AI Extension includes two components which require proper configuration.
-* OpenVINO Model Server - serves all models and executes inference operation
+OpenVINO™ Model Server - AI Extension includes two components which require proper configuration.
+* OpenVINO™ Model Server - serves all models and executes inference operation
 * AI_Extension REST API wrapper - translates LVA API, run pre and post processing operations, communicates with OVMS via localhost and gRPC interface.
 
-OpenVINO Model server requires file `/opt/ams_models/ovms_config.json` which is by default configured
+OpenVINO™ Model Server requires file `/opt/ams_models/ovms_config.json` which is by default configured
 to use [4 exemplary models](../ams_models/ovms_config.json).
 
 AI_Extension REST API wrapper requires model configuration files describing all enabled models.
@@ -176,7 +176,7 @@ It is, however, not officially supported.
 
 ## Target device selection for models: 
 
-By default, the OpenVINO Model Server - AI Extension is started, serving included models, using CPU as the target device executing the inference requests. 
+By default, the OpenVINO™ Model Server - AI Extension is started, serving included models, using CPU as the target device executing the inference requests. 
 Besides CPU, OVMS - AI Extension is currently supporting 
 [Myriad Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MYRIAD.html), 
 [GPU Plugin](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html)
@@ -193,10 +193,10 @@ Refer to the plugin documentation and examples from [OVMS documentation](../../d
 
 ## Starting docker container
 
-# OpenVINO Inference Server - AI Extension parameters
+# OpenVINO™ Model Server - AI Extension parameters
  
 
-OpenVINO Model Server - AI Extension is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
+OpenVINO™ Model Server - AI Extension is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
 
 ```
 
