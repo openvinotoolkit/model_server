@@ -167,6 +167,7 @@ endif
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar.gz* ; sleep 2" | tar -x
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg)
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
