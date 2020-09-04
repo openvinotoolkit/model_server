@@ -186,7 +186,7 @@ test_checksec:
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH" checksec.txt; then\
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		error Run checksec on ovms binary and fix issues.;\
 	fi
 	@rm -f checksec.txt
