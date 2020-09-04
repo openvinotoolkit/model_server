@@ -125,6 +125,12 @@ endif
 		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
 	fi
 	@rm bandit.txt
+	@echo "Checking license headers in files..."
+	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
+	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
+		error Run python3 lib_search.py . to see missing headers file list.;\
+	fi
+	@rm missing_headers.txt
 
 clang-format: venv
 	@echo "Formating files with clang-format.."
