@@ -96,8 +96,8 @@ Usage:
                                 CPU)
       --plugin_config PLUGIN_CONFIG
                                 a dictionary of plugin configuration keys and
-                                their values, eg
-                                "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_AUTO\"}"
+                                their values, eg "{\"CPU_THROUGHPUT_STREAMS\": \"1\"}".
+                                Default throughput streams for CPU and GPU are calculated by OpenVINO
 ```
 
 
