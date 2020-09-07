@@ -20,6 +20,9 @@
 #include <utility>
 #include <vector>
 
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
+#include "rest_parser.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -61,20 +64,33 @@ public:
     /**
      * @brief Process predict request
      *
-     * @param model_name 
-     * @param model_version 
-     * @param model_version_label 
+     * @param modelName 
+     * @param modelVersion 
+     * @param modelVersionLabel 
      * @param request 
      * @param response 
      *
      * @return StatusCode 
      */
     Status processPredictRequest(
-        const std::string& model_name,
-        const std::optional<int64_t>& model_version,
-        const std::optional<std::string_view>& model_version_label,
+        const std::string& modelName,
+        const std::optional<int64_t>& modelVersion,
+        const std::optional<std::string_view>& modelVersionLabel,
         const std::string& request,
         std::string* response);
+
+    Status processSingleModelRequest(
+        const std::string& modelName,
+        const std::optional<int64_t>& modelVersion,
+        const std::string& request,
+        Order& requestOrder,
+        tensorflow::serving::PredictResponse& responseProto);
+
+    Status processPipelineRequest(
+        const std::string& modelName,
+        const std::string& request,
+        Order& requestOrder,
+        tensorflow::serving::PredictResponse& responseProto);
 
     /**
      * @brief Process Model Metadata request

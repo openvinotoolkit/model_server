@@ -16,6 +16,7 @@
 #include "rest_parser.hpp"
 
 #include <functional>
+#include <string>
 
 namespace ovms {
 
@@ -23,6 +24,7 @@ RestParser::RestParser(const tensor_map_t& tensors) {
     for (const auto& kv : tensors) {
         const auto& name = kv.first;
         const auto& tensor = kv.second;
+        tensorPrecisionMap[name] = tensor->getPrecision();
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
         input.mutable_tensor_content()->reserve(std::accumulate(
@@ -34,7 +36,20 @@ RestParser::RestParser(const tensor_map_t& tensors) {
     }
 }
 
-bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto) {
+void RestParser::removeUnusedInputs() {
+    auto& inputs = (*requestProto.mutable_inputs());
+    auto it = inputs.begin();
+    while (it != inputs.end()) {
+        if (!it->second.tensor_shape().dim_size()) {
+            SPDLOG_DEBUG("Removing {} input from proto since it's not included in the request", it->first);
+            it = inputs.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
+
+bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
     if (!doc.IsArray()) {
         return false;
     }
@@ -46,12 +61,14 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
     }
     if (doc.GetArray()[0].IsArray()) {
         for (auto& itr : doc.GetArray()) {
-            if (!parseArray(itr, dim + 1, proto)) {
+            if (!parseArray(itr, dim + 1, proto, tensorName)) {
                 return false;
             }
         }
         return true;
     } else {
+        if (!setPrecisionIfNotSet(doc.GetArray()[0], proto, tensorName))
+            return false;
         for (auto& value : doc.GetArray()) {
             if (!addValue(proto, value)) {
                 return false;
@@ -67,9 +84,10 @@ bool RestParser::parseInstance(rapidjson::Value& doc) {
         return false;
     }
     for (auto& itr : doc.GetObject()) {
-        auto& proto = (*requestProto.mutable_inputs())[itr.name.GetString()];
+        std::string tensorName = itr.name.GetString();
+        auto& proto = (*requestProto.mutable_inputs())[tensorName];
         increaseBatchSize(proto);
-        if (!parseArray(itr.value, 1, proto)) {
+        if (!parseArray(itr.value, 1, proto, tensorName)) {
             return false;
         }
     }
@@ -111,7 +129,7 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
         }
-        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second)) {
+        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second, requestProto.mutable_inputs()->begin()->first)) {
             return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
         } else {
             format = Format::NONAMED;
@@ -120,6 +138,7 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
     } else {
         return StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED;
     }
+    removeUnusedInputs();
     if (!isBatchSizeEqualForAllInputs()) {
         return StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER;
     }
@@ -134,7 +153,7 @@ Status RestParser::parseColumnFormat(rapidjson::Value& node) {
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
         }
-        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second)) {
+        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second, requestProto.mutable_inputs()->begin()->first)) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
         format = Format::NONAMED;
@@ -148,11 +167,13 @@ Status RestParser::parseColumnFormat(rapidjson::Value& node) {
         return StatusCode::REST_NO_INPUTS_FOUND;
     }
     for (auto& kv : node.GetObject()) {
-        auto& proto = (*requestProto.mutable_inputs())[kv.name.GetString()];
-        if (!parseArray(kv.value, 0, proto)) {
+        std::string tensorName = kv.name.GetString();
+        auto& proto = (*requestProto.mutable_inputs())[tensorName];
+        if (!parseArray(kv.value, 0, proto, tensorName)) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
     }
+    removeUnusedInputs();
     format = Format::NAMED;
     return StatusCode::OK;
 }
@@ -276,9 +297,9 @@ bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) 
 }
 
 bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
-    if (!value.IsNumber()) {
+    if (!value.IsNumber())
         return false;
-    }
+
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
         return addToTensorContent<float>(proto, value);
@@ -305,6 +326,21 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     default:
         return false;
     }
+}
+
+bool RestParser::setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if (tensorPrecisionMap.count(tensorName))
+        return true;
+
+    if (value.IsInt())
+        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::I32;
+    else if (value.IsDouble())
+        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::FP32;
+    else
+        return false;
+
+    proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
+    return true;
 }
 
 }  // namespace ovms
