@@ -36,6 +36,9 @@ using namespace ovms;
 using namespace tensorflow;
 using namespace tensorflow::serving;
 
+using testing::_;
+using testing::Return;
+
 const uint NIREQ = 2;
 
 class EnsembleFlowTest : public ::testing::Test {
@@ -626,7 +629,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
 }
 
-TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionValidation) {
+TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionNodesValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -651,10 +654,10 @@ TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionValidation) {
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::OK);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithModelBatchingModeAutoValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setBatchingMode(AUTO);
     managerWithDummyModel.reloadModelWithVersions(config);
@@ -680,10 +683,10 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithModelBatchingModeAutoValidation) 
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithModelShapeModeAutoValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     shapes_map_t shapes;
     ShapeInfo shape;
@@ -714,10 +717,10 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithModelShapeModeAutoValidation) {
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithMissingNodeModelValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -743,10 +746,10 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithMissingNodeModelValidation) {
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::MODEL_NAME_MISSING);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithMissingConnectionNodeValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingConnectionNodeValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -775,10 +778,10 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithMissingConnectionNodeValidation) 
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::MODEL_NAME_MISSING);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithNodeOutputMissingValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -799,14 +802,14 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithNodeOutputMissingValidation) {
 
     // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
     connections["exit"] = {
-        {"dummy_node", {{"Missing", customPipelineOutputName}}}};
+        {"dummy_node", {{"MISSING", customPipelineOutputName}}}};
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::INVALID_MISSING_INPUT);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::INVALID_MISSING_OUTPUT);
 }
 
-TEST_F(EnsembleFlowTest, PipelineDefinitionWithNodeInputMissingValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -822,16 +825,274 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionWithNodeInputMissingValidation) {
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
     // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    //                                           /\--------|
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, "Missing"}}}};
+        {"entry", {{customPipelineInputName, DUMMY_MODEL_OUTPUT_NAME}}},
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "MISSING"}}}};
 
     // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
     connections["exit"] = {
-        {"dummy_node", {{DUMMY_MODEL_INPUT_NAME, customPipelineOutputName}}}};
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(managerWithDummyModel), StatusCode::INVALID_MISSING_INPUT);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::INVALID_MISSING_INPUT);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::DL, "dummy_node1", "output"},
+        {NodeKind::DL, "dummy_node2", "output"},
+        {NodeKind::DL, "dummy_node3", "output"},
+        {NodeKind::DL, "dummy_node4", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node O--------->O dummy node 1
+    connections["dummy_node1"] = {
+        {"dummy_node", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O dummy node 2
+    connections["dummy_node2"] = {
+        {"dummy_node1", {{"output", "input"}}}};
+
+    // dummy node 2 O-------->\/
+    // dummy node 4 O--------->O exit
+    connections["exit"] = {
+        {"dummy_node2", {{"output", "input"}}},
+        {"dummy_node4", {{"output", "input"}}}};
+
+    // entry O--------->O dummy node 3
+    connections["dummy_node3"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node 3 O-------->\/
+    // dummy node 2 O--------->O dummy node 4
+    connections["dummy_node4"] = {
+        {"dummy_node3", {{"output", "input"}}},
+        {"dummy_node2", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::OK);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::DL, "dummy_node1", "output"},
+        {NodeKind::DL, "dummy_node2", "output"},
+        {NodeKind::DL, "dummy_node3", "output"},
+        {NodeKind::DL, "dummy_node4", "output"},
+        {NodeKind::DL, "dummy_node5", "output"},
+        {NodeKind::DL, "dummy_node6", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node O--------->O dummy node 1
+    connections["dummy_node1"] = {
+        {"dummy_node", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O dummy node 2
+    connections["dummy_node2"] = {
+        {"dummy_node1", {{"output", "input"}}}};
+
+    // dummy node 2 O-------->\/
+    // dummy node 6 O--------->O dummy node 3
+    connections["dummy_node3"] = {
+        {"dummy_node2", {{"output", "input"}}},
+        {"dummy_node6", {{"output", "input"}}}};
+
+    // dummy node 3 O-------->\/
+    // dummy node 6 O--------->O exit
+    connections["exit"] = {
+        {"dummy_node3", {{"output", "input"}}},
+        {"dummy_node6", {{"output", "input"}}}};
+
+    // entry O--------->O dummy node 4
+    connections["dummy_node4"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node 3 O-------->\/
+    // dummy node 4 O--------->O dummy node 5
+    connections["dummy_node5"] = {
+        {"dummy_node4", {{"output", "input"}}},
+        {"dummy_node3", {{"output", "input"}}}};
+
+    // dummy node 5 O--------->O dummy node 6
+    connections["dummy_node6"] = {
+        {"dummy_node5", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::PIPELINE_CYCLE_FOUND);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionContainingCycleValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::DL, "dummy_node1", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // exit O--------->O dummy node
+    connections["dummy_node"] = {
+        {"exit", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O exit
+    connections["exit"] = {
+        {"dummy_node1", {{"output", "input"}}}};
+
+    // dummy node O--------->O dummy node 1
+    connections["dummy_node1"] = {
+        {"dummy_node", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::PIPELINE_CYCLE_FOUND);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node ----|
+    //                            /\-----|
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}},
+        {"dummy_node", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O exit
+    connections["exit"] = {
+        {"dummy_node", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::PIPELINE_CYCLE_FOUND);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::DL, "dummy_node1", "output"},
+        {NodeKind::DL, "dummy_node2", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node O--------->O dummy node
+    connections["dummy_node"] = {
+        {"exit", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O exit
+    connections["exit"] = {
+        {"dummy_node1", {{"output", "input"}}}};
+
+    // dummy node   O---------------\/
+    // dummy node 2 O--------->dummy node 1
+    connections["dummy_node1"] = {
+        {"dummy_node", {{"output", "input"}}},
+        {"dummy_node2", {{"output", "input"}}}};
+
+    // dummy node 1 O--------->O dummy node 2
+    connections["dummy_node2"] = {
+        {"dummy_node1", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::PIPELINE_CYCLE_FOUND);
+}
+
+TEST_F(EnsembleFlowTest, PipelineDefinitionContainingUnconnectedNodeValidation) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    PipelineFactory factory;
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "entry"},
+        {NodeKind::DL, "dummy_node", "output"},
+        {NodeKind::DL, "dummy_node1", "output"},
+        {NodeKind::EXIT, "exit"},
+    };
+
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    // entry O--------->O dummy node
+    connections["dummy_node"] = {
+        {"entry", {{"output", "input"}}}};
+
+    // dummy node O--------->O exit
+    connections["exit"] = {
+        {"dummy_node", {{"output", "input"}}}};
+
+    // Create pipeline definition
+    PipelineDefinition pipelineDefinition("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition.validateForCycles(), StatusCode::PIPELINE_CONTAINS_UNCONNECTED_NODES);
 }
 
 TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
@@ -988,13 +1249,10 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "entry1"},
         {NodeKind::ENTRY, "entry2"},
+        {NodeKind::EXIT, "exit"},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::OK);
-    PredictRequest request;
-    PredictResponse response;
-    std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
@@ -1007,13 +1265,10 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
     std::vector<NodeInfo> info{
         {NodeKind::EXIT, "exit1"},
         {NodeKind::EXIT, "exit2"},
+        {NodeKind::ENTRY, "entry"},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::OK);
-    PredictRequest request;
-    PredictResponse response;
-    std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
@@ -1027,11 +1282,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
         {NodeKind::ENTRY, "entry"},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::OK);
-    PredictRequest request;
-    PredictResponse response;
-    std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
@@ -1045,11 +1296,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
         {NodeKind::EXIT, "exit"},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::OK);
-    PredictRequest request;
-    PredictResponse response;
-    std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
@@ -1075,11 +1322,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
         {NodeKind::EXIT, "exit"},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::OK);
-    PredictRequest request;
-    PredictResponse response;
-    std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
 }
 
 const char* pipelineOneDummyConfig = R"(

@@ -67,6 +67,9 @@ class PipelineDefinition {
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
 
+private:
+    Status validateNode(ModelManager& manager, NodeInfo& node);
+
 public:
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
@@ -80,7 +83,8 @@ public:
         tensorflow::serving::PredictResponse* response,
         ModelManager& manager) const;
 
-    Status validate(ModelManager& manager);
+    Status validateNodes(ModelManager& manager);
+    Status validateForCycles();
 
     // TODO: validate method for one entry, one exit, acyclic, connected, no dead ends
     // https://jira.devtools.intel.com/browse/CVS-34360
