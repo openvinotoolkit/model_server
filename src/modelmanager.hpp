@@ -149,6 +149,13 @@ public:
         return it != models.end() ? it->second : nullptr;
     }
 
+    const bool modelExists(const std::string& name) const {
+        if (findModelByName(name) == nullptr)
+            return false;
+        else
+            return true;
+    }
+
     /**
      * @brief Finds model instance with specific name and version, returns default if version not specified
      *
@@ -175,6 +182,10 @@ public:
         const tensorflow::serving::PredictRequest* request,
         tensorflow::serving::PredictResponse* response) {
         return pipelineFactory.create(pipeline, name, request, response, *this);
+    }
+
+    const bool pipelineDefinitionExists(const std::string& name) const {
+        return pipelineFactory.definitionExists(name);
     }
 
     /**

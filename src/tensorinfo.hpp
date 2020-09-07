@@ -164,6 +164,10 @@ public:
          * @return const tensorflow::DataType
          */
     const tensorflow::DataType getPrecisionAsDataType() const {
+        return getPrecisionAsDataType(precision);
+    }
+
+    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision) {
         switch (precision) {
         case InferenceEngine::Precision::FP32:
             return tensorflow::DataType::DT_FLOAT;
@@ -198,6 +202,10 @@ public:
         * @return const std::string
         */
     const std::string getPrecisionAsString() const {
+        return getPrecisionAsString(precision);
+    }
+
+    static const std::string getPrecisionAsString(InferenceEngine::Precision precision) {
         switch (precision) {
         case InferenceEngine::Precision::FP32:
             return "FP32";

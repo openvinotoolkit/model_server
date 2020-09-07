@@ -15,6 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <string>
+
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
@@ -63,6 +66,13 @@ class RestParser {
     tensorflow::serving::PredictRequest requestProto;
 
     /**
+     * @brief Request content precision
+     */
+    std::map<std::string, InferenceEngine::Precision> tensorPrecisionMap;
+
+    void removeUnusedInputs();
+
+    /**
      * @brief Increases batch size (0th-dimension) of tensor
      */
     static void increaseBatchSize(tensorflow::TensorProto& proto);
@@ -95,7 +105,7 @@ class RestParser {
      *     ...
      * ]
      */
-    bool parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto);
+    bool parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName);
 
     /**
      * @brief Parses rapidjson Node for inputs in a string(name)=>array(data) format
@@ -150,9 +160,10 @@ class RestParser {
      */
     Status parseColumnFormat(rapidjson::Value& node);
 
+    bool setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName);
+
 public:
     RestParser() = default;
-
     /**
      * @brief Constructor for preallocating memory for inputs beforehand. Size is calculated from tensor shape required by backend.
      * 
