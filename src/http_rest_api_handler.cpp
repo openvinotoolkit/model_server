@@ -175,7 +175,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         modelInstance,
         modelInstanceUnloadGuard);
 
-    if (status == StatusCode::MODEL_NAME_MISSING) {
+    if (!status.ok()) {
         SPDLOG_INFO("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
         return status;
     }
