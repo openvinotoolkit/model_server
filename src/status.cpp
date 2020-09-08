@@ -41,7 +41,7 @@ const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::st
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT,
         {grpc::StatusCode::INTERNAL, "Model version policy is in wrong format"}},
     {StatusCode::RESHAPE_ERROR,
-        {grpc::StatusCode::INTERNAL, "Model reshape failed"}},
+        {grpc::StatusCode::FAILED_PRECONDITION, "Model could not be reshaped with requested shape"}},
     {StatusCode::AMBIGUOUS_SHAPE_PARAM,
         {grpc::StatusCode::INTERNAL, "Anonymous fixed shape is invalid for models with multiple inputs"}},
     {StatusCode::MODEL_MISSING,
@@ -135,6 +135,8 @@ const net_http::HTTPStatusCode Status::http() const {
     case StatusCode::INVALID_VALUE_COUNT:
     case StatusCode::INVALID_MISSING_INPUT:
         return HTTPStatusCode::BAD_REQUEST;
+    case StatusCode::RESHAPE_ERROR:
+        return HTTPStatusCode::PRECOND_FAILED;
     default:
         return HTTPStatusCode::ERROR;
     }
