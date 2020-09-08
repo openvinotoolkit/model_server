@@ -96,6 +96,10 @@ const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::st
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR,
         {grpc::StatusCode::INTERNAL, "Internal server error"}},
+
+    // GCS
+    {StatusCode::GCS_INVALID_ACCESS,
+        {grpc::StatusCode::INTERNAL, "Invalid or missing GCS credentials"}},
 };
 
 const net_http::HTTPStatusCode Status::http() const {

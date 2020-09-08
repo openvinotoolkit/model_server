@@ -251,8 +251,9 @@ GCSFileSystem::getDirectoryContents(const std::string& path,
     full_directory = AppendSlash(directory_path);
     for (auto&& meta : client_.ListObjects(bucket, gcs::Prefix(full_directory))) {
         if (!meta) {
-            SPDLOG_WARN("GCS: Unable to get directory content {} -> object metadata "
-                        "is empty.");
+            SPDLOG_WARN("GCS: Unable to get directory content -> object metadata "
+                        "is empty. Error: {}",
+                meta.status().message());
             return StatusCode::GCS_INVALID_ACCESS;
         }
         // ignore self:
