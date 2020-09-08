@@ -192,10 +192,15 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
 
     std::vector<std::unique_ptr<Server>> servers;
     uint grpcServersCount = getGRPCServersCount();
+    servers.reserve(grpcServersCount);
     spdlog::debug("Starting grpc servers: {}", grpcServersCount);
 
     for (uint i = 0; i < grpcServersCount; ++i) {
-        servers.push_back(std::unique_ptr<Server>(builder.BuildAndStart()));
+        std::unique_ptr<Server> server = builder.BuildAndStart();
+        if (server == nullptr) {
+            throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
+        }
+        servers.push_back(std::move(server));
     }
     spdlog::info("Server started on port {}", config.port());
 
@@ -216,7 +221,7 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
         if (restServer != nullptr) {
             spdlog::info("Started REST server at {}", server_address);
         } else {
-            spdlog::error("Failed to start REST server at {}", server_address);
+            throw std::runtime_error("Failed to start REST server at " + server_address);
         }
 
         return restServer;
@@ -242,7 +247,6 @@ int server_main(int argc, char** argv) {
         auto rest = startRESTServer();
 
         grpc[0]->Wait();
-
         if (rest != nullptr) {
             rest->WaitForTermination();
         }
