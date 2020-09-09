@@ -76,6 +76,8 @@ More complete guides to using Model Server in various scenarios can be found her
 
 * [Performance tuning](docs/performance_tuning.md)
 
+* [Model Ensemble Scheduler](docs/ensemble_scheduler.md)
+
 
 ## gRPC API Documentation
 

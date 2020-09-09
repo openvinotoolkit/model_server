@@ -26,7 +26,7 @@ class EntryNode : public Node {
 
 public:
     EntryNode(const tensorflow::serving::PredictRequest* request) :
-        Node("entry"),
+        Node("request"),
         request(request) {}
 
     Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {

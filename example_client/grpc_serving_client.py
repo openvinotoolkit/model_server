@@ -50,6 +50,8 @@ parser.add_argument('--batchsize', default=1,
                     dest='batchsize')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
+                    dest='pipeline_name')
 args = vars(parser.parse_args())
 
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
@@ -91,13 +93,14 @@ if args.get('transpose_input') == "True":
 print('\tImages in shape: {}\n'.format(imgs.shape))
 
 iteration = 0
+is_pipeline_request = bool(args.get('pipeline_name'))
 
 while iteration <= iterations:
     for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
         iteration += 1
         if iteration > iterations: break
         request = predict_pb2.PredictRequest()
-        request.model_spec.name = args.get('model_name')
+        request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
         img = imgs[x:(x + batch_size)]
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
@@ -123,8 +126,13 @@ while iteration <= iterations:
         # Comment out this section for non imagenet datasets
         print("imagenet top results in a single batch:")
         for i in range(nu.shape[0]):
-            single_result = nu[[i],...]
-            ma = np.argmax(single_result)
+            if is_pipeline_request:
+                # shape (1,)
+                ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
+            else:
+                # shape (1,1000)
+                single_result = nu[[i],...]
+                ma = np.argmax(single_result)
             mark_message = ""
             if args.get('labels_numpy_path') is not None:
                 total_executed += 1

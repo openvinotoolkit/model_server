@@ -637,19 +637,19 @@ TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionNodesValidation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -666,19 +666,19 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidat
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -700,19 +700,19 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -728,20 +728,20 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) 
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node1", "dummy"},
         {NodeKind::DL, "dummy_node2", "missing"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -757,23 +757,23 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingConnectionNodeValidat
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
     // missingNode (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
         {"missingNode", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -789,19 +789,19 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation)
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{"MISSING", customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -817,21 +817,21 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) 
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     //                                           /\--------|
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_OUTPUT_NAME}}},
+        {"request", {{customPipelineInputName, DUMMY_MODEL_OUTPUT_NAME}}},
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "MISSING"}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -847,20 +847,20 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
         {NodeKind::DL, "dummy_node1", "output"},
         {NodeKind::DL, "dummy_node2", "output"},
         {NodeKind::DL, "dummy_node3", "output"},
         {NodeKind::DL, "dummy_node4", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node
+    // request O--------->O dummy node
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
     // dummy node O--------->O dummy node 1
     connections["dummy_node1"] = {
@@ -871,14 +871,14 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
         {"dummy_node1", {{"output", "input"}}}};
 
     // dummy node 2 O-------->\/
-    // dummy node 4 O--------->O exit
-    connections["exit"] = {
+    // dummy node 4 O--------->O response
+    connections["response"] = {
         {"dummy_node2", {{"output", "input"}}},
         {"dummy_node4", {{"output", "input"}}}};
 
-    // entry O--------->O dummy node 3
+    // request O--------->O dummy node 3
     connections["dummy_node3"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
     // dummy node 3 O-------->\/
     // dummy node 2 O--------->O dummy node 4
@@ -899,7 +899,7 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
         {NodeKind::DL, "dummy_node1", "output"},
         {NodeKind::DL, "dummy_node2", "output"},
@@ -907,14 +907,14 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
         {NodeKind::DL, "dummy_node4", "output"},
         {NodeKind::DL, "dummy_node5", "output"},
         {NodeKind::DL, "dummy_node6", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node
+    // request O--------->O dummy node
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
     // dummy node O--------->O dummy node 1
     connections["dummy_node1"] = {
@@ -931,14 +931,14 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
         {"dummy_node6", {{"output", "input"}}}};
 
     // dummy node 3 O-------->\/
-    // dummy node 6 O--------->O exit
-    connections["exit"] = {
+    // dummy node 6 O--------->O response
+    connections["response"] = {
         {"dummy_node3", {{"output", "input"}}},
         {"dummy_node6", {{"output", "input"}}}};
 
-    // entry O--------->O dummy node 4
+    // request O--------->O dummy node 4
     connections["dummy_node4"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
     // dummy node 3 O-------->\/
     // dummy node 4 O--------->O dummy node 5
@@ -963,24 +963,24 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingCycleValidation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
         {NodeKind::DL, "dummy_node1", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node
+    // request O--------->O dummy node
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
-    // exit O--------->O dummy node
+    // response O--------->O dummy node
     connections["dummy_node"] = {
-        {"exit", {{"output", "input"}}}};
+        {"response", {{"output", "input"}}}};
 
-    // dummy node 1 O--------->O exit
-    connections["exit"] = {
+    // dummy node 1 O--------->O response
+    connections["response"] = {
         {"dummy_node1", {{"output", "input"}}}};
 
     // dummy node O--------->O dummy node 1
@@ -1000,21 +1000,21 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValida
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node ----|
+    // request O--------->O dummy node ----|
     //                            /\-----|
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}},
+        {"request", {{"output", "input"}}},
         {"dummy_node", {{"output", "input"}}}};
 
-    // dummy node 1 O--------->O exit
-    connections["exit"] = {
+    // dummy node 1 O--------->O response
+    connections["response"] = {
         {"dummy_node", {{"output", "input"}}}};
 
     // Create pipeline definition
@@ -1030,25 +1030,25 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
         {NodeKind::DL, "dummy_node1", "output"},
         {NodeKind::DL, "dummy_node2", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node
+    // request O--------->O dummy node
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
     // dummy node O--------->O dummy node
     connections["dummy_node"] = {
-        {"exit", {{"output", "input"}}}};
+        {"response", {{"output", "input"}}}};
 
-    // dummy node 1 O--------->O exit
-    connections["exit"] = {
+    // dummy node 1 O--------->O response
+    connections["response"] = {
         {"dummy_node1", {{"output", "input"}}}};
 
     // dummy node   O---------------\/
@@ -1074,20 +1074,20 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingUnconnectedNodeValidation) 
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "output"},
         {NodeKind::DL, "dummy_node1", "output"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry O--------->O dummy node
+    // request O--------->O dummy node
     connections["dummy_node"] = {
-        {"entry", {{"output", "input"}}}};
+        {"request", {{"output", "input"}}}};
 
-    // dummy node O--------->O exit
-    connections["exit"] = {
+    // dummy node O--------->O response
+    connections["response"] = {
         {"dummy_node", {{"output", "input"}}}};
 
     // Create pipeline definition
@@ -1102,7 +1102,7 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
     PipelineFactory factory;
 
     // Nodes
-    // entry   dummy_node    exit
+    // request   dummy_node    response
     //  O--------->O---------->O
     //           dummy
     //          default
@@ -1110,19 +1110,19 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
-    // entry (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
+    // request (customPipelineInputName) O--------->O dummy node (DUMMY_MODEL_INPUT_NAME)
     connections["dummy_node"] = {
-        {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (customPipelineOutputName)
-    connections["exit"] = {
+    // dummy node (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections["response"] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
@@ -1149,7 +1149,7 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     //                 Nodes
     //              dummy_node_N
     //         .-------->O----------v
-    //  entry O--------->O---------->O exit
+    //  request O--------->O---------->O response
     //         *-------->O----------^
     //                dummy
     //               default
@@ -1160,8 +1160,8 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::EXIT, "response"},
     };
 
     for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
@@ -1171,17 +1171,17 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
 
     for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
-        // entry (customPipelineInputName) O--------->O dummy_node_N (DUMMY_MODEL_INPUT_NAME)
+        // request (customPipelineInputName) O--------->O dummy_node_N (DUMMY_MODEL_INPUT_NAME)
         connections["dummy_node_" + std::to_string(i)] = {
-            {"entry", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+            {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
     }
 
     // dummy_node_0 (DUMMY_MODEL_OUTPUT_NAME) O---------v
-    // dummy_node_1 (DUMMY_MODEL_OUTPUT_NAME) O--------->O exit (output_0, output_1, output_N)
+    // dummy_node_1 (DUMMY_MODEL_OUTPUT_NAME) O--------->O response (output_0, output_1, output_N)
     // dummy_node_N (DUMMY_MODEL_OUTPUT_NAME) O---------^
-    auto& exitConnections = connections["exit"];
+    auto& responseConnections = connections["response"];
     for (int i = 0; i < PARALLEL_DUMMY_NODES; i++) {
-        exitConnections["dummy_node_" + std::to_string(i)] = {{DUMMY_MODEL_OUTPUT_NAME, "output_" + std::to_string(i)}};
+        responseConnections["dummy_node_" + std::to_string(i)] = {{DUMMY_MODEL_OUTPUT_NAME, "output_" + std::to_string(i)}};
     }
 
     // Create pipeline definition
@@ -1247,9 +1247,9 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry1"},
-        {NodeKind::ENTRY, "entry2"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::ENTRY, "request1"},
+        {NodeKind::ENTRY, "request2"},
+        {NodeKind::EXIT, "response"},
     };
 
     ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
@@ -1263,9 +1263,9 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::EXIT, "exit1"},
-        {NodeKind::EXIT, "exit2"},
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::EXIT, "response1"},
+        {NodeKind::EXIT, "response2"},
+        {NodeKind::ENTRY, "request"},
     };
 
     ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
@@ -1279,7 +1279,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
     };
 
     EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
@@ -1293,7 +1293,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
@@ -1316,10 +1316,10 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"},
+        {NodeKind::ENTRY, "request"},
         {NodeKind::DL, "dummy_node", "dummy"},
         {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "exit"},
+        {NodeKind::EXIT, "response"},
     };
 
     ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
@@ -1347,18 +1347,18 @@ const char* pipelineOneDummyConfig = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1406,12 +1406,12 @@ const char* pipelineOneDummyConfig2ParallelDummy = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 },
                 {
@@ -1419,21 +1419,21 @@ const char* pipelineOneDummyConfig2ParallelDummy = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output2"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output2"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 },
-                {"custom_dummy_output2": {"SourceNodeName": "dummyNode2",
-                                         "SourceNodeOutputName": "new_dummy_output2"}
+                {"custom_dummy_output2": {"node_name": "dummyNode2",
+                                         "data_item": "new_dummy_output2"}
                 }
             ]
         }
@@ -1510,18 +1510,18 @@ const char* pipelineOneDummyConfigWrongNodeKind = R"(
                     "model_name": "dummy",
                     "type": "DL modeloze Wrong kind",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1553,18 +1553,18 @@ const char* pipelineOneDummyConfigMissingNodeModelName = R"(
                     "name": "dummyNode",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1596,18 +1596,18 @@ const char* pipelineOneDummyConfigMissingNodeName = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1640,14 +1640,14 @@ const char* pipelineOneDummyConfigMissingNodeInputs = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1680,14 +1680,14 @@ const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ]
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }
@@ -1720,12 +1720,12 @@ const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ]
@@ -1758,18 +1758,18 @@ const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"SourceNodeName": "entry",
-                               "SourceNodeOutputName": "custom_dummy_input"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
                     ], 
                     "outputs": [
-                        {"ModelOutputName": "a",
-                         "OutputName": "new_dummy_output"}
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
                     ] 
                 }
             ],
             "outputs": [
-                {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                         "SourceNodeOutputName": "new_dummy_output"}
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
                 }
             ]
         }

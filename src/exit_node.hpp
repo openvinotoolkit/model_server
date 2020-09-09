@@ -26,7 +26,7 @@ class ExitNode : public Node {
 
 public:
     ExitNode(tensorflow::serving::PredictResponse* response) :
-        Node("exit"),
+        Node("response"),
         response(response) {
     }
 

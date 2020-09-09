@@ -98,7 +98,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     }
 
     timer.stop("total");
-    spdlog::debug("Total time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    spdlog::debug("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
 }
 

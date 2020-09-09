@@ -178,21 +178,21 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
             {
                 "name": "ensemble_name1", 
                 "inputs": ["in"], 
-                "outputs": [{"a":{"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+                "outputs": [{"a":{"node_name": "beta","data_item": "text"}}], 
                 "nodes": [  
                     { 
                         "name": "alpha", 
                         "model_name": "dummy",
                         "type": "DL model", 
-                        "inputs": [{"a":{"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
-                        "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+                        "inputs": [{"a":{"node_name": "input","data_item": "in"}}], 
+                        "outputs": [{"data_item": "prob","alias": "prob"}] 
                     }, 
                     { 
                         "name": "beta", 
                         "model_name": "dummy",
                         "type": "DL model",
-                        "inputs": [{"a":{"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
-                        "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+                        "inputs": [{"a":{"node_name": "alpha","data_item": "prob"}}],
+                        "outputs": [{"data_item": "text","alias": "text"}] 
                     }
                 ]
             }
@@ -216,19 +216,19 @@ TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     {
     "name": "ensemble_name1", 
     "inputs": ["in"], 
-    "outputs": [{"out1": {"SourceNodeName": "beta","SourceNodeOutputName": "text"}}], 
+    "outputs": [{"out1": {"node_name": "beta","data_item": "text"}}], 
     "nodes": [  
     { 
     "name": "alpha", 
     "type": "DL Model", 
-    "inputs": [{"data": {"SourceNodeName": "input","SourceNodeOutputName": "in"}}], 
-    "outputs": [{"ModelOutputName": "prob","OutputName": "prob"}] 
+    "inputs": [{"data": {"node_name": "input","data_item": "in"}}], 
+    "outputs": [{"data_item": "prob","alias": "prob"}] 
     }, 
     { 
     "name": "beta", 
     "type": "DL Model",
-    "inputs": [{"data": {"SourceNodeName": "alpha","SourceNodeOutputName": "prob"}}],
-    "outputs": [{"ModelOutputName": "text","OutputName": "text"}] 
+    "inputs": [{"data": {"node_name": "alpha","data_item": "prob"}}],
+    "outputs": [{"data_item": "text","alias": "text"}] 
     }]}})";
 
     std::string configFile = "/tmp/ovms_config_file.json";

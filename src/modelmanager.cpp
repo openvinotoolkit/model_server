@@ -132,9 +132,9 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
         // print(nodeInput);
         for (const auto& objectNameValue : nodeInput.GetObject()) {
             const std::string inputName = objectNameValue.name.GetString();
-            const std::string sourceNodeName = objectNameValue.value.GetObject()["SourceNodeName"].GetString();
-            const std::string sourceOutputName = objectNameValue.value.GetObject()["SourceNodeOutputName"].GetString();
-            SPDLOG_INFO("Creating node dependencies mapping entry. Node:{} input:{} <- SourceNode:{} output:{}",
+            const std::string sourceNodeName = objectNameValue.value.GetObject()["node_name"].GetString();
+            const std::string sourceOutputName = objectNameValue.value.GetObject()["data_item"].GetString();
+            SPDLOG_INFO("Creating node dependencies mapping request. Node:{} input:{} <- SourceNode:{} output:{}",
                 nodeName, inputName, sourceNodeName, sourceOutputName);
             if (connections.find(nodeName) == connections.end()) {
                 connections[nodeName] = {
@@ -150,8 +150,8 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
 
 void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
     for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
-        const std::string modelOutputName = nodeOutput.GetObject()["ModelOutputName"].GetString();
-        const std::string nodeOutputName = nodeOutput.GetObject()["OutputName"].GetString();
+        const std::string modelOutputName = nodeOutput.GetObject()["data_item"].GetString();
+        const std::string nodeOutputName = nodeOutput.GetObject()["alias"].GetString();
         SPDLOG_INFO("Alliasing node:{} model_name:{} output:{}, under alias:{}",
             nodeName, modelName, modelOutputName, nodeOutputName);
         nodeOutputNameAlias[nodeOutputName] = modelOutputName;
@@ -164,7 +164,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     auto itr2 = pipelineConfig.FindMember("nodes");
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "entry"}};
+        {NodeKind::ENTRY, "request"}};
     pipeline_connections_t connections;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
@@ -200,7 +200,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         processNodeInputs(nodeName, nodeInputItr, connections);
     }
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
-    const std::string nodeName = "exit";
+    const std::string nodeName = "response";
     // pipeline outputs are node exit inputs
     // TODO what if pipelines requires model not present in OVMS? CVS-34360
     processNodeInputs(nodeName, iteratorOutputs, connections);

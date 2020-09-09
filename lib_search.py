@@ -43,9 +43,9 @@ def check_dir(start_dir):
     not_ok = []
     no_header = []
 
-    exclude_files = ['__pycache__', '.venv', 'ovms-c/dist', '.git', '.tar.gz', 'docx', '.npy', '.png', '.bin',
-                     '.jpeg', 'license.txt', 'md', '.groovy', '.json' ,'bazel-', 'Doxyfile', 'clang-format',
-                     'net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
+    exclude_files = ['__pycache__', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.tar.gz', 'docx',
+                     '.npy', '.png', '.svg', '.bin', '.jpeg', 'license.txt', 'md', '.groovy', '.json' ,'bazel-',
+                     'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD' ]

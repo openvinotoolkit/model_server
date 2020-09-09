@@ -156,7 +156,7 @@ Status HttpRestApiHandler::processPredictRequest(
         return status;
 
     timer.stop("total");
-    spdlog::debug("Total time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
+    spdlog::debug("Total REST request processing time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
     return StatusCode::OK;
 }
 
