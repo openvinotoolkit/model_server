@@ -439,7 +439,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     // assumption: model is already loaded for most of the calls
     modelInstanceUnloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
     if (getStatus().getState() == ModelVersionState::AVAILABLE) {
-        SPDLOG_INFO("Model:{}, version:{} already loaded", getName(), getVersion());
+        SPDLOG_DEBUG("Model:{}, version:{} already loaded", getName(), getVersion());
         return StatusCode::OK;
     }
     SPDLOG_INFO("Model:{} version:{} is still loading", getName(), getVersion());

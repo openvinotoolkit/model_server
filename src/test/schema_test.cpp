@@ -32,18 +32,18 @@ TEST(SchemaTest, PipelineConfigMatchingSchema) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -70,18 +70,18 @@ TEST(SchemaTest, PipelineConfigNameInvalidType) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -108,17 +108,17 @@ TEST(SchemaTest, PipelineConfigNodeOutputsInvalidType) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"OutputName": "new_dummy_output"}
+                            {"alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -144,18 +144,18 @@ TEST(SchemaTest, PipelineConfigMissingName) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -177,8 +177,8 @@ TEST(SchemaTest, PipelineConfigMissingNodes) {
                 "name": "pipeline1Dummy",
                 "inputs": ["custom_dummy_input"],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -204,18 +204,18 @@ TEST(SchemaTest, PipelineConfigMissingInputs) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -242,12 +242,12 @@ TEST(SchemaTest, PipelineConfigMissingOutputs) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ]
@@ -276,18 +276,18 @@ TEST(SchemaTest, PipelineConfigContainsNotAllowedKeys) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -315,18 +315,18 @@ TEST(SchemaTest, PipelineConfigNodeContainsNotAllowedKeys) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -353,18 +353,18 @@ TEST(SchemaTest, PipelineConfigNodeTypeNotAllowed) {
                         "model_name": "dummy",
                         "type": "illegalTypa",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -391,18 +391,18 @@ TEST(SchemaTest, PipelineConfigNodeOutputsInvalid) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {a: {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {a: {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {{"SourceNodeName": "dummyNode",
-                     "SourceNodeOutputName": "new_dummy_output"}
+                    {{"node_name": "dummyNode",
+                     "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -429,18 +429,18 @@ TEST(SchemaTest, PipelineConfigNodeInputsInvalid) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {{"SourceNodeName": "entry",
-                              "SourceNodeOutputName": "custom_dummy_input"}}
+                            {{"node_name": "request",
+                              "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -467,17 +467,17 @@ TEST(SchemaTest, PipelineConfigNodeInputsSourceNodeNameMissing) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {a:{"SourceNodeOutputName": "custom_dummy_input"}}
+                            {a:{"data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -504,17 +504,17 @@ TEST(SchemaTest, PipelineConfigOutputsSourceNodeNameMissing) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {a: {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {a: {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"data_item": "new_dummy_output"}
                     }
                 ]
             }
@@ -541,20 +541,20 @@ TEST(SchemaTest, PipelineConfigNodesInputsInvalid) {
                         "model_name": "dummy",
                         "type": "DL model",
                         "inputs": [
-                            {"b": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"},
-                             "c": {"SourceNodeName": "entry",
-                                "SourceNodeOutputName": "custom_dummy_input"}}
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"},
+                             "c": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
                         ], 
                         "outputs": [
-                            {"ModelOutputName": "a",
-                            "OutputName": "new_dummy_output"}
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
                         ] 
                     }
                 ],
                 "outputs": [
-                    {"custom_dummy_output": {"SourceNodeName": "dummyNode",
-                                            "SourceNodeOutputName": "new_dummy_output"}
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
                     }
                 ]
             }

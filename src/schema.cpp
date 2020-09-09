@@ -64,12 +64,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"source_node_names": {
 			"type": "object",
-			"required": ["SourceNodeName", "SourceNodeOutputName"],
+			"required": ["node_name", "data_item"],
 			"properties": {
-				"SourceNodeName": {
+				"node_name": {
 					"type": "string"
 				},
-				"SourceNodeOutputName": {
+				"data_item": {
 					"type": "string"
 				}
 			},
@@ -85,12 +85,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"output_alias": {
 			"type": "object",
-			"required": ["ModelOutputName", "OutputName"],
+			"required": ["data_item", "alias"],
 			"properties": {
-				"ModelOutputName": {
+				"data_item": {
 					"type": "string"
 				},
-				"OutputName": {
+				"alias": {
 					"type": "string"
 				}
 			},

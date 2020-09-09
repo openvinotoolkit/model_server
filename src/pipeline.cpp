@@ -67,7 +67,7 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
     }
 
 Status Pipeline::execute() {
-    SPDLOG_INFO("Started execution of pipeline:", getName());
+    SPDLOG_INFO("Started execution of pipeline: {}", getName());
     ThreadSafeQueue<std::reference_wrapper<Node>> finishedNodeQueue;
     ovms::Status firstErrorStatus{ovms::StatusCode::OK};
     auto startedExecute{prepareStatusMap()};

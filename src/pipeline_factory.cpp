@@ -71,7 +71,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
-    pipeline = std::make_unique<Pipeline>(*entry, *exit);
+    pipeline = std::make_unique<Pipeline>(*entry, *exit, pipelineName);
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }
@@ -180,7 +180,7 @@ Status PipelineDefinition::validateForCycles() {
 
     const auto& itr = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), pred);
     if (itr == nodeInfos.end()) {
-        SPDLOG_ERROR("Pipeline does not contain exit node.");
+        SPDLOG_ERROR("Pipeline does not contain response node.");
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
     std::string nodeName = itr->nodeName;
@@ -262,11 +262,11 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         }
     }
     if (!entryFound) {
-        SPDLOG_ERROR("PipelineDefinition: {} is missing entry node", pipelineName);
+        SPDLOG_ERROR("PipelineDefinition: {} is missing request node", pipelineName);
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
     if (!exitFound) {
-        SPDLOG_ERROR("PipelineDefinition: {} is missing exit node", pipelineName);
+        SPDLOG_ERROR("PipelineDefinition: {} is missing response node", pipelineName);
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
     return StatusCode::OK;

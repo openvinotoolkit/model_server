@@ -37,8 +37,8 @@ class Pipeline {
     ExitNode& exit;
 
 public:
-    Pipeline(EntryNode& entry, ExitNode& exit) :
-        name("name"),
+    Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name = "default_name") :
+        name(name),
         entry(entry),
         exit(exit) {}
 
