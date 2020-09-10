@@ -93,7 +93,7 @@ The Inference Server Docker image comes pre-built with the following Object Dete
 * person-vehicle-bike-detection-crossroad - [person-vehicle-bike-detection-crossroad-0078](http://•%09https:/github.com/opencv/open_model_zoo/tree/master/models/intel/person-vehicle-bike-detection-crossroad-0078)
 
 Each model should also include a configuration file in json format. Example of such
-configuration file is [here](ams_models/vehicle_detection_adas_model.json)
+configuration file is [here](https://github.com/openvinotoolkit/model_server/blob/master/extras/ams_models/vehicle_detection_adas_model.json)
 
 Below is a sample of the model output:
 ```json
