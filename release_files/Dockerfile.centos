@@ -14,20 +14,50 @@
 # limitations under the License.
 #
 
-FROM centos:7.8.2003
-
-RUN yum update -y && yum install -y curl openssl ca-certificates libusb libusbx-devel libxml2 numactl-libs boost-thread boost-system boost-filesystem boost-program-options boost-chrono boost-date-time boost-atomic && cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
-
-RUN mkdir /ovms/
-COPY ovms.tar.gz /
-RUN tar -xf ovms.tar.gz && rm ovms.tar.gz
-RUN cd /ovms/deps && ./install_NEO_OCL_driver.sh -y
-
+FROM centos:7.8.2003 as base
+WORKDIR /
+COPY ovms.tar.xz /
+RUN env
+RUN tar -xf ovms.tar.xz
 RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
-             --gid 5000 --shell /bin/sh --skel /dev/null ovms
+             --gid 5000 --shell /bin/sh --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms && ls -Rla /ovms
 
-RUN chown -R ovms:ovms /ovms
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM centos:7.8.2003 as release
+ARG GET_DRIVERS_DEFAULT=0
+ARG INSTALL_RPMS_FROM_URL=
+ENV GET_DRIVERS=$GET_DRIVERS_DEFAULT
+ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
+ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
+WORKDIR /
+COPY --from=base /ovms /ovms
+RUN     set -e ; \
+	set -x ; \
+	env ; \
+	if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \ 
+		yum install -y epel-release ; \
+		yum update -y ; \
+	        yum install -y \
+	                libusb numactl-libs ocl-icd \
+	                boost-thread boost-system boost-filesystem \
+	                boost-program-options boost-chrono boost-date-time boost-atomic ; \
+	        yum clean all ; \
+	else  \
+		mkdir /tmp_ovms /src ; \
+		cd /tmp_ovms ; \
+		curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
+		tar -xf deps.tar.xz ; \
+		ls -Rahl . ; \
+		mv -v pkg/src/*.src.rpm /src/ ; \
+		rpm -vi pkg/bin/*.rpm ; \
+		cd / ; \
+		rm -rf /tmp_ovms ; \
+	fi ; \
+        cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
+        groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/sh --skel /dev/null ovms ; \
+        /ovms/bin/./ovms --help ;
 USER ovms
-
-RUN /ovms/bin/./ovms --help
 ENTRYPOINT ["/ovms/bin/ovms"]

@@ -39,6 +39,8 @@ BASE_OS_TAG_CENTOS ?= 7.8.2003
 BASE_OS_TAG_CLEARLINUX ?= latest
 HAS_AVX := $(shell grep avx /proc/cpuinfo | wc -l)
 
+INSTALL_RPMS_FROM_URL ?= "http://repository.toolbox.iotg.sclab.intel.com/ovms-deps/centos-7.8.2003-ovms-deps-rpms.tar.xz"
+
 check:
 ifeq ($(HAS_AVX),0)
 	@echo "CPU with AVX support required"
@@ -162,25 +164,26 @@ endif
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
-	# below is disabled for now, to test actual dockerfile shipped to the customer.
-	# will re-enable in future release, after OSPDT approvals.
-	#docker build $(NO_CACHE_OPTION) -f DockerfileRelease . \
-	#	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-	#	--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-	#	-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-	#	--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-	#	--build-arg DIST_IMAGE=$(DIST_OS):$(DIST_OS_TAG)
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C / ovms.tar.gz* ; sleep 2" | tar -x
-	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg)
+			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) )
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
+	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS).add_drivers . \
+		--build-arg OPENVINO_MODEL_SERVER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)
+	docker tag $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE)-cpu:$(OVMS_CPP_IMAGE_TAG)
+	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 
-test_checksec: 
+test_checksec:
 	@echo "Running checksec on ovms binary..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
@@ -291,3 +294,13 @@ test_throughput_dummy_model: venv
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
+
+tools_get_deps:
+	cd tools/deps && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
+	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
+	docker run -d --rm --name  $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
+	sleep 5
+	docker cp $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG):/root/rpms.tar.xz ./
+	sleep 5
+	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
+	@echo "Success! Dependencies saved to rpms.tar.xz in this directory"
