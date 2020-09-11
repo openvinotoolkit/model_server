@@ -16,6 +16,8 @@
 
 #include "schema.hpp"
 
+#include <string>
+
 #include <rapidjson/error/en.h>
 #include <rapidjson/error/error.h>
 #include <rapidjson/schema.h>
@@ -57,7 +59,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"plugin_config": {
 							"type": "object"
 						}
-					}
+					},
+					"additionalProperties": false
 				},
 				"additionalProperties": false
 			}
@@ -75,13 +78,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 			},
 			"additionalProperties": false
 		},
-        "source_node": {
-            "type": "object",
-            "additionalProperties" : {
+		"source_node": {
+			"type": "object",
+			"additionalProperties" : {
 				"$ref": "#/definitions/source_node_names"
 			},
 			"minProperties": 1,
-  			"maxProperties": 1
+			"maxProperties": 1
 		},
 		"output_alias": {
 			"type": "object",
@@ -182,10 +185,14 @@ const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
         "inputs"
     ],
     "properties": {
+		"outputs":{
+            "type": "object"
+        },
         "inputs":{
             "type": "object"
         }
-    }
+    },
+	"additionalProperties": false
     })";
 
 const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
@@ -196,8 +203,12 @@ const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
     "properties": {
         "outputs":{
             "type": "object"
+        },
+        "inputs":{
+            "type": "object"
         }
-    }
+    },
+	"additionalProperties": false
     })";
 
 StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
@@ -209,15 +220,16 @@ StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* sche
     }
     rapidjson::SchemaDocument parsedSchema(schemaJson);
     rapidjson::SchemaValidator validator(parsedSchema);
-
     if (!json.Accept(validator)) {
         rapidjson::StringBuffer sb;
         validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-        SPDLOG_ERROR("Invalid schema: {}", sb.GetString());
-        SPDLOG_ERROR("Invalid keyword: {}", validator.GetInvalidSchemaKeyword());
+        std::string schema = sb.GetString();
+        std::string keyword = validator.GetInvalidSchemaKeyword();
         sb.Clear();
         validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-        SPDLOG_ERROR("Invalid document: {}", sb.GetString());
+        std::string key = sb.GetString();
+
+        SPDLOG_ERROR("Given config is invalid according to schema: {}. Keyword: {} Key: {}", schema, keyword, key);
         return StatusCode::JSON_INVALID;
     }
 

@@ -566,3 +566,113 @@ TEST(SchemaTest, PipelineConfigNodesInputsInvalid) {
     auto result = ovms::validateJsonAgainstSchema(pipelineConfigNodesInputsInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+TEST(SchemaTest, parseModelMappingWhenJsonMatchSchema) {
+    const char* mappingConfigMatchSchema = R"({
+       "inputs":{
+            "key":"value1",
+            "key":"value2"
+        },
+       "outputs":{
+            "key":"value3",
+            "key":"value4"
+        }
+    })";
+
+    rapidjson::Document mappingConfigMatchSchemaParsed;
+    mappingConfigMatchSchemaParsed.Parse(mappingConfigMatchSchema);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMatchSchemaParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+    result = ovms::validateJsonAgainstSchema(mappingConfigMatchSchemaParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, parseModelMappingWhenOutputsMissingInConfig) {
+    const char* mappingConfigMissingOutputs = R"({
+       "inputs":{
+            "key":"value1"
+        }
+    })";
+
+    rapidjson::Document mappingConfigMissingOutputsParsed;
+    mappingConfigMissingOutputsParsed.Parse(mappingConfigMissingOutputs);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingOutputsParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, parseModelMappingWhenInputsMissingInConfig) {
+    const char* mappingConfigMissingInputs = R"({
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    rapidjson::Document mappingConfigMissingInputsParsed;
+    mappingConfigMissingInputsParsed.Parse(mappingConfigMissingInputs);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingInputsParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, parseModelMappingWhenAdditionalObjectInConfig) {
+    const char* mappingConfigWithAdditionalObject = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2"
+        },
+       "object":{
+            "key":"value3"
+        }
+    })";
+
+    rapidjson::Document mappingConfigWithAdditionalObjectParsed;
+    mappingConfigWithAdditionalObjectParsed.Parse(mappingConfigWithAdditionalObject);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWithAdditionalObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    result = ovms::validateJsonAgainstSchema(mappingConfigWithAdditionalObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, parseModelMappingWhenInputsIsNotAnObject) {
+    const char* mappingConfigWhenInputsIsNotAnObject = R"({
+       "inputs":["Array", "is", "not", "an", "object"],
+       "outputs":{
+            "key":"value2"
+        }
+    })";
+
+    rapidjson::Document mappingConfigWhenInputsIsNotAnObjectParsed;
+    mappingConfigWhenInputsIsNotAnObjectParsed.Parse(mappingConfigWhenInputsIsNotAnObject);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenInputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    result = ovms::validateJsonAgainstSchema(mappingConfigWhenInputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, parseModelMappingWhenOutputsIsNotAnObject) {
+    const char* mappingConfigWhenOutputsIsNotAnObject = R"({
+       "inputs":{
+            "key":"value"
+        },
+       "outputs":["Array", "is", "not", "an", "object"]
+    })";
+
+    rapidjson::Document mappingConfigWhenOutputsIsNotAnObjectParsed;
+    mappingConfigWhenOutputsIsNotAnObjectParsed.Parse(mappingConfigWhenOutputsIsNotAnObject);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenOutputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    result = ovms::validateJsonAgainstSchema(mappingConfigWhenOutputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
+    const char* mappingConfigIsNotAJson = "asdasdasd";
+
+    rapidjson::Document mappingConfigIsNotAJsonParsed;
+    mappingConfigIsNotAJsonParsed.Parse(mappingConfigIsNotAJson);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
