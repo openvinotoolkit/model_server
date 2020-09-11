@@ -475,9 +475,8 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     status = model->addVersions(versionsToStart, config);
     if (!status.ok()) {
-        spdlog::error("Error occurred while loading model: {} versions; error: {}",
-            config.getName(),
-            status.string());
+        spdlog::error("Error occurred while loading model: {} versions",
+            config.getName());
         return status;
     }
     status = model->reloadVersions(versionsToReload, config);

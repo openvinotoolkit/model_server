@@ -132,7 +132,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config) {
         try {
             network->reshape(networkShapes);
         } catch (const InferenceEngine::details::InferenceEngineException& e) {
-            spdlog::error("could not perform reshape on model {}: {}", getName(), e.what());
+            spdlog::error("OV does not support reshaping model: {} with provided shape", getName());
+            spdlog::debug("Description: {}", e.what());
             return StatusCode::RESHAPE_ERROR;
         }
     } else {
