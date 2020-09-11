@@ -1,25 +1,28 @@
 # OpenVINO™ Model Server - AI Extension
 
-OpenVINO™ Model Server - AI Extension extends the results from Native OpenVINO™ Model Server to return inference results in json format. This helps platforms such as Live Video Analytics (LVA) for the Edge from Azure Media Services to delegate inference requests to OpenVINO™ toolkit in media analytics pipelines.
+OpenVINO™ Model Server - AI Extension is used on IoT Edge devices together with [Live Video Analytics (LVA)](http://aka.ms/lva). 
+It enables easy delegation of inference requests to OpenVINO™ in media analytics pipelines. 
+
+A pre-built image of this server is available via the Azure Marketplace [here](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/intel_corporation.ovms?tab=Overview).
 
 The integration model is depicted below:
 ![archtecture](AI_extension.png)
 
-OpenVINO™ Model Server - AI Extension  exposes an AI_Extension REST API interface for 
-the pipeline applications. This interface supports a range of model categories and returns json response 
+OpenVINO™ Model Server - AI Extension is running as a docker container and exposes an REST API interface for 
+the pipeline applications that conforms to the HTTP extension [contract](https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/analyze-with-ai-your-choice-how-to#media-graph-http-extension-contract-definitions) specified for LVA. This interface supports a range of model categories and returns JSON response 
 including model metadata like attribute, labels or classes names. 
 
-Beside AI_Extension REST API, the OVMS - AI Extension also exposes the complete OpenVINO™ Model Server REST and gRPC API,
-which could be used with arbitrary model from OpenVINO™ toolkit - Open Model Zoo.  
+Beside the REST API, the server also exposes the complete OpenVINO™ Model Server REST and gRPC API,
+ which could be used with an arbitrary OpenVINO™ model. 
 
-## AI_Extension REST API
+## REST API 
 
-HTTP contract is defined as follows:
-* OpenVINO™ Model Server acts as the HTTP server 
+The HTTP contract is defined as follows:
+* OpenVINO™ Model Server - AI Extension acts as the HTTP server 
 * LVA acts as the HTTP client
 
 
-| POST        | http://hostname/<endpoint_name> |
+| POST        | http://hostname:port/<endpoint_name> |
 | ------------- |-------------|
 | Accept      | application/json, */* |
 | Authorization     | None |
@@ -27,10 +30,18 @@ HTTP contract is defined as follows:
 |User-Agent|Azure Media Services|
 |Body |Image bytes, binary encoded in one of the supported content types |
 
+The `endpoint_name` defines the model you want to apply to the image. The allowed values are:
+* vehicleDetection
+* vehicleClassification
+* personVehicleBikeDetection
+* faceDetection
+
+See below for more details about these models.
+
 Example:
 
 ```bash
-POST http://localhost:5000/vehicle-detection HTTP/1.1
+POST http://localhost:5000/vehicleDetection HTTP/1.1
 Host: localhost:5000
 x-ms-client-request-id: d6050cd4-c9f2-42d3-9adc-53ba7e440f17
 Content-Type: image/bmp
@@ -40,7 +51,7 @@ Content-Length: 519222
 
 ```
 
-*Note:* Depending on the model configuration, input image resolution needs to match the model expected size or
+*Note:* Depending on the model configuration, input image resolution needs to match the model's expected size or
 it will be resized automatically. 
 
 Response:
@@ -74,7 +85,7 @@ format: [image_id, label, conf, x_min, y_min, x_max, y_max], where:
 - (x_min, y_min) - coordinates of the top left bounding box corner
 - (x_max, y_max) - coordinates of the bottom right bounding box corner.
 
-There are several Object Detection models available in the [Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html). 
+There are several Object Detection models available in the [OpenVINO™ Toolkit – Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html). 
 The Inference Server Docker image comes pre-built with the following Object Detection models: 
 
 * vehicle-detection - [vehicle-detection-adas-binary-0001](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-detection-adas-binary-0001)
@@ -82,40 +93,30 @@ The Inference Server Docker image comes pre-built with the following Object Dete
 * person-vehicle-bike-detection-crossroad - [person-vehicle-bike-detection-crossroad-0078](http://•%09https:/github.com/opencv/open_model_zoo/tree/master/models/intel/person-vehicle-bike-detection-crossroad-0078)
 
 Each model should also include a configuration file in json format. Example of such
-configuration file is [here](ams_models/vehicle_detection_adas_model.json)
+configuration file is [here](https://github.com/openvinotoolkit/model_server/blob/master/extras/ams_models/vehicle_detection_adas_model.json)
 
 Below is a sample of the model output:
 ```json
 {
-   "subtype" : "vehicleDetection",
-   "entities" : [
+    "inferences": [
       {
-         "box" : {
-            "h" : 0.10686594247818,
-            "t" : 0.336242735385895,
-            "w" : 0.130945563316345,
-            "l" : 0.789495408535004
-         },
-         "tag" : {
-            "confidence" : 0.999798119068146,
-            "value" : "vehicle"
-         }
-      },
-      {
-         "box" : {
-            "h" : 0.143958985805511,
-            "l" : 0.640124976634979,
-            "t" : 0.308264225721359,
-            "w" : 0.159151077270508
-         },
-         "tag" : {
-            "value" : "vehicle",
-            "confidence" : 0.572816431522369
-         }
-      },
-    ],
-   "type" : "entity"
-}
+        "type": "entity",
+        "subtype": "vehicleDetection",
+        "entity": {
+          "tag": {
+            "value": "vehicle",
+            "confidence": 0.15077224373817444
+          },
+          "box": {
+            "l": 0,
+            "t": 0.25023195147514343,
+            "w": 0.853949785232544,
+            "h": 0.7095241844654083
+          }
+        }
+      }
+    ]
+ }
 ```
 
 ### Classification models
@@ -126,7 +127,7 @@ Each output of the model should have the shape `[1, C , ...]`. First dimension r
 which should be set to 1. `C` represents all classes defined in the model. Remaining dimensions 
 are ignored (if present, first index is used).
 
-Examples of such models are available in the [Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
+Examples of such models are available in the [OpenVINO™ Toolkit – Open Model Zoo](https://docs.openvinotoolkit.org/2020.2/_models_intel_index.html).
 The following classification model is included in the OVMS - AI Extension docker image: 
 * vehicle-attributes-recognition - [vehicle-attributes-recognition-barrier-0039](https://github.com/opencv/open_model_zoo/tree/master/models/intel/vehicle-attributes-recognition-barrier-0039)
 
@@ -138,16 +139,22 @@ Below is a sample of such model:
     "inferences": [
       {
         "type": "classification",
-        "subtype": "type",
+        "subtype": "color",
         "classification": {
-          "tag": "truck"
+          "tag": {
+            "value": "gray",
+            "confidence": 0.6284224987030029
+          }
         }
       },
       {
         "type": "classification",
-        "subtype": "color",
+        "subtype": "type",
         "classification": {
-          "tag": "gray"
+          "tag": {
+            "value": "truck",
+            "confidence": 0.9994522929191589
+          }
         }
       }
     ]
@@ -158,16 +165,16 @@ Below is a sample of such model:
 
 OpenVINO™ Model Server - AI Extension includes two components which require proper configuration.
 * OpenVINO™ Model Server - serves all models and executes inference operation
-* AI_Extension REST API wrapper - translates LVA API, run pre and post processing operations, communicates with OVMS via localhost and gRPC interface.
+* AI Extension REST API wrapper - translates LVA API, run pre and post processing operations, communicates with OVMS via localhost and gRPC interface.
 
 OpenVINO™ Model Server requires file `/opt/ams_models/ovms_config.json` which is by default configured
 to use [4 exemplary models](../ams_models/ovms_config.json).
 
-AI_Extension REST API wrapper requires model configuration files describing all enabled models.
+AI Extension REST API wrapper requires model configuration files describing all enabled models.
 Models config files should be present in `/opt/ams_models/` folder. Model configuration files should have _model.json suffix.
-They include the mapping between ovms models from `ovms_config.json` and AI_Extension REST API endpoint name.
+They include the mapping between ovms models from `ovms_config.json` and AI Extension REST API endpoint name.
 
-Model files in OpenVINO Intermediate Representation format should be stored in the folders structure
+Model files in OpenVINO™ Intermediate Representation format should be stored in the folders structure
 like defined on [OVMS documentation](../../docs/docker_container.md#preparing-the-models).
 
 Note: OVMS - AI Extension was tested for the models included in the docker image. 
@@ -236,10 +243,10 @@ for [OVMS](../../docs/performance_tuning.md) and [OpenVINO plugins](https://docs
 
 The image in Azure Marketplance is built using the make target:
 
-`make docker_build_ams_clearlinux` – clearlinux base image with Opensource version of OpenVINO 
+`make docker_build_ams_clearlinux` – clearlinux base image with Opensource version of OpenVINO™ 
 
 
-It is also possible to build the image on centos base using the command below. It requires the OpenVINO toolkit binary
+It is also possible to build the image on centos base using the command below. It requires the OpenVINO™ toolkit binary
 package url which can be received after user [registration](https://software.intel.com/content/www/us/en/develop/tools/openvino-toolkit/choose-download/linux.html)
 
 `make docker_build_ams DLDT_PACKAGE_URL= <url to binary OV package>` - centos base image with a binary OV package 
