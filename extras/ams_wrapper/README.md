@@ -1,7 +1,7 @@
 # OpenVINO™ Model Server - AI Extension
 
 OpenVINO™ Model Server - AI Extension is used on IoT Edge devices together with [Live Video Analytics (LVA)](http://aka.ms/lva). 
-It enables easy delegation of inference requests to OpenVINO in media analytics pipelines. 
+It enables easy delegation of inference requests to OpenVINO™ in media analytics pipelines. 
 
 A pre-built image of this server is available via the Azure Marketplace [here](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/intel_corporation.ovms?tab=Overview).
 
@@ -13,12 +13,12 @@ the pipeline applications that conforms to the HTTP extension [contract](https:/
 including model metadata like attribute, labels or classes names. 
 
 Beside the REST API, the server also exposes the complete OpenVINO™ Model Server REST and gRPC API,
- which could be used with an arbitrary OpenVINO model. 
+ which could be used with an arbitrary OpenVINO™ model. 
 
 ## REST API 
 
 The HTTP contract is defined as follows:
-* OpenVINO Model Server - AI Extension acts as the HTTP server 
+* OpenVINO™ Model Server - AI Extension acts as the HTTP server 
 * LVA acts as the HTTP client
 
 
