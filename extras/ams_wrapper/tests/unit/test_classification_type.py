@@ -14,48 +14,57 @@
 # limitations under the License.
 #
 
-from src.api.types import SingleClassification, Classification, Attribute
+from src.api.types import SingleClassification, Classification, Tag
 
 
 def test_single_classification():
     expected_dict = {
-        "type": "classification",
-        "subtype": "type",
-        "classification": {
-            "tag": "car"
-        }
-    }
-    attribute = Attribute('car', 0.97)
-    attribs = []
-    attribs.append(attribute)
-    test_classification = SingleClassification(subtype_name='type', attributes=attribs)
-    assert expected_dict == test_classification.as_dict()
+                        'type': 'classification',
+                        'subtype': 'type',
+                        'classification': {
+                            'tag': {
+                                'value': 'car',
+                                'confidence': 0.97
+                            }
+                        }
+                    }
+    tag = Tag('car', 0.97)
+#    attribs = []
+#    attribs.append(attribute)
+    test_classification = SingleClassification(subtype_name='type', tag=tag)
     print(test_classification.as_dict())
+    assert expected_dict == test_classification.as_dict()
 
 
 def test_entity():
     expected_dict = {
-        "inferences": [
-            {
-                "type": "classification",
-                "subtype": "animal",
-                "classification": {
-                    "tag": "dog"
-                }
-            },
-            {
-                "type": "classification",
-                "subtype": "animal",
-                "classification": {
-                    "tag": "fox"
-                }
-            }
-        ]
-    }
+                        "inferences": [
+                            {
+                                "type": "classification",
+                                "subtype": "animal",
+                                "classification": {
+                                    "tag": {
+                                        "value": "dog",
+                                        "confidence": 0.85
+                                    }
+                                }
+                            },
+                            {
+                                "type": "classification",
+                                "subtype": "animal",
+                                "classification": {
+                                    "tag": {
+                                        "value": "fox",
+                                        "confidence": 0.11
+                                    }
+                                }
+                            }
+                        ]
+                    }
 
     classifications = [
-        SingleClassification(subtype_name='animal', attributes=[Attribute("dog", 0.85)]),
-        SingleClassification(subtype_name='animal', attributes=[Attribute("fox", 0.11)]),
+        SingleClassification(subtype_name='animal', tag=Tag("dog", 0.85)),
+        SingleClassification(subtype_name='animal', tag=Tag("fox", 0.11)),
     ]
     classification = Classification(classifications)
     assert expected_dict == classification.as_dict()

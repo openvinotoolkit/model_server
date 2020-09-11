@@ -1,5 +1,5 @@
 # OpenVINO&trade; Model Server
-OpenVINO&trade; Model Server is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. The server provides an inference service via gRPC enpoint or REST API -- making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit). 
+OpenVINO&trade; Model Server is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. The server provides an inference service via gRPC(Remote Procedure Calls) endpoint or REST API -- making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit). 
 
 The server is implemented as a python service using the gRPC interface library or falcon REST API framework with data serialization and deserialization using TensorFlow, and OpenVINO&trade; as the inference execution provider. Model repositories may reside on a locally accessible file system (e.g. NFS), Google Cloud Storage (GCS), Amazon S3 or MinIO.
 
@@ -11,9 +11,9 @@ A few key features:
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj). The server can be enabled both on [Bare Metal Hosts](docs/host.md#using-hddl-accelerators) or in
 [Docker containers](docs/docker_container.md#starting-docker-container-with-hddl).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
-- [Sagemaker integration](example_sagemaker). The server supports using AWS SageMaker containers for serving inferece execution.  
+- [Sagemaker integration](example_sagemaker). The server supports using AWS SageMaker containers for serving inference execution.  
 - Supports [multi-worker configuration](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multi-worker-configuration) and [parallel inference execution](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/performance_tuning.md#multiple-model-server-instances).
-- [Model reshaping](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-reshaping). The server supports reshaphing models in runtime. 
+- [Model reshaping](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-reshaping). The server supports reshaping models in runtime. 
 
 ## Running the Server
 
@@ -82,7 +82,7 @@ all exposed versions including their state in their lifecycle.
 
 Refer to the [example client code](example_client) to learn how to use this API and submit the requests using the gRPC interface.
 
-Using the gRPC interface is recommended for optimal performace due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
+Using the gRPC interface is recommended for optimal performance due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
 
 ## RESTful API Documentation 
 
@@ -131,11 +131,11 @@ OpenVINO&trade; model server accepts 3 logging levels:
 
 The default setting is **INFO**, which can be altered by setting environment variable `LOG_LEVEL`.
 
-The captured logs will be displayed on the model server console. While using docker containers or kubernetes the logs
+The captured logs will be displayed on the model server console. While using docker containers or Kubernetes the logs
 can be examined using `docker logs` or `kubectl logs` commands respectively.
 
 It is also possible to save the logs to a local file system by configuring an environment variable `LOG_PATH` with the absolute path pointing to a log file. 
-Please see example below for usage details.
+Please see the example below for usage details.
 
 ```
 docker run --name ie-serving --rm -d -v /models/:/opt/ml:ro -p 9001:9001 --env LOG_LEVEL=DEBUG --env LOG_PATH=/var/log/ie_serving.log \
@@ -168,18 +168,18 @@ models/
     └── mapping_config.json
 ```
 
-In above scenario, server will detect only version `1` of `model1`.
+In the above scenario, the server will detect only version `1` of `model1`.
 Directory `2` does not contain valid OpenVINO model files, so it won't 
 be detected as a valid model version. 
 For `model2`, there are correct files, but they are not in a numerical directory. 
 The server will not detect any version in `model2`.
 
-When new model version is detected, the server loads the model files 
+When a new model version is detected, the server loads the model files 
 and starts serving new model version. This operation might fail for the following reasons:
 - there is a problem with accessing model files (i. e. due to network connectivity issues
 to the  remote storage or insufficient permissions)
 - model files are malformed and can not be imported by the Inference Engine
-- model requires custom CPU extension
+- the model requires custom CPU extension
 
 In all those situations, the root cause is reported in the server logs or in the response from a call
 to GetModelStatus function. 
@@ -190,8 +190,8 @@ When model files become accessible or fixed, server will try to
 load them again on the next [version update](docs/docker_container.md#updating-model-versions) 
 attempt.
 
-At startup, the server will enable gRPC and REST API endpoint, after all configured models and detected model versions
-are loaded successfully (in AVAILABLE state).
+At startup, the server will enable gRPC and REST API endpoint, after all, configured models and detected model versions
+are loaded successfully (in the AVAILABLE state).
 
 The server will fail to start if it can not list the content of configured model paths.
 
@@ -209,11 +209,10 @@ The possible issues could be:
 
 ### Resource Allocation
 RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, 
-however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
+however, it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
 
-OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or 
-kubernetes capabilities.
+OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by the operating system, docker or Kubernetes capabilities.
 
 ### Usage Monitoring
 It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
@@ -269,6 +268,9 @@ Docker image with OpenVINO Model Server can be built with several options:
 In clearlinux based image, it is 2019.3 - to be upgraded later soon.
 
 ### Testing
+
+Running the tests requires python3.6 and docker installed (testing scripts are validated on ubuntu18.04).
+Account running the tests must be in a `docker` group.
 
 `make style` to run linter tests
 

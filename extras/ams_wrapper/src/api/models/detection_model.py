@@ -19,7 +19,7 @@ import json
 from src.logger import get_logger
 from src.api.models.model import Model
 from src.api.models.model_config import ModelOutputConfiguration
-from src.api.types import Tag, Rectangle, SingleEntity, Entity
+from src.api.types import Tag, Rectangle, SingleEntity, Entity, Detection
 
 
 logger = get_logger(__name__)
@@ -35,6 +35,7 @@ class DetectionModel(Model):
         # model with output shape (1,1,200,7)
         # with last dimension containg detection details
         detections = []
+        entities = []
         for detection in result_array[0][0]:
             label = detection[output_config.value_index_mapping['value']].item()
             # End of detections
@@ -69,7 +70,9 @@ class DetectionModel(Model):
         if len(detections) == 0:
             response = None
         else:
-            entity = Entity(subtype_name=self.endpoint, entities=detections)
-            response = json.dumps(entity.as_dict())
-
+            for detection in detections:
+                entity = Entity(subtype_name=self.endpoint, entity=detection)
+                entities.append(entity)
+            model_detection = Detection(entities=entities)
+            response = json.dumps(model_detection.as_dict())
         return response

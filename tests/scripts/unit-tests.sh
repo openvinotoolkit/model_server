@@ -7,7 +7,7 @@ LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/inference_engine/external
 LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64
 LD_LIBRARY_PATH+=:/opt/intel/openvino/deployment_tools/ngraph/lib
 
-OPEN_VINO_DOCKER_IMAGE=openvino/ubuntu18_dev:2020.1
+OPEN_VINO_DOCKER_IMAGE=openvino/ubuntu18_dev:2020.4
 OVMS_TESTS_IMAGE="${OPEN_VINO_DOCKER_IMAGE}-ovms-tests"
 
 docker build \
@@ -29,10 +29,11 @@ docker run -t --rm \
     -w /mnt/ovms \
     -e LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" \
     -e PYTHONPATH="${PYTHONPATH}" \
+    -u "$(id -u)" \
     "${OVMS_TESTS_IMAGE}" \
     bash -c "
     set -ex;
     source /opt/intel/openvino/bin/setupvars.sh
-    make install;
-    make unit;
-    make coverage"
+    make install VIRTUALENV_DIR=/tmp/.venv;
+    make unit VIRTUALENV_DIR=/tmp/.venv;
+    make coverage VIRTUALENV_DIR=/tmp/.venv"

@@ -39,7 +39,7 @@ pipeline {
                     ]
                 }
             }
-        stage('functional tests') {
+        stage('functional tests part1') {
             parallel {
                 stage('functional tests bin') {
                     steps {
@@ -51,6 +51,10 @@ pipeline {
                         sh './tests/scripts/functional-tests-apt-ubuntu.sh'
                     }
                 }
+            }
+        }
+        stage('functional tests part2') {
+            parallel {
                 stage('functional tests openvino base') {
                     steps {
                         sh './tests/scripts/functional-tests-ov-base.sh'
@@ -66,6 +70,16 @@ pipeline {
         stage('functional tests ams') {
             steps {
                 sh './tests/scripts/functional-tests-ams.sh'
+            }
+        }
+        stage('Push docker image clearlinux') {
+            when{
+                branch 'master'
+                expression { env.REGISTRY_URL != null }
+                expression { env.IMAGE_NAME != null }
+            }
+            steps {
+                sh 'make docker_push_clearlinux'
             }
         }
     }
