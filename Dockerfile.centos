@@ -32,22 +32,32 @@ ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 
 RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
-            gcc \
-            gcc-c++ \
-            gdb \
+            boost-atomic \
+            boost-chrono \
+            boost-filesystem \
+            boost-program-options \
+            boost-thread \
+            boost-system \
+            boost-date-time \
             cmake3 \
-            make \
+            devtoolset-8-gcc* \
             automake \
             autoconf \
-            pkg-config \
-            libtool \
             curl \
+            gdb \
             git \
-            libusb libusbx-devel \
+            libusb \
+            libusbx-devel \
             libcurl-devel \
-            openssl-devel \
+            libtool \
             libuuid-devel \
+            libxml2-devel \
+            make \
+            numactl-libs \
+            ocl-icd \
+            openssl-devel \
             patch \
+            pkg-config \
             pulseaudio-libs-devel \
             python2 \
             python2-pip \
@@ -59,28 +69,15 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
+            unzip \
             wget \
             which \
-            devtoolset-8-gcc* \
-            boost-thread \
-            boost-system \
-            boost-filesystem \
-            boost-chrono \
-            boost-program-options \
-            boost-date-time \
-            boost-atomic \
-            libxml2-devel \
-            yum-utils \
-            numactl-libs \
-            unzip && \
+            yum-utils && \
             yum clean all
 
-RUN ln -s /usr/bin/cmake3 /usr/bin/cmake
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
 ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
 ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
-ENV BAZEL_LINKLIBS=-l%:libstdc++.a
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -101,13 +98,6 @@ RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage
 	cd build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF  && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install
 ####### End of Azure SDK
 
-
-# GPU support:
-RUN yum install -y yum-plugin-copr
-RUN yum -y copr enable jdanecki/intel-opencl
-RUN yum install -y intel-opencl
-RUN yum install -y epel-release && yum install -y ocl-icd.x86_64 clinfo flex intel-igc-core.x86_64 intel-igc-opencl.x86_64 intel-gmmlib.x86_64 intel-gmmlib-debuginfo.x86_64 intel-opencl-debuginfo.x86_64 intel-level-zero-gpu.x86_64 intel-gmmlib-debugsource.x86_64 intel-opencl-debugsource.x86_64 intel-level-zero-gpu-debuginfo.x86_64
-
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
 WORKDIR /bazel
@@ -118,13 +108,11 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN ls
-
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$(nproc --all)
 ################## END OF OPENVINO SOURCE BUILD ######################
 
@@ -137,14 +125,14 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TE
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     ./install.sh -s silent.cfg --ignore-signature && \
-    rm -Rf $TEMP_DIR $INSTALL_DIR/install_dependencies $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+    rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$(nproc --all)
 RUN mv .deps/install/lib64 .deps/install/lib
 
@@ -154,22 +142,16 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
+ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/
 
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN bazel build ${debug_bazel_flags} //src:ovms
-RUN ./bazel-bin/src/./ovms
-
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /root/.cache/bazel/_bazel_root/ -iname '_U@*' -type d -exec cp -v -- /openvino/bin/intel64/Release/lib/plugins.xml '{}' ';'
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /root/.cache/bazel/_bazel_root/ -iname '_U@*' -type d -exec cp -v -- /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml '{}' ';'
-
-RUN ./bazel-bin/src/./ovms
-
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
-RUN ./bazel-bin/src/./ovms
 
 COPY ${ovms_metadata_file} metadata.json
 
