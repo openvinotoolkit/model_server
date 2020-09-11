@@ -18,17 +18,10 @@ FROM centos:7.8.2003
 
 RUN yum update -y && yum install -y curl openssl ca-certificates libusb libusbx-devel libxml2 numactl-libs boost-thread boost-system boost-filesystem boost-program-options boost-chrono boost-date-time boost-atomic && cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-# GPU support:
-RUN yum install -y yum-plugin-copr
-RUN yum -y copr enable jdanecki/intel-opencl
-RUN yum install -y intel-opencl
-RUN yum install -y epel-release && yum install -y ocl-icd.x86_64 clinfo flex intel-igc-core.x86_64 intel-igc-opencl.x86_64 intel-gmmlib.x86_64 intel-gmmlib-debuginfo.x86_64 intel-opencl-debuginfo.x86_64 intel-level-zero-gpu.x86_64 intel-gmmlib-debugsource.x86_64 intel-opencl-debugsource.x86_64 intel-level-zero-gpu-debuginfo.x86_64
-
-RUN yum clean all
-
 RUN mkdir /ovms/
 COPY ovms.tar.gz /
 RUN tar -xf ovms.tar.gz && rm ovms.tar.gz
+RUN cd /ovms/deps && ./install_NEO_OCL_driver.sh -y
 
 RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
              --gid 5000 --shell /bin/sh --skel /dev/null ovms
