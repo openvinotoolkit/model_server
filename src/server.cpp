@@ -23,12 +23,14 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "avx_check.hpp"
@@ -54,6 +56,21 @@ uint getGRPCServersCount() {
     }
 
     return std::max<uint>(1, ovms::Config::instance().grpcWorkers());
+}
+
+bool isPortAvailable(uint64_t port) {
+    struct sockaddr_in addr;
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+
+    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        return false;
+    }
+    close(s);
+    return true;
 }
 
 struct GrpcChannelArgument {
@@ -195,6 +212,9 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     servers.reserve(grpcServersCount);
     spdlog::debug("Starting grpc servers: {}", grpcServersCount);
 
+    if (!isPortAvailable(config.port())) {
+        throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
+    }
     for (uint i = 0; i < grpcServersCount; ++i) {
         std::unique_ptr<Server> server = builder.BuildAndStart();
         if (server == nullptr) {
