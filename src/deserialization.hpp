@@ -108,7 +108,12 @@ Status deserializePredictRequest(
         for (const auto& pair : inputMap) {
             const auto& name = pair.first;
             auto tensorInfo = pair.second;
-            auto& requestInput = request.inputs().find(name)->second;
+            auto requestInputItr = request.inputs().find(name);
+            if (requestInputItr == request.inputs().end()) {
+                SPDLOG_ERROR("Failed to deserialize request. Validation of request failed");
+                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+            }
+            auto& requestInput = requestInputItr->second;
 
             InferenceEngine::Blob::Ptr blob =
                 deserializeTensorProto<TensorProtoDeserializator>(

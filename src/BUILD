@@ -21,7 +21,6 @@ cc_library(
         "avx_check.hpp",
         "config.cpp",
         "config.hpp",
-        "deserialization.cpp",
         "deserialization.hpp",
         "dl_node.cpp",
         "dl_node.hpp",

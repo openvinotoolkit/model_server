@@ -141,6 +141,10 @@ bool dirExists(const std::string& path) {
 std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent* entry;
     DIR* dir = opendir(path.c_str());
+    if (!dir) {
+        SPDLOG_WARN("Failed to opendir: {}", path);
+        return std::string();
+    }
 
     while ((entry = readdir(dir)) != nullptr) {
         auto name = std::string(entry->d_name);

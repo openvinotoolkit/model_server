@@ -129,7 +129,13 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
         }
-        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second, requestProto.mutable_inputs()->begin()->first)) {
+        auto inputsIterator = requestProto.mutable_inputs()->begin();
+        if (inputsIterator == requestProto.mutable_inputs()->end()) {
+            const std::string details = "Failed to parse row formatted request.";
+            SPDLOG_ERROR("Internal error occured: {}", details);
+            return Status(StatusCode::INTERNAL_ERROR, details);
+        }
+        if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {
             return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
         } else {
             format = Format::NONAMED;
@@ -153,7 +159,13 @@ Status RestParser::parseColumnFormat(rapidjson::Value& node) {
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
         }
-        if (!parseArray(node, 0, requestProto.mutable_inputs()->begin()->second, requestProto.mutable_inputs()->begin()->first)) {
+        auto inputsIterator = requestProto.mutable_inputs()->begin();
+        if (inputsIterator == requestProto.mutable_inputs()->end()) {
+            const std::string details = "Failed to parse column formatted request.";
+            SPDLOG_ERROR("Internal error occured: {}", details);
+            return Status(StatusCode::INTERNAL_ERROR, details);
+        }
+        if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
         format = Format::NONAMED;
