@@ -140,6 +140,7 @@ cc_test(
     srcs = [
         "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
+        "test/ensemble_mapping_config_tests.cpp",
         "test/get_model_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
