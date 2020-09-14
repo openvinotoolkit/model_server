@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <string>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -34,21 +35,23 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             }
 
             if (request->inputs().count(output_name) == 0) {
-                SPDLOG_INFO("EntryNode::fetchResults (deserialization) (Node name {}): missing input proto name: {} in request", getName(), output_name);
-                return StatusCode::INVALID_MISSING_INPUT;
+                std::stringstream ss;
+                ss << "Required input: " << output_name;
+                const std::string details = ss.str();
+                spdlog::debug("[Node: {}] Missing input with specific name", getName(), details);
+                return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
             const auto& tensor_proto = request->inputs().at(output_name);
             InferenceEngine::Blob::Ptr blob;
-            SPDLOG_DEBUG("Entry node deserializing:{}", output_name);
+            spdlog::debug("[Node: {}] Deserializing input:{}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
-                SPDLOG_INFO("EntryNode::fetchResults error (deserialization) (Node name {}) (Input name {}): {}", getName(), output_name, status.string());
                 return status;
             }
 
             outputs[output_name] = blob;
 
-            SPDLOG_DEBUG("EntryNode::fetchResults (deserialization) (Node name {}): blob with name [{}] has been prepared", getName(), output_name);
+            spdlog::debug("[Node: {}]: blob with name {} has been prepared", getName(), output_name);
         }
     }
 
@@ -61,7 +64,9 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
         // TODO: https://jira.devtools.intel.com/browse/CVS-34457
         // Convert from proto.*_val to tensor_content
         // For now just throw an error
-        return StatusCode::INVALID_CONTENT_SIZE;
+        const std::string details = "Tensor content size can't be 0";
+        spdlog::debug("[Node: {}] {}", getName(), details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
     // Assuming content is in proto.tensor_content
@@ -76,7 +81,11 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
     size_t tensor_count = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
 
     if (proto.tensor_content().size() != tensor_count * tensorflow::DataTypeSize(proto.dtype())) {
-        return StatusCode::INVALID_CONTENT_SIZE;
+        std::stringstream ss;
+        ss << "Expected: " << tensor_count * tensorflow::DataTypeSize(proto.dtype()) << "; Actual: " << proto.tensor_content().size();
+        const std::string details = ss.str();
+        spdlog::debug("[Node {}] Invalid size of tensor proto - {}", getName(), details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
     // description.setLayout();  // Layout info is stored in model instance. If we find out it is required, then need to be set right before inference.
@@ -107,22 +116,25 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
         case tensorflow::DataType::DT_UINT16:  // TODO: Data is in proto.int_val container, need to convert
         case tensorflow::DataType::DT_INT64:   // Unsupported due to 0% precision observed for resnet
         default: {
-            Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-            SPDLOG_INFO(status.string());
-            return status;
+            std::stringstream ss;
+            ss << "Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());
+            const std::string details = ss.str();
+            spdlog::debug("[Node: {}] Unsupported deserialization precision - {}", getName(), details);
+            return Status(StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, details);
         }
         }
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_ERROR("EntryNode::deserialize: exception thrown from make_shared_blob; {}; exception message: {}", status.string(), e.what());
+        spdlog::debug("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+            getName(), status.string(), e.what());
         return status;
     } catch (std::logic_error& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_ERROR("EntryNode::deserialize: exception thrown from make_shared_blob; {}; exception message: {}", status.string(), e.what());
+        spdlog::debug("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+            getName(), status.string(), e.what());
         return status;
     }
 
     return StatusCode::OK;
 }
-
 }  // namespace ovms

@@ -15,9 +15,12 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "node.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 

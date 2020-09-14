@@ -18,132 +18,170 @@
 
 namespace ovms {
 
-const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::string>> Status::grpcMessages = {
-    {StatusCode::OK,
-        {grpc::StatusCode::OK, ""}},
+const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
+    {StatusCode::OK, ""},
 
-    {StatusCode::PATH_INVALID,
-        {grpc::StatusCode::INTERNAL, "The provided base path is invalid or doesn't exists"}},
-    {StatusCode::FILE_INVALID,
-        {grpc::StatusCode::INTERNAL, "File not found or cannot open"}},
-    {StatusCode::NO_MODEL_VERSION_AVAILABLE,
-        {grpc::StatusCode::INTERNAL, "Not a single model version directory has valid numeric name"}},
-    {StatusCode::NETWORK_NOT_LOADED,
-        {grpc::StatusCode::INTERNAL, "Error while loading a network"}},
-    {StatusCode::JSON_INVALID,
-        {grpc::StatusCode::INTERNAL, "The file is not valid json"}},
-    {StatusCode::MODELINSTANCE_NOT_FOUND,
-        {grpc::StatusCode::INTERNAL, "ModelInstance not found"}},
-    {StatusCode::SHAPE_WRONG_FORMAT,
-        {grpc::StatusCode::INTERNAL, "The provided shape is in wrong format"}},
-    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT,
-        {grpc::StatusCode::INTERNAL, "Plugin config is in wrong format"}},
-    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT,
-        {grpc::StatusCode::INTERNAL, "Model version policy is in wrong format"}},
-    {StatusCode::RESHAPE_ERROR,
-        {grpc::StatusCode::FAILED_PRECONDITION, "Model could not be reshaped with requested shape"}},
-    {StatusCode::AMBIGUOUS_SHAPE_PARAM,
-        {grpc::StatusCode::INTERNAL, "Anonymous fixed shape is invalid for models with multiple inputs"}},
-    {StatusCode::MODEL_MISSING,
-        {grpc::StatusCode::NOT_FOUND, "Model with requested name and/or version is not found"}},
-    {StatusCode::MODEL_NAME_MISSING,
-        {grpc::StatusCode::NOT_FOUND, "Model with requested name is not found"}},
-    {StatusCode::MODEL_VERSION_MISSING,
-        {grpc::StatusCode::NOT_FOUND, "Model with requested version is not found"}},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
-        {grpc::StatusCode::NOT_FOUND, "Model with requested version is retired"}},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_YET,
-        {grpc::StatusCode::NOT_FOUND, "Model with requested version is not loaded yet"}},
-    {StatusCode::MODEL_SPEC_MISSING,
-        {grpc::StatusCode::INVALID_ARGUMENT, "model_spec missing in request"}},
-    {StatusCode::INVALID_SIGNATURE_DEF,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid signature name"}},
+    {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
+    {StatusCode::FILE_INVALID, "File not found or cannot open"},
+    {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
+    {StatusCode::NETWORK_NOT_LOADED, "Error while loading a network"},
+    {StatusCode::JSON_INVALID, "The file is not valid json"},
+    {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
+    {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
+    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, "Plugin config is in wrong format"},
+    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
+    {StatusCode::RESHAPE_ERROR, "Model could not be reshaped with requested shape"},
+    {StatusCode::AMBIGUOUS_SHAPE_PARAM, "Anonymous fixed shape is invalid for models with multiple inputs"},
+    {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
+    {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
+    {StatusCode::MODEL_VERSION_MISSING, "Model with requested version is not found"},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, "Model with requested version is retired"},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_YET, "Model with requested version is not loaded yet"},
+    {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
+    {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
 
     // Predict request validation
-    {StatusCode::INVALID_NO_OF_INPUTS,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of inputs"}},
-    {StatusCode::INVALID_MISSING_INPUT,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Missing input with specific name"}},
-    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of shape dimensions"}},
-    {StatusCode::INVALID_BATCH_SIZE,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid input batch size"}},
-    {StatusCode::INVALID_SHAPE,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid input shape"}},
-    {StatusCode::INVALID_PRECISION,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid input precision"}},
-    {StatusCode::INVALID_VALUE_COUNT,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid number of values in tensor proto container"}},
-    {StatusCode::INVALID_CONTENT_SIZE,
-        {grpc::StatusCode::INVALID_ARGUMENT, "Invalid content size of tensor proto"}},
+    {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
+    {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},
+    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
+    {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
+    {StatusCode::INVALID_SHAPE, "Invalid input shape"},
+    {StatusCode::INVALID_PRECISION, "Invalid input precision"},
+    {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
+    {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
 
     // Deserialization
-    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION,  // Should never occur - ModelInstance::validate takes care of that
-        {grpc::StatusCode::INTERNAL, "Unsupported deserialization precision"}},
-    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR,
-        {grpc::StatusCode::INTERNAL, "Internal deserialization error"}},
+    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, "Unsupported deserialization precision"},
+    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, "Internal deserialization error"},
 
     // Inference
-    {StatusCode::OV_INTERNAL_INFERENCE_ERROR,
-        {grpc::StatusCode::INTERNAL, "Internal inference error"}},
+    {StatusCode::OV_INTERNAL_INFERENCE_ERROR, "Internal inference error"},
 
     // Serialization
-    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION,  // Should never occur - it should be validated during model loading
-        {grpc::StatusCode::INTERNAL, "Unsupported serialization precision"}},
-    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR,
-        {grpc::StatusCode::INTERNAL, "Internal serialization error"}},
+    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
+    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
 
     // GetModelStatus
-    {StatusCode::INTERNAL_ERROR,
-        {grpc::StatusCode::INTERNAL, "Internal server error"}},
+    {StatusCode::INTERNAL_ERROR, "Internal server error"},
 
-    // GCS
-    {StatusCode::GCS_INVALID_ACCESS,
-        {grpc::StatusCode::INTERNAL, "Invalid or missing GCS credentials"}},
+    // Rest parser failure
+    {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},
+    {StatusCode::REST_PREDICT_UNKNOWN_ORDER, "Invalid JSON structure. Could not detect row or column format"},
+    {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, "Invalid JSON structure. Nonamed instance is not an array."},
+    {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, "Invalid JSON structure. One of named instances is not a JSON object."},
+    {StatusCode::REST_INPUT_NOT_PREALLOCATED, "Internal allocation error"},
+    {StatusCode::REST_NO_INSTANCES_FOUND, "Invalid JSON structure. Missing instances in row format"},
+    {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, "Could not detect neither named or nonamed format"},
+    {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, "Could not parse instance content. Not valid ndarray detected"},
+    {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, "Invalid JSON structure. Request inputs have different batch sizes"},
+    {StatusCode::REST_INPUTS_NOT_AN_OBJECT, "Invalid JSON structure. One of inputs is not a JSON object."},
+    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure. Missing inputs in column format"},
+    {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
+    {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
+    {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
+    {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Tensor serialization error"},
 };
 
-const net_http::HTTPStatusCode Status::http() const {
-    using net_http::HTTPStatusCode;
-    switch (code) {
-    case StatusCode::OK:
-        return HTTPStatusCode::OK;
-    case StatusCode::MODEL_NAME_MISSING:
-        return HTTPStatusCode::NOT_FOUND;
-    case StatusCode::MODEL_VERSION_MISSING:
-        return HTTPStatusCode::NOT_FOUND;
-    case StatusCode::REST_NOT_FOUND:
-        return HTTPStatusCode::NOT_FOUND;
-    case StatusCode::REST_COULD_NOT_PARSE_VERSION:
-    case StatusCode::REST_MALFORMED_REQUEST:
-        return HTTPStatusCode::BAD_REQUEST;
-    case StatusCode::REST_BODY_IS_NOT_AN_OBJECT:
-    case StatusCode::REST_PREDICT_UNKNOWN_ORDER:
-    case StatusCode::REST_INSTANCES_NOT_AN_ARRAY:
-    case StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT:
-    case StatusCode::REST_INPUT_NOT_PREALLOCATED:
-    case StatusCode::REST_NO_INSTANCES_FOUND:
-    case StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED:
-    case StatusCode::REST_COULD_NOT_PARSE_INSTANCE:
-    case StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER:
-    case StatusCode::REST_INPUTS_NOT_AN_OBJECT:
-    case StatusCode::REST_NO_INPUTS_FOUND:
-    case StatusCode::REST_COULD_NOT_PARSE_INPUT:
-        return HTTPStatusCode::BAD_REQUEST;
-    case StatusCode::INVALID_BATCH_SIZE:
-    case StatusCode::INVALID_SHAPE:
-    case StatusCode::INVALID_SIGNATURE_DEF:
-    case StatusCode::INVALID_NO_OF_INPUTS:
-    case StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS:
-    case StatusCode::INVALID_PRECISION:
-    case StatusCode::INVALID_CONTENT_SIZE:
-    case StatusCode::INVALID_VALUE_COUNT:
-    case StatusCode::INVALID_MISSING_INPUT:
-        return HTTPStatusCode::BAD_REQUEST;
-    case StatusCode::RESHAPE_ERROR:
-        return HTTPStatusCode::PRECOND_FAILED;
-    default:
-        return HTTPStatusCode::ERROR;
-    }
-}
+const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
+    {StatusCode::OK, grpc::StatusCode::OK},
+
+    {StatusCode::PATH_INVALID, grpc::StatusCode::INTERNAL},
+    {StatusCode::FILE_INVALID, grpc::StatusCode::INTERNAL},
+    {StatusCode::NO_MODEL_VERSION_AVAILABLE, grpc::StatusCode::INTERNAL},
+    {StatusCode::NETWORK_NOT_LOADED, grpc::StatusCode::INTERNAL},
+    {StatusCode::JSON_INVALID, grpc::StatusCode::INTERNAL},
+    {StatusCode::MODELINSTANCE_NOT_FOUND, grpc::StatusCode::INTERNAL},
+    {StatusCode::SHAPE_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
+    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
+    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
+    {StatusCode::RESHAPE_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
+    {StatusCode::AMBIGUOUS_SHAPE_PARAM, grpc::StatusCode::INTERNAL},
+    {StatusCode::MODEL_MISSING, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::MODEL_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_MISSING, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
+
+    // Predict request validation
+    {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_MISSING_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_BATCH_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
+
+    // Deserialization
+
+    // Should never occur - ModelInstance::validate takes care of that
+    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, grpc::StatusCode::INTERNAL},
+    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, grpc::StatusCode::INTERNAL},
+
+    // Inference
+    {StatusCode::OV_INTERNAL_INFERENCE_ERROR, grpc::StatusCode::INTERNAL},
+
+    // Serialization
+
+    // Should never occur - it should be validated during model loading
+    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, grpc::StatusCode::INTERNAL},
+    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, grpc::StatusCode::INTERNAL},
+
+    // GetModelStatus
+    {StatusCode::INTERNAL_ERROR, grpc::StatusCode::INTERNAL},
+};
+
+const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
+    {StatusCode::OK, net_http::HTTPStatusCode::OK},
+
+    {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::NETWORK_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::RESHAPE_ERROR, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::AMBIGUOUS_SHAPE_PARAM, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
+
+    // Predict request validation
+    {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+
+    // Deserialization
+
+    // Should never occur - ModelInstance::validate takes care of that
+    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+
+    // Inference
+    {StatusCode::OV_INTERNAL_INFERENCE_ERROR, net_http::HTTPStatusCode::ERROR},
+
+    // Serialization
+
+    // Should never occur - it should be validated during model loading
+    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+
+    // GetModelStatus
+    {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
+};
 
 }  // namespace ovms

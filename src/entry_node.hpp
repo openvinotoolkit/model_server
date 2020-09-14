@@ -14,10 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <string>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "node.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
@@ -42,7 +44,7 @@ public:
     }
 
     // Deserialize proto to blob
-    static Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
+    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
 };
 
 }  // namespace ovms

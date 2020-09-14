@@ -147,12 +147,30 @@ enum class StatusCode {
 
 class Status {
     StatusCode code;
+    std::string message;
 
-    static const std::map<const StatusCode, const std::pair<grpc::StatusCode, const std::string>> grpcMessages;
+    static const std::map<const StatusCode, const std::string> statusMessageMap;
+    static const std::map<const StatusCode, grpc::StatusCode> grpcStatusMap;
+    static const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
+
+    void appendDetails(const std::string& details) {
+        this->message += " - " + details;
+    }
 
 public:
     Status(StatusCode code = StatusCode::OK) :
-        code(code) {}
+        code(code) {
+        auto it = statusMessageMap.find(code);
+        if (it != statusMessageMap.end())
+            this->message = it->second;
+        else
+            this->message = "Unknown error";
+    }
+
+    Status(StatusCode code, const std::string& details) :
+        Status(code) {
+        appendDetails(details);
+    }
 
     bool ok() const {
         return code == StatusCode::OK;
@@ -179,15 +197,11 @@ public:
     }
 
     const grpc::Status grpc() const {
-        static const grpc::Status defaultStatus = grpc::Status(
-            grpc::StatusCode::UNKNOWN,
-            "Unknown error");
-
-        auto it = grpcMessages.find(code);
-        if (it != grpcMessages.end()) {
-            return grpc::Status(it->second.first, it->second.second);
+        auto it = grpcStatusMap.find(code);
+        if (it != grpcStatusMap.end()) {
+            return grpc::Status(it->second, this->message);
         } else {
-            return defaultStatus;
+            return grpc::Status(grpc::StatusCode::UNKNOWN, "Unknown error");
         }
     }
 
@@ -196,21 +210,21 @@ public:
     }
 
     const std::string& string() const {
-        static const std::string defaultString = "Unknown error";
-
-        auto it = grpcMessages.find(code);
-        if (it != grpcMessages.end()) {
-            return it->second.second;
-        } else {
-            return defaultString;
-        }
+        return this->message;
     }
 
     operator const std::string&() const {
         return this->string();
     }
 
-    const net_http::HTTPStatusCode http() const;
+    const net_http::HTTPStatusCode http() const {
+        auto it = httpStatusMap.find(code);
+        if (it != httpStatusMap.end()) {
+            return it->second;
+        } else {
+            return net_http::HTTPStatusCode::ERROR;
+        }
+    }
 };
 
 }  // namespace ovms

@@ -224,8 +224,34 @@ public:
             return "I32";
         case InferenceEngine::Precision::I64:
             return "I64";
-            // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
         case InferenceEngine::Precision::BOOL:
+            return "BOOL";
+        default:
+            return "DT_INVALID";
+        }
+    }
+
+    static const std::string getDataTypeAsString(tensorflow::DataType dataType) {
+        switch (dataType) {
+        case tensorflow::DataType::DT_FLOAT:
+            return "FP32";
+        case tensorflow::DataType::DT_HALF:
+            return "FP16";
+        case tensorflow::DataType::DT_INT16:
+            return "I16";
+        case tensorflow::DataType::DT_UINT8:
+            return "U8";
+        case tensorflow::DataType::DT_INT8:
+            return "I8";
+        case tensorflow::DataType::DT_UINT16:
+            return "U16";
+        case tensorflow::DataType::DT_INT32:
+            return "I32";
+        case tensorflow::DataType::DT_UINT64:
+            return "U64";
+        case tensorflow::DataType::DT_INT64:
+            return "I64";
+        case tensorflow::DataType::DT_BOOL:
             return "BOOL";
         default:
             return "DT_INVALID";
@@ -344,6 +370,28 @@ public:
          */
     const InferenceEngine::TensorDesc getTensorDesc() const {
         return InferenceEngine::TensorDesc{precision, shape, layout};
+    }
+
+    static std::string shapeToString(const shape_t& shape) {
+        std::ostringstream oss;
+        oss << "(";
+        size_t i = 0;
+        for (; i < shape.size() - 1; i++) {
+            oss << shape[i] << ",";
+        }
+        oss << shape[i] << ")";
+        return oss.str();
+    }
+
+    static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape) {
+        std::ostringstream oss;
+        oss << "(";
+        int i = 0;
+        for (; i < tensorShape.dim_size() - 1; i++) {
+            oss << tensorShape.dim(i).size() << ",";
+        }
+        oss << tensorShape.dim(i).size() << ")";
+        return oss.str();
     }
 };
 

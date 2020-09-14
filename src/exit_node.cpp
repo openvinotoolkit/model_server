@@ -16,6 +16,7 @@
 #include "exit_node.hpp"
 
 #include <string>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -28,15 +29,14 @@ Status ExitNode::fetchResults(BlobMap&) {
     for (const auto& kv : this->inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
-        SPDLOG_DEBUG("Serializing response from pipeline. Output name:{}", output_name);
+        spdlog::debug("[Node: {}] Serializing response from pipeline. Output name:{}", getName(), output_name);
         auto& proto = (*this->response->mutable_outputs())[output_name];
         auto status = serialize(blob, proto);
         if (!status.ok()) {
-            SPDLOG_INFO("Failed to serialize output:{} with error:{}", output_name, status.string());
             return status;
         }
 
-        SPDLOG_DEBUG("ExitNode::fetchResults (Node name {}): serialize blob to proto: blob name [{}]", getName(), output_name);
+        spdlog::debug("[Node: {}] Serialized blob to proto: blob name {}", getName(), output_name);
     }
 
     return StatusCode::OK;
@@ -75,7 +75,12 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
         proto.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);  // Manually tested that OV I64 = TF int32_t
         break;
     default:
-        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+        std::stringstream ss;
+        ss << "Actual: " << TensorInfo::getPrecisionAsString(blob->getTensorDesc().getPrecision());
+        const std::string details = ss.str();
+        spdlog::debug("[Node: {}] Unsupported serialization precision - {}", getName(), details);
+        Status status = Status(StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, details);
+        return status;
     }
 
     // Set content
@@ -83,5 +88,4 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
 
     return StatusCode::OK;
 }
-
 }  // namespace ovms
