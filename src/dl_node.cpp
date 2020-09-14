@@ -87,7 +87,12 @@ Status DLNode::setInputsForInference(InferenceEngine::InferRequest& infer_reques
     try {
         // Prepare inference request, fill with input blobs
         for (const auto& kv : this->inputBlobs) {
-            infer_request.SetBlob(kv.first, kv.second);
+            std::string realModelInputName;
+            if (!getRealInputName(kv.first, &realModelInputName).ok()) {
+                SPDLOG_ERROR("DLNode::fetchResults (Node name {}); cannot find real model input name for alias: {}", getName(), kv.first);
+                return StatusCode::INTERNAL_ERROR;
+            }
+            infer_request.SetBlob(realModelInputName, kv.second);
         }
         // OV implementation the InferenceEngineException is not
         // a base class for all other exceptions thrown from OV.
@@ -169,8 +174,11 @@ Status DLNode::fetchResults(BlobMap& outputs) {
             }
 
             try {
-                auto aliasItr = nodeOutputNameAlias.find(output_name);
-                const std::string realModelOutputName = ((aliasItr != nodeOutputNameAlias.end()) ? (*aliasItr).second : output_name);
+                std::string realModelOutputName;
+                if (!getRealOutputName(output_name, &realModelOutputName).ok()) {
+                    SPDLOG_ERROR("[Node: {}] Cannot find real model output name for alias: {}", getName(), output_name);
+                    return StatusCode::INTERNAL_ERROR;
+                }
                 SPDLOG_DEBUG("[Node: {}] Getting blob from model:{}, inferRequestStreamId:{}, blobName:{}",
                     getName(), modelName, streamId.value(), realModelOutputName);
                 const auto blob = infer_request.GetBlob(realModelOutputName);

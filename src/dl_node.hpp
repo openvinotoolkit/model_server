@@ -82,6 +82,23 @@ public:
     }
 
 private:
+    Status getRealInputName(const std::string& alias, std::string* result) const {
+        if (this->model->getInputsInfo().count(alias) == 0) {
+            return StatusCode::INVALID_MISSING_INPUT;
+        }
+        *result = this->model->getInputsInfo().at(alias)->getName();
+        return StatusCode::OK;
+    }
+
+    Status getRealOutputName(const std::string& alias, std::string* result) const {
+        const auto& modelOutputName = nodeOutputNameAlias.count(alias) == 1 ? nodeOutputNameAlias.at(alias) : alias;
+        if (this->model->getOutputsInfo().count(modelOutputName) == 0) {
+            return StatusCode::INVALID_MISSING_OUTPUT;
+        }
+        *result = this->model->getOutputsInfo().at(modelOutputName)->getName();
+        return StatusCode::OK;
+    }
+
     Status requestExecuteRequiredResources();
     Status setInputsForInference(InferenceEngine::InferRequest& infer_request);
     Status executeInference(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
