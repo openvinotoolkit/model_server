@@ -66,11 +66,6 @@ void check_file_access(const std::string& path, ovms::FileSystem* fs) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(is_dir, false);
 
-    int64_t time_ns;
-    status = fs->fileModificationTime(path, &time_ns);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_GT(time_ns, 0);
-
     std::string file_contents;
     status = fs->readTextFile(
         path, &file_contents);  // make sure file provided in env is small, or

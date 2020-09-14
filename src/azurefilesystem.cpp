@@ -42,11 +42,6 @@ StatusCode AzureFileSystem::isDirectory(const std::string& path,
     return StatusCode::NOT_IMPLEMENTED;
 }
 
-StatusCode AzureFileSystem::fileModificationTime(const std::string& path,
-    int64_t* mtime_ns) {
-    return StatusCode::NOT_IMPLEMENTED;
-}
-
 StatusCode
 AzureFileSystem::getDirectoryContents(const std::string& path,
     std::set<std::string>* contents) {

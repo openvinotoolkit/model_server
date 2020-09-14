@@ -243,41 +243,6 @@ StatusCode S3FileSystem::isDirectory(const std::string& path, bool* is_dir) {
     return StatusCode::OK;
 }
 
-StatusCode S3FileSystem::fileModificationTime(const std::string& path, int64_t* mtime_ns) {
-    bool is_dir;
-
-    auto status = isDirectory(path, &is_dir);
-    if (status != StatusCode::OK) {
-        return status;
-    }
-
-    if (is_dir) {
-        return StatusCode::OK;
-    }
-
-    std::string bucket, object;
-    status = parsePath(path, &bucket, &object);
-    if (status != StatusCode::OK) {
-        return status;
-    }
-
-    // Send a request for the objects metadata
-    s3::Model::HeadObjectRequest head_request;
-    head_request.SetBucket(bucket.c_str());
-    head_request.SetKey(object.c_str());
-
-    // If request succeeds, copy over the modification time
-    auto head_object_outcome = client_.HeadObject(head_request);
-    if (head_object_outcome.IsSuccess()) {
-        *mtime_ns = head_object_outcome.GetResult().GetLastModified().Millis();
-    } else {
-        spdlog::error("Failed to get modification time for object at {}", path);
-        return StatusCode::S3_FAILED_GET_TIME;
-    }
-
-    return StatusCode::OK;
-}
-
 StatusCode S3FileSystem::getDirectoryContents(const std::string& path, std::set<std::string>* contents) {
     // Parse bucket and dir_path
     std::string bucket, dir_path, full_dir;

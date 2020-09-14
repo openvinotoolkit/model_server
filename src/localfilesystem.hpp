@@ -50,15 +50,6 @@ public:
     StatusCode isDirectory(const std::string& path, bool* is_dir) override;
 
     /**
-     * @brief Get path modification time
-     * 
-     * @param path 
-     * @param mtime_ns 
-     * @return StatusCode 
-     */
-    StatusCode fileModificationTime(const std::string& path, int64_t* mtime_ns) override;
-
-    /**
      * @brief Get the files and directories in given directory
      * 
      * @param path 

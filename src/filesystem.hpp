@@ -56,15 +56,6 @@ public:
     virtual StatusCode isDirectory(const std::string& path, bool* is_dir) = 0;
 
     /**
-     * @brief Get path modification time
-     * 
-     * @param path 
-     * @param mtime_ns 
-     * @return StatusCode 
-     */
-    virtual StatusCode fileModificationTime(const std::string& path, int64_t* mtime_ns) = 0;
-
-    /**
      * @brief Get the files and directories in given directory
      * 
      * @param path 

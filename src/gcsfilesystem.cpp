@@ -201,44 +201,6 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
     return StatusCode::OK;
 }
 
-StatusCode GCSFileSystem::fileModificationTime(const std::string& path,
-    int64_t* mtime_ns) {
-    SPDLOG_TRACE("fileModificationTime {}", path);
-    bool is_directory;
-    auto status = this->isDirectory(path, &is_directory);
-    if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to get file modification time {} -> {}", path,
-            ovms::Status(status).string());
-        return status;
-    }
-    if (is_directory) {
-        SPDLOG_WARN("GCS: fileModificationTime called for a directory: {}", path);
-        return StatusCode::GCS_INCORRECT_REQUESTED_OBJECT_TYPE;
-    }
-    std::string bucket, object;
-    status = this->parsePath(path, &bucket, &object);
-    if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to get file modification time {} -> {}", path,
-            ovms::Status(status).string());
-        return status;
-    }
-    google::cloud::StatusOr<gcs::ObjectMetadata> meta =
-        client_.GetObjectMetadata(bucket, object);
-    if (!meta) {
-        SPDLOG_WARN("GCS: Unable to get file modification time {} -> object "
-                    "metadata is null",
-            path);
-        return StatusCode::GCS_METADATA_FAIL;
-    }
-    auto update_time =
-        std::chrono::time_point_cast<std::chrono::nanoseconds>(meta->updated())
-            .time_since_epoch()
-            .count();
-    *mtime_ns = update_time;
-    SPDLOG_TRACE("GCS: modification time for {} is {}", path, update_time);
-    return StatusCode::OK;
-}
-
 StatusCode
 GCSFileSystem::getDirectoryContents(const std::string& path,
     std::set<std::string>* contents) {

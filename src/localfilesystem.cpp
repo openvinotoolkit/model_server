@@ -55,19 +55,6 @@ StatusCode LocalFileSystem::isDirectory(const std::string& path, bool* is_dir) {
     return StatusCode::OK;
 }
 
-StatusCode LocalFileSystem::fileModificationTime(const std::string& path, int64_t* mtime_ns) {
-    // For last modification time we'll be using c style
-    struct stat st;
-    if (stat(path.c_str(), &st) != 0) {
-        SPDLOG_DEBUG("Couldn't access path {}", path);
-        return StatusCode::PATH_INVALID;
-    }
-
-    *mtime_ns = st.st_mtim.tv_sec * NANOS_PER_SECOND + st.st_mtim.tv_nsec;
-
-    return StatusCode::OK;
-}
-
 StatusCode LocalFileSystem::getDirectoryContents(const std::string& path, files_list_t* contents) {
     try {
         for (const auto& entry : fs::directory_iterator(path)) {
