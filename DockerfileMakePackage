@@ -34,18 +34,6 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/inte
 
 RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 
-RUN find /usr/local/lib/ -iname 'libboost_system.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_random.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_filesystem.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_thread.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_chrono.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_atomic.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_date_time.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_regex.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_log.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_log_setup.so*' -exec cp -v {} /ovms_release/lib/ \;
-RUN find /usr/local/lib/ -iname 'libboost_locale.so*' -exec cp -v {} /ovms_release/lib/ \;
-
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /openvino/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
@@ -60,15 +48,9 @@ RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath
 RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /ovms
-#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libstdc++' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
-#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libgcc' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libssl' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libcrypto' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libusb' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
-RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libboost' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
-#RUN cp -v `ldd /ovms_release/bin/ovms | grep 'libnuma' | cut -d'>' -f2 | cut -d' ' -f2` /ovms_release/lib || true
-RUN cp /usr/lib64/libOpenCL.so.1 /ovms_release/lib
 RUN cp -v /ovms/release_files/license.txt /ovms_release/
+RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
+RUN cp -rv /ovms/release_files/user-guide /ovms_release/
 
 RUN ls -lahR /ovms_release/
 
@@ -77,5 +59,6 @@ RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --set-rpath '$
 
 WORKDIR /
 RUN tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/ && sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && cp /ovms_release/metadata.json /ovms.tar.gz.metadata.json
+RUN tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/ && sha256sum ovms.tar.xz > ovms.tar.xz.sha256 && cp /ovms_release/metadata.json /ovms.tar.xz.metadata.json
 
 ENTRYPOINT [ ]
