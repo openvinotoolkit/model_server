@@ -292,6 +292,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
         return validationResult;
     }
 
+    std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
     // TODO: Add check if pipeline graph is acyclic, connected, no dead ends
     // https://jira.devtools.intel.com/browse/CVS-34361
@@ -308,6 +309,9 @@ Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
         SPDLOG_INFO("Pipeline with requested name:{} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
-    return definitions.at(name)->create(pipeline, request, response, manager);
+    std::shared_lock lock(definitionsMtx);
+    auto& definition = *definitions.at(name);
+    lock.unlock();
+    return definition.create(pipeline, request, response, manager);
 }
 }  // namespace ovms

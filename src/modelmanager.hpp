@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -103,13 +104,17 @@ private:
      */
     void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
+    /**
+     * @brief Mutex for blocking concurrent add & find of model
+     */
+    mutable std::shared_mutex modelsMtx;
+
 public:
     /**
      * @brief Gets the instance of ModelManager
      */
     static ModelManager& getInstance() {
         static ModelManager instance;
-
         return instance;
     }
 
@@ -144,10 +149,7 @@ public:
      *
      * @return pointer to Model or nullptr if not found 
      */
-    const std::shared_ptr<Model> findModelByName(const std::string& name) const {
-        auto it = models.find(name);
-        return it != models.end() ? it->second : nullptr;
-    }
+    const std::shared_ptr<Model> findModelByName(const std::string& name) const;
 
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)

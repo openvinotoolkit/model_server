@@ -17,6 +17,7 @@
 
 #include <map>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -92,6 +93,7 @@ public:
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;
+    mutable std::shared_mutex definitionsMtx;
 
 public:
     Status createDefinition(const std::string& pipelineName,
@@ -100,6 +102,7 @@ public:
         ModelManager& manager);
 
     bool definitionExists(const std::string& name) const {
+        std::shared_lock lock(definitionsMtx);
         return definitions.count(name) == 1;
     }
 

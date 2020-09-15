@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <unordered_map>
 #include <utility>
@@ -394,9 +395,10 @@ void ModelManager::getVersionsToChange(
 }
 
 std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
+    std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models[modelName] = modelFactory(modelName);
+        models.insert({modelName, modelFactory(modelName)});
     }
     return models[modelName];
 }
@@ -511,6 +513,12 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     return StatusCode::OK;
+}
+
+const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
+    std::shared_lock lock(modelsMtx);
+    auto it = models.find(name);
+    return it != models.end() ? it->second : nullptr;
 }
 
 }  // namespace ovms

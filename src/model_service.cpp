@@ -76,6 +76,7 @@ Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::Get
 
 Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response) {
     SPDLOG_DEBUG("model_service: request: {}", request->DebugString());
+
     bool has_requested_version = request->model_spec().has_version();
     auto requested_version = request->model_spec().version().value();
     std::string requested_model_name = request->model_spec().name();
@@ -84,6 +85,7 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
         SPDLOG_INFO("requested model {} was not found", requested_model_name);
         return StatusCode::MODEL_NAME_MISSING;
     }
+
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
     if (has_requested_version || requested_version != 0) {
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
@@ -97,15 +99,11 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
         addStatusToResponse(response, requested_version, status);
     } else {
         // return status details of all versions of a requested model.
-        auto model_versions = model_ptr->getModelVersions();
-        for (const auto& [model_version, model_instance_ptr] : model_versions) {
-            if (!model_instance_ptr) {
-                spdlog::error("during model iteration, found null model instance pointer!");
-                return StatusCode::MODEL_VERSION_MISSING;
-            }
-            const auto& status = model_instance_ptr->getStatus();
-            SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, model_version, status.getStateString());
-            addStatusToResponse(response, model_version, status);
+        auto modelVersionsInstances = model_ptr->getModelVersionsMapCopy();
+        for (const auto& [modelVersion, modelInstance] : modelVersionsInstances) {
+            const auto& status = modelInstance.getStatus();
+            SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, modelVersion, status.getStateString());
+            addStatusToResponse(response, modelVersion, status);
         }
     }
     SPDLOG_DEBUG("model_service: response: {}", response->DebugString());

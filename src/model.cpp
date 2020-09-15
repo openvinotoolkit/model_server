@@ -20,6 +20,46 @@
 #include <utility>
 
 namespace ovms {
+const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMapCopy() const {
+    std::shared_lock lock(modelVersionsMtx);
+    std::map<model_version_t, const ModelInstance&> modelInstancesMapCopy;
+    for (auto& [modelVersion, modelInstancePtr] : modelVersions) {
+        modelInstancesMapCopy.insert({modelVersion, *modelInstancePtr});
+    }
+    return std::move(modelInstancesMapCopy);
+}
+
+const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModelVersions() const {
+    return modelVersions;
+}
+
+void Model::updateDefaultVersion() {
+    model_version_t newDefaultVersion = 0;
+    spdlog::info("Updating default version for model:{}, from:{}", getName(), defaultVersion);
+    for (const auto& [version, versionInstance] : modelVersions) {
+        if (version > newDefaultVersion &&
+            ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
+            newDefaultVersion = version;
+        }
+    }
+    defaultVersion = newDefaultVersion;
+    if (newDefaultVersion) {
+        SPDLOG_INFO("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
+    } else {
+        SPDLOG_INFO("Model:{} will not have default version since no version is available.", getName());
+    }
+}
+
+const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
+    std::shared_lock lock(modelVersionsMtx);
+    auto defaultVersion = getDefaultVersion();
+    const auto modelInstanceIt = modelVersions.find(defaultVersion);
+
+    if (modelVersions.end() == modelInstanceIt) {
+        return nullptr;
+    }
+    return modelInstanceIt->second;
+}
 
 std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory() {
     SPDLOG_DEBUG("Producing new ModelInstance");
@@ -33,7 +73,9 @@ Status Model::addVersion(const ModelConfig& config) {
         return status;
     }
     const auto& version = config.getVersion();
+    std::unique_lock lock(modelVersionsMtx);
     modelVersions[version] = std::move(modelInstance);
+    lock.unlock();
     updateDefaultVersion();
     return StatusCode::OK;
 }
