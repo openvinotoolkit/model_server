@@ -49,8 +49,19 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
 
     auto networkShapes = network->getInputShapes();
+    const auto& networkInputs = network->getInputsInfo();
     bool reshapeRequired = false;
-    for (const auto& pair : network->getInputsInfo()) {
+    auto& configShapes = config.getShapes();
+    for (const auto& shape : configShapes) {
+        if (shape.first == ANONYMOUS_INPUT_NAME) {
+            continue;
+        }
+        if (networkInputs.count(shape.first) == 0) {
+            spdlog::error("Config shape - {} not found in network", shape.first);
+            return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
+        }
+    }
+    for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
 
@@ -75,8 +86,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             shape = parameter.getShape(name);
         } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
             shape = config.getShapes().at(name).shape;
-        } else if (config.getShapes().count(DEFAULT_INPUT_NAME) && config.getShapes().at(DEFAULT_INPUT_NAME).shape.size()) {
-            shape = config.getShapes().at(DEFAULT_INPUT_NAME).shape;
+        } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
+            shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
         }
 
         spdlog::debug("Network shape - {}; Final shape - {}", TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));

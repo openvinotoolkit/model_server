@@ -52,7 +52,7 @@ using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
 
-const std::string DEFAULT_INPUT_NAME = "DEFAULT_INPUT_NAME";
+const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 /**
@@ -513,7 +513,7 @@ public:
     bool isShapeAuto(const std::string& name) const {
         auto it = getShapes().find(name);
         if (it == getShapes().end()) {
-            it = getShapes().find(DEFAULT_INPUT_NAME);
+            it = getShapes().find(ANONYMOUS_INPUT_NAME);
         }
         if (it == getShapes().end()) {
             return false;
@@ -522,11 +522,11 @@ public:
     }
 
     bool isShapeAnonymous() const {
-        return getShapes().size() == 1 && getShapes().begin()->first == DEFAULT_INPUT_NAME;
+        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
     }
 
     bool isShapeAnonymousFixed() const {
-        return isShapeAnonymous() && !isShapeAuto(DEFAULT_INPUT_NAME);
+        return isShapeAnonymous() && !isShapeAuto(ANONYMOUS_INPUT_NAME);
     }
 
     /**
