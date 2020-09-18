@@ -162,18 +162,6 @@ std::string ModelInstance::findModelFilePathWithExtension(const std::string& ext
     return findFilePathWithExtension(path, extension);
 }
 
-uint getOVCPUThroughputStreams() {
-    const char* environmentVariableBuffer = std::getenv(CPU_THROUGHPUT_STREAMS);
-    if (environmentVariableBuffer) {
-        auto result = stou32(environmentVariableBuffer);
-        if (result && result.value() > 0) {
-            return result.value();
-        }
-    }
-
-    return std::max(std::thread::hardware_concurrency() / 8, 1u);
-}
-
 uint getNumberOfParallelInferRequests() {
     const char* environmentVariableBuffer = std::getenv(NIREQ);
     if (environmentVariableBuffer) {
@@ -200,7 +188,7 @@ Status ModelInstance::loadOVCNNNetwork() {
     try {
         network = loadOVCNNNetworkPtr(modelFile);
     } catch (std::exception& e) {
-        spdlog::error("Error:{}; occured during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
@@ -215,7 +203,12 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
     // For CPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS depending on core count
     if (config.isDeviceUsed("CPU")) {
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
-            pluginConfig["CPU_THROUGHPUT_STREAMS"] = std::to_string(getOVCPUThroughputStreams());
+            pluginConfig["CPU_THROUGHPUT_STREAMS"] = "CPU_THROUGHPUT_AUTO";
+        }
+    }
+    if (config.isDeviceUsed("GPU")) {
+        if (pluginConfig.count("GPU_THROUGHPUT_STREAMS") == 0) {
+            pluginConfig["GPU_THROUGHPUT_STREAMS"] = "GPU_THROUGHPUT_AUTO";
         }
     }
     return pluginConfig;
