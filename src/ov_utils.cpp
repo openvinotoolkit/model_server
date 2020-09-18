@@ -22,6 +22,9 @@ namespace ovms {
 InferenceEngine::Blob::Ptr blobClone(const InferenceEngine::Blob::Ptr sourceBlob) {
     auto copyBlob = InferenceEngine::Blob::CreateFromData(std::make_shared<InferenceEngine::Data>("", sourceBlob->getTensorDesc()));
     copyBlob->allocate();
+    if (copyBlob->byteSize() != sourceBlob->byteSize()) {
+        return nullptr;
+    }
     std::memcpy((void*)copyBlob->buffer(), (void*)sourceBlob->buffer(), sourceBlob->byteSize());
     return copyBlob;
 }
