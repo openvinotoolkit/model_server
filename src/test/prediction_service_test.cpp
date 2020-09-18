@@ -150,6 +150,40 @@ public:
         }
     }
 
+    static void checkOutputShape(const tensorflow::serving::PredictResponse& response, const ovms::shape_t& shape) {
+        ASSERT_EQ(response.outputs().count("a"), 1);
+        const auto& output_tensor = response.outputs().at("a");
+        ASSERT_EQ(output_tensor.tensor_shape().dim_size(), shape.size());
+        for (size_t i = 0; i < shape.size(); i++) {
+            EXPECT_EQ(output_tensor.tensor_shape().dim(i).size(), shape[i]);
+        }
+    }
+
+    ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
+        std::shared_ptr<ovms::ModelInstance> model;
+        std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+        auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
+        if (!status.ok()) {
+            return status;
+        }
+
+        response.Clear();
+        return ovms::inference(*model, &request, &response, unload_guard);
+    }
+
+    ovms::Status performInferenceWithShape(tensorflow::serving::PredictResponse& response, const ovms::shape_t& shape = {1, 10}, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
+        auto request = preparePredictRequest(
+            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, tensorflow::DataType>{shape, precision}}});
+        return performInferenceWithRequest(request, response);
+    }
+
+    ovms::Status performInferenceWithBatchSize(tensorflow::serving::PredictResponse& response, int batchSize = 1, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
+        ovms::shape_t shape = {batchSize, 10};
+        auto request = preparePredictRequest(
+            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, tensorflow::DataType>{shape, precision}}});
+        return performInferenceWithRequest(request, response);
+    }
+
 public:
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -352,4 +386,97 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ASSERT_EQ(output_tensor.tensor_shape().dim_size(), 2);
     EXPECT_EQ(output_tensor.tensor_shape().dim(0).size(), 1);
     EXPECT_EQ(output_tensor.tensor_shape().dim(1).size(), 5);
+}
+
+/**
+ * Scenario - perform inferences with different shapes and model reload via config.json change
+ * 
+ * 1. Load model with shape=auto, initial internal shape (1,10)
+ * 2. Do the inference with (1,12) shape - expect status OK and result (1,12)
+ * 3. Reshape model to fixed=(1,11) with config.json change
+ * 4. Do the inference with (1,12) shape - expect status INVALID_SHAPE
+ * 5. Do the inference with (1,11) shape - expect status OK and result (1,11)
+ * 6. Reshape model back to shape=auto, initial internal shape (1,10)
+ * 7. Do the inference with (1,12) shape - expect status OK and result (1,12)
+ */
+TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
+    using namespace ovms;
+
+    // Prepare model with shape=auto (initially (1,10) shape)
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("auto");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform reshape to (1,12) using request
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::OK);
+    checkOutputShape(response, {1, 12});
+
+    // Reshape with model reload to Fixed=(1,11)
+    config.setBatchingParams("0");
+    config.parseShapeParameter("(1,11)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    // Cannot do the inference with (1,12)
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::INVALID_SHAPE);
+
+    // Successfull inference with (1,11)
+    ASSERT_EQ(performInferenceWithShape(response, {1, 11}), StatusCode::OK);
+    checkOutputShape(response, {1, 11});
+
+    // Reshape back to AUTO, internal shape is (1,10)
+    config.setBatchingParams("0");
+    config.parseShapeParameter("auto");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    // Perform reshape to (1,12) using request
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::OK);
+    checkOutputShape(response, {1, 12});
+}
+
+/**
+ * Scenario - perform inferences with different batch size and model reload via config.json change
+ * 
+ * 1. Load model with bs=auto, initial internal shape (1,10)
+ * 2. Do the inference with (3,10) shape - expect status OK and result (3,10)
+ * 3. Change model batch size to fixed=4 with config.json change
+ * 4. Do the inference with (3,10) shape - expect status INVALID_BATCH_SIZE
+ * 5. Do the inference with (4,10) shape - expect status OK and result (4,10)
+ * 6. Reshape model back to batchsize=auto, initial internal shape (1,10)
+ * 7. Do the inference with (3,10) shape - expect status OK and result (3,10)
+ */
+TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
+    using namespace ovms;
+
+    // Prepare model with shape=auto (initially (1,10) shape)
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform batch size change to 3 using request
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
+    checkOutputShape(response, {3, 10});
+
+    // Change batch size with model reload to Fixed=4
+    config.setBatchingParams("4");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    // Cannot do the inference with (3,10)
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::INVALID_BATCH_SIZE);
+
+    // Successfull inference with (4,10)
+    ASSERT_EQ(performInferenceWithBatchSize(response, 4), StatusCode::OK);
+    checkOutputShape(response, {4, 10});
+
+    // Reshape back to AUTO, internal shape is (1,10)
+    config.setBatchingParams("auto");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    // Perform batch change to 3 using request
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
+    checkOutputShape(response, {3, 10});
 }

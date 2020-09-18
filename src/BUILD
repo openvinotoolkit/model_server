@@ -45,6 +45,7 @@ cc_library(
         "model.hpp",
         "model_version_policy.cpp",
         "model_version_policy.hpp",
+        "modelconfig.cpp",
         "modelconfig.hpp",
         "modelmanager.cpp",
         "modelmanager.hpp",

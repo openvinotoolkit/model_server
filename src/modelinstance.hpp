@@ -39,6 +39,29 @@ namespace ovms {
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
+class DynamicModelParameter {
+public:
+    DynamicModelParameter() :
+        batchSize(0),
+        shapes({}) {}
+    DynamicModelParameter(int batchSize) :
+        batchSize(batchSize),
+        shapes({}) {}
+    DynamicModelParameter(const std::map<std::string, shape_t>& shapes) :
+        batchSize(0),
+        shapes(shapes) {}
+
+    bool isBatchSizeRequested() const { return batchSize > 0; }
+    bool isShapeRequested(const std::string& name) const { return shapes.count(name) && shapes.at(name).size() > 0; }
+
+    int getBatchSize() const { return batchSize; }
+    const shape_t& getShape(const std::string& name) const { return shapes.at(name); }
+
+private:
+    int batchSize;
+    std::map<std::string, shape_t> shapes;
+};
+
 /**
      * @brief This class contains all the information about inference engine model
      */
@@ -187,14 +210,12 @@ private:
          */
     std::recursive_mutex loadingMutex;
 
-    Status checkShapesAmbiguity(const ModelConfig& config);
-
     /**
          * @brief Internal method for loading inputs
          *
          * @param config
          */
-    Status loadInputTensors(const ModelConfig& config);
+    Status loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Internal method for loading outputs
@@ -208,14 +229,12 @@ private:
          *
          * @return status
          */
-    Status loadModelImpl(const ModelConfig& config);
-
-    Status handleAnonymousShape(ModelConfig& config);
+    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Configures batchsize
          */
-    void configureBatchSize(const ModelConfig& config);
+    void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     const Status validatePrecision(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
@@ -380,7 +399,7 @@ public:
          *
          * @return Status
          */
-    virtual Status reloadModel(const ModelConfig& config);
+    virtual Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Reloads model version with different batch size or shape, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
