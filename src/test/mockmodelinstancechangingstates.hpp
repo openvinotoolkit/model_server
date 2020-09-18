@@ -39,7 +39,7 @@ public:
         status.setAvailable();
         return ovms::StatusCode::OK;
     }
-    ovms::Status reloadModel(const ovms::ModelConfig& config) override {
+    ovms::Status reloadModel(const ovms::ModelConfig& config, const ovms::DynamicModelParameter& parameter = ovms::DynamicModelParameter()) override {
         version = config.getVersion();
         status.setLoading();
         status.setAvailable();

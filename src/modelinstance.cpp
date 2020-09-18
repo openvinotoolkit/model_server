@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include "config.hpp"
+#include "stringutils.hpp"
 
 using namespace InferenceEngine;
 
@@ -40,19 +41,7 @@ const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
-Status ModelInstance::checkShapesAmbiguity(const ModelConfig& config) {
-    auto networkShapes = network->getInputShapes();
-    auto configShapes = config.getShapes();
-    // Return AMBIGUOUS_SHAPE_PARAM status code if fixed shape is specified
-    // for anonymous input and model has multiple inputs
-    if (configShapes.count(DEFAULT_INPUT_NAME)) {
-        if (configShapes.at(DEFAULT_INPUT_NAME).shapeMode == FIXED && networkShapes.size() > 1)
-            return StatusCode::AMBIGUOUS_SHAPE_PARAM;
-    }
-    return StatusCode::OK;
-}
-
-Status ModelInstance::loadInputTensors(const ModelConfig& config) {
+Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     auto networkShapes = network->getInputShapes();
     bool reshapeRequired = false;
     for (const auto& pair : network->getInputsInfo()) {
@@ -74,26 +63,23 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config) {
         }
         input->setLayout(layout);
 
-        if (config.getShapes().count(name)) {
-            if (config.getShapes().at(name).shape.size()) {
-                shape = config.getShapes().at(name).shape;
-            }
+        if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+            // leave shape untouched
+        } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
+            shape = parameter.getShape(name);
+        } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
+            shape = config.getShapes().at(name).shape;
+        } else if (config.getShapes().count(DEFAULT_INPUT_NAME) && config.getShapes().at(DEFAULT_INPUT_NAME).shape.size()) {
+            shape = config.getShapes().at(DEFAULT_INPUT_NAME).shape;
         }
 
-        bool changeBatchSizeOnly = false;
-        if (config.getBatchSize() > 0) {
-            changeBatchSizeOnly = true;
-        }
-
-        // This log is not accurate on reload with batch size changed.
-        // BS is already set in the network by configureBatchSize() method call.
-        spdlog::debug("Network shape - {}; Config shape - {}", TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
+        spdlog::debug("Network shape - {}; Final shape - {}", TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
 
         if (networkShapes[name] != shape) {
+            reshapeRequired = true;
             networkShapes[name] = shape;
-            if (!changeBatchSizeOnly)
-                reshapeRequired = true;
         }
+
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
@@ -256,7 +242,6 @@ Status ModelInstance::fetchModelFilepaths() {
     spdlog::debug("Getting model files from path:{}", path);
     if (!dirExists(path)) {
         spdlog::error("Missing model directory {}", path);
-        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::PATH_INVALID;
     }
     for (auto extension : REQUIRED_MODEL_FILES_EXTENSIONS) {
@@ -280,37 +265,21 @@ void ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
         numberOfParallelInferRequests);
 }
 
-Status ModelInstance::handleAnonymousShape(ModelConfig& config) {
-    auto networkShapes = network->getInputShapes();
-    auto configShapes = config.getShapes();
-    if (configShapes.count(DEFAULT_INPUT_NAME)) {
-        //  Return AMBIGUOUS_SHAPE_PARAM status code if fixed shape is specified
-        //  for anonymous input and model has multiple inputs
-        if (configShapes.at(DEFAULT_INPUT_NAME).shapeMode == FIXED && networkShapes.size() > 1)
-            return StatusCode::AMBIGUOUS_SHAPE_PARAM;
-
-        //  For single fixed input or for any amount of inputs for default auto mode,
-        //  replace default key with models inputs names
-        if (networkShapes.size() > 0) {
-            for (auto& it : networkShapes) {
-                config.addShape(it.first, configShapes.at(DEFAULT_INPUT_NAME));
-            }
-        }
-        config.removeShape(DEFAULT_INPUT_NAME);
+void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    if (parameter.isBatchSizeRequested()) {
+        network->setBatchSize(parameter.getBatchSize());
+    } else if (config.getBatchSize() > 0) {
+        network->setBatchSize(config.getBatchSize());
     }
-    return StatusCode::OK;
 }
 
-void ModelInstance::configureBatchSize(const ModelConfig& config) {
-    batchSize = config.getBatchSize() > 0 ? config.getBatchSize() : network->getBatchSize();
-    network->setBatchSize(batchSize);
-}
-
-Status ModelInstance::loadModelImpl(const ModelConfig& config) {
+Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     this->path = config.getPath();
     this->targetDevice = config.getTargetDevice();
+    this->config = config;
     auto status = fetchModelFilepaths();
     if (!status.ok()) {
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return status;
     }
     try {
@@ -321,32 +290,29 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config) {
         if (!this->network)
             status = loadOVCNNNetwork();
         if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
 
-        status = handleAnonymousShape(const_cast<ModelConfig&>(config));
+        configureBatchSize(this->config, parameter);
+        status = loadInputTensors(this->config, parameter);
         if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-
-        configureBatchSize(config);
-        status = loadInputTensors(config);
+        loadOutputTensors(this->config);
+        status = loadOVExecutableNetwork(this->config);
         if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        loadOutputTensors(config);
-        status = loadOVExecutableNetwork(config);
-        if (!status.ok()) {
-            return status;
-        }
-        prepareInferenceRequestsQueue(config);
+        prepareInferenceRequestsQueue(this->config);
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
     }
     this->status.setAvailable();
-    this->config = config;
     modelLoadedNotify.notify_all();
     return status;
 }
@@ -367,7 +333,7 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     return loadModelImpl(config);
 }
 
-Status ModelInstance::reloadModel(const ModelConfig& config) {
+Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading();
     while (!canUnloadInstance()) {
@@ -375,7 +341,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config) {
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
-    return loadModelImpl(config);
+    return loadModelImpl(config, parameter);
 }
 
 Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
@@ -385,23 +351,22 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
     // will block further requests for reloading/unloading until inference is performed
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     spdlog::info("Will reload model:{} version:{}", getName(), getVersion());
-    ModelConfig newConfig;
 
+    DynamicModelParameter parameter;
     if (batchSize > 0) {
-        newConfig = config.copyConfigWithNewBatchSize(batchSize);
+        parameter = DynamicModelParameter(batchSize);
     } else if (requestShapes.size() > 0) {
-        newConfig = config.copyConfigWithNewShapes(requestShapes);
+        parameter = DynamicModelParameter(requestShapes);
     } else {
         spdlog::debug("Error: requested model:{} version:{} reload with no batchsize and shapes set.", getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
-    ModelConfig oldConfig = config;
-    // TODO make fail-safe old config store
-    auto status = reloadModel(newConfig);
+
+    auto status = reloadModel(config, parameter);
     if (!status.ok()) {
         spdlog::info("Failed to reload model:{} version:{} with error:{}. Reloading to previous configuration",
             getName(), getVersion(), status.string());
-        auto recoveryStatus = reloadModel(oldConfig);
+        auto recoveryStatus = reloadModel(config);
         if (!recoveryStatus.ok()) {
             spdlog::info("Failed to reload model:{} version:{} to previous configuration with error:{}",
                 getName(), getVersion(), recoveryStatus.string());

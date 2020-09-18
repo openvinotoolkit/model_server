@@ -91,10 +91,10 @@ private:
     std::promise<void> exit;
 
     /**
-     * @brief A current configuration of models
+     * @brief A current configurations of models
      * 
      */
-    ModelConfig modelConfig;
+    std::vector<ModelConfig> servedModelConfigs;
 
     /**
      * @brief Retires models non existing in config file

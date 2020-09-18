@@ -707,7 +707,7 @@ public:
 
 TEST_F(ReloadAvailabileModelDueToConfigChange, SameConfig_ExpectNoReloads) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
-    ovms::ModelManager::getVersionsToChange(config, getMockedModelVersionInstances(initialVersions, config), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre());
 }
 
@@ -770,6 +770,30 @@ TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToNamedLayoutChang
 TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurationChange_Auto) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
     config.parseShapeParameter("auto");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectNoReloadWhenShapeConfigurationStill_Auto) {
+    config.parseShapeParameter("auto");
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.parseShapeParameter("auto");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre());
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectNoReloadWhenShapeConfigurationStill_Fixed) {
+    config.parseShapeParameter("(1,3,224,224)");
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.parseShapeParameter("(1,3,224,224)");
+    ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    EXPECT_THAT(*versionsToReload, UnorderedElementsAre());
+}
+
+TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurationChange_AnonymousToNamed) {
+    config.parseShapeParameter("auto");
+    mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, config);
+    config.parseShapeParameter("{\"a\": \"auto\"");
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

@@ -71,12 +71,12 @@ void ModelManager::startWatcher() {
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
-    modelConfig = ModelConfig{
+    auto& modelConfig = servedModelConfigs.emplace_back(
         config.modelName(),
         config.modelPath(),
         config.targetDevice(),
         config.batchSize(),
-        config.nireq()};
+        config.nireq());
 
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
@@ -236,12 +236,14 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     }
     // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
     std::set<std::string> modelsInConfigFile;
+    servedModelConfigs.clear();
     for (const auto& configs : itr->value.GetArray()) {
-        modelConfig.clear();
+        ModelConfig& modelConfig = servedModelConfigs.emplace_back();
         auto status = modelConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             SPDLOG_ERROR("Parsing model:{} config failed",
                 modelConfig.getName());
+            servedModelConfigs.pop_back();
             continue;
         }
         reloadModelWithVersions(modelConfig);
@@ -312,7 +314,9 @@ void ModelManager::watcher(std::future<void> exit) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
         }
-        reloadModelWithVersions(modelConfig);
+        for (auto& config : servedModelConfigs) {
+            reloadModelWithVersions(config);
+        }
     }
     spdlog::info("Exited config watcher thread");
 }
@@ -462,8 +466,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
 
-    // TODO check if reload whole model when part of config changes (eg. CPU_THROUGHPUT_STREAMS)
-    // right now assumes no need to reload model
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;

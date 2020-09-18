@@ -165,7 +165,11 @@ TEST(RestModelStatus, serialize2Json) {
  "model_version_status": [
   {
    "version": "2",
-   "state": "START"
+   "state": "START",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
   }
  ]
 }

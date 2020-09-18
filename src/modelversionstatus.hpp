@@ -99,7 +99,8 @@ public:
     const std::string& getStateString() const {
         return ModelVersionStateToString(this->state);
     }
-    ModelVersionStatusErrorCode getErrorCode() {
+
+    ModelVersionStatusErrorCode getErrorCode() const {
         return this->errorCode;
     }
 

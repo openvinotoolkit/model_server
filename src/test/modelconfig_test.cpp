@@ -201,39 +201,6 @@ TEST(ModelConfig, parseShapeParam) {
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 }
 
-TEST(ModelConfig, setShapesFromRequest) {
-    ovms::ModelConfig config;
-    ovms::ShapeInfo shapeInfo;
-    shapeInfo.shapeMode = ovms::AUTO;
-    shapeInfo.shape = {1, 2, 3, 4};
-    ovms::shapes_map_t shapes = {{"input", shapeInfo}};
-    config.setShapes(shapes);
-
-    std::map<std::string, ovms::shape_t> req1{{"input", {10, 20, 30, 40}}};
-    config.setShapesFromRequest(req1);
-    auto r_shapes = config.getShapes();
-    EXPECT_THAT(r_shapes["input"].shape, ElementsAre(10, 20, 30, 40));
-
-    shapeInfo.shapeMode = ovms::AUTO;
-    shapeInfo.shape = {};
-    shapes = {{ovms::DEFAULT_INPUT_NAME, shapeInfo}};
-    config.setShapes(shapes);
-
-    std::map<std::string, ovms::shape_t> req2{{"input", {100, 200, 300, 400}}};
-    config.setShapesFromRequest(req2);
-    r_shapes = config.getShapes();
-    EXPECT_THAT(r_shapes[ovms::DEFAULT_INPUT_NAME].shape, ElementsAre(100, 200, 300, 400));
-
-    shapes = {{"input1", shapeInfo}, {"input2", shapeInfo}};
-    config.setShapes(shapes);
-
-    std::map<std::string, ovms::shape_t> req3{{"input1", {1, 1, 1}}, {"input2", {2, 2, 2}}};
-    config.setShapesFromRequest(req3);
-    r_shapes = config.getShapes();
-    EXPECT_THAT(r_shapes["input1"].shape, ElementsAre(1, 1, 1));
-    EXPECT_THAT(r_shapes["input2"].shape, ElementsAre(2, 2, 2));
-}
-
 TEST(ModelConfig, plugin_config) {
     ovms::ModelConfig config;
     ovms::plugin_config_t pluginConfig{
@@ -297,4 +264,171 @@ TEST(ModelConfig, isDeviceUsed) {
     EXPECT_TRUE(config.isDeviceUsed("CPU"));
     config.setTargetDevice("HETERO:MYRIAD,GPU");
     EXPECT_FALSE(config.isDeviceUsed("CPU"));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_SingleInput) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::AUTO, {}}}});
+    rhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::AUTO, {}}}});
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 224, 224}}}});
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 224, 224}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_SingleInput_WrongShape) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::AUTO, {}}}});
+    rhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 100}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 225, 225}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{DEFAULT_INPUT_NAME, {Mode::FIXED, {1, 3, 225, 225}}}});
+    rhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.setShapes({{"a", {Mode::FIXED, {1, 3, 224, 224}}}});
+    rhs.setShapes({{"a", {Mode::FIXED, {1, 3, 225, 225}}}});
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    shapes_map_t shapesMap = {
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}}};
+
+    lhs.setShapes(shapesMap);
+    rhs.setShapes(shapesMap);
+
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_Anonymous) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.parseShapeParameter("auto");
+    rhs.parseShapeParameter("auto");
+
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("(1,3,224,224)");
+    rhs.parseShapeParameter("(1,3,224,224)");
+
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("{\"a\": \"auto\"}");
+    rhs.parseShapeParameter("{\"a\": \"auto\"}");
+
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("(1,3,224,224)");
+    rhs.parseShapeParameter("auto");
+
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("auto");
+    rhs.parseShapeParameter("(1,3,224,224)");
+
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("auto");
+    rhs.parseShapeParameter("{\"a\": \"auto\"}");
+
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+
+    lhs.parseShapeParameter("auto");
+    rhs.parseShapeParameter("{\"a\": \"auto\", \"b\": \"auto\"}");
+
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongShape) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    rhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 225, 225}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongShapeMode) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    rhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::FIXED, {1, 1000}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongInputName) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    rhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"wrong_input", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongNumberOfInputs) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    rhs.setShapes({
+        {"a", {Mode::AUTO, {}}},
+        {"b", {Mode::FIXED, {1, 3, 224, 224}}},
+        {"c", {Mode::AUTO, {}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
 }
