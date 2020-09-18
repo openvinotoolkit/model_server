@@ -87,7 +87,7 @@ Status ModelManager::startFromConfig() {
 
     status = modelConfig.parseModelVersionPolicy(config.modelVersionPolicy());
     if (!status.ok()) {
-        spdlog::error("Couldn't parse model version policy");
+        spdlog::error("Couldn't parse model version policy. {}", status.string());
         return status;
     }
 
