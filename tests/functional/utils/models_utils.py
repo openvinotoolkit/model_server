@@ -47,20 +47,20 @@ class ModelVersionState:
 
 ERROR_MESSAGE = {
     ModelVersionState.START: {
-        ErrorCode.OK: "",  # "Version detected"
+        ErrorCode.OK: "OK",  # "Version detected"
     },
     ModelVersionState.LOADING: {
-        ErrorCode.OK: "",  # "Version is being loaded",
+        ErrorCode.OK: "OK",  # "Version is being loaded",
         ErrorCode.UNKNOWN: "Error occurred while loading version"
     },
     ModelVersionState.AVAILABLE: {
-        ErrorCode.OK: "",  # "Version available"
+        ErrorCode.OK: "OK",  # "Version available"
     },
     ModelVersionState.UNLOADING: {
-        ErrorCode.OK: "",  # "Version is scheduled to be deleted"
+        ErrorCode.OK: "OK",  # "Version is scheduled to be deleted"
     },
     ModelVersionState.END: {
-        ErrorCode.OK: "",  # "Version has been removed"
+        ErrorCode.OK: "OK",  # "Version has been removed"
     },
 }
 
