@@ -184,7 +184,12 @@ Status DLNode::fetchResults(BlobMap& outputs) {
                 const auto blob = infer_request.GetBlob(realModelOutputName);
                 SPDLOG_DEBUG("[Node: {}] Creating copy of blob from model:{}, inferRequestStreamId:{}, blobName:{}",
                     getName(), modelName, streamId.value(), realModelOutputName);
-                outputs[output_name] = blobClone(blob);
+                const auto copiedBlob = blobClone(blob);
+                if (copiedBlob == nullptr) {
+                    SPDLOG_ERROR("[Node: {}] Cannot copy blob - buffer sizes mismatch", getName());
+                    return StatusCode::INTERNAL_ERROR;
+                }
+                outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
             } catch (const InferenceEngine::details::InferenceEngineException& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_DEBUG("[Node: {}] Error during getting blob {}; exception message: {}", getName(), status.string(), e.what());

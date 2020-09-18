@@ -49,7 +49,7 @@ class RestApiRequestDispatcher {
 public:
     RestApiRequestDispatcher(int timeout_in_ms) :
         regex_(HttpRestApiHandler::kPathRegex) {
-        handler_.reset(new HttpRestApiHandler(timeout_in_ms));
+        handler_ = std::make_unique<HttpRestApiHandler>(timeout_in_ms);
     }
 
     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
