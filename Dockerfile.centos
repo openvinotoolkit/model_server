@@ -151,6 +151,7 @@ COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
+RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 

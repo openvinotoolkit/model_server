@@ -40,7 +40,7 @@
     {
       "config": {
         "name": "resnet_gs",
-        "base_path": "gs://public-artifacts/intelai_public_models/resnet_50_i8",
+        "base_path": "gs://ovms-public-eu/resnet50-binary",
         "target_device": "CPU"
       }
     },
