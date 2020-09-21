@@ -188,7 +188,7 @@ It uses `json` format as shown in the example below:
              "base_path":"s3://bucket/models/model5",
              "shape": "auto",
              "nireq": 32,
-             "target_device": "HDDL",
+             "target_device": "HDDL"
          }
       }
    ]

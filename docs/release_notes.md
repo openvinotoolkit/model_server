@@ -56,3 +56,7 @@ Instead of environment variables `LOG_LEVEL` and `LOG_PATH`, log level and path 
 
 In the Python implementation (2020.4 and below) this parameter defined the number of frontend threads. In the C++ implementation (2021.1 and above) this defines the number of internal gRPC server objects to increase the maximum bandwidth capacity. Consider tuning
 if you expect multiple clients sending requests in parallel to the server. 
+
+### Model data type conversion
+
+In the Python implementation (2020.4 and below) the user request input data type was automatically converted to provided model data type. In some cases such conversion impacted the performance of inference request. In the C++ implementation (2021.1 and above) the user input data type must be the same as the model input data type.
