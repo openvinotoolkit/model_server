@@ -29,6 +29,7 @@
 #include "tensorflow_serving/util/threadpool_executor.h"
 
 #include "http_rest_api_handler.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -62,7 +63,12 @@ public:
         }
         spdlog::warn("Ignoring HTTP request: {} {}", req->http_method(), req->uri_path());
 
-        return nullptr;
+        return [this](net_http::ServerRequestInterface* req) {
+            static Status invalidUrlStatus = StatusCode::REST_INVALID_URL;
+            static std::string invalidUrlError = "{\"error\": \"" + invalidUrlStatus.string() + "\"}";
+            req->WriteResponseString(invalidUrlError);
+            req->ReplyWithStatus(invalidUrlStatus.http());
+        };
     }
 
 private:

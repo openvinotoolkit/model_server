@@ -38,7 +38,7 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
-const std::string HttpRestApiHandler::kPathRegex = "(.?)\\/v1\\/.*";
+const std::string HttpRestApiHandler::kPathRegex = "(.?)\\/v1\\/models\\/.*";
 const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
@@ -59,7 +59,7 @@ Status HttpRestApiHandler::processRequest(
     std::string model_version_label_str;
     std::string method;
     std::string model_subresource;
-    Status status = StatusCode::REST_MALFORMED_REQUEST;
+    Status status = StatusCode::REST_INVALID_URL;
 
     // Parse request parameters
     bool parse_successful = false;
