@@ -54,8 +54,8 @@ class TestSingleModelInferenceGc:
         stub = create_channel(port=ports["grpc_port"])
 
         imgs_v1_224 = np.ones(ResnetGS.input_shape, ResnetGS.dtype)
-        out_name = 'prob'
-        output = infer(imgs_v1_224, input_tensor='data', grpc_stub=stub,
+        out_name = '1463'
+        output = infer(imgs_v1_224, input_tensor='0', grpc_stub=stub,
                        model_spec_name=Resnet.name,
                        model_spec_version=None,
                        output_tensors=[out_name])
@@ -67,8 +67,8 @@ class TestSingleModelInferenceGc:
         _, ports = start_server_single_model_from_gc
         stub = create_channel(port=ports["grpc_port"])
 
-        out_name = 'prob'
-        expected_input_metadata = {'data': {'dtype': 1, 'shape': list(ResnetGS.input_shape)}}
+        out_name = '1463'
+        expected_input_metadata = {'0': {'dtype': 1, 'shape': list(ResnetGS.input_shape)}}
         expected_output_metadata = {out_name: {'dtype': 1, 'shape': list(ResnetGS.output_shape)}}
         request = get_model_metadata(model_name=Resnet.name)
         response = stub.GetModelMetadata(request, 10)

@@ -52,7 +52,7 @@ endif
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.4
-DLDT_PACKAGE_URL ?= http://registrationcenter-download.intel.com/akdlm/IRC_NAS/16803/l_openvino_toolkit_p_2020.4.287_online.tgz
+DLDT_PACKAGE_URL ?= http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.088.tgz
 OV_USE_BINARY ?= 1
 
 # opt, dbg:
@@ -154,7 +154,7 @@ else
 endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
@@ -171,15 +171,21 @@ endif
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
+
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg GPU=1 \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
-	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS).add_drivers . \
-		--build-arg OPENVINO_MODEL_SERVER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)
+
+	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+    	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+    	--build-arg no_proxy=$(NO_PROXY) \
+    	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+    	--build-arg GPU=1 \
+    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)
+
 	docker tag $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE)-cpu:$(OVMS_CPP_IMAGE_TAG)
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 
@@ -202,10 +208,10 @@ test_perf: venv
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(HOME)/resnet50:/models/resnet50 \
+		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet --model_path /models/resnet50 --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
 	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
@@ -214,7 +220,9 @@ test_perf: venv
 		--iteration 1000 \
 		--batchsize 1 \
 		--report_every 100 \
-		--input_name data
+		--input_name 0 \
+		--output_name 1463 \
+		--model_name resnet-binary
 	@echo "Removing test container"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 
@@ -248,11 +256,11 @@ test_throughput: venv
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(HOME)/resnet50:/models/resnet50 \
+		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet \
-		--model_path /models/resnet50 \
+		--model_name resnet-binary \
+		--model_path /models/resnet50-binary \
 		--port $(OVMS_CPP_CONTAINTER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
@@ -262,7 +270,9 @@ test_throughput: venv
 		--labels_numpy_path labels.npy \
 		--iteration 500 \
 		--batchsize 1 \
-		--input_name data
+		--input_name 0 \
+		--output_name 1463 \
+		--model_name resnet-binary
 	@echo "Removing test container"
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
 

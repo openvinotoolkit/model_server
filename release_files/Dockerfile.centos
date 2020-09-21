@@ -26,17 +26,27 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM centos:7.8.2003 as release
-ARG GET_DRIVERS_DEFAULT=0
 ARG INSTALL_RPMS_FROM_URL=
-ENV GET_DRIVERS=$GET_DRIVERS_DEFAULT
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
+ARG GPU=1
 WORKDIR /
-COPY --from=base /ovms /ovms
+
+RUN if [ "GPU" == "1" ] ; then \
+        mkdir /tmp/gpu_deps ; \
+        curl -L -o /tmp/gpu_deps/intel-igc-core-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-core-1.0.2597-1.el7.x86_64.rpm/download ; \
+        curl -L -o /tmp/gpu_deps/intel-opencl-19.41.14441-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-opencl-19.41.14441-1.el7.x86_64.rpm/download ; \
+        curl -L -o /tmp/gpu_deps/intel-igc-opencl-devel-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-opencl-devel-1.0.2597-1.el7.x86_64.rpm/download ; \
+        curl -L -o /tmp/gpu_deps/intel-igc-opencl-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-opencl-1.0.2597-1.el7.x86_64.rpm/download ; \
+        curl -L -o /tmp/gpu_deps/intel-gmmlib-19.3.2-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-gmmlib-19.3.2-1.el7.x86_64.rpm/download ; \
+        curl -L -o /tmp/gpu_deps/intel-gmmlib-devel-19.3.2-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-gmmlib-devel-19.3.2-1.el7.x86_64.rpm/download ; \
+        cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
+    fi ;
+
 RUN     set -e ; \
 	set -x ; \
 	env ; \
-	if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \ 
+	if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
 		yum install -y epel-release ; \
 		yum update -y ; \
 	        yum install -y \
@@ -57,7 +67,10 @@ RUN     set -e ; \
 	fi ; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
-             --gid 5000 --shell /bin/sh --skel /dev/null ovms ; \
-        /ovms/bin/./ovms --help ;
+             --gid 5000 --shell /bin/sh --skel /dev/null ovms
+
+COPY --from=base /ovms /ovms
+
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
+
