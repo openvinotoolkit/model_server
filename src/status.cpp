@@ -63,6 +63,9 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR, "Internal server error"},
 
+    // Rest handler failure
+    {StatusCode::REST_INVALID_URL, "Invalid request URL"},
+
     // Rest parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},
     {StatusCode::REST_PREDICT_UNKNOWN_ORDER, "Invalid JSON structure. Could not detect row or column format"},
@@ -133,6 +136,26 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
+
+    // REST handler failure
+    {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
+
+    // REST parser failure
+    {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_PREDICT_UNKNOWN_ORDER, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_INPUT_NOT_PREALLOCATED, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::REST_NO_INSTANCES_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
 
     {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
