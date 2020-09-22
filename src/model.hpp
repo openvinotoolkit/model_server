@@ -17,7 +17,9 @@
 
 #include <map>
 #include <memory>
+#include <shared_mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "modelinstance.hpp"
@@ -27,6 +29,17 @@ namespace ovms {
      * @brief This class represent inference models
      */
 class Model {
+private:
+    /**
+     * @brief Mutex for protecting concurrent modfying and accessing modelVersions
+     */
+    mutable std::shared_mutex modelVersionsMtx;
+
+    /**
+         * @brief Update default version
+         */
+    void updateDefaultVersion();
+
 protected:
     /**
          * @brief Model name
@@ -98,24 +111,21 @@ public:
          *
          * @return ModelInstance
          */
-    const std::shared_ptr<ModelInstance> getDefaultModelInstance() const {
-        auto defaultVersion = getDefaultVersion();
-        const auto modelInstanceIt = modelVersions.find(defaultVersion);
-
-        if (modelVersions.end() == modelInstanceIt) {
-            return nullptr;
-        }
-        return modelVersions.at(defaultVersion);
-    }
+    const std::shared_ptr<ModelInstance> getDefaultModelInstance() const;
 
     /**
-         * @brief Gets model versions
-         *
-         * @return model versions
-         */
-    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& getModelVersions() const {
-        return modelVersions;
-    }
+     * @brief Gets model versions instances
+     *
+     * @return model versions instances
+     */
+    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& getModelVersions() const;
+
+    /**
+     * @brief Gets model versions instances
+     *
+     * @return model versions instances
+     */
+    const std::map<model_version_t, const ModelInstance&> getModelVersionsMapCopy() const;
 
     /**
          * @brief Finds ModelInstance with specific version
@@ -125,28 +135,9 @@ public:
          * @return specific model version
          */
     const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const {
+        std::shared_lock lock(modelVersionsMtx);
         auto it = modelVersions.find(version);
         return it != modelVersions.end() ? it->second : nullptr;
-    }
-
-    /**
-         * @brief Update default version
-         */
-    void updateDefaultVersion() {
-        model_version_t newDefaultVersion = 0;
-        spdlog::info("Updating default version for model:{}, from:{}", getName(), getDefaultVersion());
-        for (const auto& [version, versionInstance] : getModelVersions()) {
-            if (version > newDefaultVersion &&
-                ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
-                newDefaultVersion = version;
-            }
-        }
-        defaultVersion = newDefaultVersion;
-        if (newDefaultVersion) {
-            SPDLOG_INFO("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
-        } else {
-            SPDLOG_INFO("Model:{} will not have default version since no version is available.", getName());
-        }
     }
 
     /**
