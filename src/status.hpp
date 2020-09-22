@@ -37,9 +37,10 @@ enum class StatusCode {
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
-    SHAPE_WRONG_FORMAT,                /*!< The provided shape param is in wrong format */
-    PLUGIN_CONFIG_WRONG_FORMAT,        /*!< Plugin config is in wrong format */
-    MODEL_VERSION_POLICY_WRONG_FORMAT, /*!< Model version policy is in wrong format */
+    SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
+    PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
+    MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
+    MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
     NO_MODEL_VERSION_AVAILABLE,        /*!< No model version found in path */
     RESHAPE_ERROR,                     /*!< Impossible to perform reshape */

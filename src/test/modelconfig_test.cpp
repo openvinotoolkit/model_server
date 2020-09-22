@@ -432,3 +432,10 @@ TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongNumberOfInputs) {
     });
     EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
 }
+
+TEST(ModelConfig, modelVersionPolicyIncorrect) {
+    std::string command = "{\"test\": {\"versions\":[1, 3, 4]}}";
+    ovms::ModelConfig config;
+    auto result = config.parseModelVersionPolicy(command);
+    EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY);
+}

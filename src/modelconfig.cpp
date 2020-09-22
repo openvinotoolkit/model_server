@@ -162,7 +162,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
         return StatusCode::OK;
     }
 
-    return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
+    return StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY;
 }
 
 Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
@@ -380,8 +380,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         buffer.Clear();
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         v["model_version_policy"].Accept(writer);
-        if (!this->parseModelVersionPolicy(buffer.GetString()).ok()) {
-            SPDLOG_ERROR("Couldn't parse model version policy");
+        const auto& status = parseModelVersionPolicy(buffer.GetString());
+        if (!status.ok()) {
+            SPDLOG_ERROR("Couldn't parse model version policy. {}", status.string());
         }
     } else {
         modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
