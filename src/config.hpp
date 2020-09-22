@@ -153,6 +153,10 @@ public:
          * @return const std::string&
          */
     const std::string& batchSize() {
+        if (!result->count("batch_size")) {
+            static const std::string d = "0";
+            return d;
+        }
         return result->operator[]("batch_size").as<std::string>();
     }
 
@@ -183,8 +187,11 @@ public:
          *
          * @return uint 
          */
-    uint nireq() {
-        return result->operator[]("nireq").as<uint>();
+    uint32_t nireq() {
+        if (!result->count("nireq")) {
+            return 0;
+        }
+        return result->operator[]("nireq").as<uint32_t>();
     }
 
     /**

@@ -91,7 +91,6 @@ protected:
         std::string fileToReload = "/tmp/ovms_config_file1.json";
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
-        setenv("NIREQ", "1", 1);
         managerWithDummyModel.startFromFile(fileToReload);
         std::this_thread::sleep_for(std::chrono::milliseconds(1100));
         std::unique_ptr<Pipeline> pipeline;
@@ -1333,7 +1332,8 @@ const char* pipelineOneDummyConfig = R"(
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
-                "model_version_policy": {"all": {}}
+                "model_version_policy": {"all": {}},
+                "nireq": 1
             }
         }
     ],
@@ -1369,7 +1369,6 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
-    setenv("NIREQ", "1", 1);
     managerWithDummyModel.startFromFile(fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     std::unique_ptr<Pipeline> pipeline;
@@ -1392,7 +1391,8 @@ const char* pipelineOneDummyConfig2ParallelDummy = R"(
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
-                "model_version_policy": {"all": {}}
+                "model_version_policy": {"all": {}},
+                "nireq": 2
             }
         }
     ],
@@ -1444,7 +1444,6 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
-    setenv("NIREQ", "2", 1);
     managerWithDummyModel.startFromFile(fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     std::unique_ptr<Pipeline> pipeline;
@@ -1496,7 +1495,8 @@ const char* pipelineOneDummyConfigWrongNodeKind = R"(
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
-                "model_version_policy": {"all": {}}
+                "model_version_policy": {"all": {}},
+                "nireq": 1
             }
         }
     ],
