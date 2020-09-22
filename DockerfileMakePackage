@@ -28,9 +28,13 @@ RUN mkdir /patchelf && cd /patchelf && \
 RUN mkdir -vp /ovms_release/bin
 RUN mkdir -vp /ovms_release/deps
 RUN mkdir -vp /ovms_release/lib
+RUN mkdir -vp /ovms_release/lib/hddl/config
+
 RUN cp /ovms/metadata.json /ovms_release/
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /ovms_release/lib/ && cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/deployment_tools/inference_engine/external/hddl/config/* /ovms_release/lib/hddl/config/
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /ovms_release/lib/ && cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; rm -vrf /ovms_release/deps/*-devel-*
 
 RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 
