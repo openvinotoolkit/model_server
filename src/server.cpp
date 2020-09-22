@@ -46,6 +46,10 @@ using grpc::ServerBuilder;
 
 using namespace ovms;
 
+namespace {
+volatile sig_atomic_t shutdown_request = 0;
+}
+
 uint getGRPCServersCount() {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
@@ -140,15 +144,11 @@ void logConfig(Config& config) {
 }
 
 void onInterrupt(int status) {
-    spdlog::info("Program interrupted with signal: {}", status);
-    spdlog::default_logger()->flush();
-    exit(0);
+    shutdown_request = 1;
 }
 
 void onTerminate(int status) {
-    spdlog::info("Program terminated with signal: {}", status);
-    spdlog::default_logger()->flush();
-    exit(0);
+    shutdown_request = 1;
 }
 
 void installSignalHandlers() {
@@ -251,10 +251,10 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
 }
 
 int server_main(int argc, char** argv) {
+    installSignalHandlers();
     try {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
-        installSignalHandlers();
 
         if (!ovms::check_4th_gen_intel_core_features()) {
             spdlog::error("CPU with AVX support required, current CPU has no such support.");
@@ -266,10 +266,20 @@ int server_main(int argc, char** argv) {
         auto grpc = startGRPCServer(predict_service, model_service);
         auto rest = startRESTServer();
 
-        grpc[0]->Wait();
-        if (rest != nullptr) {
-            rest->WaitForTermination();
+        while (!shutdown_request) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
+
+        spdlog::info("Shutting down");
+        for (const auto& g : grpc) {
+            g->Shutdown();
+        }
+
+        if (rest != nullptr) {
+            rest->Terminate();
+        }
+
+        ModelManager::getInstance().join();
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;
