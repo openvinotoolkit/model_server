@@ -24,8 +24,6 @@
 namespace ovms {
 
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
-const std::string DEFAULT_NIREQ = std::to_string(AVAILABLE_CORES / 8 + 2);
-const std::string DEFAULT_GRPC_SERVERS = std::to_string(AVAILABLE_CORES / 8 + 4);
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
 Config& Config::parse(int argc, char** argv) {
@@ -45,8 +43,8 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint64_t>()->default_value("0"),
                 "REST_PORT")
             ("grpc_workers",
-                "number of gRPC servers. Recommended to be >= NIREQ. Default value calculated at runtime: NIREQ + 2",
-                cxxopts::value<uint>()->default_value(DEFAULT_GRPC_SERVERS.c_str()),
+                "number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
+                cxxopts::value<uint>()->default_value("1"),
                 "GRPC_WORKERS")
             ("rest_workers",
                 "number of workers in REST server - has no effect if rest_port is not set",
@@ -80,11 +78,11 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_PATH")
             ("batch_size",
-                "sets models batchsize, int value or auto. This parameter will be ignored if shape is set",
-                cxxopts::value<std::string>()->default_value("0"),
+                "resets models batchsize, int value or auto. This parameter will be ignored if shape is set",
+                cxxopts::value<std::string>(),
                 "BATCH_SIZE")
             ("shape",
-                "sets models shape (model must support reshaping). If set, batch_size parameter is ignored",
+                "resets models shape (model must support reshaping). If set, batch_size parameter is ignored",
                 cxxopts::value<std::string>(),
                 "SHAPE")
             ("model_version_policy",
@@ -92,8 +90,8 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_VERSION_POLICY")
             ("nireq",
-                "Number of parallel inference request executions for model. Recommended to be >= CPU_THROUGHPUT_STREAMS. Default value calculated at runtime: CPU cores / 8",
-                cxxopts::value<uint>()->default_value(DEFAULT_NIREQ.c_str()),
+                "Size of inference request queue for model executions. Recommended to be >= parallel executions. Default value calculated by OpenVINO based on available resources",
+                cxxopts::value<uint32_t>(),
                 "NIREQ")
             ("target_device",
                 "Target device to run the inference",

@@ -252,6 +252,8 @@ private:
     const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
+    uint32_t getNumOfParalInferReqs(const ModelConfig& config);
+
 public:
     /**
          * @brief A default constructor

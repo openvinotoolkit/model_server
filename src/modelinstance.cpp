@@ -162,16 +162,24 @@ std::string ModelInstance::findModelFilePathWithExtension(const std::string& ext
     return findFilePathWithExtension(path, extension);
 }
 
-uint getNumberOfParallelInferRequests() {
-    const char* environmentVariableBuffer = std::getenv(NIREQ);
-    if (environmentVariableBuffer) {
-        auto result = stou32(environmentVariableBuffer);
-        if (result && result.value() > 0) {
-            return result.value();
-        }
+uint ModelInstance::getNumOfParalInferReqs(const ModelConfig& modelConfig) {
+    uint numberOfParallelInferRequests;
+    if (modelConfig.getNireq() > 0) {
+        return modelConfig.getNireq();
     }
-    auto& config = ovms::Config::instance();
-    return std::max(config.nireq(), 1u);
+    auto& ovmsConfig = ovms::Config::instance();
+    if (ovmsConfig.nireq() > 0) {
+        // nireq is set globally for all models in ovms startup parameters
+        return ovmsConfig.nireq();
+    }
+    std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
+    try {
+        numberOfParallelInferRequests = execNetwork->GetMetric(key).as<unsigned int>();
+    } catch (const details::InferenceEngineException& ex) {
+        spdlog::info("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+        numberOfParallelInferRequests = 1u;
+    }
+    return numberOfParallelInferRequests;
 }
 
 void ModelInstance::loadOVEngine() {
@@ -200,7 +208,7 @@ void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // For CPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS depending on core count
+    // For CPU and GPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS automatically
     if (config.isDeviceUsed("CPU")) {
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
             pluginConfig["CPU_THROUGHPUT_STREAMS"] = "CPU_THROUGHPUT_AUTO";
@@ -249,7 +257,7 @@ Status ModelInstance::fetchModelFilepaths() {
 }
 
 void ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
-    uint numberOfParallelInferRequests = config.getNireq() > 0 ? config.getNireq() : getNumberOfParallelInferRequests();
+    uint numberOfParallelInferRequests = getNumOfParalInferReqs(config);
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
     spdlog::info("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
