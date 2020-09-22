@@ -35,7 +35,7 @@ private:
     /**
          * @brief Private copying constructor
          */
-    Config(const Config&);
+    Config(const Config&) = delete;
 
     /**
          * @brief cxxopts options dictionary definition

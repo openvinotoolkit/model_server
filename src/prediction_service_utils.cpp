@@ -33,7 +33,12 @@ using tensorflow::serving::PredictResponse;
 namespace ovms {
 
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request) {
-    auto& requestInput = request->inputs().begin()->second;  // assuming same batch size for all inputs
+    auto requestInputItr = request->inputs().begin();
+    if (requestInputItr == request->inputs().end()) {
+        SPDLOG_ERROR("Failed to get batch size of a request. Validation of request failed");
+        return 0;
+    }
+    auto& requestInput = requestInputItr->second;  // assuming same batch size for all inputs
     return static_cast<size_t>(requestInput.tensor_shape().dim(0).size());
 }
 

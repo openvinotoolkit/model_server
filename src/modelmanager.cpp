@@ -119,18 +119,8 @@ Status ModelManager::startFromFile(const std::string& jsonFilename) {
     return StatusCode::OK;
 }
 
-void print(const rapidjson::Value& json) {
-    using namespace rapidjson;
-    StringBuffer sb;
-    PrettyWriter<StringBuffer> writer(sb);
-    json.Accept(writer);
-    auto str = sb.GetString();
-    SPDLOG_ERROR("ER:{}", str);
-}
-
 void processNodeInputs(const std::string nodeName, const rapidjson::Value::ConstMemberIterator& itro, pipeline_connections_t& connections) {
     for (const auto& nodeInput : itro->value.GetArray()) {
-        // print(nodeInput);
         for (const auto& objectNameValue : nodeInput.GetObject()) {
             const std::string inputName = objectNameValue.name.GetString();
             const std::string sourceNodeName = objectNameValue.value.GetObject()["node_name"].GetString();
@@ -357,7 +347,8 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t> versionsToReload = std::make_shared<model_versions_t>();
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
-            if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() || modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
+            if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
+                modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
@@ -479,8 +470,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     status = model->addVersions(versionsToStart, config);
     if (!status.ok()) {
-        spdlog::error("Error occurred while loading model: {} versions",
-            config.getName());
+        spdlog::error("Error occurred while loading model: {} versions; error: {}",
+            config.getName(),
+            status.string());
         return status;
     }
     status = model->reloadVersions(versionsToReload, config);

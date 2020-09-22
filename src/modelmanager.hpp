@@ -58,7 +58,7 @@ private:
     /**
      * @brief Private copying constructor
      */
-    ModelManager(const ModelManager&);
+    ModelManager(const ModelManager&) = delete;
 
     /**
      * @brief Reads models from configuration file
