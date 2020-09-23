@@ -32,6 +32,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
     {StatusCode::RESHAPE_ERROR, "Model could not be reshaped with requested shape"},
+    {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
     {StatusCode::MODEL_VERSION_MISSING, "Model with requested version is not found"},
