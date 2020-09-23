@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM centos:7.8.2003 as base
+FROM centos:7 as base
 WORKDIR /
 COPY ovms.tar.xz /
 RUN env
@@ -25,7 +25,7 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM centos:7.8.2003 as release
+FROM centos:7 as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
