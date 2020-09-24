@@ -687,12 +687,7 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidat
 
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
-    shapes_map_t shapes;
-    ShapeInfo shape;
-    shape.shapeMode = AUTO;
-    std::pair<std::string, ShapeInfo> shapeInfo("shape", shape);
-    shapes.insert(shapeInfo);
-    config.setShapes(shapes);
+    config.parseShapeParameter("auto");
     managerWithDummyModel.reloadModelWithVersions(config);
 
     PipelineFactory factory;

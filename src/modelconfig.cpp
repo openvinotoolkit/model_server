@@ -216,7 +216,7 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
         if (!status.ok()) {
             return status;
         }
-        this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
+        this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
         return StatusCode::OK;
     }
 
@@ -330,7 +330,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!parseShape(shapeInfo, v["shape"].GetString()).ok()) {
                 SPDLOG_ERROR("There was an error parsing shape {}", v["shape"].GetString());
             }
-            this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
+            this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
         } else {
             if (v["shape"].IsArray()) {
                 // Shape for all inputs
@@ -338,7 +338,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                 for (auto& sh : v["shape"].GetArray()) {
                     shapeInfo.shape.push_back(sh.GetUint64());
                 }
-                this->addShape(DEFAULT_INPUT_NAME, shapeInfo);
+                this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
             } else {
                 // Map of shapes
                 for (auto& s : v["shape"].GetObject()) {

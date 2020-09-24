@@ -48,6 +48,7 @@ enum class StatusCode {
     BATCHSIZE_CHANGE_REQUIRED,         /*!< Model instance needs to be reloaded with new batch size */
     FORBIDDEN_MODEL_DYNAMIC_PARAMETER, /*!< Value of the provided param is forbidden */
     ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, /*!< Anonymous fixed shape is invalid for models with multiple inputs */
+    CONFIG_SHAPE_IS_NOT_IN_NETWORK,    /*!< Invalid shape dimension number or dimension value */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
