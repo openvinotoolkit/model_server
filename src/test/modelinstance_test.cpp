@@ -138,7 +138,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance;
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {

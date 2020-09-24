@@ -42,13 +42,14 @@ enum class StatusCode {
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
-    NO_MODEL_VERSION_AVAILABLE,        /*!< No model version found in path */
-    RESHAPE_ERROR,                     /*!< Impossible to perform reshape */
-    RESHAPE_REQUIRED,                  /*!< Model instance needs to be reloaded with new shape */
-    BATCHSIZE_CHANGE_REQUIRED,         /*!< Model instance needs to be reloaded with new batch size */
-    FORBIDDEN_MODEL_DYNAMIC_PARAMETER, /*!< Value of the provided param is forbidden */
-    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, /*!< Anonymous fixed shape is invalid for models with multiple inputs */
-    CONFIG_SHAPE_IS_NOT_IN_NETWORK,    /*!< Invalid shape dimension number or dimension value */
+    NO_MODEL_VERSION_AVAILABLE,             /*!< No model version found in path */
+    RESHAPE_ERROR,                          /*!< Impossible to perform reshape */
+    RESHAPE_REQUIRED,                       /*!< Model instance needs to be reloaded with new shape */
+    BATCHSIZE_CHANGE_REQUIRED,              /*!< Model instance needs to be reloaded with new batch size */
+    FORBIDDEN_MODEL_DYNAMIC_PARAMETER,      /*!< Value of the provided param is forbidden */
+    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,      /*!< Anonymous fixed shape is invalid for models with multiple inputs */
+    CONFIG_SHAPE_IS_NOT_IN_NETWORK,         /*!< Invalid shape dimension number or dimension value */
+    CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, /*!< Cannot load network into target device */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */

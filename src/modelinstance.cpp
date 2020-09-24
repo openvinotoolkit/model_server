@@ -262,8 +262,14 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     try {
         loadExecutableNetworkPtr(pluginConfig);
     } catch (std::exception& e) {
-        spdlog::error("Error:{}; occured during loading ExecutableNetwork for model:{} version:{}", e.what(), getName(), getVersion());
-        return StatusCode::INTERNAL_ERROR;
+        Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
+        spdlog::error("{}; error: {}; model:{}; version:{}; device:{}",
+            status.string(),
+            e.what(),
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
     }
     spdlog::info("Plugin config for device {}:", targetDevice);
     for (const auto pair : pluginConfig) {
