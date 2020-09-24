@@ -81,40 +81,41 @@ Status Model::addVersion(const ModelConfig& config) {
 }
 
 Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config) {
-    Status status;
+    Status result = StatusCode::OK;
     for (const auto version : *versionsToStart) {
         spdlog::info("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         config.parseModelMapping();
-        status = addVersion(config);
+        auto status = addVersion(config);
         if (!status.ok()) {
             spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());
-            return status;
+            result = status;
         }
     }
-    return status;
+    return result;
 }
 
 Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire) {
-    Status status;
+    Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {
         spdlog::info("Will unload model: {}; version: {} ...", getName(), version);
         auto modelVersion = getModelInstanceByVersion(version);
         if (!modelVersion) {
-            status = StatusCode::UNKNOWN_ERROR;
+            Status status = StatusCode::UNKNOWN_ERROR;
             spdlog::error("Error occurred while unloading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());
-            return status;
+            result = status;
+            continue;
         }
         modelVersion->unloadModel();
         updateDefaultVersion();
     }
-    return StatusCode::OK;
+    return result;
 }
 
 void Model::retireAllVersions() {
@@ -126,11 +127,11 @@ void Model::retireAllVersions() {
 }
 
 Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
-    Status status;
+    Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         spdlog::info("Will reload model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
-        status = config.parseModelMapping();
+        auto status = config.parseModelMapping();
         if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
             spdlog::error("Error while parsing model mapping for model {}", status.string());
         }
@@ -141,7 +142,8 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 getName(),
                 version,
                 status.string());
-            return StatusCode::UNKNOWN_ERROR;
+            result = StatusCode::UNKNOWN_ERROR;
+            continue;
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {
@@ -149,11 +151,12 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 getName(),
                 version,
                 status.string());
-            return status;
+            result = status;
+            continue;
         }
         updateDefaultVersion();
     }
-    return StatusCode::OK;
+    return result;
 }
 
 }  // namespace ovms

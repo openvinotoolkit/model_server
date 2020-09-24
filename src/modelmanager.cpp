@@ -231,7 +231,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig& modelConfig = servedModelConfigs.emplace_back();
         auto status = modelConfig.parseNode(configs["config"]);
-        if (status != StatusCode::OK) {
+        if (!status.ok()) {
             SPDLOG_ERROR("Parsing model:{} config failed",
                 modelConfig.getName());
             servedModelConfigs.pop_back();
@@ -442,6 +442,9 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *versions);
     if (sc != StatusCode::OK) {
         spdlog::error("Couldn't download model from {}", config.getBasePath());
+        if (localPath.size() > 0) {
+            config.setLocalPath(localPath);
+        }
         return sc;
     }
     config.setLocalPath(localPath);
@@ -449,6 +452,52 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
 
     return StatusCode::OK;
 }
+
+class TemporaryModelFilesProvider {
+    ModelConfig& config;
+    Status& status;
+    const std::shared_ptr<model_versions_t>& versionsToStart;
+    const std::shared_ptr<model_versions_t>& versionsToReload;
+
+public:
+    TemporaryModelFilesProvider(
+        std::shared_ptr<FileSystem> filesystem,
+        ModelConfig& config,
+        Status& status,
+        const std::shared_ptr<model_versions_t>& versionsToStart,
+        const std::shared_ptr<model_versions_t>& versionsToReload) :
+        config(config),
+        status(status),
+        versionsToStart(versionsToStart),
+        versionsToReload(versionsToReload) {
+        downloadModels(filesystem, config, versionsToStart);
+        downloadModels(filesystem, config, versionsToReload);
+    }
+
+    ~TemporaryModelFilesProvider() {
+        if (!hasVersionsToStartOrReload() || !hasTempPath()) {
+            return;
+        }
+        LocalFileSystem lfs;
+        auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+        if (lfstatus != StatusCode::OK) {
+            spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                config.getLocalPath(),
+                lfstatus);
+            status = lfstatus;
+        } else {
+            spdlog::info("Model removed from {}", config.getLocalPath());
+        }
+    }
+
+    bool hasVersionsToStartOrReload() const {
+        return versionsToStart->size() > 0 || versionsToReload->size() > 0;
+    }
+
+    bool hasTempPath() const {
+        return config.getLocalPath().compare(config.getBasePath()) != 0;
+    }
+};
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto fs = getFilesystem(config.getBasePath());
@@ -465,46 +514,33 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-    downloadModels(fs, config, versionsToStart);
-    downloadModels(fs, config, versionsToReload);
 
-    status = model->addVersions(versionsToStart, config);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while loading model: {} versions; error: {}",
+    TemporaryModelFilesProvider provider(fs, config, status, versionsToStart, versionsToReload);
+
+    Status result;
+    result = model->addVersions(versionsToStart, config);
+    if (!result.ok()) {
+        spdlog::error("Error occurred while loading model: {}; versions; error {}",
             config.getName(),
-            status.string());
-        return status;
+            result.string());
+        status = result;
     }
-    status = model->reloadVersions(versionsToReload, config);
-    if (!status.ok()) {
+    result = model->reloadVersions(versionsToReload, config);
+    if (!result.ok()) {
         spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
             config.getName(),
-            status.string());
-        return status;
+            result.string());
+        status = result;
     }
-    status = model->retireVersions(versionsToRetire);
-    if (!status.ok()) {
+    result = model->retireVersions(versionsToRetire);
+    if (!result.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
             config.getName(),
-            status.string());
-        return status;
+            result.string());
+        status = result;
     }
 
-    if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
-        if (config.getLocalPath().compare(config.getBasePath())) {
-            LocalFileSystem lfs;
-            auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-            if (lfstatus != StatusCode::OK) {
-                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                    config.getLocalPath(),
-                    lfstatus);
-            } else {
-                spdlog::info("Model removed from {}", config.getLocalPath());
-            }
-        }
-    }
-
-    return StatusCode::OK;
+    return status;
 }
 
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
