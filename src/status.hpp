@@ -113,7 +113,8 @@ enum class StatusCode {
     // REST handler
     REST_NOT_FOUND,               /*!< Requested REST resource not found */
     REST_COULD_NOT_PARSE_VERSION, /*!< Could not parse model version in request */
-    REST_INVALID_URL,             /*!< Malformed REST request */
+    REST_INVALID_URL,             /*!< Malformed REST request url */
+    REST_UNSUPPORTED_METHOD,      /*!< Request sent with unsupported method */
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,          /*!< REST body should be JSON object */
