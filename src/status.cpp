@@ -66,6 +66,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
 
     // Rest handler failure
     {StatusCode::REST_INVALID_URL, "Invalid request URL"},
+    {StatusCode::REST_UNSUPPORTED_METHOD, "Unsupported method"},
 
     // Rest parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},
@@ -141,6 +142,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
 
     // REST parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},

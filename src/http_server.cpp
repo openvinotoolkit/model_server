@@ -49,25 +49,13 @@ private:
 class RestApiRequestDispatcher {
 public:
     RestApiRequestDispatcher(int timeout_in_ms) :
-        regex_(HttpRestApiHandler::kPathRegex) {
+        regex_(HttpRestApiHandler::kPathRegexExp) {
         handler_ = std::make_unique<HttpRestApiHandler>(timeout_in_ms);
     }
 
     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
-        std::smatch sm;
-        auto strreq = std::string(req->uri_path());
-        if (std::regex_match(strreq, sm, regex_)) {
-            return [this](net_http::ServerRequestInterface* req) {
-                this->processRequest(req);
-            };
-        }
-        spdlog::warn("Ignoring HTTP request: {} {}", req->http_method(), req->uri_path());
-
         return [this](net_http::ServerRequestInterface* req) {
-            static Status invalidUrlStatus = StatusCode::REST_INVALID_URL;
-            static std::string invalidUrlError = "{\"error\": \"" + invalidUrlStatus.string() + "\"}";
-            req->WriteResponseString(invalidUrlError);
-            req->ReplyWithStatus(invalidUrlStatus.http());
+            this->processRequest(req);
         };
     }
 
@@ -101,7 +89,7 @@ private:
             spdlog::error("Error Processing HTTP/REST request: {} {} Error: {}",
                 req->http_method(),
                 req->uri_path(),
-                status.getCode());  // TODO: convert code to string error
+                status.string());
         }
         req->ReplyWithStatus(http_status);
     }
@@ -138,5 +126,4 @@ std::unique_ptr<http_server> createAndStartHttpServer(int port, int num_threads,
 
     return nullptr;
 }
-
 }  // namespace ovms
