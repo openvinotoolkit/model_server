@@ -47,6 +47,7 @@ enum class StatusCode {
     RESHAPE_REQUIRED,                  /*!< Model instance needs to be reloaded with new shape */
     BATCHSIZE_CHANGE_REQUIRED,         /*!< Model instance needs to be reloaded with new batch size */
     FORBIDDEN_MODEL_DYNAMIC_PARAMETER, /*!< Value of the provided param is forbidden */
+    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, /*!< Anonymous fixed shape is invalid for models with multiple inputs */
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */

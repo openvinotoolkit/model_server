@@ -521,6 +521,14 @@ public:
         return it->second.shapeMode == Mode::AUTO;
     }
 
+    bool isShapeAnonymous() const {
+        return getShapes().size() == 1 && getShapes().begin()->first == DEFAULT_INPUT_NAME;
+    }
+
+    bool isShapeAnonymousFixed() const {
+        return isShapeAnonymous() && !isShapeAuto(DEFAULT_INPUT_NAME);
+    }
+
     /**
          * @brief Sets the shape from the string representation
          *

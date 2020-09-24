@@ -42,6 +42,12 @@ const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
+        Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
+        spdlog::error(status.string());
+        return status;
+    }
+
     auto networkShapes = network->getInputShapes();
     bool reshapeRequired = false;
     for (const auto& pair : network->getInputsInfo()) {
