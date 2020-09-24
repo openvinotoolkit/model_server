@@ -123,7 +123,7 @@ private:
     /**
          * @brief Model version
          */
-    model_version_t version;
+    model_version_t version = -1;
 
     /**
          * @brief Input mapping configuration

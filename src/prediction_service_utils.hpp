@@ -50,11 +50,6 @@ Status inference(
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
-Status assureModelInstanceLoadedWithProperBatchSize(
-    ModelInstance& modelInstance,
-    size_t requestedBatchSize,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
 Status reloadModelIfRequired(
     Status validationStatus,
     ModelInstance& modelInstance,
