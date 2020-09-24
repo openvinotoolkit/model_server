@@ -126,56 +126,6 @@ StatusCode GCSFileSystem::fileExists(const std::string& path, bool* exists) {
     return StatusCode::OK;
 }
 
-namespace {
-
-std::string AppendSlash(const std::string& name) {
-    if (name.empty() || (name.back() == '/')) {
-        return name;
-    }
-
-    return (name + "/");
-}
-
-bool isAbsolutePath(const std::string& path) {
-    return !path.empty() && (path[0] == '/');
-}
-
-std::string joinPath(std::initializer_list<std::string> segments) {
-    std::string joined;
-
-    for (const auto& seg : segments) {
-        if (joined.empty()) {
-            joined = seg;
-        } else if (isAbsolutePath(seg)) {
-            if (joined[joined.size() - 1] == '/') {
-                joined.append(seg.substr(1));
-            } else {
-                joined.append(seg);
-            }
-        } else {
-            if (joined[joined.size() - 1] != '/') {
-                joined.append("/");
-            }
-            joined.append(seg);
-        }
-    }
-
-    return joined;
-}
-
-StatusCode CreateLocalDir(const std::string& path) {
-    int status =
-        mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
-    if (status == -1) {
-        SPDLOG_ERROR("Failed to create local folder: {} {} ", path,
-            strerror(errno));
-        return StatusCode::PATH_INVALID;
-    }
-    return StatusCode::OK;
-}
-
-}  // namespace
-
 StatusCode GCSFileSystem::isDirectory(const std::string& path,
     bool* is_directory) {
     *is_directory = false;
@@ -192,7 +142,7 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
         return StatusCode::OK;
     }
     for (auto&& meta :
-        client_.ListObjects(bucket, gcs::Prefix(AppendSlash(object)))) {
+        client_.ListObjects(bucket, gcs::Prefix(appendSlash(object)))) {
         if (meta) {
             *is_directory = true;
             break;
@@ -212,7 +162,7 @@ GCSFileSystem::getDirectoryContents(const std::string& path,
             ovms::Status(status).string());
         return status;
     }
-    full_directory = AppendSlash(directory_path);
+    full_directory = appendSlash(directory_path);
     for (auto&& meta : client_.ListObjects(bucket, gcs::Prefix(full_directory))) {
         if (!meta) {
             SPDLOG_WARN("GCS: Unable to get directory content -> object metadata "

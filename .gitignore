@@ -8,6 +8,7 @@ __pycache__/
 report.json
 bazel-bin
 bazel-out
+bazel-ovms
 bazel-ovms-c
 bazel-testlogs
 __pycache__

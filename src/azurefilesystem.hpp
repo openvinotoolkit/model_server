@@ -15,19 +15,19 @@
 //*****************************************************************************
 #pragma once
 
+#define _TURN_OFF_PLATFORM_STRING
+
 #include <regex>
 #include <string>
 #include <vector>
 
-#include "cpprest/containerstream.h"
-#include "cpprest/filestream.h"
+#include "azurestorage.hpp"
 #include "filesystem.hpp"
 #include "status.hpp"
-#include "was/blob.h"
-#include "was/common.h"
-#include "was/storage_account.h"
 
 namespace ovms {
+
+namespace as = azure::storage;
 
 class AzureFileSystem : public FileSystem {
 public:
@@ -112,14 +112,16 @@ public:
         const std::string& local_path) override;
 
     /**
-     * @brief Download selected model versions
-     * 
-     * @param path 
-     * @param local_path 
-     * @param versions 
-     * @return StatusCode 
-     */
+ * @brief Download selected model versions
+ *
+ * @param path
+ * @param local_path
+ * @param versions
+ * @return StatusCode
+ */
     StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) override;
+
+    StatusCode fileModificationTime(const std::string& path, int64_t* mtime_ns);
 
     /**
    * @brief Delete a folder
@@ -129,18 +131,11 @@ public:
    */
     StatusCode deleteFileFolder(const std::string& path) override;
 
-private:
-    /**
-   * @brief
-   *
-   * @param path
-   * @param bucket
-   * @param object
-   * @return StatusCode
-   */
-    StatusCode parsePath(const std::string& path, std::string* bucket,
-        std::string* object);
+    static const std::string AZURE_URL_FILE_PREFIX;
 
+    static const std::string AZURE_URL_BLOB_PREFIX;
+
+private:
     /**
    *
    * @brief
@@ -160,6 +155,12 @@ private:
    */
     StatusCode downloadFileFolderTo(const std::string& path,
         const std::string& local_path);
+
+    /**
+   * @brief
+   *
+   */
+    as::cloud_storage_account account_;
 };
 
 }  // namespace ovms

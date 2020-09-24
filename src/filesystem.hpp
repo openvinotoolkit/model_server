@@ -27,7 +27,58 @@
 
 namespace ovms {
 
+namespace fs = std::filesystem;
+
 using files_list_t = std::set<std::string>;
+namespace {
+
+std::string appendSlash(const std::string& name) {
+    if (name.empty() || (name.back() == '/')) {
+        return name;
+    }
+
+    return (name + "/");
+}
+
+bool isAbsolutePath(const std::string& path) {
+    return !path.empty() && (path[0] == '/');
+}
+
+std::string joinPath(std::initializer_list<std::string> segments) {
+    std::string joined;
+
+    for (const auto& seg : segments) {
+        if (joined.empty()) {
+            joined = seg;
+        } else if (isAbsolutePath(seg)) {
+            if (joined[joined.size() - 1] == '/') {
+                joined.append(seg.substr(1));
+            } else {
+                joined.append(seg);
+            }
+        } else {
+            if (joined[joined.size() - 1] != '/') {
+                joined.append("/");
+            }
+            joined.append(seg);
+        }
+    }
+
+    return joined;
+}
+
+StatusCode CreateLocalDir(const std::string& path) {
+    int status =
+        mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
+    if (status == -1) {
+        SPDLOG_ERROR("Failed to create local folder: {} {} ", path,
+            strerror(errno));
+        return StatusCode::PATH_INVALID;
+    }
+    return StatusCode::OK;
+}
+
+}  // namespace
 
 class FileSystem {
 public:
@@ -113,9 +164,9 @@ public:
             spdlog::error("Failed to create local temp folder: {} {}", file_template, strerror(errno));
             return StatusCode::FILESYSTEM_ERROR;
         }
-        std::filesystem::permissions(tmp_folder,
-            std::filesystem::perms::others_all | std::filesystem::perms::group_all,
-            std::filesystem::perm_options::remove);
+        fs::permissions(tmp_folder,
+            fs::perms::others_all | fs::perms::group_all,
+            fs::perm_options::remove);
 
         *local_path = std::string(tmp_folder);
 

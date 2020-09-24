@@ -76,6 +76,8 @@ cc_library(
         "rest_utils.hpp",
         "s3filesystem.cpp",
         "s3filesystem.hpp",
+        "azurestorage.hpp",
+        "azurestorage.cpp",
         "azurefilesystem.cpp",
         "azurefilesystem.hpp",
         "serialization.cpp",
@@ -101,8 +103,8 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-	"@cpprest//:sdk",
 	"@azure//:storage",
+	"@cpprest//:sdk",
 	"@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
@@ -122,8 +124,9 @@ cc_binary(
         "main.cpp",
     ],
     linkopts = [
+        "-lxml2",
+        "-luuid",
         "-lstdc++fs",
-        "-lssl",
         "-lcrypto"
     ],
     copts = [
@@ -155,6 +158,7 @@ cc_test(
         "test/modelversionstatus_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/gcsfilesystem_test.cpp",
+        "test/azurefilesystem_test.cpp",
         "test/ovtestutils.hpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",
@@ -177,12 +181,13 @@ cc_test(
         "test/dummy/0/dummy.bin",
     ],
     linkopts = [
+        "-lxml2",
+        "-luuid",
         "-lstdc++fs",
-        "-lssl",
         "-lcrypto"
     ],
     deps = [
         "//src:ovms_lib",
-        "@com_google_googletest//:gtest"
+        "@com_google_googletest//:gtest",
     ],
 )

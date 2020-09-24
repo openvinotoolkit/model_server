@@ -15,77 +15,283 @@
 //*****************************************************************************
 #include "azurefilesystem.hpp"
 
-#include <filesystem>
-#include <fstream>
+#include <memory>
 #include <set>
-#include <string>
+#include <vector>
 
-#include <spdlog/spdlog.h>
+#include "stringutils.hpp"
 
 namespace ovms {
 
-namespace fs = std::filesystem;
+const std::string AzureFileSystem::AZURE_URL_FILE_PREFIX = "azure://";
+const std::string AzureFileSystem::AZURE_URL_BLOB_PREFIX = "azure_blob://";
 
-AzureFileSystem::AzureFileSystem() {
+as::cloud_storage_account createDefaultOrAnonymousAccount() {
+    try {
+        const char* env_cred = std::getenv("AZURE_STORAGE_CREDENTIALS");
+
+        std::string credentials = std::string(_XPLATSTR("DefaultEndpointsProtocol = https;"));
+
+        if (!env_cred) {
+            SPDLOG_TRACE("Creating AzureFileSystem anonymous credentials.");
+        } else {
+            credentials = std::string(_XPLATSTR(env_cred));
+        }
+
+        as::cloud_storage_account storage_account = as::cloud_storage_account::parse(credentials);
+        if (!storage_account.is_initialized()) {
+            SPDLOG_ERROR("Unable to create default azure storage account");
+            throw std::runtime_error("Unable to create default azure storage account");
+        }
+
+        return storage_account;
+    } catch (const as::storage_exception& e) {
+        SPDLOG_ERROR("Unable to create default azure storage account: {}", e.what());
+        as::request_result result = e.result();
+        as::storage_extended_error extended_error = result.extended_error();
+        if (!extended_error.message().empty()) {
+            SPDLOG_ERROR("Unable to create default azure storage account: {}", extended_error.message());
+        }
+        throw e;
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Unable to create default azure storage account: {}", e.what());
+        throw e;
+    }
+}
+
+AzureFileSystem::AzureFileSystem() :
+    account_{createDefaultOrAnonymousAccount()} {
     SPDLOG_TRACE("AzureFileSystem default ctor");
-    azure::storage::cloud_storage_account storage_account = azure::storage::cloud_storage_account::parse("");
 }
 
 AzureFileSystem::~AzureFileSystem() { SPDLOG_TRACE("AzureFileSystem dtor"); }
 
 StatusCode AzureFileSystem::fileExists(const std::string& path, bool* exists) {
-    return StatusCode::NOT_IMPLEMENTED;
+    *exists = false;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->fileExists(exists);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::isDirectory(const std::string& path,
     bool* is_directory) {
-    return StatusCode::NOT_IMPLEMENTED;
+    *is_directory = false;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->isDirectory(is_directory);
+
+    return status;
+}
+
+StatusCode AzureFileSystem::fileModificationTime(const std::string& path,
+    int64_t* mtime_ns) {
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->fileModificationTime(mtime_ns);
+
+    return status;
 }
 
 StatusCode
 AzureFileSystem::getDirectoryContents(const std::string& path,
     std::set<std::string>* contents) {
-    return StatusCode::NOT_IMPLEMENTED;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->getDirectoryContents(contents);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::getDirectorySubdirs(const std::string& path,
     std::set<std::string>* subdirs) {
-    return StatusCode::NOT_IMPLEMENTED;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->getDirectorySubdirs(subdirs);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::getDirectoryFiles(const std::string& path,
     std::set<std::string>* files) {
-    return StatusCode::NOT_IMPLEMENTED;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->getDirectoryFiles(files);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::readTextFile(const std::string& path,
     std::string* contents) {
-    return StatusCode::NOT_IMPLEMENTED;
-}
 
-StatusCode AzureFileSystem::downloadFile(const std::string& remote_path,
-    const std::string& local_path) {
-    return StatusCode::NOT_IMPLEMENTED;
-}
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
 
-StatusCode AzureFileSystem::downloadFileFolder(const std::string& path,
-    const std::string& local_path) {
-    return StatusCode::NOT_IMPLEMENTED;
+    status = azureStorageObj->readTextFile(contents);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::downloadModelVersions(const std::string& path,
     std::string* local_path,
     const std::vector<model_version_t>& versions) {
-    return StatusCode::NOT_IMPLEMENTED;
+
+    auto sc = createTempPath(local_path);
+    if (sc != StatusCode::OK) {
+        spdlog::error("Failed to create a temporary path {}", sc);
+        return sc;
+    }
+
+    for (auto& ver : versions) {
+        std::string versionpath = path;
+        if (!endsWith(versionpath, "/")) {
+            versionpath.append("/");
+        }
+        versionpath.append(std::to_string(ver));
+        std::string lpath = *local_path;
+        if (!endsWith(lpath, "/")) {
+            lpath.append("/");
+        }
+        lpath.append(std::to_string(ver));
+        fs::create_directory(lpath);
+
+        auto factory = std::make_shared<ovms::AzureStorageFactory>();
+        auto azureStorageObj = factory.get()->getNewAzureStorageObject(versionpath, account_);
+        auto status = azureStorageObj->checkPath(versionpath);
+        if (status != StatusCode::OK) {
+            SPDLOG_WARN("AS: Check path failed: {} -> {}", versionpath,
+                ovms::Status(status).string());
+            return status;
+        }
+
+        status = azureStorageObj->downloadFileFolderTo(lpath);
+        if (status != StatusCode::OK) {
+            spdlog::error("Failed to download model version {}", versionpath);
+            return status;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+StatusCode AzureFileSystem::downloadFile(const std::string& remote_path,
+    const std::string& local_path) {
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(remote_path, account_);
+    auto status = azureStorageObj->checkPath(remote_path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", remote_path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->downloadFile(local_path);
+
+    return status;
+}
+
+StatusCode AzureFileSystem::downloadFileFolder(const std::string& path,
+    const std::string& local_path) {
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->downloadFileFolder(local_path);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::downloadFileFolderTo(const std::string& path,
     const std::string& local_path) {
-    return StatusCode::NOT_IMPLEMENTED;
+
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->downloadFileFolderTo(local_path);
+
+    return status;
 }
 
 StatusCode AzureFileSystem::deleteFileFolder(const std::string& path) {
-    return StatusCode::NOT_IMPLEMENTED;
+    auto factory = std::make_shared<ovms::AzureStorageFactory>();
+    auto azureStorageObj = factory.get()->getNewAzureStorageObject(path, account_);
+    auto status = azureStorageObj->checkPath(path);
+    if (status != StatusCode::OK) {
+        SPDLOG_WARN("AS: Check path failed: {} -> {}", path,
+            ovms::Status(status).string());
+        return status;
+    }
+
+    status = azureStorageObj->deleteFileFolder();
+
+    return status;
 }
 
 }  // namespace ovms

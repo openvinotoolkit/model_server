@@ -1,0 +1,64 @@
+diff --git a/Microsoft.WindowsAzure.Storage/CMakeLists.txt b/Microsoft.WindowsAzure.Storage/CMakeLists.txt
+index ac9e65d..fd2aca4 100644
+--- a/Microsoft.WindowsAzure.Storage/CMakeLists.txt
++++ b/Microsoft.WindowsAzure.Storage/CMakeLists.txt
+@@ -43,8 +43,13 @@ if(UNIX)
+   endif()
+ 
+   set(_OPENSSL_VERSION "")
+-  find_package(OpenSSL 1.0.0 REQUIRED)
++  #find_package(OpenSSL 1.0.0 REQUIRED)
+ 
++set(OPENSSL_INCLUDE_DIR "/azure/cpprestsdk/include" CACHE INTERNAL "")
++    set(OPENSSL_LIBRARIES
++    "/azure/cpprestsdk/libcrypto.a"
++    "/azure/cpprestsdk/libssl.a"
++    )
+ 
+   find_package(UUID REQUIRED)
+   find_package(Casablanca REQUIRED)
+@@ -83,15 +88,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+   set(LINUX_SUPPRESSIONS "-Wno-deprecated -Wno-unknown-pragmas -Wno-reorder -Wno-unused-function -Wno-char-subscripts -Wno-switch -Wno-unused-but-set-parameter -Wno-unused-value -Wno-unused-local-typedefs -Wno-unused-parameter")
+   set(WARNINGS "${WARNINGS} ${LINUX_SUPPRESSIONS}")
+ 
+-  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs")
++  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs,--exclude-libs,ALL")
+ 
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-strict-aliasing")
+ 
+   set(STRICT_CXX_FLAGS ${WARNINGS} "-Werror -pedantic")
+ 
+-  if (BUILD_SHARED_LIBS)
+-    add_definitions(-DBOOST_LOG_DYN_LINK)
+-  endif()
+   add_definitions(-D_TURN_OFF_PLATFORM_STRING)
+ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   message("-- Setting clang options")
+@@ -105,9 +107,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
+ 
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-strict-aliasing")
+-  if (BUILD_SHARED_LIBS)
+-    add_definitions(-DBOOST_LOG_DYN_LINK)
+-  endif()
+   add_definitions(-D_TURN_OFF_PLATFORM_STRING)
+ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+   message("-- Setting MSVC options")
+@@ -174,4 +173,3 @@ if(BUILD_SAMPLES)
+   set(AZUREAZURAGE_LIBRARY_SAMPLE azurestoragesample)
+   add_subdirectory(samples)
+ endif()
+-
+diff --git a/Microsoft.WindowsAzure.Storage/src/CMakeLists.txt b/Microsoft.WindowsAzure.Storage/src/CMakeLists.txt
+index d775d23..850046e 100644
+--- a/Microsoft.WindowsAzure.Storage/src/CMakeLists.txt
++++ b/Microsoft.WindowsAzure.Storage/src/CMakeLists.txt
+@@ -84,7 +84,7 @@ endif()
+ 
+ add_library(${AZURESTORAGE_LIBRARY} ${SOURCES})
+ 
+-target_link_libraries(${AZURESTORAGE_LIBRARIES})
++target_link_libraries(${AZURESTORAGE_LIBRARY} PRIVATE "-Wl,--exclude-libs,ALL")
+ 
+ if(WIN32)
+   target_link_libraries(${AZURESTORAGE_LIBRARY} Ws2_32.lib rpcrt4.lib xmllite.lib bcrypt.lib)

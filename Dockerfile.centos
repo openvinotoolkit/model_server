@@ -56,7 +56,6 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             make \
             numactl-libs \
             ocl-icd \
-            openssl-devel \
             patch \
             pkg-config \
             pulseaudio-libs-devel \
@@ -73,31 +72,22 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             unzip \
             wget \
             which \
-            yum-utils && \
+            boost-thread \
+            boost-system \
+            boost-filesystem \
+            boost-chrono \
+            boost-program-options \
+            boost-date-time \
+            boost-atomic \
+            libxml2-devel \
+            yum-utils \
+            numactl-libs \
+            unzip && \
             yum clean all
 
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
 ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
 ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
-
-####### Azure SDK needs new boost:
-WORKDIR /boost
-RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
-	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
-		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
-		--with-random --with-thread --with-atomic --with-regex \
-		--with-log --with-locale \
-		install
-
-####### Azure SDK
-WORKDIR /azure
-RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init && \
-	mkdir Release/build.release && cd Release/build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && \
-	make --jobs=$(nproc --all) install
-RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && mkdir build.release && \
-	cd build.release && cmake3 .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF  && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install
-####### End of Azure SDK
 
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
@@ -130,13 +120,6 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TE
 
 #################### END OF OPENVINO BINARY INSTALL
 
-# Build AWS S3 SDK
-RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
-WORKDIR /awssdk/build
-RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
-RUN make --jobs=$(nproc --all)
-RUN mv .deps/install/lib64 .deps/install/lib
-
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
@@ -146,6 +129,57 @@ COPY third_party /ovms/third_party/
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+
+WORKDIR /boringssl
+RUN find /root -iname 'boringssl' -type d -exec cp -vR {} . \;
+
+####### Azure SDK needs new boost:
+WORKDIR /boost
+RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
+	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+		--with-random --with-thread --with-atomic --with-regex \
+		--with-log --with-locale \
+		install
+
+####### Azure SDK
+WORKDIR /azure
+RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
+
+RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
+
+WORKDIR /
+RUN cp -rf /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch /azure/cpprestsdk/ 
+RUN cd /azure/cpprestsdk/ && patch -p1 < rest_sdk_v2.10.16.patch
+RUN cp -rf /ovms/third_party/azure/azure_sdk.patch /azure/azure-storage-cpp/ 
+RUN cd /azure/azure-storage-cpp/ && patch -p1 < azure_sdk.patch
+RUN mkdir -p /azure/cpprestsdk/include
+RUN cp -rf /boringssl/boringssl/src/include/ /azure/cpprestsdk/
+RUN cd /boringssl/boringssl/_objs/crypto/ && ar rvs libcrypto.a *.o
+RUN cd /boringssl/boringssl/_objs/ssl/ && ar rvs libssl.a *.o
+RUN cp -rf /boringssl/boringssl/_objs/crypto/libcrypto.a /azure/cpprestsdk/
+RUN cp -rf /boringssl/boringssl/_objs/ssl/libssl.a /azure/cpprestsdk/
+WORKDIR /azure
+
+RUN cd cpprestsdk && mkdir Release/build.release && cd Release/build.release && cmake3 .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$(nproc --all) install
+RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLANCA_DIR=/azure/cpprestsdk cmake3 .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install
+
+####### End of Azure SDK
+
+# WARNING - do not move this install - needed here for proper ssl linkage in rest and azure
+RUN yum install -d6 -y openssl-devel
+
+# Build AWS S3 SDK
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk/build
+RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN make --jobs=$(nproc --all)
+RUN mv .deps/install/lib64 .deps/install/lib
+
+####### End of AWS S3 SDK
+
+WORKDIR /ovms
 
 COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/

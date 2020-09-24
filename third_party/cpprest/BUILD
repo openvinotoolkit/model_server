@@ -21,7 +21,8 @@ package(
 cc_library(
     name = "sdk",
     srcs = [
-        "Release/build.release/Binaries/libcpprest.a",
+        "Release/build.release/Binaries/libcpprest.so",
+        "Release/build.release/Binaries/libcpprest.so.2.10",
     ],
     hdrs = glob([
 	"Release/include/**/*.h",
