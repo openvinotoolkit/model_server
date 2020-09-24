@@ -111,11 +111,25 @@ enum class StatusCode {
     GCS_FAILED_GET_OBJECT,
     GCS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
+    // AS
+    AS_INVALID_PATH,
+    AS_CONTAINER_NOT_FOUND,
+    AS_SHARE_NOT_FOUND,
+    AS_METADATA_FAIL,
+    AS_FAILED_LIST_OBJECTS,
+    AS_FAILED_GET_TIME,
+    AS_INVALID_ACCESS,
+    AS_FILE_NOT_FOUND,
+    AS_FILE_INVALID,
+    AS_FAILED_GET_OBJECT,
+    AS_INCORRECT_REQUESTED_OBJECT_TYPE,
+
     // REST handler
     REST_NOT_FOUND,               /*!< Requested REST resource not found */
     REST_COULD_NOT_PARSE_VERSION, /*!< Could not parse model version in request */
     REST_INVALID_URL,             /*!< Malformed REST request url */
     REST_UNSUPPORTED_METHOD,      /*!< Request sent with unsupported method */
+    REST_MALFORMED_REQUEST,       /*!< Malformed REST request */
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,          /*!< REST body should be JSON object */

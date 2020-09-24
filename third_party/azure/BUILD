@@ -21,7 +21,9 @@ package(
 cc_library(
     name = "storage",
     srcs = [
-	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.a",
+	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so.7.5",
+	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so.7",
+	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so",
     ],
     hdrs = glob([
 	"Microsoft.WindowsAzure.Storage/includes/**/*.h",

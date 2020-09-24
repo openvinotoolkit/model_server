@@ -168,41 +168,6 @@ StatusCode S3FileSystem::fileExists(const std::string& path, bool* exists) {
     return StatusCode::OK;
 }
 
-std::string appendSlash(const std::string& name) {
-    if (name.empty() || (name.back() == '/')) {
-        return name;
-    }
-
-    return (name + "/");
-}
-
-bool isAbsolutePath(const std::string& path) {
-    return !path.empty() && (path[0] == '/');
-}
-
-std::string joinPath(std::initializer_list<std::string> segments) {
-    std::string joined;
-
-    for (const auto& seg : segments) {
-        if (joined.empty()) {
-            joined = seg;
-        } else if (isAbsolutePath(seg)) {
-            if (joined[joined.size() - 1] == '/') {
-                joined.append(seg.substr(1));
-            } else {
-                joined.append(seg);
-            }
-        } else {
-            if (joined[joined.size() - 1] != '/') {
-                joined.append("/");
-            }
-            joined.append(seg);
-        }
-    }
-
-    return joined;
-}
-
 StatusCode S3FileSystem::isDirectory(const std::string& path, bool* is_dir) {
     *is_dir = false;
     std::string bucket, object_path;

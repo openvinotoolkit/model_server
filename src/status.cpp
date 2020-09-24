@@ -86,6 +86,41 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Tensor serialization error"},
+
+    // Storage errors
+    // S3
+    {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
+    {StatusCode::S3_METADATA_FAIL, "S3 metadata failure"},
+    {StatusCode::S3_FAILED_LIST_OBJECTS, "S3 Failed to list objects"},
+    {StatusCode::S3_FAILED_GET_TIME, "S3 Failed to get modification time"},
+    {StatusCode::S3_INVALID_ACCESS, "S3 Invalid access rights"},
+    {StatusCode::S3_FILE_NOT_FOUND, "S3 File or directory not found"},
+    {StatusCode::S3_FILE_INVALID, "S3 File path is invalid"},
+    {StatusCode::S3_FAILED_GET_OBJECT, "S3 Failed to get object from path"},
+
+    // GCS
+    {StatusCode::GCS_BUCKET_NOT_FOUND, "GCS Bucket not found"},
+    {StatusCode::GCS_METADATA_FAIL, "GCS metadata failure"},
+    {StatusCode::GCS_FAILED_LIST_OBJECTS, "GCS Failed to list objects"},
+    {StatusCode::GCS_FAILED_GET_TIME, "GCS Failed to list objects"},
+    {StatusCode::GCS_INVALID_ACCESS, "GCS Invalid access rights"},
+    {StatusCode::GCS_FILE_NOT_FOUND, "GCS File or directory not found"},
+    {StatusCode::GCS_FILE_INVALID, "GCS File path is invalid"},
+    {StatusCode::GCS_FAILED_GET_OBJECT, "GCS Failed to get object from path"},
+    {StatusCode::GCS_INCORRECT_REQUESTED_OBJECT_TYPE, "GCS invalid object type in path"},
+
+    // AS
+    {StatusCode::AS_INVALID_PATH, "AS Invalid path"},
+    {StatusCode::AS_CONTAINER_NOT_FOUND, "AS Container not found"},
+    {StatusCode::AS_SHARE_NOT_FOUND, "AS Share not found"},
+    {StatusCode::AS_METADATA_FAIL, "AS metadata failure"},
+    {StatusCode::AS_FAILED_LIST_OBJECTS, "AS Failed to list objects"},
+    {StatusCode::AS_FAILED_GET_TIME, "AS Failed to list objects"},
+    {StatusCode::AS_INVALID_ACCESS, "AS Invalid access rights"},
+    {StatusCode::AS_FILE_NOT_FOUND, "AS File or directory not found"},
+    {StatusCode::AS_FILE_INVALID, "AS File path is invalid"},
+    {StatusCode::AS_FAILED_GET_OBJECT, "AS Failed to get object from path"},
+    {StatusCode::AS_INCORRECT_REQUESTED_OBJECT_TYPE, "AS invalid object type in path"},
 };
 
 const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
