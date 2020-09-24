@@ -178,7 +178,7 @@ Status HttpRestApiHandler::processPredictRequest(
         status = processPipelineRequest(modelName, request, requestOrder, responseProto);
     } else {
         SPDLOG_INFO("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
-        status = StatusCode::MODEL_MISSING;
+        status = StatusCode::MODEL_NAME_MISSING;
     }
     if (!status.ok())
         return status;
