@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM centos:7.8.2003 as base_build
+FROM centos:7 as base_build
 
 LABEL version="1.0.0"
 LABEL description="OpenVINO Model Server"

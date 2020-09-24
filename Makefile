@@ -35,7 +35,7 @@ BASE_OS ?= centos
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 18.04
-BASE_OS_TAG_CENTOS ?= 7.8.2003
+BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
 HAS_AVX := $(shell grep avx /proc/cpuinfo | wc -l)
 
