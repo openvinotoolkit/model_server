@@ -33,6 +33,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
     {StatusCode::RESHAPE_ERROR, "Model could not be reshaped with requested shape"},
     {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
+    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, "Cannot load network into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
     {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
