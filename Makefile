@@ -79,7 +79,7 @@ endif
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
 
-OVMS_CPP_DOCKER_IMAGE ?= ovms
+OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test

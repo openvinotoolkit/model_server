@@ -7,19 +7,18 @@ Build the docker image using command:
 ```bash
 ~/ovms-c$ make docker_build BASE_OS=[one of ubuntu/centos/clearlinux ]
 ```
-It will generate the image, tagged as `ovms:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
+It will generate the image, tagged as `openvino/model_server:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
 The release package should work on a any linux machine with glibc >= one used by the build image.
 
-For debugging, an image with a suffix `-build` is also generated (i.e. `ovms-build:latest`).
+For debugging, an image with a suffix `-build` is also generated (i.e. `openvino/model_server-build:latest`).
 
 
 **Note:** You can use also publicly available docker image from internal docker registry service.
 
 
 ```bash
-docker pull ger-registry-pre.caas.intel.com/ovms/model_server:latest
-docker tag ger-registry-pre.caas.intel.com/ovms/model_server:latest ovms:latest
+docker pull openvino/model_server:latest
 ```
 
 Before deploying OVMS server [prepare models and models repository](models_repository.md).
@@ -32,7 +31,7 @@ OpenVINO&trade; model server. To enable just a single model, you _do not_ need a
 completed with just one command like below:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ovms:latest \
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/model_server:latest \
 --model_path /opt/ml/model1 --model_name my_model --port 9001 --rest_port 8001
 ```
 
@@ -40,7 +39,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ovms:latest
 
 * option `-p` exposes the model serving port outside the docker container.
 
-* `ovms:latest` represent the image name which can be different depending the tagging and building process.
+* `openvino/model_server:latest` represent the image name which can be different depending the tagging and building process.
 
 * `ovms` binary is the docker entrypoint. It accepts the following parameters:
 
@@ -111,7 +110,7 @@ Below is an example presenting how to start docker container with a support for 
 `GOOGLE_APPLICATION_CREDENTIALS` contain a path to GCP authentication key. 
 
 ```bash
-docker run --rm -d  -p 9001:9001 ovms:latest \
+docker run --rm -d  -p 9001:9001 openvino/model_server:latest \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}
 --model_path gs://bucket/model_path --model_name my_model --port 9001
@@ -130,7 +129,7 @@ environmental variable in a HOST:PORT format. In an example below you can see
 how to start docker container serving single model located in S3.
 
 ```bash
-docker run --rm -d  -p 9001:9001 ovms:latest \
+docker run --rm -d  -p 9001:9001 openvino/model_server:latest \
 -e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
 -e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
 -e AWS_REGION=“${AWS_REGION}”  \
@@ -205,7 +204,7 @@ file above contains both GCS and S3 paths so starting docker container
 supporting all those models can be done with:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 ovms:latest \
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/model_server:latest \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}  \
 -e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
@@ -330,7 +329,7 @@ To start OVMS with NCS you can use command similar to:
 
 ```
 docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
@@ -351,7 +350,7 @@ The command example is listed below:
 
 ```
 docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
 ## Starting docker container with HDDL
@@ -368,7 +367,7 @@ Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.or
 To start server with HDDL you can use command similar to:
 ```
 docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
 ```
 
 `--device=/dev/ion:/dev/ion` mounts the HDDL accelerators character device.
@@ -402,12 +401,12 @@ Below is exemplary config.json setting up Multi-Device Plugin for resnet model, 
 Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
 ```
 docker run -d  --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
-ovms-py:latest --config_path /opt/ml/config.json --port 9001 
+openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
 ```
 Or alternatively, when you are using just a single model, start OpenVINO™ Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
- /dev:/dev -p 9001:9001 ovms:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+ /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.

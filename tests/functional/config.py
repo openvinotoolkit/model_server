@@ -25,7 +25,7 @@ except ImportError:
     pass
 
 """IMAGE - docker image name which should be used to run tests"""
-image = os.environ.get("IMAGE", "ovms:latest")
+image = os.environ.get("IMAGE", "openvino/model_server")
 
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
 test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))

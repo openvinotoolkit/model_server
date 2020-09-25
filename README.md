@@ -30,11 +30,11 @@ Build the docker image using command:
 ```bash
 ~/ovms-c$ make docker_build
 ```
-It will generate the image, tagged as `ovms:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
+It will generate the image, tagged as `openvino/model_server:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 The release package should work on a any linux machine with glibc >= one used by the build image.
-For debugging, an image with a suffix -build is also generated (i.e. ovms-build:latest).
+For debugging, an image with a suffix -build is also generated (i.e. openvino/model_server-build:latest).
 
-*Note:* Images include OpenVINO 2020.4 release. <br>
+*Note:* Images include OpenVINO 2021.1 release. <br>
 
 
 ## Running the Server
@@ -47,7 +47,7 @@ Start using OpenVINO Model Server in 5 Minutes or less:
 curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 
 # Start the container serving gRPC on port 9000
-docker run -d -v $(pwd)/model:/models/face-detection/1 -p 9000:9000 ger-registry-pre.caas.intel.com/ovms/model_server:latest --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG
+docker run -d -v $(pwd)/model:/models/face-detection/1 -p 9000:9000 openvino/model_server:latest --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG
 
 # Download the example client script
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt

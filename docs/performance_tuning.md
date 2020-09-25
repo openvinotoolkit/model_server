@@ -23,7 +23,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 Particularly important parameter is CPU_THROUGHPUT_STREAMS which defines the number of parallel executions should run
 in parallel. This setting can increase significantly the throughput when a single inference request can not 
-utilizes all available CPU cores. Set this value to CPU_THROUGHPUT_AUTO to get the most universal setting. You can tune
+utilizes all available CPU cores. By default it is set to CPU_THROUGHPUT_AUTO to get the most universal configuration. You can tune
 it for a given model, HW or usage model.
 
 Read about available parameters on [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
@@ -32,9 +32,9 @@ While passing the plugin configuration, omit the `KEY_` phase. Example docker co
  to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```
-docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 \
---model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 1 \
---plugin_config "{\"CPU_THROUGHPUT_STREAMS\": \"CPU_THROUGHPUT_AUTO\"\"}"
+docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest\
+--model_path /opt/model --model_name my_model --port 9001 --nireq 4 \
+--plugin_config '{"CPU_THROUGHPUT_STREAMS": "2", "CPU_THREADS_NUM": "4"}'
 ```
 
 ## Multi worker configuration
@@ -57,12 +57,13 @@ They are listed on [supported configuration parameters for CPU Plugin](https://d
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load.
 You can set it with `plugin_config` parameter. 
 
-Example docker command, setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `KEY_CPU_THROUGHPUT_AUTO`:
+Example docker command, setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32`. It will be efficient
+configuration when the number of parallel connections exceeds 32:
 
 ```
-docker run --rm -d -v <model_path>:/opt/model -p 9001:9001  \
+docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config "{\"CPU_THROUGHPUT_STREAMS\": \"32\"}"
+--plugin_config '{"CPU_THROUGHPUT_STREAMS": "32"}'
 ```
 
 Depending on the target device, there are different sets of plugin configuration and tuning options. 
