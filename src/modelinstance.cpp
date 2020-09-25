@@ -37,6 +37,8 @@ namespace ovms {
 const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
 const char* NIREQ = "NIREQ";
 
+const uint MAX_NIREQ_COUNT = 100000;
+
 const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
@@ -183,8 +185,8 @@ std::string ModelInstance::findModelFilePathWithExtension(const std::string& ext
     return findFilePathWithExtension(path, extension);
 }
 
-uint ModelInstance::getNumOfParalInferReqs(const ModelConfig& modelConfig) {
-    uint numberOfParallelInferRequests;
+uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
+    uint numberOfParallelInferRequests = 0;
     if (modelConfig.getNireq() > 0) {
         return modelConfig.getNireq();
     }
@@ -201,6 +203,18 @@ uint ModelInstance::getNumOfParalInferReqs(const ModelConfig& modelConfig) {
         numberOfParallelInferRequests = 1u;
     }
     return numberOfParallelInferRequests;
+}
+
+uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
+    uint nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
+    if (nireq > MAX_NIREQ_COUNT) {
+        SPDLOG_WARN("Ignored configured nireq because its value was too high:{}. Set to:{}", nireq, MAX_NIREQ_COUNT);
+        return MAX_NIREQ_COUNT;
+    } else if (nireq < 1u) {
+        SPDLOG_WARN("Ignored configured nireq because it has to be above 0 and was:{}. Set to 1", nireq);
+        return 1u;
+    }
+    return nireq;
 }
 
 void ModelInstance::loadOVEngine() {
@@ -278,7 +292,7 @@ Status ModelInstance::fetchModelFilepaths() {
 }
 
 void ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
-    uint numberOfParallelInferRequests = getNumOfParalInferReqs(config);
+    uint numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
     spdlog::info("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
