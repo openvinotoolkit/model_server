@@ -168,7 +168,7 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 
 ## Start model server
 ```
-~$ docker run --rm -v ~/models/:/models:ro -p 9100:9100 -p 8100:8100 ovms:latest --config_path /models/config.json --port 9100 --rest_port 8100
+~$ docker run --rm -v ~/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
 
 ## Requesting the service

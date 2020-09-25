@@ -7,10 +7,9 @@ To quickly start using OpenVINO Model Server please execute the following steps.
 A Docker image with OpenVINO Model Server is available on DockerHub. Use the following command to download the latest release:
 
 ```bash
-docker pull ger-registry-pre.caas.intel.com/ovms/model_server:ubuntu_latest
-docker tag ger-registry-pre.caas.intel.com/ovms/model_server:ubuntu_latest ovms:latest
+docker pull openvino/model_server:latest
 ```
-or build the docker image ovms:latest with a command:
+or build the docker image openvino/model_server:latest with a command:
 
 ```bash
 make docker_build
@@ -34,8 +33,8 @@ curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/op
 To start the Model Server container use the following command:
 
 ```bash
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 ovms:latest \
---model_path /models/face-detection --model_name face-detection --port 9000  --shape auto
+docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000:9000 openvino/model_server:latest \
+--model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
 ```
 
 Model Server expects models in the predefined structure of folders - that is why the folder with downloaded models is mounted as `/models/face-detection/1`. In our case this expected structure is as follows:
