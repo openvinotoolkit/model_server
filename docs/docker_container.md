@@ -6,25 +6,21 @@ Choose one option to get a Docker image:
 
 <details><summary>Build an image</summary>
 
-To build your own image, use the following command in the git repository root folder, replacing `DLDT_PACKAGE_URL=<URL>` 
-with the URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download). 
+To build your own image, use the following command in the git repository root folder, replacing `BASE_OS=<OS>` with one of the following:
+
+- `BASE_OS=ubuntu`
+- `BASE_OS=centos`
+- `BASE_OS=clearlinux`
 
 ```bash
-make docker_build DLDT_PACKAGE_URL=<URL>
+make docker_build BASE_OS=<OS>
 ```
+It will generate the image, tagged as `openvino/model_server:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
-called from the root directory of the repository.
-
-It will generate the images, tagged as:
-* `openvino/model_server:latest` - with CPU, NCS and HDDL support
-* `openvino/model_server-gpu:latest` - with CPU, NCS, HDDL and iGPU support
-
-as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
+The image is created and tagged as `ovms:latest` and a `.tar.gz` release package that includes OpenVINO Model Server binary files and libraries is put in a `./dist` folder.
 
 The release package is compatible with linux machines on which `glibc` version is greater than or equal to the build image version.
 For debugging, an image with a suffix `-build` is also generated (i.e. `openvino/model_server-build:latest`).
-
-*Note:* Images include OpenVINO 2021.1 release. <br>
 
 </details>
 
@@ -60,12 +56,20 @@ Options used in this command:
 * `-v` - Defines how to mount the models folder in the Docker container.
 * `-p` - Exposes the model serving port outside the Docker container.
 * `openvino/model_server:latest` - Represents the image name. This varies by tag and build process. The `ovms` binary is the Docker entry point. See the [full list](https://hub.docker.com/repository/docker/openvino/model_server) of `ovms` tags. 
-* `model_path` - Model location. This can be a Docker container that is mounted during start-up or a Google* Cloud Storage path in format `gs://<bucket>/<model_path>` or AWS S3 path `s3://<bucket>/<model_path>`. 
+* `--model_path` - Model location. This can be a Docker container that is mounted during start-up or a Google* Cloud Storage path in format `gs://<bucket>/<model_path>` or AWS S3 path `s3://<bucket>/<model_path>`. 
 See the requirements below for using a cloud storage.
-* `model_name` - The name of the model in the `model_path`.
-* `port` - gRPC server port
-* `rest_port` - REST server port
+* `--model_name` - The name of the model in the `model_path`.
+* `--port` - gRPC server port.
+* `--rest_port` - REST server port.
 
+Other allowed command line options:
+* `--help` - Displays help message.
+* `--file_system_poll_wait_seconds` - Time interval between config and model versions changes detection. Default is 1. Zero value disables changes monitoring.
+* `--log_level` `"DEBUG"/"INFO"/"ERROR"` - Serving log level - one of DEBUG, INFO, ERROR  (default: INFO).
+* `--log_path` - Optional path to the log file.
+* `--config_path` - Absolute path to json configuration file.
+
+Furthermore, in command line it is possible to specify options, for example --shape, for single model(options are described in "Model configuration options explained").
 
 </details>
 
@@ -142,51 +146,23 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 </details>
 
 
-<details><summary>Configuration options explained</summary>
+<details><summary>Model configuration options explained</summary>
 
-| Option  | Value format  | Description  |
-|---|---|---|
-| `"model_name"` | `string` | model name exposed over gRPC and REST API  |
-| `"base_path"` | `"/opt/ml/models/model"`<br>"gs://bucket/models/model"<br>"s3://bucket/models/model" | If using a Google Cloud Storage or S3 path, see the requirements below.  |
-| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of tuples, such as `{input1:(1,3,224,224),input2:(1,3,50,50)}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [docs_IE_DG_ShapeInference.html](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). |
-| `"batch_size"` | `integer / "auto"` | Optional. By default, the batch size is derived from the model, defined through the OpenVINO Model Optimizer. `batch_size` is useful for sequential inference requests of the same batch size.<br><br>Some models, such as object detection, don't work correctly with the `batch_size` parameter. With these models, the output's first dimension doesn't represent the batch size. You can set the batch size for these models by using network reshaping and setting the `shape` parameter appropriately.<br><br>The default option of using the Model Optimizer to determine the batch size uses the size of the first dimension in the first input for the size. For example, if the input shape is `(1, 3, 225, 225)`, the batch size is set to `1`. If you set `batch_size` to a numerical value, the model batch size is changed when the service starts.<br><br>`batch_size` also accepts a value of `auto`. If you use `auto`, then the served model batch size is set according to the incoming data at run time. The model is reloaded each time the input data changes the batch size. You might see a delayed response upon the first request.<br>  |
-| `"model_version_policy"` | <code>{"all": {}}<br>{"latest": { "num_versions": Integer}<br>{"specific": { "versions":[1, 3] }}</code> | Optional.<br><br>The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.<br><br>The accepted format is in json.<br><br>Examples:<br><code>{"latest": { "num_versions":2 } # server will serve only ywo latest versions of model<br><br>{"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model<br><br>{"all": {}} # server will serve all available versions of given model |
-| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](performance_tuning.md)  |
-| `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
-| `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. |
-| `"file_system_poll_wait_seconds"`| `integer` |Time interval between config and model versions changes detection. Default is 1. Zero value disables changes monitoring.|
-| `log_level`| `"DEBUG"/"INFO"/"ERROR"` | serving log level - one of DEBUG, INFO, ERROR  (default: INFO) |
-| `log_path` | `local filesystem path` | optional path to the log file |
+| Option  | Value format  | Description  | Required |
+|---|---|---|---|
+| `"model_name"/"name"` | `string` | model name exposed over gRPC and REST API.(use `model_name` in command line, `name` in json config)   | &check;|
+| `"model_path"/"base_path"` | `"/opt/ml/models/model"`<br>"gs://bucket/models/model"<br>"s3://bucket/models/model"<br>"azure://bucket/models/model" | If using a Google Cloud Storage, Azure Storage or S3 path, see the requirements below.(use `model_path` in command line, `base_path` in json config)  | &check;|
+| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of tuples, such as `{input1:(1,3,224,224),input2:(1,3,50,50)}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [docs_IE_DG_ShapeInference.html](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). ||
+| `"batch_size"` | `integer / "auto"` | Optional. By default, the batch size is derived from the model, defined through the OpenVINO Model Optimizer. `batch_size` is useful for sequential inference requests of the same batch size.<br><br>Some models, such as object detection, don't work correctly with the `batch_size` parameter. With these models, the output's first dimension doesn't represent the batch size. You can set the batch size for these models by using network reshaping and setting the `shape` parameter appropriately.<br><br>The default option of using the Model Optimizer to determine the batch size uses the size of the first dimension in the first input for the size. For example, if the input shape is `(1, 3, 225, 225)`, the batch size is set to `1`. If you set `batch_size` to a numerical value, the model batch size is changed when the service starts.<br><br>`batch_size` also accepts a value of `auto`. If you use `auto`, then the served model batch size is set according to the incoming data at run time. The model is reloaded each time the input data changes the batch size. You might see a delayed response upon the first request.<br>  ||
+| `"model_version_policy"` | <code>{"all": {}}<br>{"latest": { "num_versions": Integer}<br>{"specific": { "versions":[1, 3] }}</code> | Optional.<br><br>The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.<br><br>The accepted format is in json.<br><br>Examples:<br><code>{"latest": { "num_versions":2 } # server will serve only ywo latest versions of model<br><br>{"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model<br><br>{"all": {}} # server will serve all available versions of given model ||
+| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](performance_tuning.md)  ||
+| `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
+| `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
 
 
 </details>
 
 <details><summary>Cloud storage requirements</summary>
-
-**Azure Cloud Storage path requirements**
-
-Add the Azure Storage path as the `model_path` and pass the Azure Storage credentials to the Docker container. <br>
-
-To start a Docker container with support for Azure Storage paths to your model use the 
-`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the path to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) key. 
-
-Example command with blob storage `azure_blob://<bucket>/<model_path>`:
-
-```bash
-docker run --rm -d  -p 9001:9001 \
--e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
-openvino/model_server:latest \
---model_path azure_blob://bucket/model_path --model_name as_model --port 9001
-```
-
-Example command with file storage `azure://<share>/<model_path>`:
-
-```bash
-docker run --rm -d  -p 9001:9001 \
--e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
-openvino/model_server:latest \
---model_path azure://share/model_path --model_name as_model --port 9001
-```
 
 **Google Cloud Storage path requirements**
 
@@ -199,11 +175,10 @@ To start a Docker container with support for Google Cloud Storage paths to your 
 Example command with `gs://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d  -p 9001:9001 \
--e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}” \
--v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-openvino/model_server:latest \
---model_path gs://bucket/model_path --model_name gs_model --port 9001
+docker run --rm -d  -p 9001:9001 ovms:latest \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}
+--model_path gs://bucket/model_path --model_name my_model --port 9001
 ```
 **AWS S3 and Minio storage path requirements**
 
@@ -212,33 +187,15 @@ Add the S3 path as the `model_path` and pass the credentials as environment vari
 Example command with `s3://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d -p 9001:9001 \
--e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}” \
--e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}” \
--e AWS_REGION=“${AWS_REGION}” \
--e S3_ENDPOINT=“${S3_ENDPOINT}” \
-openvino/model_server:latest \
---model_path s3://bucket/model_path --model_name s3_model --port 9001
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/model_server:latest \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}  \
+-e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
+-e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
+-e AWS_REGION=“${AWS_REGION}”  \
+-e S3_ENDPOINT=“${S3_ENDPOINT}”  \
+--config_path /opt/ml/config.json --port 9001 --rest_port 8001
 ```
-</details>
-
-<details><summary>Security considerations</summary>
-
-OpenVINO Model Server docker containers, by default, starts with the security context of local account `ovms` with linux
-uid 5000. It ensure docker container has not elevated permissions on the host machine. This is in line with 
-best practices to use minimal permissions to run docker applications. You can change the security context by adding `--user`
-parameter to `docker run` command. It might be needed for example to load mounted models with restricted access.
-For example:
-```bash
-docker run --rm -d  --user $(id -u):$(id -g)  -v ${pwd}/model/:/model -p 9178:9178 openvino/model_server:latest \
---model_path /model --model_name my_model
-```
-
-OpenVINO Model Server currently doesn't provide access restrictions and traffic encryption on gRPC and REST API endpoints.
-The endpoints can be secured using network settings like docker network settings or network firewall on the host.
-The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides 
-traffic encryption and user authorization.
-
 </details>
 
 ## Other Options for the OpenVINO&trade; Model Server in a Docker Container
@@ -282,12 +239,12 @@ Accepted format for parameter in CLI and in config is `json`.
 Accepted values:
 ```
 {"all": {}}
-{"latest": { "num_versions": Integer}}
+{"latest": { "num_versions": Integer}
 {"specific": { "versions": List }}
 ```
 Examples:
 ```
-{"latest": { "num_versions":2 }} # server will serve only 2 latest versions of model
+{"latest": { "num_versions":2 } # server will serve only 2 latest versions of model
 {"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
 {"all": {}} # server will serve all available versions of given model
 ```
