@@ -46,8 +46,8 @@ In order to increase the throughout, there is introduced a parameter `--grps_wor
 of gRPC server instances. This way the OVMS can achieve bandwidth utilization over 30Gb/s if there is 
 sufficient network link.
 
-Another parameter impacting the performance is `nireq`. It defines the size of the model queue for inference execution.
-It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients.
+Another parameter impacting the performance is `nireq`. It defines the size of the requests queue for inference execution.
+It should be at least as big as the number of assigned OpenVINO streams and up to expected number of parallel clients.
 
 ### Plugin configuration
 
