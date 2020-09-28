@@ -65,12 +65,16 @@ uint getGRPCServersCount() {
 bool isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
     int s = socket(AF_INET, SOCK_STREAM, 0);
+    if (s == -1) {
+        return false;
+    }
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
 
     if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(s);
         return false;
     }
     close(s);
