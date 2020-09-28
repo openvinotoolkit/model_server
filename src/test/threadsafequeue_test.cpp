@@ -65,11 +65,10 @@ TEST(TestThreadSafeQueue, SeveralElementsInFIFOOrder) {
     }
 }
 
-TEST(TestThreadSafeQueue, DISABLED_NoElementsPushed) {
-    // TODO handle timeout
+TEST(TestThreadSafeQueue, NoElementsPushed) {
     const std::vector<int> elements = {};
     ThreadSafeQueue<int> queue;
-    EXPECT_EQ(0, queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS));
+    EXPECT_EQ(std::nullopt, queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS));
 }
 
 const uint ELEMENTS_TO_INSERT = 500;

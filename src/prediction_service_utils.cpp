@@ -140,8 +140,6 @@ Status inference(
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     timer.stop("prediction");
-    // TODO - current return code below is the same as in Python, but INVALID_ARGUMENT does not neccesarily mean
-    // that the problem may be input
     if (!status.ok())
         return status;
     spdlog::debug("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",

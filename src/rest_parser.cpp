@@ -192,7 +192,7 @@ Status RestParser::parseColumnFormat(rapidjson::Value& node) {
 
 Status RestParser::parse(const char* json) {
     rapidjson::Document doc;
-    if (doc.Parse(json).HasParseError()) {  // TODO: Use ParseStream?
+    if (doc.Parse(json).HasParseError()) {
         return StatusCode::JSON_INVALID;
     }
     if (!doc.IsObject()) {
@@ -316,7 +316,7 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     case tensorflow::DataType::DT_FLOAT:
         return addToTensorContent<float>(proto, value);
     case tensorflow::DataType::DT_HALF:
-        return addToHalfVal(proto, value);  // TODO(CVS-34457): Deserialize always from tensor_content, otherwise try from HalfVal/IntVal/etc
+        return addToHalfVal(proto, value);
     case tensorflow::DataType::DT_DOUBLE:
         return addToTensorContent<double>(proto, value);
     case tensorflow::DataType::DT_INT32:
@@ -324,7 +324,7 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     case tensorflow::DataType::DT_INT16:
         return addToTensorContent<int16_t>(proto, value);
     case tensorflow::DataType::DT_UINT16:
-        return addToIntVal(proto, value);  // TODO(CVS-34457): Deserialize always from tensor_content, otherwise try from HalfVal/IntVal/etc
+        return addToIntVal(proto, value);
     case tensorflow::DataType::DT_INT8:
         return addToTensorContent<int8_t>(proto, value);
     case tensorflow::DataType::DT_UINT8:

@@ -199,7 +199,6 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
     const std::string nodeName = "response";
     // pipeline outputs are node exit inputs
-    // TODO what if pipelines requires model not present in OVMS? CVS-34360
     processNodeInputs(nodeName, iteratorOutputs, connections);
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, nodeName, "", std::nullopt, {})));
     auto status = factory.createDefinition(pipelineName, info, connections, manager);
@@ -217,11 +216,8 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     }
     std::set<std::string> pipelinesInConfigFile;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        // print(pipelineConfig);
         processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
     }
-    // retirePipelinesRemovedFromConfigFile(pipelinesInConfigFile); // TODO retire pipelines CVS-35859
-    // factory.dropDefinitionsOtherThan(pipelinesInConfigFile);
     return ovms::StatusCode::OK;
 }
 
@@ -231,7 +227,6 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
         SPDLOG_ERROR("Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
-    // TODO reload model if no version change, just config change eg. CPU_STREAMS_THROUGHPUT
     std::set<std::string> modelsInConfigFile;
     servedModelConfigs.clear();
     for (const auto& configs : itr->value.GetArray()) {
@@ -274,7 +269,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
-    status = loadPipelinesConfig(configJson);  // TODO not ignore the retcode
+    status = loadPipelinesConfig(configJson);
     return StatusCode::OK;
 }
 

@@ -45,7 +45,7 @@ public:
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
             return makeBlob<float>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::FP16: {  // TODO: Not tested manually for accurracy.
+        case InferenceEngine::Precision::FP16: {
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L45
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
@@ -78,7 +78,6 @@ public:
         case InferenceEngine::Precision::I32:
             return makeBlob<int32_t>(requestInput, tensorInfo);
 
-        // TODO: Unsupported yet
         case InferenceEngine::Precision::I64:
 
         case InferenceEngine::Precision::MIXED:

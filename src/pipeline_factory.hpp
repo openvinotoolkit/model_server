@@ -86,9 +86,6 @@ public:
 
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
-
-    // TODO: validate method for one entry, one exit, acyclic, connected, no dead ends
-    // https://jira.devtools.intel.com/browse/CVS-34360
 };
 
 class PipelineFactory {

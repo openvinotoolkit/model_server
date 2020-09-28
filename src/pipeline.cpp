@@ -180,7 +180,6 @@ Status Pipeline::execute() {
                 }
             }
         }
-        // TODO cleanup streamIds
     }
     return firstErrorStatus;
 }

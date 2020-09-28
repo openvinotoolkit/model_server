@@ -61,9 +61,6 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
 Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {
     InferenceEngine::TensorDesc description;
     if (proto.tensor_content().size() == 0) {
-        // TODO: https://jira.devtools.intel.com/browse/CVS-34457
-        // Convert from proto.*_val to tensor_content
-        // For now just throw an error
         const std::string details = "Tensor content size can't be 0";
         spdlog::debug("[Node: {}] {}", getName(), details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
@@ -112,9 +109,9 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             description.setPrecision(InferenceEngine::Precision::I32);
             blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
             break;
-        case tensorflow::DataType::DT_HALF:    // TODO: Data is in proto.half_val container, need to convert
-        case tensorflow::DataType::DT_UINT16:  // TODO: Data is in proto.int_val container, need to convert
-        case tensorflow::DataType::DT_INT64:   // Unsupported due to 0% precision observed for resnet
+        case tensorflow::DataType::DT_HALF:
+        case tensorflow::DataType::DT_UINT16:
+        case tensorflow::DataType::DT_INT64:
         default: {
             std::stringstream ss;
             ss << "Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());

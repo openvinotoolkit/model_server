@@ -354,10 +354,8 @@ TEST(RestParserRow, ParseFloat) {
 TEST(RestParserRow, ParseHalf) {
     RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})"), StatusCode::OK);
-    // EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_half_val()), ElementsAre(-5, 0, -4, 155234));  // TODO: Check for values
     parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})"), StatusCode::OK);
-    // EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_half_val()), ElementsAre(-5.1222, 0.434422, -4.52122, 155234.22122));  // TODO: Check for values
 }
 
 TEST(RestParserRow, InvalidJson) {

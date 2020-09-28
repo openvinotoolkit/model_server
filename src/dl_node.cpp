@@ -167,8 +167,6 @@ Status DLNode::fetchResults(BlobMap& outputs) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            // Multiple next nodes can have the same dependency, do not prepare the same blob multiple times
-            // TODO what if different following nodes expect different outputs but under the same name?
             if (outputs.count(output_name) == 1) {
                 continue;
             }
@@ -269,8 +267,6 @@ Status DLNode::prepareInputsAndModelForInference() {
 
         // If precision is incorrect, perform conversion
         if (status == StatusCode::INVALID_PRECISION) {
-            // TODO: Create new blob with proper precision
-            // https://jira.devtools.intel.com/browse/CVS-35616
             return status;
         }
 

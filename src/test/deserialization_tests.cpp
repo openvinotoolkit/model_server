@@ -60,7 +60,7 @@ const std::vector<Precision> SUPPORTED_INPUT_PRECISIONS{
     // Precision::I64,
     // Precision::BIN,
     // Precision::BOOL
-    // //Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+    // //Precision::CUSTOM)
 };
 
 const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS{
@@ -77,7 +77,7 @@ const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS{
     Precision::I64,
     Precision::BIN,
     Precision::BOOL
-    // Precision::CUSTOM), // TODO CUSTOM RETURNS the same name as unspecified - need to write test for that
+    // Precision::CUSTOM)
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {

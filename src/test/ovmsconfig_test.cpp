@@ -27,12 +27,7 @@ using testing::_;
 using testing::ContainerEq;
 using testing::Return;
 using testing::ReturnRef;
-/*TODO: Disabling tests because of the thread pool issue with restsdk.
-Need to rewrite those tests as functional not to use GTEST
 
-https://github.com/Azure/azure-storage-cpp/issues/198
-https://github.com/Azure/azure-storage-cpp/issues/298
-*/
 class DISABLED_OvmsConfigTest : public ::testing::Test {
 public:
     void SetUp() override {
@@ -45,10 +40,6 @@ public:
     }
 
     ::testing::AssertionResult AssertRegexMessageInOutput(std::string regexMessage) {
-        // TODO: Currently cannot capture stdout should work once we switch to cmake
-        // [ FATAL ] external/com_google_googletest/googletest/src/gtest-port.cc:1075:: Only one stdout capturer can exist at a time.
-        // external/bazel_tools/tools/test/test-setup.sh: line 310: 11889 Aborted (core dumped) "${TEST_PATH}" "$@" 2>&1
-        // when enabling with internal::CaptureStdout - and buffer is empty using Setup.
         std::string stdOut{buffer.str()};
         std::regex re(regexMessage.c_str());
         std::smatch m;
