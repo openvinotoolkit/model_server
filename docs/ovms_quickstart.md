@@ -3,7 +3,7 @@
 The OpenVINO Model Server requires a trained model in Intermediate Representation (IR) format on which it performs inference. Options to download appropriate models include:
  
 - Downloading models from the [Open Model Zoo](https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/)
-- Using the [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) to convert models to the IR format from formats like TensorFlow*, ONNX*, Caffe*, or MXNet*.
+- Using the [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) to convert models to the IR format from formats like TensorFlow*, ONNX*, Caffe*, MXNet* or Kaldi*.
 
 This guide uses the [face detection model](https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/). 
 
@@ -70,15 +70,14 @@ The Model Server expects models in a defined folder structure. The folder with t
 models/
 └── face-detection
 	└── 1
-		├── face-detection-0106.bin
-		└── face-detection-0106.xml
+		├── face-detection-retail-0004.bin
+		└── face-detection-retail-0004.xml
 ``` 
 
 
 Use these links for more information about the folder structure and how to deploy more than one model at the time: 
-- [Docker command, including parameters](https://docs.docker.com/engine/reference/run/)
-- [Prepare models](./docker_container.md#preparing-the-models)
-- [Deploy multiple models at once and to start a Docker container with a configuration file](./docker_container.md#starting-docker-container-with-a-configuration-file)
+- [Prepare models](./models_repository.md#preparing-the-models-repository)
+- [Deploy multiple models at once and to start a Docker container with a configuration file](./docker_container.md#step-3-start-the-docker-container)
 
 ### Step 5: Download the Example Client Components
 
@@ -118,7 +117,7 @@ pip install -r client_requirements.txt
 3. Create a folder in which inference results will be put:
 
 ```
-mdkir results
+mkdir results
 ```
 
 4. Run the client script:
