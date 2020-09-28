@@ -15,9 +15,9 @@ Please refer to: https://helm.sh/docs/intro/install for Helm installation.
 ## Model Repository
 
 If you already have a model repository you may use that with this helm chart. If you don't, you can use any model
-from https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin.
+from https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/.
 
-Model Server requires respository of models to make available for inferencing. For example you can 
+Model Server requires a repository of models to execute inference requests. For example you can 
 use a Google Cloud Storage (GCS) bucket:
 ```shell script
 $ gsutil mb gs://model-repository
