@@ -156,8 +156,8 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 - `outputs` field defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client
 - `nodes` list field declares nodes used in pipeline and its connections:
     - `name` is node name so you can refer to it from other nodes
-    - `model_name` is required only for `DL model` nodes, you can specify underlying model (needs to be defined in `model_config_list`)
-    - `version` is required only for `DL model` nodes, you can specify model version for inference
+    - `model_name` is available only for `DL model` nodes, you can specify underlying model (needs to be defined in `model_config_list`) - **required**.  
+    - `version` is available only for `DL model` nodes, you can specify model version for inference - __optional__ (by default, using latest version).
     - `type` is node kind, currently there is only `DL model` kind available
     - `inputs` defines list of input/output mappings between this and dependency nodes, \*\***IMPORTANT**\*\* please note that output shape, precision and layout of previous node/request needs to match input of current node's model
         - `node_name` defines which node we refer to
