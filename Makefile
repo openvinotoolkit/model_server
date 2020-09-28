@@ -52,7 +52,7 @@ endif
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.4
-DLDT_PACKAGE_URL ?= http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.088.tgz
+DLDT_PACKAGE_URL ?= http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.096.tgz
 OV_USE_BINARY ?= 1
 
 # opt, dbg:
