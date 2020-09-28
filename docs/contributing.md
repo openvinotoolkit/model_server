@@ -4,9 +4,8 @@
 
 Before sending your merge requests, make sure you followed this list.
 
-- Read [contributing guidelines](contributing.md).
-- Changes are consistent with the [Coding Style](contributing.md#coding-style).
-- Each merge request should start with the coresponding Jira ticet number and short task description, eg: `CVS-3111 Implement feature XY`
+- Changes are consistent with the [Coding Style](contributing.md#c-coding-style).
+- Each merge request should start with the coresponding Jira ticket number and short task description, eg: `CVS-3111 Implement feature XY`
 - The branches should also correspond to Jira task name and start with Jira ticket number
 - Write a short description what the merge request introduces/improves
 - Always include unit tests when contributing new features
@@ -88,7 +87,7 @@ Example:
 
 ### Scoping
 
-Always place code in a namespace, the provide a method for preventing name conflicts.
+Always place code in a namespace to prevent name conflicts.
 ```
 namespace ovms {
     
