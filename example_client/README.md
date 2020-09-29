@@ -1,7 +1,6 @@
 # gRPC client examples
 
-This client can be used to demonstrate connectivity with ie-serving service over gRPC API and
- TensorFlow server using Predict call.
+This client can be used to demonstrate connectivity with OpenVINO Model Server over gRPC API and TensorFlow server using Predict call.
 
 
 ## Requirements
@@ -510,9 +509,7 @@ to install and run them(provided for Linux OS):
 Sample output:
 ==============
 TERMINAL 1: <openvino_installation_root>/openvino/inference_engine/external/hddl/bin/hddldaemon
-TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml -e DEVICE=HDDL
-            -e FILE_SYSTEM_POLL_WAIT_SECONDS=0 -p 8001:8001 -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh
-            ie_serving model --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001
+TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml -p 8001:8001 -p 9001:9001 openvino/model_server:latest --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001 --target_device HDDL
 TERMINAL 3: python3.6 multi_inputs.py -n SSDMobileNet -l image_tensor -o DetectionOutput -d 300 -c 1
             -f /var/repos/github/sample-videos/face-demographics-walking.mp4 -i 127.0.0.1 -p 9001
 
