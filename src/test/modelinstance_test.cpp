@@ -123,7 +123,6 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance;
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    // TODO we do validation before passing file to OV need to test that too. Hence INTERNAL_ERROR not FILE_INVALID
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
 

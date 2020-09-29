@@ -51,7 +51,6 @@ Status serializeBlobToTensorProto(
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);
         break;
 
-    // TODO: Unsupported yet
     case InferenceEngine::Precision::Q78:
     case InferenceEngine::Precision::BIN:
     case InferenceEngine::Precision::BOOL:

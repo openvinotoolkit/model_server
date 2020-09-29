@@ -71,7 +71,6 @@ public:
 
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
-        // TODO dirty hack to avoid initializing config
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
@@ -122,7 +121,6 @@ public:
 
     void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
-        // TODO dirty hack to avoid initializing config
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 

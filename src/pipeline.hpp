@@ -62,7 +62,6 @@ public:
     }
 
 private:
-    // TODO consider creating id for each node and using vector<bool>
     std::map<const std::string, bool> prepareStatusMap() const;
 };
 

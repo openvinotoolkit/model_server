@@ -294,8 +294,6 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
 
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
-    // TODO: Add check if pipeline graph is acyclic, connected, no dead ends
-    // https://jira.devtools.intel.com/browse/CVS-34361
 
     return StatusCode::OK;
 }
