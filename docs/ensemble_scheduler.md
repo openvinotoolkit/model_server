@@ -19,41 +19,43 @@ Let's say you want to develop an application to perform image classification. Th
 ![diagram](model_ensemble_diagram.svg)
 
 ## Prepare the models
-In order to use the models we need to download it from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo):
+In order to use the models we need to download it from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo).
+Follow the the steps below in your home folder:
 ```
-~$ mkdir models
+mkdir models
 
-~$ docker run -e https_proxy=$https_proxy -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name googlenet-v2-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ~/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name googlenet-v2-tf --output_dir /models
 
-~$ docker run -e https_proxy=$https_proxy -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ~/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name resnet-50-tf --output_dir /models
 ```
-Prepare argmax model with `(1, 1001)` input shapes to match output of googlenet and resnet output shapes. We will use python script located in this repository. It uses tensorflow to create models in _saved model_ format so tensorflow pip package is required.
+Prepare argmax model with `(1, 1001)` input shapes to match output of googlenet and resnet output shapes. We will use python script located in this repository. 
+It uses tensorflow to create models in _saved model_ format so tensorflow pip package is required. Generated model will sum they inputs and calculate the index with 
+the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. 
+Run commands listed below from the git repository root folder:
 ```
-~$ pip3 install tensorflow==1.15
-
-~$ python3 ovms-c/tests/models/argmax_sum.py --input_size 1001 --export_dir models/public/argmax/saved_model
+virtualenv -p python3 .tf_env
+source .tf_env/bin/activate
+pip3 install tensorflow==1.15
+python3 tests/models/argmax_sum.py --input_size 1001 --export_dir ~/models/tf_argmax
 ```
 
 Next, convert models to IR format and [prepare models repository](models_repository.md):
 ```
-~$ docker run -e https_proxy=$https_proxy -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
 
-~$ docker run -e https_proxy=$https_proxy -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 
-~$ docker run -e https_proxy=$https_proxy -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/public/argmax/saved_model --output_dir /models/public/argmax/1
+docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/tf_argmax --output_dir /models/public/argmax/1
 
-~$ mv models/public/googlenet-v2-tf/FP32 models/public/googlenet-v2-tf/1 && mv models/public/resnet-50-tf/FP32 models/public/resnet-50-tf/1
+mv ~/models/public/googlenet-v2-tf/FP32 ~/models/public/googlenet-v2-tf/1 && mv ~/models/public/resnet-50-tf/FP32 ~/models/public/resnet-50-tf/1
 
 ~$ tree models/public
 models/public
 ├── argmax
-│   ├── 1
-│   │   ├── saved_model.bin
-│   │   ├── saved_model.mapping
-│   │   └── saved_model.xml
-│   └── saved_model
-│       ├── saved_model.pb
-│       └── variables
+│   └── 1
+│       ├── saved_model.bin
+│       ├── saved_model.mapping
+│       └── saved_model.xml
 ├── googlenet-v2-tf
 │   ├── 1
 │   │   ├── googlenet-v2-tf.bin
@@ -172,7 +174,8 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 ```
 
 ## Requesting the service
-We can now send input images to the service requesting resource name `image_classification_pipeline`. There is example client to do exactly that. Check accurracy of our pipeline by running the client:
+We can now send input images to the service requesting resource name `image_classification_pipeline`. There is example client to do exactly that. 
+Check accuracy of our pipeline by running the client included in this repository:
 ```
 ~$ cd model_server
 ~/model_server$ make venv
