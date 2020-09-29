@@ -375,6 +375,25 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     return loadModelImpl(config);
 }
 
+Status ModelInstance::recoverFromReshapeError() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    this->status.setLoading();
+    if (!canUnloadInstance()) {
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+        spdlog::error("Cannot recover model (name:{}; version:{}) from reshape error, inferences are still in progress", getName(), getVersion());
+        return Status(StatusCode::INTERNAL_ERROR, "cannot recover model");
+    }
+    auto status = this->loadInputTensors(this->config);
+    if (!status.ok()) {
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+        return status;
+    }
+    this->loadOutputTensors(this->config);
+    this->status.setAvailable();
+    this->modelLoadedNotify.notify_all();
+    return StatusCode::OK;
+}
+
 Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading();
@@ -384,6 +403,24 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     return loadModelImpl(config, parameter);
+}
+
+Status ModelInstance::recoverFromReloadingError(const Status& status) {
+    if (status == StatusCode::RESHAPE_ERROR) {
+        auto recoveryStatus = this->recoverFromReshapeError();
+        if (!recoveryStatus.ok()) {
+            return recoveryStatus;
+        }
+        return status;
+    }
+    spdlog::info("Failed to reload model:{} version:{} with error:{}. Reloading to previous configuration",
+        getName(), getVersion(), status.string());
+    auto recoveryStatus = reloadModel(config);
+    if (!recoveryStatus.ok()) {
+        spdlog::info("Failed to reload model:{} version:{} to previous configuration with error:{}",
+            getName(), getVersion(), recoveryStatus.string());
+    }
+    return status;
 }
 
 Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
@@ -406,13 +443,7 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
 
     auto status = reloadModel(config, parameter);
     if (!status.ok()) {
-        spdlog::info("Failed to reload model:{} version:{} with error:{}. Reloading to previous configuration",
-            getName(), getVersion(), status.string());
-        auto recoveryStatus = reloadModel(config);
-        if (!recoveryStatus.ok()) {
-            spdlog::info("Failed to reload model:{} version:{} to previous configuration with error:{}",
-                getName(), getVersion(), recoveryStatus.string());
-        }
+        return this->recoverFromReloadingError(status);
     } else {
         unloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
     }
