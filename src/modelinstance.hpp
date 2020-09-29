@@ -255,6 +255,22 @@ private:
     uint32_t getNumOfParallelInferRequests(const ModelConfig& config);
     uint32_t getNumOfParallelInferRequestsUnbounded(const ModelConfig& config);
 
+    /**
+         * @brief Reloads model input/output metadata from current state of CNNNetwork
+         *
+         * @return Status
+         */
+    Status recoverFromReshapeError();
+
+    /**
+         * @brief Recover from any state model is put into when reload is requested
+         * 
+         * @param status returned from reload operation
+         *
+         * @return Status
+         */
+    Status recoverFromReloadingError(const Status& status);
+
 public:
     /**
          * @brief A default constructor

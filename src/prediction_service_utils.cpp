@@ -167,15 +167,15 @@ Status reloadModelIfRequired(
     if (status.batchSizeChangeRequired()) {
         status = modelInstance.reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
         if (!status.ok()) {
-            SPDLOG_ERROR("Model instance reload failed. {}, {}.", status.getCode(), status.string());
+            SPDLOG_ERROR("Model instance reload (batch size change) failed. Status Code: {}, Error {}", status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
         status = modelInstance.reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Model instance reload failed. {}, {}.", status.getCode(), status.string());
+        if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
+            SPDLOG_ERROR("Model instance reload (reshape) failed. Status Code: {}, Error: {}", status.getCode(), status.string());
         }
     } else if (!status.ok()) {
-        SPDLOG_INFO("Validation of inferRequest failed. {}, {}.", status.getCode(), status.string());
+        SPDLOG_INFO("Validation of inferRequest failed. Status Code: {}, Error: {}", status.getCode(), status.string());
     }
     return status;
 }
