@@ -52,9 +52,8 @@ RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath
 RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /ovms
-RUN cp -v /ovms/release_files/license.txt /ovms_release/
+RUN cp -v /ovms/release_files/LICENSE /ovms_release/
 RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
-RUN cp -rv /ovms/release_files/user-guide /ovms_release/
 
 RUN ls -lahR /ovms_release/
 
