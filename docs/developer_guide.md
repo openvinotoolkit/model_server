@@ -97,7 +97,7 @@ Use the tests below that are the best for your circumstances. If you have proble
 2. Start OVMS docker container with downloaded model
 
 ```bash
-docker run -d -v $(HOME)/resnet50-binary:/models/resnet50-binary -p 9178:9178 openvino/model_server:latest \
+docker run -d -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 openvino/model_server:latest \
 --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
 ```
 
@@ -229,7 +229,7 @@ Two debugging options are available. Click the option you need to use:
 
 1. Build a project in a debug mode:
 	```
-	$ make docker_build BAZEL_BUILD_TYPE=dbg
+	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
 
 2. Run the container:
