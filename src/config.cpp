@@ -90,7 +90,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_VERSION_POLICY")
             ("nireq",
-                "Size of inference request queue for model executions. Recommended to be >= parallel executions. Default value calculated by OpenVINO based on available resources",
+                "Size of inference request queue for model executions. Recommended to be >= parallel executions. Default value calculated by OpenVINO based on available resources. Request for 0 is treated as request for default value",
                 cxxopts::value<uint32_t>(),
                 "NIREQ")
             ("target_device",
