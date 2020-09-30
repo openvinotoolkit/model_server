@@ -8,7 +8,7 @@ saved in `image_input_dir` directory.
 The script can adjust the input image size and change the batch size in the request. It demonstrate how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
-The example relies on the model [face_detection_0004](https://docs.openvinotoolkit.org/2018_R5/_docs_Retail_object_detection_face_sqnet10modif_ssd_0004_caffe_desc_face_detection_retail_0004.html).
+The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/latest/omz_models_intel_face_detection_retail_0004_description_face_detection_retail_0004.html).
 
 ```bash
 python face_detection.py --help
@@ -42,10 +42,9 @@ Start the OVMS service locally:
 
 ```bash
 mkdir -p model/1
-wget -P model/1 https://download.01.org/opencv/2019/open_model_zoo/R2/20190628_180000_models_bin/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
-wget -P model/1 https://download.01.org/opencv/2019/open_model_zoo/R2/20190628_180000_models_bin/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
-docker run -d -v `pwd`/model:/models -e LOG_LEVEL=DEBUG -p 9000:9000 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving model --model_path /models --model_name face-detection --port 9000  --shape auto
+wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
+wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
+docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto --log_level DEBUG
 ```
 
 Run the client:
