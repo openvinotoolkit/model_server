@@ -37,6 +37,7 @@ to the  remote storage or insufficient permissions)
 - OVMS is started with a model, which doesn't support defined configuration like changing the model shape in runtime
 - target device different from CPU does not support at least one layer in the model 
 - model files are malformed and cannot be imported by the Inference Engine
+- OpenVINO is not able to load network into device due to lack of available RAM
 
 In all those situations, the root cause is reported in the server logs or in the response from a call
 to GetModelStatus function. 
@@ -69,7 +70,8 @@ The possible issues could be:
 ### Resource Allocation
 RAM consumption might depend on the size of the models configured for serving and serving parameters. It should be measured experimentally.
 Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
-Increasing the number of processing streams might also impact the RAM allocation.
+Increasing the number of processing streams might also impact the RAM allocation. When usage exceeds its limits, unexpected behavior
+can be observed. One of them being unable to load new models into device with error from OpenVINO: `can't protect` in server logs.
 
 OpenVINO&trade; Model Server consumes all available CPU resources unless they are restricted by operating system, Docker or 
 Kubernetes capabilities.
