@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. By default the cluster contains 
+A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. By default, the cluster contains 
 a single instance of the server but the _replicas_ configuration parameter can be set to create a cluster 
 of any size, as described below. This guide assumes you already have a functional Kubernetes cluster and helm 
 installed (see below for instructions on installing helm).
@@ -17,7 +17,7 @@ Please refer to: https://helm.sh/docs/intro/install for Helm installation.
 If you already have a model repository you may use that with this helm chart. If you don't, you can use any model
 from https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/.
 
-Model Server requires a repository of models to execute inference requests. For example you can 
+Model Server requires a repository of models to execute inference requests. For example, you can 
 use a Google Cloud Storage (GCS) bucket:
 ```shell script
 $ gsutil mb gs://model-repository
@@ -31,14 +31,14 @@ $ gsutil cp -r 1 gs://model-repository/1
 ## Bucket Permissions
 
 Make sure to set bucket permissions so the server can access the model repository. If the bucket 
-is public or Model Server is run on the same GCP or AWS account as the storage bucket, then no additional changes 
+is public or Model Server is run on the same Google Cloud Platform (GCP) or Amazon Web Services (AWS) account as the storage bucket, then no additional changes 
 are needed and you can proceed to _Deploy the Model Server_ section.
 
 ### GCS
 
 Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable. Please follow the steps below:
 
-* Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_ . Name a file for example: _gcp-creds.json_ 
+* Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_. Name a file for example: _gcp-creds.json_ 
 (you can follow these instructions to create a Service Account and download JSON: 
 https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account)
 * Create a Kubernetes secret from this JSON file:
@@ -82,22 +82,6 @@ By default, Model Server is deployed with 1 instance. If you would like to scale
 ```shell script
 $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
-
-
-## Deploy Model Server with a Configuration File
-
-To serve multiple models you can run Model Server with a configuration file as described here:
-https://github.com/openvinotoolkit/model_server/blob/master/docs/docker_container.md#starting-docker-container-with-a-configuration-file
-
-To deploy with config file:
-* create a configuration file named _config.json_ and fill it with proper information
-* create a configmap from this file with a chosen name (here _ovms-config_):
-      
-      $ kubectl create configmap ovms-config --from-file config.json
-
-* deploy Model Server with parameter `config_configmap_name` (without `model_name` and `model_path`):
-
-      $ helm install ovms ovms --set config_configmap_name=ovms-config
 
 
 ## Using Model Server
