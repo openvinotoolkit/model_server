@@ -208,8 +208,8 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
 uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
     uint nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
     if (nireq > MAX_NIREQ_COUNT) {
-        SPDLOG_WARN("Ignored configured nireq because its value was too high:{}. Set to:{}", nireq, MAX_NIREQ_COUNT);
-        return MAX_NIREQ_COUNT;
+        SPDLOG_ERROR("Invalid nireq because its value was too high:{}. Maximum value:{}", nireq, MAX_NIREQ_COUNT);
+        return 0;
     } else if (nireq < 1u) {
         SPDLOG_WARN("Ignored configured nireq because it has to be above 0 and was:{}. Set to 1", nireq);
         return 1u;
@@ -297,14 +297,18 @@ Status ModelInstance::fetchModelFilepaths() {
     return StatusCode::OK;
 }
 
-void ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
+Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     uint numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
+    if (numberOfParallelInferRequests == 0) {
+        return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
+    }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
     spdlog::info("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
         getBatchSize(),
         numberOfParallelInferRequests);
+    return StatusCode::OK;
 }
 
 void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter) {
@@ -348,7 +352,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        prepareInferenceRequestsQueue(this->config);
+        status = prepareInferenceRequestsQueue(this->config);
+        if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+            return status;
+        }
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         spdlog::error("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);

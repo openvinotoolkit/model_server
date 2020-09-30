@@ -43,6 +43,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
+    {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
