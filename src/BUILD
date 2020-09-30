@@ -18,7 +18,6 @@ cc_library(
     name = "ovms_lib",
     linkstatic = 1,
     srcs = [
-        "avx_check.hpp",
         "config.cpp",
         "config.hpp",
         "deserialization.hpp",

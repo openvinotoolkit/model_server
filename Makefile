@@ -37,16 +37,8 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
-HAS_AVX := $(shell grep avx /proc/cpuinfo | wc -l)
 
 INSTALL_RPMS_FROM_URL ?= "http://repository.toolbox.iotg.sclab.intel.com/ovms-deps/centos-7.8.2003-ovms-deps-rpms.tar.xz"
-
-check:
-ifeq ($(HAS_AVX),0)
-	@echo "CPU with AVX support required"
-	exit 1
-endif
-	@echo "CPU with AVX support detected"
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -91,7 +83,7 @@ TEST_PATH ?= tests/functional/
 
 default: docker_build
 
-venv:check $(ACTIVATE)
+venv:$(ACTIVATE)
 	@echo -n "Using venv "
 	@. $(ACTIVATE); python3 --version
 
