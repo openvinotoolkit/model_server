@@ -500,11 +500,13 @@ To run this example you will need to run the OpenVINO hddldaemon and OpenVINO mo
 to install and run them(provided for Linux OS):
 
 * Setup OpenVINO & HDDL:
-  - https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux.html
-  - https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux_ivad_vpu.html
+  - https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html
+  - https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux_ivad_vpu.html
 
 * Setup OVMS to use HDDL:
-  - https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#starting-docker-container-with-hddl
+  - https://github.com/openvinotoolkit/model_server/tree/master/docs/docker_container.md#starting-docker-container-with-hddl
+
+* Download sample video from [this](https://github.com/intel-iot-devkit/sample-videos) repository
 
 Sample output:
 ==============
@@ -524,8 +526,6 @@ Console logs:
 [$(levelname)s ] Exiting thread 0
 [$(levelname)s ] Good Bye!
 
-You should also be seeing the GUI showing the video frame and bounding boxes drawn with the detected class name
+You need GUI to run this script. You should be seeing video frames and bounding boxes drawn with the detected class name.
 
 ```
-
-Refer also to the usage demo in the [jupyter notebook](../example_k8s/OVMS_demo.ipynb).

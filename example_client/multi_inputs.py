@@ -176,6 +176,7 @@ def thread_function(thr_id, network_name, input_layer, output_layer, input_dimen
     # resize the frame to what network input layer expects it to be
     image = cv2.resize(frame, (input_dimension, input_dimension))
     image = image.transpose(2, 0, 1).reshape(1, 3, input_dimension, input_dimension)
+    image = image.astype('float32')
 
     inf_time = time()
     # send the input as protobuf
