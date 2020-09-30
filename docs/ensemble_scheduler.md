@@ -153,20 +153,29 @@ Pipelines need to be defined in configuration file in order to use them. The sam
 ```
 In `model_config_list` section, three models are defined as usual. We can refer to them by name in pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO™ Model Server will first try to search for model with requested name. If not found, it will try to find pipeline.
 
-- `name` field in each `pipeline_config_list` entry is pipeline identifier related to name field specified in gRPC/REST request
-- `inputs` field defines input names required to be present in gRPC/REST request
-- `outputs` field defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client
-- `nodes` list field declares nodes used in pipeline and its connections:
-    - `name` is node name so you can refer to it from other nodes
-    - `model_name` is available only for `DL model` nodes, you can specify underlying model (needs to be defined in `model_config_list`) - **required**.  
-    - `version` is available only for `DL model` nodes, you can specify model version for inference - __optional__ (by default, using latest version).
-    - `type` is node kind, currently there is only `DL model` kind available
-    - `inputs` defines list of input/output mappings between this and dependency nodes, \*\***IMPORTANT**\*\* please note that output shape, precision and layout of previous node/request needs to match input of current node's model
-        - `node_name` defines which node we refer to
-        - `data_item` defines which resource of node we point to
-    - `outputs` defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes
-        - `data_item` is the name of resource exposed by node - for `DL model` nodes it means model output
-        - `alias` is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes
+Pipeline configuration options explained
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"name"`|string|pipeline identifier related to name field specified in gRPC/REST request|&check;|
+|`"inputs"`|array|defines input names required to be present in gRPC/REST request|&check;|
+|`"outputs"`|array|defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client|&check;|
+|`"nodes"`|array|declares nodes used in pipeline and its connections|&check;|
+
+Node options explained
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"name"`|string|node name so you can refer to it from other nodes|&check;|
+|`"model_name"`|string|you can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
+|`"version"`|integer|you can specify model version for inference, available only for `DL model` nodes||
+|`"type"`|string|node kind, currently there is only `DL model` kind available|&check;|
+|`"inputs"`|array|defines list of input/output mappings between this and dependency nodes, \*\***IMPORTANT**\*\* please note that output shape, precision and layout of previous node/request needs to match input of current node's model|&check;|
+|`"node_name"`|string|defines which node we refer to|&check;|
+|`"data_item"`|string|defines which resource of node we point to|&check;|
+|`"outputs"`|array|defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
+|`"data_item"`|string|is the name of resource exposed by node - for `DL model` nodes it means model output|&check;|
+|`"alias"`|string|is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
 ## Start model server
 ```
