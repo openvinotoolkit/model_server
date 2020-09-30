@@ -156,6 +156,31 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 
 <details><summary>Cloud storage requirements</summary>
 
+**Azure Cloud Storage path requirements**
+
+Add the Azure Storage path as the `model_path` and pass the Azure Storage credentials to the Docker container. <br>
+
+To start a Docker container with support for Azure Storage paths to your model use the 
+`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the path to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) key. 
+
+Example command with blob storage `azure_blob://<bucket>/<model_path>`:
+
+```bash
+docker run --rm -d  -p 9001:9001 \
+-e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+openvino/model_server:latest \
+--model_path azure_blob://bucket/model_path --model_name as_model --port 9001
+```
+
+Example command with file storage `azure://<share>/<model_path>`:
+
+```bash
+docker run --rm -d  -p 9001:9001 \
+-e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+openvino/model_server:latest \
+--model_path azure://share/model_path --model_name as_model --port 9001
+```
+
 **Google Cloud Storage path requirements**
 
 Add the Google Cloud Storage path as the `model_path` and pass the Google Cloud Storage credentials to the Docker container. <br>
