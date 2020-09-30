@@ -33,7 +33,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "avx_check.hpp"
 #include "config.hpp"
 #include "http_server.hpp"
 #include "model_service.hpp"
@@ -155,6 +154,10 @@ void onTerminate(int status) {
     shutdown_request = 1;
 }
 
+void onIllegal(int status) {
+    shutdown_request = 2;
+}
+
 void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
@@ -167,6 +170,12 @@ void installSignalHandlers() {
     sigemptyset(&sigTermHandler.sa_mask);
     sigTermHandler.sa_flags = 0;
     sigaction(SIGTERM, &sigTermHandler, NULL);
+
+    static struct sigaction sigIllHandler;
+    sigIllHandler.sa_handler = onIllegal;
+    sigemptyset(&sigIllHandler.sa_mask);
+    sigIllHandler.sa_flags = 0;
+    sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
 std::vector<std::unique_ptr<Server>> startGRPCServer(
@@ -260,10 +269,6 @@ int server_main(int argc, char** argv) {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
 
-        if (!ovms::check_4th_gen_intel_core_features()) {
-            spdlog::error("CPU with AVX support required, current CPU has no such support.");
-            return 1;
-        }
         PredictionServiceImpl predict_service;
         ModelServiceImpl model_service;
 
@@ -273,7 +278,9 @@ int server_main(int argc, char** argv) {
         while (!shutdown_request) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
-
+        if (shutdown_request == 2) {
+            spdlog::error("Illegal operation. OVMS started on unsupported device");
+        }
         spdlog::info("Shutting down");
         for (const auto& g : grpc) {
             g->Shutdown();
