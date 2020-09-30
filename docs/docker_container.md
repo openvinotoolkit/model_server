@@ -6,14 +6,11 @@ Choose one option to get a Docker image:
 
 <details><summary>Build an image</summary>
 
-To build your own image, use the following command in the git repository root folder, replacing `BASE_OS=<OS>` with one of the following:
-
-- `BASE_OS=ubuntu`
-- `BASE_OS=centos`
-- `BASE_OS=clearlinux`
+To build your own image, use the following command in the git repository root folder, replacing `DLDT_PACKAGE_URL=<URL>` 
+with the URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download). 
 
 ```bash
-make docker_build BASE_OS=<OS>
+make docker_build DLDT_PACKAGE_URL=<URL>
 ```
 It will generate the image, tagged as `openvino/model_server:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
@@ -193,6 +190,25 @@ openvino/model_server:latest \
 ```
 </details>
 
+<details><summary>Security considerations</summary>
+
+OpenVINO Model Server docker containers, by default, starts with the security context of local account `ovms` with linux
+uid 5000. It ensure docker container has not elevated permissions on the host machine. This is in line with 
+best practices to use minimal permissions to run docker applications. You can change the security context by adding `--user`
+parameter to `docker run` command. It might be needed for example to load mounted models with restricted access.
+For example:
+```bash
+docker run --rm -d  --user $(id -u):$(id -g)  -v ${pwd}/model/:/model -p 9178:9178 openvino/model_server:latest \
+--model_path /model --model_name my_model
+```
+
+OpenVINO Model Server currently doesn't provide access restrictions and traffic encryption on gRPC and REST API endpoints.
+The endpoints can be secured using network settings like docker network settings or network firewall on the host.
+The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides 
+traffic encryption and user authorization.
+
+</details>
+
 ## Other Options for the OpenVINO&trade; Model Server in a Docker Container
 
 ### Batch Processing
@@ -234,12 +250,12 @@ Accepted format for parameter in CLI and in config is `json`.
 Accepted values:
 ```
 {"all": {}}
-{"latest": { "num_versions": Integer}
+{"latest": { "num_versions": Integer}}
 {"specific": { "versions": List }}
 ```
 Examples:
 ```
-{"latest": { "num_versions":2 } # server will serve only 2 latest versions of model
+{"latest": { "num_versions":2 }} # server will serve only 2 latest versions of model
 {"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
 {"all": {}} # server will serve all available versions of given model
 ```
