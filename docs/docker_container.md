@@ -170,10 +170,11 @@ To start a Docker container with support for Google Cloud Storage paths to your 
 Example command with `gs://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d  -p 9001:9001 ovms:latest \
--e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
--v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}
---model_path gs://bucket/model_path --model_name my_model --port 9001
+docker run --rm -d  -p 9001:9001 \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}” \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+openvino/model_server:latest \
+--model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 **AWS S3 and Minio storage path requirements**
 
@@ -182,14 +183,13 @@ Add the S3 path as the `model_path` and pass the credentials as environment vari
 Example command with `s3://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/model_server:latest \
--e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
--v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}  \
--e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
--e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
--e AWS_REGION=“${AWS_REGION}”  \
--e S3_ENDPOINT=“${S3_ENDPOINT}”  \
---config_path /opt/ml/config.json --port 9001 --rest_port 8001
+docker run --rm -d -p 9001:9001 \
+-e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}” \
+-e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}” \
+-e AWS_REGION=“${AWS_REGION}” \
+-e S3_ENDPOINT=“${S3_ENDPOINT}” \
+openvino/model_server:latest \
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 </details>
 
