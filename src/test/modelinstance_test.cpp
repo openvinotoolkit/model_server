@@ -210,6 +210,16 @@ TEST_F(TestLoadModel, SuccessfulLoad) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
+    std::filesystem::path dir = std::filesystem::current_path();
+    std::string dummy_model = dir.u8string() + "/src/test/dummy";
+    ovms::ModelInstance modelInstance;
+    auto config = DUMMY_MODEL_CONFIG;
+    config.setNireq(100000 + 1);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::INVALID_NIREQ);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
 class TestReloadModel : public ::testing::Test {};
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {

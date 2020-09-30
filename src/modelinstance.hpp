@@ -146,7 +146,7 @@ protected:
     /**
          * @brief Prepares inferenceRequestsQueue
          */
-    void prepareInferenceRequestsQueue(const ModelConfig& config);
+    Status prepareInferenceRequestsQueue(const ModelConfig& config);
 
     /**
          * @brief Fetch model file paths

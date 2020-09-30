@@ -57,6 +57,7 @@ enum class StatusCode {
     MODEL_VERSION_MISSING,            /*!< Model with requested version is not found */
     MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
     MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
