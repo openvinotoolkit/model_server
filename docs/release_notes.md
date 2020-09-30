@@ -22,9 +22,6 @@ This preview drop is pre-alpha quality and not intended for production use.
 1.Using the serving API with heavy load of over 24k requests can sometimes produce gRPC response errors.
 This issue is under investigation and will be fixed in official release.
 
-2.When model server is started with config.json file the "nireq" config setting from the file is ignored.
-The workaround is to use the "NIREQ" environment variable to set the nireq value for all models.
-
 ## Changes in 2021.1 
 Moving from 2020.4 to 2021.1 introduces a few changes and optimizations which primarily impact the server deployment and configuration process. These changes are documented below. 
 
