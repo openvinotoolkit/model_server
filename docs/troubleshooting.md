@@ -80,3 +80,21 @@ Kubernetes capabilities.
 It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
 With this setting model server logs will store information about all the incoming requests.
 You can parse the logs to analyze: volume of requests, processing statistics and most used models.
+
+### Configuring AWS For Use With a Proxy
+To use AWS behind a proxy, an environment variable should be configured. The AWS storage module is using the following format
+```
+http://user:password@hostname:port
+or
+https://user:password@hostname:port
+```
+
+where user and password are optional. The OVMS will try to use the following environment variables:
+```
+https_proxy
+HTTPS_PROXY
+http_proxy
+HTTP_proxy
+```
+
+Note that neither `no_proxy` or `NO_PROXY` is used.

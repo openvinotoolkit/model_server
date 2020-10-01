@@ -39,13 +39,6 @@
     },
     {
       "config": {
-        "name": "resnet_gs",
-        "base_path": "gs://ovms-public-eu/resnet50-binary",
-        "target_device": "CPU"
-      }
-    },
-    {
-      "config": {
         "name": "resnet_s3",
         "base_path": "s3://inference/resnet"
       }

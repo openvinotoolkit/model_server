@@ -16,7 +16,7 @@
 import pytest
 import numpy as np
 from constants import MODEL_SERVICE, ERROR_SHAPE
-from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS
+from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
 from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
 from utils.logger import get_logger
@@ -48,22 +48,6 @@ class TestMultiModelInference:
             logger.info("Output shape: {} for model {} ".format(output[model.output_name].shape, model.name))
             assert_msg = "{} for model {}".format(ERROR_SHAPE, model.name)
             assert output[model.output_name].shape == model.output_shape, assert_msg
-
-    """
-    No gs support yet
-        in_name = 'input'
-        out_name = 'resnet_v1_50/predictions/Reshape_1'
-
-        img = np.ones((1, 3, 224, 224))
-        in_name = 'data'
-        out_name = 'prob'
-        output = infer(img, input_tensor=in_name, grpc_stub=stub,
-                       model_spec_name='resnet_gs',
-                       model_spec_version=None,
-                       output_tensors=[out_name])
-        logger.info("Output shape: {}".format(output[out_name].shape))
-        assert output[out_name].shape == (1, 1000), ERROR_SHAPE
-    """
 
     def test_get_model_metadata(self, start_server_multi_model):
         _, ports = start_server_multi_model
@@ -106,7 +90,7 @@ class TestMultiModelInference:
 
         _, ports = start_server_multi_model
 
-        for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3, ResnetGS]:
+        for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             input_data = np.ones(model.input_shape, model.dtype)
             logger.info("Starting inference using {} model".format(model.name))
 

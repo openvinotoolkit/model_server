@@ -149,6 +149,7 @@ private:
      */
     Aws::S3::S3Client client_;
     std::regex s3_regex_;
+    std::regex proxy_regex_;
 };
 
 }  // namespace ovms
