@@ -173,25 +173,33 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 Add the Azure Storage path as the `model_path` and pass the Azure Storage credentials to the Docker container. <br>
 
 To start a Docker container with support for Azure Storage paths to your model use the 
-`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the path to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) key. 
+`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the connection string to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) storage account. 
 
-Example command with blob storage `azure_blob://<bucket>/<model_path>`:
+Example connection string is:
+AZURE_STORAGE_CREDENTIALS="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 
-```bash
-docker run --rm -d  -p 9001:9001 \
--e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
-openvino/model_server:latest \
---model_path azure_blob://bucket/model_path --model_name as_model --port 9001
-```
-
-Example command with file storage `azure://<share>/<model_path>`:
+Example command with blob storage `az://<bucket>/<model_path>`:
 
 ```bash
 docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
 openvino/model_server:latest \
---model_path azure://share/model_path --model_name as_model --port 9001
+--model_path az://bucket/model_path --model_name as_model --port 9001
 ```
+
+Example command with file storage `azfs://<share>/<model_path>`:
+
+```bash
+docker run --rm -d  -p 9001:9001 \
+-e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+openvino/model_server:latest \
+--model_path azfs://share/model_path --model_name as_model --port 9001
+```
+
+Add -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" to docker run command for proxy cloud storage connection.
+
+By default the https_proxy setting will be used. If you want to use http_proxy please set the
+AZURE_STORAGE_USE_HTTP_PROXY environment variable to any value and pass it to the container.
 
 **Google Cloud Storage path requirements**
 

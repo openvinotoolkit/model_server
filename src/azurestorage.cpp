@@ -580,9 +580,9 @@ std::string AzureStorageBlob::getNameFromPath(std::string& path) {
 }
 
 StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
-    // azure_blob://share/blockpath/file
-    // azure_blob://share/blockpath
-    // azure_blob://share/
+    // az://share/blockpath/file
+    // az://share/blockpath
+    // az://share/
     if (path.back() == '/') {
         SPDLOG_ERROR("Path can not end with '/'", path);
         return StatusCode::AS_INVALID_PATH;
@@ -595,10 +595,10 @@ StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
         share_start = path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) + AzureFileSystem::AZURE_URL_BLOB_PREFIX.size();
     } else if (path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
         // File path
-        SPDLOG_ERROR("Wrong object type - azure_blob:// prefix in path required, azure:// found:", path);
+        SPDLOG_ERROR("Wrong object type - az:// prefix in path required, azure:// found:", path);
         return StatusCode::AS_INVALID_PATH;
     } else {
-        SPDLOG_ERROR("Missing azure_blob:// prefix in path:", path);
+        SPDLOG_ERROR("Missing az:// prefix in path:", path);
         return StatusCode::AS_INVALID_PATH;
     }
 
@@ -1246,10 +1246,10 @@ StatusCode AzureStorageFile::parseFilePath(const std::string& path) {
         share_start = path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) + AzureFileSystem::AZURE_URL_FILE_PREFIX.size();
     } else if (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
         // Blob path
-        SPDLOG_ERROR("Wrong object type. azure:// prefix in path required, found azure_blob://:", path);
+        SPDLOG_ERROR("Wrong object type. azfs:// prefix in path required, found az://:", path);
         return StatusCode::AS_INVALID_PATH;
     } else {
-        SPDLOG_ERROR("Missing azure:// prefix in path:", path);
+        SPDLOG_ERROR("Missing azfs:// prefix in path:", path);
         return StatusCode::AS_INVALID_PATH;
     }
 
@@ -1300,7 +1300,7 @@ std::shared_ptr<AzureStorageAdapter> AzureStorageFactory::getNewAzureStorageObje
 }
 
 bool AzureStorageFactory::isBlobStoragePath(std::string path) {
-    return (path.find("azure_blob://") != std::string::npos);
+    return (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
 }
 
 }  // namespace ovms

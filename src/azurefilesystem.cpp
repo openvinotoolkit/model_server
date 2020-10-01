@@ -23,8 +23,8 @@
 
 namespace ovms {
 
-const std::string AzureFileSystem::AZURE_URL_FILE_PREFIX = "azure://";
-const std::string AzureFileSystem::AZURE_URL_BLOB_PREFIX = "azure_blob://";
+const std::string AzureFileSystem::AZURE_URL_FILE_PREFIX = "azfs://";
+const std::string AzureFileSystem::AZURE_URL_BLOB_PREFIX = "az://";
 
 as::cloud_storage_account createDefaultOrAnonymousAccount() {
     try {
@@ -42,6 +42,27 @@ as::cloud_storage_account createDefaultOrAnonymousAccount() {
         if (!storage_account.is_initialized()) {
             SPDLOG_ERROR("Unable to create default azure storage account");
             throw std::runtime_error("Unable to create default azure storage account");
+        }
+
+        const char* use_http = std::getenv("AZURE_STORAGE_USE_HTTP_PROXY");
+
+        const char* proxy_env;
+
+        std::string https_proxy = std::string("");
+        if (!use_http) {
+            proxy_env = std::getenv("https_proxy");
+        } else {
+            proxy_env = std::getenv("http_proxy");
+        }
+
+        if (!proxy_env) {
+            SPDLOG_DEBUG("No proxy detected.");
+        } else {
+            https_proxy = std::string(proxy_env);
+            web::web_proxy wproxy(https_proxy);
+            as::operation_context::set_default_proxy(wproxy);
+
+            SPDLOG_DEBUG("Proxy detected: {}" + https_proxy);
         }
 
         return storage_account;
