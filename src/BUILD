@@ -126,7 +126,7 @@ cc_binary(
         "-lxml2",
         "-luuid",
         "-lstdc++fs",
-        "-lcrypto"
+        "-lcrypto",
     ],
     copts = [
         "-Wconversion"
@@ -183,7 +183,7 @@ cc_test(
         "-lxml2",
         "-luuid",
         "-lstdc++fs",
-        "-lcrypto"
+        "-lcrypto",
     ],
     deps = [
         "//src:ovms_lib",

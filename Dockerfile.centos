@@ -130,9 +130,6 @@ ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
-WORKDIR /boringssl
-RUN find /root -iname 'boringssl' -type d -exec cp -vR {} . \;
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
@@ -143,23 +140,24 @@ RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.
 		--with-log --with-locale \
 		install
 
+# OPENSSL
+WORKDIR /openssl
+
+RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1
+RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install || true && make --jobs=$(nproc --all) install_runtime
+
 ####### Azure SDK
+
 WORKDIR /azure
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
 
 RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
 
 WORKDIR /
-RUN cp -rf /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch /azure/cpprestsdk/ 
+RUN cp -rf /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch /azure/cpprestsdk/
 RUN cd /azure/cpprestsdk/ && patch -p1 < rest_sdk_v2.10.16.patch
-RUN cp -rf /ovms/third_party/azure/azure_sdk.patch /azure/azure-storage-cpp/ 
+RUN cp -rf /ovms/third_party/azure/azure_sdk.patch /azure/azure-storage-cpp/
 RUN cd /azure/azure-storage-cpp/ && patch -p1 < azure_sdk.patch
-RUN mkdir -p /azure/cpprestsdk/include
-RUN cp -rf /boringssl/boringssl/src/include/ /azure/cpprestsdk/
-RUN cd /boringssl/boringssl/_objs/crypto/ && ar rvs libcrypto.a *.o
-RUN cd /boringssl/boringssl/_objs/ssl/ && ar rvs libssl.a *.o
-RUN cp -rf /boringssl/boringssl/_objs/crypto/libcrypto.a /azure/cpprestsdk/
-RUN cp -rf /boringssl/boringssl/_objs/ssl/libssl.a /azure/cpprestsdk/
 WORKDIR /azure
 
 RUN cd cpprestsdk && mkdir Release/build.release && cd Release/build.release && cmake3 .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$(nproc --all) install
