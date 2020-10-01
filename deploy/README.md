@@ -84,6 +84,22 @@ $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://m
 ```
 
 
+## Deploy Model Server with a Configuration File
+
+To serve multiple models you can run Model Server with a configuration file as described here:
+https://github.com/openvinotoolkit/model_server/blob/master/docs/docker_container.md#starting-docker-container-with-a-configuration-file
+
+To deploy with config file:
+* create a configuration file named _config.json_ and fill it with proper information
+* create a configmap from this file with a chosen name (here _ovms-config_):
+      
+      $ kubectl create configmap ovms-config --from-file config.json
+
+* deploy Model Server with parameter `config_configmap_name` (without `model_name` and `model_path`):
+
+      $ helm install ovms ovms --set config_configmap_name=ovms-config
+
+
 ## Using Model Server
 
 Now that the server is running you can send HTTP or gRPC requests to perform inferencing. 

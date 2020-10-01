@@ -42,7 +42,7 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
-        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy}}
+        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy }}
         env:
         {{ end }}
         {{ if .Values.http_proxy }}
@@ -87,17 +87,17 @@ spec:
                "--model_path", "{{ .Values.model_path }}",
                "--model_name", "{{ .Values.model_name }}",
                "--target_device", "{{ .Values.target_device }}",
-        {{ end }}
-        {{ if .Values.nireq }}
-              "--nireq", "{{ .Values.nireq }}",
-        {{ end }}
-        {{ if .Values.plugin_config }}
-              "--plugin_config", "{{ .Values.plugin_config }}",
+               {{ if .Values.nireq }}
+               "--nireq", "{{ .Values.nireq }}",
+               {{ end }}
+               {{ if .Values.plugin_config }}
+               "--plugin_config", "{{ .Values.plugin_config }}",
+               {{ end }}
         {{ end }}
                "--log_level", "{{ .Values.log_level }}",
                "--port", "8080",
                "--rest_port", "8081"]
-        {{ if or .Values.gcp_creds_secret_name .Values.config_mode }}
+        {{ if or .Values.gcp_creds_secret_name .Values.config_configmap_name }}
         volumeMounts:
         {{ end }}
         {{ if .Values.gcp_creds_secret_name }}
