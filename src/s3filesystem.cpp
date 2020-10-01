@@ -79,14 +79,18 @@ StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket,
 S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3_path) :
     options_(options),
     s3_regex_(S3_URL_PREFIX + "([0-9a-zA-Z-.]+):([0-9]+)/([0-9a-z.-]+)(((/"
-                              "[0-9a-zA-Z.-_]+)*)?)") {
+                              "[0-9a-zA-Z.-_]+)*)?)"),
+    proxy_regex_("^(https?)://(([^:]{1,128}):([^@]{1,256})@)?([^:/]{1,255})(:([0-9]{1,5}))?/?") {
     Aws::Client::ClientConfiguration config;
     Aws::Auth::AWSCredentials credentials;
 
     const char* secret_key = std::getenv("AWS_SECRET_ACCESS_KEY");
     const char* key_id = std::getenv("AWS_ACCESS_KEY_ID");
-    const char* region = std::getenv("AWS_DEFAULT_REGION");
+    const char* region = std::getenv("AWS_REGION");
     const char* s3_endpoint = std::getenv("S3_ENDPOINT");
+    const char* http_proxy = std::getenv("http_proxy") != nullptr ? std::getenv("http_proxy") : std::getenv("HTTP_PROXY");
+    const char* https_proxy = std::getenv("https_proxy") != nullptr ? std::getenv("https_proxy") : std::getenv("HTTPS_PROXY");
+    const std::string default_proxy = https_proxy != nullptr ? std::string(https_proxy) : http_proxy != nullptr ? std::string(http_proxy) : "";
 
     if ((secret_key != NULL) && (key_id != NULL)) {
         credentials.SetAWSAccessKeyId(key_id);
@@ -119,6 +123,22 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         }
         config.endpointOverride = Aws::String(endpoint.c_str());
         config.scheme = Aws::Http::Scheme::HTTP;
+    }
+
+    if (!default_proxy.empty()) {
+        if (std::regex_match(default_proxy, sm, proxy_regex_)) {
+            config.proxyHost = sm[5].str();
+            config.proxyPort = std::stoi(sm[7].str());
+            config.proxyScheme = sm[1].str().size() == 4 ? Aws::Http::Scheme::HTTP : Aws::Http::Scheme::HTTPS;
+            if (!sm[3].str().empty()) {
+                config.proxyUserName = sm[3].str();
+            }
+            if (!sm[4].str().empty()) {
+                config.proxyPassword = sm[4].str();
+            }
+        } else {
+            spdlog::warn("Couldn't parse proxy: {}", default_proxy);
+        }
     }
 
     if ((secret_key != NULL) && (key_id != NULL)) {
@@ -183,6 +203,7 @@ StatusCode S3FileSystem::isDirectory(const std::string& path, bool* is_dir) {
     auto head_bucket_outcome = client_.HeadBucket(head_request);
     if (!head_bucket_outcome.IsSuccess()) {
         spdlog::error("Couldn't get MetaData for bucket with name {}", bucket);
+        spdlog::error("{}", head_bucket_outcome.GetError().GetMessage());
         return StatusCode::S3_METADATA_FAIL;
     }
 

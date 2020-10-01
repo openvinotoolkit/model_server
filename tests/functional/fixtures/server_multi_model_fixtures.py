@@ -42,9 +42,7 @@ def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
             'AWS_ACCESS_KEY_ID=' + aws_access_key_id,
             'AWS_SECRET_ACCESS_KEY=' + aws_secret_access_key,
             'AWS_REGION=' + aws_region,
-            'S3_ENDPOINT=' + minio_endpoint,
-            'https_proxy=' + os.getenv('https_proxy', ""),
-            'no_proxy={}'.format(minio_endpoint)]
+            'S3_ENDPOINT=' + minio_endpoint]
 
     start_server_command_args = {"config_path": "{}/config.json".format(config.models_path),
                                  "grpc_workers": 2,
