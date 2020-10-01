@@ -6,21 +6,25 @@ Choose one option to get a Docker image:
 
 <details><summary>Build an image</summary>
 
-To build your own image, use the following command in the git repository root folder, replacing `BASE_OS=<OS>` with one of the following:
-
-- `BASE_OS=ubuntu`
-- `BASE_OS=centos`
-- `BASE_OS=clearlinux`
+To build your own image, use the following command in the git repository root folder, replacing `DLDT_PACKAGE_URL=<URL>` 
+with the URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download). 
 
 ```bash
-make docker_build BASE_OS=<OS>
+make docker_build DLDT_PACKAGE_URL=<URL>
 ```
-It will generate the image, tagged as `openvino/model_server:latest`, as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
-The image is created and tagged as `ovms:latest` and a `.tar.gz` release package that includes OpenVINO Model Server binary files and libraries is put in a `./dist` folder.
+called from the root directory of the repository.
+
+It will generate the images, tagged as:
+* `openvino/model_server:latest` - with CPU, NCS and HDDL support
+* `openvino/model_server-gpu:latest` - with CPU, NCS, HDDL and iGPU support
+
+as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
 The release package is compatible with linux machines on which `glibc` version is greater than or equal to the build image version.
 For debugging, an image with a suffix `-build` is also generated (i.e. `openvino/model_server-build:latest`).
+
+*Note:* Images include OpenVINO 2021.1 release. <br>
 
 </details>
 
@@ -164,6 +168,31 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 
 <details><summary>Cloud storage requirements</summary>
 
+**Azure Cloud Storage path requirements**
+
+Add the Azure Storage path as the `model_path` and pass the Azure Storage credentials to the Docker container. <br>
+
+To start a Docker container with support for Azure Storage paths to your model use the 
+`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the path to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) key. 
+
+Example command with blob storage `azure_blob://<bucket>/<model_path>`:
+
+```bash
+docker run --rm -d  -p 9001:9001 \
+-e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+openvino/model_server:latest \
+--model_path azure_blob://bucket/model_path --model_name as_model --port 9001
+```
+
+Example command with file storage `azure://<share>/<model_path>`:
+
+```bash
+docker run --rm -d  -p 9001:9001 \
+-e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+openvino/model_server:latest \
+--model_path azure://share/model_path --model_name as_model --port 9001
+```
+
 **Google Cloud Storage path requirements**
 
 Add the Google Cloud Storage path as the `model_path` and pass the Google Cloud Storage credentials to the Docker container. <br>
@@ -175,10 +204,11 @@ To start a Docker container with support for Google Cloud Storage paths to your 
 Example command with `gs://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d  -p 9001:9001 ovms:latest \
--e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
--v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}
---model_path gs://bucket/model_path --model_name my_model --port 9001
+docker run --rm -d  -p 9001:9001 \
+-e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}” \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+openvino/model_server:latest \
+--model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 **AWS S3 and Minio storage path requirements**
 
@@ -187,15 +217,33 @@ Add the S3 path as the `model_path` and pass the credentials as environment vari
 Example command with `s3://<bucket>/<model_path>`:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/model_server:latest \
--e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}”  \
--v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}  \
--e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}”  \
--e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}”  \
--e AWS_REGION=“${AWS_REGION}”  \
--e S3_ENDPOINT=“${S3_ENDPOINT}”  \
---config_path /opt/ml/config.json --port 9001 --rest_port 8001
+docker run --rm -d -p 9001:9001 \
+-e AWS_ACCESS_KEY_ID=“${AWS_ACCESS_KEY_ID}” \
+-e AWS_SECRET_ACCESS_KEY=“${AWS_SECRET_ACCESS_KEY}” \
+-e AWS_REGION=“${AWS_REGION}” \
+-e S3_ENDPOINT=“${S3_ENDPOINT}” \
+openvino/model_server:latest \
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
+</details>
+
+<details><summary>Security considerations</summary>
+
+OpenVINO Model Server docker containers, by default, starts with the security context of local account `ovms` with linux
+uid 5000. It ensure docker container has not elevated permissions on the host machine. This is in line with 
+best practices to use minimal permissions to run docker applications. You can change the security context by adding `--user`
+parameter to `docker run` command. It might be needed for example to load mounted models with restricted access.
+For example:
+```bash
+docker run --rm -d  --user $(id -u):$(id -g)  -v ${pwd}/model/:/model -p 9178:9178 openvino/model_server:latest \
+--model_path /model --model_name my_model
+```
+
+OpenVINO Model Server currently doesn't provide access restrictions and traffic encryption on gRPC and REST API endpoints.
+The endpoints can be secured using network settings like docker network settings or network firewall on the host.
+The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides 
+traffic encryption and user authorization.
+
 </details>
 
 ## Other Options for the OpenVINO&trade; Model Server in a Docker Container
@@ -239,12 +287,12 @@ Accepted format for parameter in CLI and in config is `json`.
 Accepted values:
 ```
 {"all": {}}
-{"latest": { "num_versions": Integer}
+{"latest": { "num_versions": Integer}}
 {"specific": { "versions": List }}
 ```
 Examples:
 ```
-{"latest": { "num_versions":2 } # server will serve only 2 latest versions of model
+{"latest": { "num_versions":2 }} # server will serve only 2 latest versions of model
 {"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
 {"all": {}} # server will serve all available versions of given model
 ```
