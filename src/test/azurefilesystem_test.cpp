@@ -37,7 +37,7 @@ std::string getEnvOrThrow(const std::string& name) {
 
 std::string getCredentials() {
     const char* path = "/tmp/ovms_test_azure_credentials.json";
-    std::string creds = getEnvOrThrow("AZURE_STORAGE_CREDENTIALS");
+    std::string creds = getEnvOrThrow("AZURE_STORAGE_CONNECTION_STRING");
     std::ofstream f;
     f.open(path);
     f << creds;
@@ -141,7 +141,7 @@ TEST(DISABLED_AzureFileSystem, file_details) {
     check_dir_access(getAnonDirPath(), anon_fs.get());
 
     auto creds_path = getCredentials();
-    ::setenv("AZURE_STORAGE_CREDENTIALS", creds_path.c_str(), 1);
+    ::setenv("AZURE_STORAGE_CONNECTION_STRING", creds_path.c_str(), 1);
 
     auto fs = std::make_shared<ovms::AzureFileSystem>();
     check_file_access(getAnonFilePath(), fs.get());

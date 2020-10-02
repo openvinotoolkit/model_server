@@ -173,16 +173,16 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 Add the Azure Storage path as the `model_path` and pass the Azure Storage credentials to the Docker container. <br>
 
 To start a Docker container with support for Azure Storage paths to your model use the 
-`AZURE_STORAGE_CREDENTIALS` variable. This variable contains the connection string to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) storage account. 
+`AZURE_STORAGE_CONNECTION_STRING` variable. This variable contains the connection string to the [AS authentication](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) storage account. 
 
 Example connection string is:
-AZURE_STORAGE_CREDENTIALS="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
+AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 
 Example command with blob storage `az://<bucket>/<model_path>`:
 
 ```bash
 docker run --rm -d  -p 9001:9001 \
--e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+-e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
 --model_path az://bucket/model_path --model_name as_model --port 9001
 ```
@@ -191,7 +191,7 @@ Example command with file storage `azfs://<share>/<model_path>`:
 
 ```bash
 docker run --rm -d  -p 9001:9001 \
--e AZURE_STORAGE_CREDENTIALS=“${AZURE_STORAGE_CREDENTIALS}” \
+-e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
 --model_path azfs://share/model_path --model_name as_model --port 9001
 ```

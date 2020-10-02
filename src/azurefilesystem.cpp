@@ -28,12 +28,12 @@ const std::string AzureFileSystem::AZURE_URL_BLOB_PREFIX = "az://";
 
 as::cloud_storage_account createDefaultOrAnonymousAccount() {
     try {
-        const char* env_cred = std::getenv("AZURE_STORAGE_CREDENTIALS");
+        const char* env_cred = std::getenv("AZURE_STORAGE_CONNECTION_STRING");
 
         std::string credentials = std::string(_XPLATSTR("DefaultEndpointsProtocol = https;"));
 
         if (!env_cred) {
-            SPDLOG_TRACE("Creating AzureFileSystem anonymous credentials.");
+            SPDLOG_TRACE("Creating AzureFileSystem anonymous connection string.");
         } else {
             credentials = std::string(_XPLATSTR(env_cred));
         }
