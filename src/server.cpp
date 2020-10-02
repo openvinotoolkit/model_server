@@ -248,7 +248,7 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
         const std::string server_address = "localhost:" + std::to_string(config.restPort());
 
         int workers = config.restWorkers() ? config.restWorkers() : 10;
-        spdlog::info("workers {}", workers);
+        spdlog::info("Will start {} REST workers", workers);
 
         std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restPort(), workers, REST_TIMEOUT);
         if (restServer != nullptr) {

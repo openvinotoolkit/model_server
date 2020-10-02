@@ -26,6 +26,10 @@ namespace ovms {
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
+const std::string DEFAULT_REST_WORKERS_STRING{"24"};
+const uint64_t DEFAULT_REST_WORKERS = std::stoul(DEFAULT_REST_WORKERS_STRING);
+const uint64_t MAX_REST_WORKERS = 10'000;
+
 Config& Config::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
@@ -48,7 +52,7 @@ Config& Config::parse(int argc, char** argv) {
                 "GRPC_WORKERS")
             ("rest_workers",
                 "number of workers in REST server - has no effect if rest_port is not set",
-                cxxopts::value<uint>()->default_value("24"),
+                cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
                 "serving log level - one of DEBUG, INFO, ERROR",
@@ -145,6 +149,17 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
+    // check rest_workers value
+    if (result->count("rest_workers") && ((this->restWorkers() > MAX_REST_WORKERS) || (this->restWorkers() < 1))) {
+        std::cerr << "rest_workers count should be from 1 to " << MAX_REST_WORKERS << std::endl;
+        exit(EX_USAGE);
+    }
+
+    if (result->count("rest_workers") && (this->restWorkers() != DEFAULT_REST_WORKERS) && this->restPort() == 0) {
+        std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
+        exit(EX_USAGE);
+    }
+
     // check docker ports
     if (result->count("port") && ((this->port() > MAX_PORT_NUMBER) || (this->port() < 0))) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
@@ -160,6 +175,7 @@ void Config::validate() {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
         exit(EX_USAGE);
     }
+
     return;
 }
 
