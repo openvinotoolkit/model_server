@@ -293,6 +293,8 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 9. In this terminal use the Docker container ID/hash to stop the sleep process that is preventing the tests from starting. These tests are waiting for stdout text "Server started on port":
 	```
 	docker exec -ti HASH bash
+	[root@898d55a2aa56 src]# yum install psmisc
+	...
 	[root@898d55a2aa56 src]# killall sleep
 	```
 
