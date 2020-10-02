@@ -11,7 +11,7 @@ The server implements gRPC and REST API framework with data serialization and de
   
 OVMS is now implemented in C++ and provides much higher scalability compared to its predecessor in Python version.
 You can take advantage of all the power of Xeon CPU capabilities or AI accelerators and expose it over the network interface.
-Read [release notes](docs/release_notes.md) to find out what's new in C++ version.
+Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what's new in C++ version.
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
