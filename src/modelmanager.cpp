@@ -409,7 +409,6 @@ std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
     }
     if (basePath.rfind(AzureFileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
-        return std::make_shared<LocalFileSystem>();
     }
     return std::make_shared<LocalFileSystem>();
 }
