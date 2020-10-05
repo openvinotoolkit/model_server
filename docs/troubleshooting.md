@@ -70,8 +70,7 @@ The possible issues could be:
 ### Resource Allocation
 RAM consumption might depend on the size of the models configured for serving and serving parameters. It should be measured experimentally.
 Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
-Increasing the number of processing streams might also impact the RAM allocation. When usage exceeds its limits, unexpected behavior
-can be observed. One of them being unable to load new models into device with error from OpenVINO: `can't protect` in server logs.
+Increasing the number of processing streams might also impact the RAM allocation.
 
 OpenVINO&trade; Model Server consumes all available CPU resources unless they are restricted by operating system, Docker or 
 Kubernetes capabilities.
@@ -98,3 +97,6 @@ HTTP_proxy
 ```
 
 Note that neither `no_proxy` or `NO_PROXY` is used.
+
+### Unable to load network into device with: `can't protect` in server logs
+Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
