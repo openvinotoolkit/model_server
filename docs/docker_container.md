@@ -66,15 +66,6 @@ See the requirements below for using a cloud storage.
 * `--port` - gRPC server port.
 * `--rest_port` - REST server port.
 
-Other allowed command line options:
-* `--help` - Displays help message.
-* `--file_system_poll_wait_seconds` - Time interval between config and model versions changes detection. Default is 1. Zero value disables changes monitoring.
-* `--log_level` `"DEBUG"/"INFO"/"ERROR"` - Serving log level - one of DEBUG, INFO, ERROR  (default: INFO).
-* `--log_path` - Optional path to the log file.
-* `--config_path` - Absolute path to json configuration file.
-
-Furthermore, in command line it is possible to specify options, for example --shape, for single model(options are described in "Model configuration options explained").
-
 </details>
 
 <details><summary>Start the Docker container with multiple models</summary>
@@ -152,6 +143,10 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 
 <details><summary>Model configuration options explained</summary>
 
+Configuration options for models are provided for each model served by the model server separately and can be defined either with command line parameters or with a configuration file.
+* While serving just one model, you can define its configuration via command line parameters. 
+* While serving multiple models, you need to define their configuration in a config file as described above.
+
 | Option  | Value format  | Description  | Required |
 |---|---|---|---|
 | `"model_name"/"name"` | `string` | model name exposed over gRPC and REST API.(use `model_name` in command line, `name` in json config)   | &check;|
@@ -162,6 +157,23 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config
 | `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](performance_tuning.md)  ||
 | `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
+
+
+</details>
+
+<details><summary>Server configuration options explained</summary>
+
+Configuration options for server are defined only via command line options and determine configuration common for all served models. 
+
+| Option  | Value format  | Description  | Required |
+|---|---|---|---|
+| `port` | `integer` | Number of the port used by gRPC sever. | &check;|
+| `rest_port` | `integer` |  Number of the port used by HTTP server (if not provided or set to 0, HTTP server will not be launched). ||
+| `grpc_workers` | `integer` |  Number of the gRPC server instances (should be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. ||
+| `rest_workers` | `integer` |  Number of HTTP server threads. Effective when `rest_port` > 0. Default value is 24. ||
+| `file_system_poll_wait_seconds` | `integer` |  Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. ||
+| `log_level` | `"DEBUG"/"INFO"/"ERROR"` |  Serving logging level ||
+| `log_path` | `string` |  Optional path to the log file. ||
 
 
 </details>

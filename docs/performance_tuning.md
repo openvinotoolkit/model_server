@@ -13,8 +13,8 @@ OpenVINO Model Server can be scaled vertically by adding more resources or horiz
 of the service on multiple hosts. 
 
 While hosting multiple instances of OVMS on a single host, it is optimal to ensure CPU affinity for the containers. It can be arranged
-via [CPU manager for Kuburnetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/)
-An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus`.
+via [CPU manager for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/)
+An equivalent in the Docker, would be starting the containers with the option `--cpuset-cpus`.
 
 In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like:
 * CPU_THREADS_NUM
@@ -22,13 +22,13 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 * CPU_THROUGHPUT_STREAMS
 
 Particularly important parameter is CPU_THROUGHPUT_STREAMS which defines the number of parallel executions should run
-in parallel. This setting can increase significantly the throughput when a single inference request can not 
-utilizes all available CPU cores. By default it is set to CPU_THROUGHPUT_AUTO to get the most universal configuration. You can tune
+in parallel. This setting can increase significantly the throughput when a single inference request cannot 
+utilize all available CPU cores. By default it is set to CPU_THROUGHPUT_AUTO to get the most universal configuration. You can tune
 it for a given model, HW or usage model.
 
 Read about available parameters on [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
 
-While passing the plugin configuration, omit the `KEY_` phase. Example docker command, setting `KEY_CPU_THROUGHPUT_STREAMS` parameter
+While passing the plugin configuration, omit the `KEY_` phase. Example Docker command, setting `KEY_CPU_THROUGHPUT_STREAMS` parameter
  to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```
@@ -57,7 +57,7 @@ They are listed on [supported configuration parameters for CPU Plugin](https://d
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load.
 You can set it with `plugin_config` parameter. 
 
-Example docker command, setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32`. It will be efficient
+Example Docker command, setting a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32`. It will be efficient
 configuration when the number of parallel connections exceeds 32:
 
 ```
