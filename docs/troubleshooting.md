@@ -98,5 +98,9 @@ HTTP_proxy
 
 Note that neither `no_proxy` or `NO_PROXY` is used.
 
+### Using GCS model behind a proxy
+If your environment is required to use proxy but `http_proxy`/`https_proxy` is not passed to server container there will be 15 minutes timeout when accessing GCS models.
+During that time no logs will be captured by OVMS. Currently there is no option to change timeout duration for GCS.
+
 ### Unable to load network into device with: `can't protect` in server logs
 Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
