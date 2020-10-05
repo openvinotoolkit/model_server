@@ -38,7 +38,7 @@ BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
 
-INSTALL_RPMS_FROM_URL ?= "http://repository.toolbox.iotg.sclab.intel.com/ovms-deps/centos-7.8.2003-ovms-deps-rpms.tar.xz"
+INSTALL_RPMS_FROM_URL ?=
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
