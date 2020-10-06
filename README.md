@@ -17,7 +17,7 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 
 A few key features: 
 - Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
-- Deploy new [model versions](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#model-version-policy) without changing client code.
+- Deploy new [model versions](https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#model-version-policy) without changing client code.
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
@@ -26,14 +26,15 @@ A few key features:
 - [Model reshaping](docs/docker_container.md#model-reshaping). The server supports reshaping models in runtime. 
 - [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
-**Note: OVMS has been tested on CentOS and publically released docker images are also based on CentOS.** 
+**Note: OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.** 
 
 ## Build OpenVINO Model Server
 Build the docker image using command:
 ```bash
-make docker_build
+make docker_build DLDT_PACKAGE_URL=<URL>
 ```
 called from the root directory of the repository.
+Note: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
 It will generate the images, tagged as:
 * `openvino/model_server:latest` - with CPU, NCS and HDDL support
@@ -49,7 +50,7 @@ For debugging, an image with a suffix `-build` is also generated (i.e. `openvino
 
 ## Run OpenVINO Model Server
 
-A detailed description of how to use OpenVINO Model Server can be found [here](docs/ovms_quickstart.md).
+A demonstration how to use OpenVINO Model Server can be found in [a quick start guide](docs/ovms_quickstart.md).
 
 More detailed guides to using Model Server in various scenarios can be found here:
 
