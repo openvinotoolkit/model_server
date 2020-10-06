@@ -37,11 +37,11 @@ called from the root directory of the repository.
 
 It will generate the images, tagged as:
 * `openvino/model_server:latest` - with CPU, NCS and HDDL support
-* `openvino/model_server-gpu:latest` - with CPU, NCS, HDDL and iGPU support
+* `openvino/model_server:latest-gpu` - with CPU, NCS, HDDL and iGPU support
 
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
-The release package is compatible with linux machines on which `glibc` version is greater than or equal to the build image version.
+The release package is compatible with linux machines on which `glibc` version is greater than or equal to the build image version 2.17.
 For debugging, an image with a suffix `-build` is also generated (i.e. `openvino/model_server-build:latest`).
 
 *Note:* Images include OpenVINO 2021.1 release. <br>
