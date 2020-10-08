@@ -31,10 +31,9 @@ A few key features:
 ## Build OpenVINO Model Server
 Build the docker image using command:
 ```bash
-make docker_build DLDT_PACKAGE_URL=<URL>
+make docker_build
 ```
 called from the root directory of the repository.
-Note: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
 It will generate the images, tagged as:
 * `openvino/model_server:latest` - with CPU, NCS and HDDL support
