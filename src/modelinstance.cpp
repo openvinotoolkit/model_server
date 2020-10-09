@@ -71,6 +71,10 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         auto precision = input->getPrecision();
         auto layout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
+            SPDLOG_INFO("HERE");
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        SPDLOG_INFO("Input name shape: {};", shape_stream.str());
 
         // Data from config
         if (config.getLayout().size()) {
@@ -83,12 +87,16 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         input->setLayout(layout);
 
         if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+            SPDLOG_INFO("HERE");
             // leave shape untouched
         } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
+            SPDLOG_INFO("HERE");
             shape = parameter.getShape(name);
         } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
+            SPDLOG_INFO("HERE");
             shape = config.getShapes().at(name).shape;
         } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
+            SPDLOG_INFO("HERE");
             shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
         }
 
@@ -103,9 +111,11 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
-        std::stringstream shape_stream;
+ //       std::stringstream shape_stream;
+            SPDLOG_INFO("HERE");
+        shape_stream.clear();
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        spdlog::info("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
+        SPDLOG_INFO("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
             name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
     }
 
@@ -313,9 +323,13 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
 
 void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (parameter.isBatchSizeRequested()) {
+        SPDLOG_ERROR("ER:{}", parameter.getBatchSize());
         network->setBatchSize(parameter.getBatchSize());
     } else if (config.getBatchSize() > 0) {
+        SPDLOG_ERROR("ERmodelconfig:{}", config.getBatchSize());
+        SPDLOG_ERROR("ERnetwork:{}", network->getBatchSize());
         network->setBatchSize(config.getBatchSize());
+        SPDLOG_ERROR("ER:{}", network->getBatchSize());
     }
 }
 

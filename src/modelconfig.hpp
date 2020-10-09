@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <exception>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -32,7 +33,11 @@ namespace ovms {
 
 enum Mode { FIXED,
     AUTO };
-using shape_t = std::vector<size_t>;
+using dimension_size_t = size_t;
+using shape_t = std::vector<dimension_size_t>;
+
+static uint64_t MAX_BATCH_SIZE = 100'000;
+static uint64_t MAX_DIMENSION_SIZE = 100'000;
 
 struct ShapeInfo {
     Mode shapeMode = FIXED;
@@ -180,7 +185,10 @@ public:
         version(version),
         mappingInputs({}),
         mappingOutputs({}) {
-        setBatchingParams(configBatchSize);
+        Status status = setBatchingParams(configBatchSize);
+        if (!status.ok()) {
+            throw std::invalid_argument("Validation of input batchsize parameter failed");
+}
     }
 
     /**
@@ -351,18 +359,14 @@ public:
          * 
          * @param configBatchSize 
          */
-    void setBatchingParams(const std::string& configBatchSize) {
-        auto [batchingMode, effectiveBatchSize] = extractBatchingParams(configBatchSize);
-        setBatchingMode(batchingMode);
-        setBatchSize(effectiveBatchSize);
-    }
+    Status setBatchingParams(const std::string& configBatchSize);
 
     /**
          * @brief Extract batching mode and effective batch size from string.
          * 
          * @param configBatchSize 
          */
-    static std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize);
+    Status extractBatchingParams(std::string configBatchSize, std::tuple<Mode, size_t>& batchinParams);
 
     /**
          * @brief Get the model version policy

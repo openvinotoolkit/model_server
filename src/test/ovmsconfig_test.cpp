@@ -28,7 +28,7 @@ using testing::ContainerEq;
 using testing::Return;
 using testing::ReturnRef;
 
-class DISABLED_OvmsConfigTest : public ::testing::Test {
+class OvmsConfigTest : public ::testing::Test {
 public:
     void SetUp() override {
         sbuf = std::cout.rdbuf();
@@ -52,14 +52,14 @@ public:
     std::streambuf* sbuf;
 };
 
-TEST_F(DISABLED_OvmsConfigTest, bufferTest) {
+TEST_F(OvmsConfigTest, bufferTest) {
     std::string input{"Test buffer"};
     std::cout << input;
     std::string check{buffer.str()};
     EXPECT_EQ(input, check);
 }
 
-TEST_F(DISABLED_OvmsConfigTest, emptyInput) {
+TEST_F(OvmsConfigTest, emptyInput) {
     char* n_argv[] = {"ovms"};
     int arg_count = 1;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
@@ -67,7 +67,7 @@ TEST_F(DISABLED_OvmsConfigTest, emptyInput) {
     // EXPECT_TRUE(AssertRegexMessageInOutput(std::string("config_path")));
 }
 
-TEST_F(DISABLED_OvmsConfigTest, helpInput) {
+TEST_F(OvmsConfigTest, helpInput) {
     char* n_argv[] = {"ovms", "help"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
@@ -75,97 +75,97 @@ TEST_F(DISABLED_OvmsConfigTest, helpInput) {
     // EXPECT_TRUE(AssertRegexMessageInOutput(std::string("config_path")));
 }
 
-TEST_F(DISABLED_OvmsConfigTest, badInput) {
+TEST_F(OvmsConfigTest, badInput) {
     char* n_argv[] = {"ovms", "--bad_option"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeTwoParams) {
+TEST_F(OvmsConfigTest, negativeTwoParams) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_name", "some_name"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use either config_path or model_path");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeMissingPathAndName) {
+TEST_F(OvmsConfigTest, negativeMissingPathAndName) {
     char* n_argv[] = {"ovms", "--rest_port", "8080"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeMissingName) {
+TEST_F(OvmsConfigTest, negativeMissingName) {
     char* n_argv[] = {"ovms", "--model_path", "/path/to/model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeMissingPath) {
+TEST_F(OvmsConfigTest, negativeMissingPath) {
     char* n_argv[] = {"ovms", "--model_name", "model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeSamePorts) {
+TEST_F(OvmsConfigTest, negativeSamePorts) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port and rest_port cannot");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeMultiParams) {
+TEST_F(OvmsConfigTest, negativeMultiParams) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "10"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, missingParams) {
+TEST_F(OvmsConfigTest, missingParams) {
     char* n_argv[] = {"ovms", "--batch_size", "10"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativePortMin) {
+TEST_F(OvmsConfigTest, negativePortMin) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options: Argument ‘-1’");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeRestPortMin) {
+TEST_F(OvmsConfigTest, negativeRestPortMin) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options: Argument ‘-1’ ");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativePortRange) {
+TEST_F(OvmsConfigTest, negativePortRange) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range from 0");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeRestPortRange) {
+TEST_F(OvmsConfigTest, negativeRestPortRange) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range from 0");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativePortMax) {
+TEST_F(OvmsConfigTest, negativePortMax) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeRestPortMax) {
+TEST_F(OvmsConfigTest, negativeRestPortMax) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeGrpcWorkersMax) {
+TEST_F(OvmsConfigTest, negativeGrpcWorkersMax) {
     char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "grpc_workers count should be from 1");
 }
 
-TEST_F(DISABLED_OvmsConfigTest, negativeUint64Max) {
+TEST_F(OvmsConfigTest, negativeUint64Max) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range from 0 to 65535");

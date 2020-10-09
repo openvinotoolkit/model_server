@@ -91,19 +91,48 @@ bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
     return true;
 }
 
-std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBatchSize) {
+static bool isNumber(const std::string& numberString) {
+    return !numberString.empty() &&
+               std::find_if(numberString.begin(),
+                            numberString.end(),
+                            [](char c) { return !std::isdigit(c); }) == numberString.end();
+}
+
+    Status ModelConfig::setBatchingParams(const std::string& configBatchSize) {
+        std::tuple<Mode, size_t> batchingParams{FIXED, 0};
+        Status status = extractBatchingParams(configBatchSize, batchingParams);
+        setBatchingMode(std::get<0>(batchingParams));
+        setBatchSize(std::get<1>(batchingParams));
+        return status;
+    }
+
+
+Status ModelConfig::extractBatchingParams(std::string configBatchSize, std::tuple<Mode, size_t>& batchingParams) {
     Mode batchingMode = FIXED;
     size_t effectiveBatchSize = 0;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
     } else {
+        bool isAcceptable = isNumber(configBatchSize);
         try {
-            effectiveBatchSize = std::stoi(configBatchSize);
+            effectiveBatchSize = std::stoul(configBatchSize);
+            spdlog::debug("Read batch size:: {} for model: {}", effectiveBatchSize, getName());
         } catch (const std::invalid_argument& e) {
-            SPDLOG_ERROR("Wrong batch size parameter provided. Model batch size will be set to default.");
+            isAcceptable = false;
+        } catch (const std::out_of_range& e) {
+            isAcceptable = false;
+        }
+        isAcceptable = isAcceptable && (effectiveBatchSize <= MAX_BATCH_SIZE);
+        if (!isAcceptable) {
+            SPDLOG_ERROR("Wrong batch size parameter provided. Allowed is: 'auto' or integer between [1,{}]",
+                         MAX_BATCH_SIZE);
+            return StatusCode::UNKNOWN_ERROR;
         }
     }
-    return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+    std::get<0>(batchingParams) = batchingMode;
+    std::get<1>(batchingParams) = effectiveBatchSize;
+    SPDLOG_ERROR("ER:{} effectiveBatchSize", effectiveBatchSize);
+    return StatusCode::OK;
 }
 
 Status ModelConfig::parseModelVersionPolicy(std::string command) {
@@ -311,8 +340,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     // Check for optional parameters
     if (v.HasMember("batch_size")) {
         if (v["batch_size"].IsString()) {
-            this->setBatchingParams(v["batch_size"].GetString());
+            SPDLOG_ERROR("ER");
+            Status status = this->setBatchingParams(v["batch_size"].GetString());
+            if (!status.ok()) {
+                SPDLOG_ERROR("Invalid batch size parameter provided for model: {}", getName());
+                return status;
+            }
         } else {
+            SPDLOG_ERROR("ER");
             this->setBatchingParams(v["batch_size"].GetUint64());
         }
     }
@@ -391,7 +426,15 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
     bool shapeSet = (getShapes().size() > 0);
 
-    spdlog::debug("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    SPDLOG_INFO("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    for (const auto& [key, value] : getShapes()) {
+        auto shape = value.shape;
+            SPDLOG_INFO("HERE");
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        SPDLOG_INFO("Input name shape: {};", shape_stream.str());
+        
+    }
     if (batchSizeSet && shapeSet) {
         spdlog::warn("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);

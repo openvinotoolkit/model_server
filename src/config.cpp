@@ -136,8 +136,11 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
-    if (result->count("config_path") && (result->count("batch_size") || result->count("shape") ||
-                                            result->count("nireq") || result->count("model_version_policy") || result->count("target_device") ||
+    if (result->count("config_path") && (result->count("batch_size") ||
+                                            result->count("shape") ||
+                                            result->count("nireq") ||
+                                            result->count("model_version_policy") ||
+                                            result->count("target_device") ||
                                             result->count("plugin_config"))) {
         std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
         exit(EX_USAGE);
@@ -174,6 +177,25 @@ void Config::validate() {
     if (this->port() == this->restPort()) {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
         exit(EX_USAGE);
+    }
+
+    if (result->count("batch_size")) {
+        if (this->batchSize() != "auto") {
+            bool errorOccured = false;
+            try {
+                size_t requestedBatchSize = std::stol(this->batchSize());
+                std::cout << "HERE " << requestedBatchSize << std::endl;
+                std::cout << "HERE " << this->batchSize() << std::endl;
+                errorOccured = (requestedBatchSize > std::numeric_limits<int>::max());
+            } catch (std::invalid_argument& e) {
+                errorOccured = true;
+            }
+            if (errorOccured) {
+                std::cerr << "Invalid value for batch_size parameter. Allowed is: 'auto' or integer between [1," << std::numeric_limits<int>::max() << "]" << std::endl;
+                exit(EX_USAGE);
+
+            }
+        }
     }
 
     return;
