@@ -50,8 +50,7 @@ cd model
 curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
 
 
-docker run -d -v `pwd`/model:/models -e LOG_LEVEL=DEBUG -p 9000:9000 ie-serving-py:latest \
-/ie-serving-py/start_server.sh ie_serving model --model_path /models --model_name face-detection --port 9000  --shape auto
+docker run -d -v `pwd`/model:/models -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
 #### Run the client:
@@ -107,7 +106,7 @@ Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shap
 
 ```bash
 
- docker run -d -v $(pwd)/model:/models/person-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 ovms:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
+ docker run -d -v $(pwd)/model:/models/person-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
 
 ```
 
