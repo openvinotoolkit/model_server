@@ -22,7 +22,7 @@ This guide provides step-by-step instructions on how to install OpenVINO&trade; 
 - <a href="#ExistingDocker">Installing OpenVINO&trade; Model Server with existing Docker Container</a>
 - <a href="#quickstart">Quick Start Guide for OpenVINO&trade; Model Server</a>
 - <a href="#singlemodel">Starting Docker Container with a Single Model
-- <a href="#configfile">Starting Docker container with a configuration file</a>
+- <a href="#configfile">Starting Docker container with a configuration file for multiple models</a>
 - <a href="#sourcecode">Building the OpenVINO&trade; Model Server Image </a>
 - <a href="#ncs">Starting Docker container with Neural Compute Stick</a>
 - <a href="#hddl">Starting Docker container with HDDL Plugin </a>
@@ -383,7 +383,7 @@ chooses to which one the model is loaded.
 
 ### Starting docker container with HDDL<a name="hddl"></a>
 
-Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
+Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj)
 is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin, using OpenVINO toolkit binary distribution :
 - `make docker_build_bin dldt_package_url=<url>` 
 
