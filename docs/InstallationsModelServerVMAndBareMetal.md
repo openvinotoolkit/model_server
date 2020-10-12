@@ -22,7 +22,7 @@ OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machi
 ## Overview
 This guide provides step-by-step instructions to install OpenVino&trade; Model Server on Virtual Machines or Bare Metal Hosts. Links are provided for different compatible hardwares. Following instructions are covered in this:
 - <a href="#model-server-installation">Model Server Installation</a>
-- <a href="#model-server-installation">Starting the Serving</a>
+- <a href="#start-the-serving">Start the Serving</a>
 - <a href="#using-ncs2">Using Neural Compute Sticks</a>
 - <a href="#using-hddl">Using HDDL accelerators</a>
 - <a href="#using-igpu">Using iGPU accelerators</a>
