@@ -31,8 +31,8 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
-          }    
+              build job: "ovmsc-github/utils-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
+          } 
         }
     }
 }
