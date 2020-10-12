@@ -56,6 +56,45 @@ TEST(SchemaTest, PipelineConfigMatchingSchema) {
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
+TEST(SchemaTest, PipelineConfigWithNegativeNodeVersion) {
+    const char* PipelineConfigWithNegativeNodeVersion = R"(
+    {
+        "model_config_list": [],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "version": -1,
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ], 
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ] 
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document PipelineConfigWithNegativeNodeVersionParsed;
+    PipelineConfigWithNegativeNodeVersionParsed.Parse(PipelineConfigWithNegativeNodeVersion);
+    auto result = ovms::validateJsonAgainstSchema(PipelineConfigWithNegativeNodeVersionParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
 TEST(SchemaTest, PipelineConfigNameInvalidType) {
     const char* pipelineConfigNameInvalidType = R"(
     {

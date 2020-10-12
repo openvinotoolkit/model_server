@@ -41,7 +41,7 @@ Status GetModelMetadataImpl::getModelStatus(
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
-    if (request->model_spec().has_version()) {
+    if (request->model_spec().has_version() && request->model_spec().version().value() != 0) {
         ovms::model_version_t version = request->model_spec().version().value();
         SPDLOG_DEBUG("requested: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
@@ -123,10 +123,6 @@ void GetModelMetadataImpl::buildResponse(
 Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
-        if (model_version.value() < 0) {
-            spdlog::error("Version in GetModelMetadata request cannot be negative. Provided value {}", model_version.value());
-            return StatusCode::MODEL_VERSION_MISSING;
-        }
         request->mutable_model_spec()->mutable_version()->set_value(model_version.value());
     }
     request->mutable_metadata_field()->Add("signature_def");

@@ -43,7 +43,7 @@ protected:
         directoryPath = "/tmp" + directoryName;
         configPath = directoryPath + "/config.json";
         modelPath = directoryPath + "/dummy";
-        mappingConfigPath = modelPath + "/0/mapping_config.json";
+        mappingConfigPath = modelPath + "/1/mapping_config.json";
 
         // Copy dummy model to temporary destination
         std::filesystem::remove_all(directoryPath);

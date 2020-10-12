@@ -176,8 +176,8 @@ cc_test(
         "test/schema_test.cpp",
     ],
     data = [
-        "test/dummy/0/dummy.xml",
-        "test/dummy/0/dummy.bin",
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
     ],
     linkopts = [
         "-lxml2",
