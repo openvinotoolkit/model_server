@@ -22,7 +22,7 @@ Before sending your merge requests, make sure you followed this list.
 - Write a short description what the merge request introduces/improves
 - Always include unit tests when contributing new features
 - Bug fixes also generally require unit tests, because the presence of bugs usually indicates insufficient tests
-- Include a license at the top of new files.
+- Include a license at the top of new files
 
 ## C++ Coding Style <a name="coding-style"></a>
 
@@ -60,7 +60,7 @@ Example 2
 #### 2. File Naming Conventions <a name="file-naming-conventions"></a>
 - Filenames should be all lowercase and can include underscores (_). Use _test suffix for unit tests.
 
-- Examples:
+- Examples :
     - modelmanagerconfig.cpp
     - model_manager_config.cpp
     - modelmanagerconfig_test.cpp
@@ -81,7 +81,7 @@ Example 2
 
 - Use `< >` for non-project libraries and `" "` for project's headers. Separate each non-empty group with one blank line.
 
-- Example:
+- Example :
 
     ```
     #include <cstdio.h>
@@ -120,7 +120,7 @@ Example 2
 
 - Run `make clang-format` command before you submit changes.
 
-- Prerequisites: 
+- Prerequisites :
 Install Clang-Format 6.0 using command :
     ```apt-get install clang-format-6.0```
 
@@ -128,7 +128,7 @@ Install Clang-Format 6.0 using command :
 
 - Run make `test-checksec` command before you submit changes.
 
-- Prerequisites:
+- Prerequisites :
     ```
     dpkg -i http://archive.ubuntu.com/ubuntu/pool/universe/c/checksec/checksec_2.1.0-1_all.deb
     ```
@@ -136,6 +136,6 @@ Install Clang-Format 6.0 using command :
 
 - Run `make sdl-check` command before you submit changes.
 
-- Prerequisites:
+- Prerequisites :
     Install Bandit Package using command :
     ```pip3 install bandit```

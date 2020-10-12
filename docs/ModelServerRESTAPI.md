@@ -22,7 +22,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 
 * Response format
 
-If successful, returns a JSON of following format
+If successful, returns a JSON of following format :
 ```Bash
 {
   'model_version_status':[
@@ -162,13 +162,13 @@ Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx
 
 * Response
 
-A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows:
+A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows :
 ```
 {
   "predictions": <value>|<(nested)list>|<list-of-objects>
 }
 ```
-A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows:
+A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows :
 ```
 {
   "outputs": <value>|<(nested)list>|<object>

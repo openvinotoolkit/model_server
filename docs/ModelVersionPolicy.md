@@ -2,7 +2,7 @@
 
 Model version policy makes it possible to decide which versions of model will be served by OVMS. This parameter allows you to control the memory consumption of the server and decide which versions will be used regardless of what is located under the path given when the server is started. model_version_policy parameter is optional. By default server serves only the latest version for the model. Accepted format for parameter in CLI and in config is json.
 
-Accepted values:
+Accepted values :
 
 {"all": {}}
 {"latest": { "num_versions": Integer}}
@@ -21,7 +21,7 @@ Examples:
 - By default model server is detecting new and deleted versions in 1 second intervals. The frequency can be changed by setting a parameter --file_system_poll_wait_seconds. If set to zero, updates will be disabled.
 
 ## Updating configuration file
-OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications in runtime:
+OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications in runtime :
 
 - When new model is added to the configuration file config.json, OVMS will load and start serving the configured versions. It will also start monitoring for version changes in the configured model storage. If the new model has invalid configuration or it doesn't include any version, which can be successfully loaded, it will be ignored till next update in the configuration file is detected.
 

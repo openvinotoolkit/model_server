@@ -373,7 +373,7 @@ Console logs:
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/tree/main/example_client) shows how to use these API and submit the requests using the gRPC interface.
+- [Example Client Code](https://github.com/openvinotoolkit/model_server/tree/main/example_client) shows how to use these API and submit the requests using the gRPC interface.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 

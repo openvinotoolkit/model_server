@@ -33,7 +33,7 @@ are needed and you can proceed to _Deploy the Model Server_ section.
 Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable. Please follow the steps below:
 
 * Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_. Name a file for example: _gcp-creds.json_ 
-(you can follow these instructions to create a Service Account and download JSON [here](https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account) )
+(you can follow these instructions to create a Service Account and download JSON [here](https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account))
 * Create a Kubernetes secret from this JSON file:
 
 ``` bash 
@@ -79,7 +79,7 @@ $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://m
 ```
 ## Deploy Model Server with a Configuration File
 
-To serve multiple models you can run Model Server with a configuration file as described [here](./InstallationsLinuxDocker.md#configfile)
+To serve multiple models you can run Model Server with a configuration file as described [here](./InstallationsLinuxDocker.md#configfile).
 
 ### To deploy with config file:
 - Create a configuration file named config.json and fill it with proper information
@@ -107,8 +107,8 @@ openvino-model-server   LoadBalancer   10.121.14.253   1.2.3.4         8080:3004
 
 The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
 
-Follow the instructions [here](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files)
-to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
+Follow the instructions [here](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) to create an image classification client that can be used to perform inference with models being exposed by the server. 
+For example:
 ```shell script
 $ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
 	Model name: resnet

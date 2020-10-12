@@ -6,9 +6,9 @@
 These samples include python scripts and installation steps to use OpenVINO&trade; Model Server for various use-cases. 
 
 - [Face Detection with OpenVINO&trade; Model Server](./FaceDetectionScriptExample.md#facedetection) : This sample uses python script to run OpenVINO&trade; Face Detection Model with the Model Server.
-- [Person-Vehicle-Bike Detection](./FaceDetectionScriptExample.md#persondetection): Detection of Person and Vehicles using OpenVINO&trade; Model Server with python example.
-- [Age Gender Classification](./AgeGenderGuide.md): Classification of Age Gender using OpenVINO&trade; Model Server. 
-- [Clients for gRPC and REST API calls](https://github.com/openvinotoolkit/model_server/tree/main/example_client): Example python scripts for gRPC and REST API calls with resnet classification models
+- [Person-Vehicle-Bike Detection](./FaceDetectionScriptExample.md#persondetection) : Detection of Person and Vehicles using OpenVINO&trade; Model Server with python example.
+- [Age Gender Classification](./AgeGenderGuide.md) : Classification of Age Gender using OpenVINO&trade; Model Server. 
+- [Clients for gRPC and REST API calls](https://github.com/openvinotoolkit/model_server/tree/main/example_client) : Example python scripts for gRPC and REST API calls with resnet classification models
 
 ## Additional Tools
 

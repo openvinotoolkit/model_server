@@ -20,7 +20,7 @@ This document gives information and steps to run and debug tests. It gives infor
 
 The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.6 - 3.8 must be installed. 
 
-In-case of problems, see <a href="#debug">Debugging</a>
+In-case of problems, see <a href="#debug">Debugging</a>.
 
 ## Prepare Environment to Use the Tests <a name="test-prep"></a>
 
@@ -30,17 +30,17 @@ In-case of problems, see <a href="#debug">Debugging</a>
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
-2. Mount the source code in the Docker container:
+2. Mount the source code in the Docker container :
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
 	```
 
-3. In the docker container context compile the source code via:
+3. In the docker container context compile the source code via :
 	```bash
 	bazel build //src:ovms
 	```
 
-4. From the container, run a single unit test:
+4. From the container, run a single unit test :
 	```bash
 	bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
@@ -58,7 +58,7 @@ In-case of problems, see <a href="#debug">Debugging</a>
 	
 5. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
 
-	* With a Docker cache:
+	* With a Docker cache :
 	
 	```bash
 	OVMS_CPP_DOCKER_IMAGE=<unique_image_name> make docker_build
@@ -66,7 +66,7 @@ In-case of problems, see <a href="#debug">Debugging</a>
     OVMS_CPP_CONTAINTER_PORT=<unique_network_port> make test_perf
 	```
 
-	* Without a Docker cache:
+	* Without a Docker cache :
 
 	```bash
 	make NO_DOCKER_CACHE=true
@@ -79,7 +79,7 @@ In-case of problems, see <a href="#debug">Debugging</a>
  
 > **NOTE**: Python is only necessary to complete the functional tests in this guide.
 
-2. Install the `virtualenv` package:
+2. Install the `virtualenv` package :
 
 	```
 	pip3 install virtualenv
@@ -95,7 +95,7 @@ Click the test that needs to be run:
 
 <details><summary>Run test inference</summary>
 
-1. Download an exemplary model [ResNet50-binary model](https://docs.openvinotoolkit.org/latest/omz_models_intel_resnet50_binary_0001_description_resnet50_binary_0001.html):
+1. Download an exemplary model [ResNet50-binary model](https://docs.openvinotoolkit.org/latest/omz_models_intel_resnet50_binary_0001_description_resnet50_binary_0001.html) :
 
 	```
 	tests/performance/download_model.sh
@@ -145,7 +145,7 @@ The functional tests are written in Python. Therefore, to complete the tests in 
 make test_functional
 ``` 
 
-- Configuration options are:
+- Configuration options are :
 
 | Variable    | Description |
 | :---        |    :----   |
@@ -158,7 +158,7 @@ make test_functional
 | `START_CONTAINER_COMMAND` | The command to start the OpeVINO Model Storage container.|
 | `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
 
-2. Add any configuration variables to the command line in this format:
+2. Add any configuration variables to the command line in this format :
 
 ```bash
 export IMAGE="openvino/model_server:latest"
@@ -237,7 +237,7 @@ os.environ["OVMS_BINARY_PATH"] = "/home/example_path/ovms/bin/ovms"
 ldd ./ovms
 ```
 
-3. Otherwise use export to specify the following variable in `user_config.py` file or in the environment:
+3. Otherwise use export to specify the following variable in `user_config.py` file or in the environment :
 
 ```
 os.environ["LD_LIBRARY_PATH"] = "<path to ovms libraries>"
@@ -249,17 +249,17 @@ os.environ["LD_LIBRARY_PATH"] = "<path to ovms libraries>"
 
 ## Debugging <a name="debug"></a>
 
-Two debugging options are available. Click on the required option:
+Two debugging options are available. Click on the required option :
 
 
 <details><summary>Use gdb to debug in Docker</summary>
 
-1. Build a project in a debug mode:
+1. Build a project in a debug mode :
 	```
 	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
 
-2. Run the container:
+2. Run the container :
 	```
 	docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 --entrypoint bash openvino/model_server-build:latest
 	```
@@ -271,12 +271,12 @@ Two debugging options are available. Click on the required option:
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
 
-- For unit test debugging, run command:
+- For unit test debugging, run command :
 	```
 	gdb --args ./bazel-bin/src/./ovms_test --gtest_filter='OvmsConfigTest.emptyInput'
 	```
 
-- For forking tests debugging, enable fork follow mode by running command  :
+- For forking tests debugging, enable fork follow mode by running command :
 	```
 	# (in gdb cli) set follow-fork-mode child
 	```
@@ -285,12 +285,12 @@ Two debugging options are available. Click on the required option:
 
 Use OpenVINO Model Server build image because it installs the necessary tools.
 
-1. Add the ENTRYPOINT line in Dockerfile.centos to:
+1. Add the ENTRYPOINT line in Dockerfile.centos to :
 	```
 	ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo 'Server started on port'; sleep 100000"]
 	```
 
-2. Build the project in debug mode:
+2. Build the project in debug mode :
 	```
 	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
@@ -309,7 +309,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 	docker ps
 	```
 
-7. Use the ID to execute a new bash shell into this container and start gdb. Make sure the parameters you pass to the OpenVINO Model Server match the parameters in the test code:
+7. Use the ID to execute a new bash shell into this container and start gdb. Make sure the parameters you pass to the OpenVINO Model Server match the parameters in the test code :
 	```
 	docker exec -ti HASH bash
 	[root@898d55a2aa56 src]# cd /ovms/bazel-bin/src/ ; gdb --args ./ovms  --model_name age_gender --model_path /opt/ml/age_gender --port 9000 --rest_port 5500 --log_level TRACE
@@ -317,7 +317,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 
 8. Open a third terminal.
 
-9. In this terminal use the Docker container ID/hash to stop the sleep process that is preventing the tests from starting. These tests are waiting for stdout text "Server started on port":
+9. In this terminal use the Docker container ID/hash to stop the sleep process that is preventing the tests from starting. These tests are waiting for stdout text "Server started on port" :
 	```
 	docker exec -ti HASH bash
 	[root@898d55a2aa56 src]# yum install psmisc
