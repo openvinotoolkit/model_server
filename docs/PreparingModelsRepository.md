@@ -35,7 +35,7 @@ representing its versions (1,2, etc). The versions and the sub-folder names shou
 tensors names as the input and output dictionary keys.  The client passes the input values to the gRPC request and 
 reads the results by referring to the correspondent tensor names. 
 
-Below is the snippet of the example client code:
+Below is the snippet of the example client code :
 ```python
 input_tensorname = 'input'
 request.inputs[input_tensorname].CopyFrom(make_tensor_proto(img, shape=(1, 3, 224, 224)))
@@ -59,10 +59,8 @@ which can map the input and output keys to the appropriate tensors.
        }
 }
 ```
-- This extra mapping can be handy to enable model `user friendly` names on the client when the model has cryptic 
-tensor names.
+- This extra mapping can be handy to enable model `user friendly` names on the client when the model has cryptic tensor names.
 
-- OpenVINO&trade; model server enables the versions present in the configured model folder according to the defined
-[version policy](./ModelVersionPolicy.md).
+- OpenVINO&trade; model server enables the versions present in the configured model folder according to the defined [version policy](./ModelVersionPolicy.md).
 
-- If the client does not specify the version number in parameters, by default the latest version is served
+- If the client does not specify the version number in parameters, by default the latest version is served.

@@ -3,7 +3,12 @@
 ## Introduction
 In addition with [gRPC APIs](./ModelServerGRPCAPI.md) OpenVINO&trade; model server also supports RESTful APIs. This page describes these API endpoints and an end-to-end example on usage.
 
-## Model Status API
+This document covers following API:
+* <a href="#model-status">Model Status API</a>
+* <a href="#model-metadata">Model MetaData API </a>
+* <a href="#predict">Predict API </a>
+
+## Model Status API <a name="model-status"></a>
 * Description
 
 Get information about the status of served models
@@ -17,7 +22,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 
 * Response format
 
-If successful, returns a JSON of following format
+If successful, returns a JSON of following format :
 ```Bash
 {
   'model_version_status':[
@@ -50,7 +55,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
 }
 ```
 
-## Model Metadata API
+## Model MetaData API <a name="model-metadata"></a>
 * Description 
 
 Get the metadata of a model in the model server.
@@ -130,7 +135,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 }
 ```
 
-## Model Predict Function
+## Predict API <a name="predict"></a>
 * Description
 
 Sends requests via TensorFlow Serving RESTful API using images in numpy format. It displays performance statistics and optionally the model accuracy.
@@ -157,13 +162,13 @@ Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx
 
 * Response
 
-A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows:
+A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows :
 ```
 {
   "predictions": <value>|<(nested)list>|<list-of-objects>
 }
 ```
-A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows:
+A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows :
 ```
 {
   "outputs": <value>|<(nested)list>|<object>

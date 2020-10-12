@@ -8,9 +8,9 @@ OpenVINO&trade; Model Server is a scalable, high-performance solution for servin
 * Supports multiple Deep Learning frameworks such as Caffe*, TensorFlow*, MXNet* and ONNX*.
 * Supports multi-worker configuration and parallel inference execution.
 * Supports model reshaping at runtime.
-* Speeds time-to-market as development of client code is reduced
-* Server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability. [Kubernetes deployments](../deploy)
-* The server supports reshaphing models in runtime - [Model Reshaping](./ShapeAndBatchSize.md)
+* Speeds time-to-market as development of client code is reduced.
+* Server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability. [Kubernetes deployments](../deploy).
+* The server supports reshaphing models in runtime - [Model Reshaping](./ShapeAndBatchSize.md).
 
 ### Model Server Components:
 OpenVINO&trade; Model Server includes the following components:
@@ -20,7 +20,7 @@ OpenVINO&trade; Model Server includes the following components:
 3. Inference Engine Serving 
 
 ### Documentation Set Contents
-OpenVINO&trade; Model Server documentation set includes the following documents:
+OpenVINO&trade; Model Server documentation set includes the following documents :
 
 - [Understanding Architecture of OpenVINO&trade; Model Server](./Architecture.md)
 - [Install the OpenVINO&trade; Model Server on Linux using Docker](./InstallationsLinuxDocker.md)

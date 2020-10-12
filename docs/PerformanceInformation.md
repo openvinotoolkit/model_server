@@ -23,7 +23,7 @@ via [CPU manager for Kuburnetes](https://kubernetes.io/docs/tasks/administer-clu
 
 An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus`.
 
-In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like:
+In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like :
 
 | Parameters      | Description |
 | :---        |    :----   |
@@ -34,7 +34,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 > **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
 
-- Example
+- Example :
 1. While passing the plugin configuration, omit the `KEY_` phase. 
 2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
 

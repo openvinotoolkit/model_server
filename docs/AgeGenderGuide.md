@@ -14,19 +14,19 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 ```
 
 #### Pull and tag the docker image with OVMS component 
-1. Pull the latest version of OpenVINO&trade; Model Server from Dockerhub 
+Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
 ```Bash
 docker pull openvino/model_server:latest
 ```
 
 #### Start OVMS docker container with downloaded model
-Start OVMS container with image pulled in previous step and mount `model` directory
+Start OVMS container with image pulled in previous step and mount `model` directory :
 ```Bash 
 docker run --rm -d -v $(pwd)/model:/models/age_gender/1 -p 9000:9000 -p 9001:9001 openvino/model_server:latest --model_path models/age_gender --model_name age_gender --port 9000 --rest_port 9001
 ```
 
 ####  Download Sample Image
-Download sample image using command :
+Download sample image using the command :
 ```Bash
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0001.jpg
 ```

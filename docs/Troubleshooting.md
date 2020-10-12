@@ -15,13 +15,13 @@ This document gives information about troubleshooting following issues while usi
 
 OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./ModelVersionPolicy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
 
-When new model version is detected, the server loads the model files and starts serving new model version. This operation might fail for the following reasons:
-- There is a problem with accessing model files (i. e. due to network connectivity issues to the  remote storage or insufficient permissions)
-- Model files are malformed and can not be imported by the Inference Engine
-- Model requires custom CPU extension
+When new model version is detected, the server loads the model files and starts serving new model version. This operation might fail for the following reasons :
+- There is a problem with accessing model files (i. e. due to network connectivity issues to the  remote storage or insufficient permissions).
+- Model files are malformed and can not be imported by the Inference Engine.
+- Model requires custom CPU extension.
 
 
-Below are examples of incorrect structure:
+Below are examples of incorrect structure :
 ```bash
 models/
 ├── model1
@@ -38,7 +38,7 @@ models/
 ```
 - In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as valid model version because it does not contain valid OpenVINO model files.
 
-- The server will not detect any version in `model2`because although the files in `model2` are correct, but they are not in a numerical directory 
+- The server will not detect any version in `model2`because although the files in `model2` are correct, but they are not in a numerical directory.
 
 - The root cause is reported in the server logs or in the response from a call to GetModelStatus function. 
 
@@ -55,7 +55,7 @@ models/
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling. 
 - The information about the failure reason is passed to the gRPC client in the response. It is also logged on the model server in the DEBUG mode.
 
-The possible issues could be:
+The possible issues could be :
 * Incorrect shape of the input data.
 * Incorrect input key name which does not match the tensor name or set input key name in `mapping_config.json`.
 * Incorrectly serialized data on the client side.
@@ -65,8 +65,7 @@ The possible issues could be:
 
 - Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
 
-- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or 
-kubernetes capabilities.
+- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or kubernetes capabilities.
 
 ## Usage Monitoring<a name="usage-monitoring"></a>
 - It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
@@ -80,7 +79,7 @@ http://user:password@hostname:port
 or
 https://user:password@hostname:port
 ```
-where user and password are optional. The OVMS will try to use the following environment variables:
+where user and password are optional. The OVMS will try to use the following environment variables :
 ```
 https_proxy
 HTTPS_PROXY
