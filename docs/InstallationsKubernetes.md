@@ -33,7 +33,7 @@ are needed and you can proceed to _Deploy the Model Server_ section.
 Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable. Please follow the steps below :
 
 * Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_. Name a file for example: _gcp-creds.json_ 
-(you can follow these instructions to create a Service Account and download JSON [here](https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account))
+(you can follow these instructions to create a Service Account and download JSON [here](https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account)).
 * Create a Kubernetes secret from this JSON file :
 
 ``` bash 
@@ -61,7 +61,9 @@ $ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://
     
 ## Deploy the Model Server Image
 
-Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](../deploy/ovms/values.yaml)
+Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](../deploy/ovms/values.yaml).
+
+```
 $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
