@@ -23,7 +23,7 @@ This guide provides step-by-step instructions on how to install OpenVINO&trade; 
 - <a href="#quickstart">Quick Start Guide for OpenVINO&trade; Model Server</a>
 - <a href="#singlemodel">Starting Docker Container with a Single Model
 - <a href="#configfile">Starting Docker container with a configuration file</a>
-- <a href="#sourcecode">Building the OpenVINO&trade; Model Server Image using Source Code </a>
+- <a href="#sourcecode">Building the OpenVINO&trade; Model Server Image </a>
 - <a href="#ncs">Starting Docker container with Neural Compute Stick</a>
 - <a href="#hddl">Starting Docker container with HDDL Plugin </a>
 - <a href="#gpu">Starting Docker container with GPU</a>
