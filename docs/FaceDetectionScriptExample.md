@@ -97,17 +97,17 @@ curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/op
 
 ### Prepare Model Repository
 
-Refer this link to place your downloaded or converted in a repository to mount it to the OpenVINO&trade; Model Server- [Preparation of Models](./PreparingModelsRepository.md)
+Refer this link to place your downloaded or converted in a repository to mount it to the OpenVINO&trade; Model Server- [Preparation of Models](./models_repository.md)
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
 Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer this guide to know more about the parameters.
 
-- Run following command on your terminal 
+- Run following command on your terminal
 
 ```bash
 
- docker run -d -v $(pwd)/model:/models/person-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 ovms:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
+ docker run -d -v $(pwd)/model:/models/person-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
 
 ```
 
@@ -117,7 +117,7 @@ Check if the container is running with :
 ```bash
 docker ps
 ```
-If the container is not running , check out the [troubleshooting guide](./Troubleshooting.md)
+If the container is not running , check out the [troubleshooting guide](./troubleshooting.md)
 
 
 ### Run the example script
@@ -138,4 +138,4 @@ Note : Add the `model_name` parameter and pass the model name you have used whil
 
 - The image with inference is stored in results folder. The inference bounding boxes are drawn around people and vehicles present in the image 
 
-![image](./Images/person-detection_3_0.jpg)
+![image](person-detection_3_0.jpg)

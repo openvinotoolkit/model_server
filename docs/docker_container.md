@@ -92,7 +92,7 @@ You can also build your own image using steps in - <a href="#sourcecode">Build O
 
 #### Running the OpenVINO&trade; Model Server image
 
-Follow the [Preparation of Model guide](./PreparingModelsRepository.md) before running the docker image 
+Follow the [Preparation of Model guide](./models_repository.md) before running the docker image 
 
 Run the OpenVINO&trade; Model Server by running the following command: 
 
@@ -103,7 +103,7 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_
 
 - Publish the container's port to your host's **open ports**
 - In above command port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
-- For preparing and saving models to serve with OpenVINO&trade; Model Server refer [this](./PreparingModelsRepository.md)
+- For preparing and saving models to serve with OpenVINO&trade; Model Server refer [this](./models_repository.md)
 - Add a name to your model for the client gRPC/REST API calls.
 
 #### Other Arguments
@@ -208,7 +208,7 @@ docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 openvino/mo
 
 * option `-p` exposes the model serving port outside the docker container.
 
-* `ovms:latest` represent the image name which can be different depending the tagging and building process.
+* `openvino/model_server:latest` represent the image name which can be different depending the tagging and building process.
 
 * `ovms` binary is the docker entrypoint. It accepts the following parameters:
 
@@ -390,7 +390,7 @@ Each config object includes values for the model `name` and the `base_path` attr
 - When the config file is present, the docker container can be started in a similar manner as a single model. Keep in mind that models with cloud storage path require specific environmental variables set. Configuration file above contains both GCS and S3 paths so starting docker container supporting all those models can be done with:
 
 ```bash
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config.json>:/opt/ml/config.json ovms:latest \
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config.json>:/opt/ml/config.json openvino/model_server:latest \
 --config_path /opt/ml/config.json --port 9001 --rest_port 8001
 ```
 
@@ -432,7 +432,7 @@ rules:
 
 ```
 docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
@@ -458,7 +458,7 @@ To start server with HDDL you can use command similar to:
 
 ```
 docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
 ```
 
 `--device=/dev/ion:/dev/ion` mounts the accelerator.
@@ -509,7 +509,7 @@ ovms-py:latest --config_path /opt/ml/config.json --port 9001
 Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
- /dev:/dev -p 9001:9001 ovms:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+ /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.

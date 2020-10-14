@@ -58,7 +58,7 @@ This guide provides step-by-step instructions to install OpenVino&trade; Model S
 ```
 2. The server can be started in interactive mode, as  a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
-Refer to [Installing OpenVINO&trade; Model Server for Linux using Docker Container](./InstallationsLinuxDocker.md) to get more details about the docker image built in <a href="#model-server-installation">Model Server Installation</a>.
+Refer to [Installing OpenVINO&trade; Model Server for Linux using Docker Container](./docker_container.md) to get more details about the docker image built in <a href="#model-server-installation">Model Server Installation</a>.
 
 While preparing environment you can use steps from this [Dockerfile](https://github.com/openvinotoolkit/model_server/blob/main/Dockerfile.centos) as a reference.
 
@@ -74,7 +74,7 @@ Example :
 ```
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
-You can also run it in [Docker container](./InstallationsLinuxDocker.md).
+You can also run it in [Docker container](./docker_container.md).
 
 >Note:
 >* Checkout supported configurations. Look at [VPU Plugins documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html) to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) and convert your model to desired format.
@@ -91,7 +91,7 @@ Example :
 ```
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
-You can also run it in [Docker container](./InstallationsLinuxDocker.md).
+You can also run it in [Docker container](./docker_container.md).
 
 >Note: Check out supported configurations. Look at VPU Plugins to see if your model is supported. If not, take a look at OpenVINO Model Optimizer and convert your model to desired format.
 
@@ -107,14 +107,14 @@ Example :
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-You can also run it in [Docker container](./InstallationsLinuxDocker.md).
+You can also run it in [Docker container](./docker_container.md).
 
 >**Note**: Check out [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
 Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) and convert your model to the OpenVINO format.
 
 ## Using Multi-Device and Heterogeneous Plugin<a name="using-plugin"></a>
 
-See [Multi-Device Plugin overview](./InstallationsLinuxDocker.md#multiplugin) and [Hetero Plugin overview](./InstallationsLinuxDocker.md#heteroplugin).<br>
+See [Multi-Device Plugin overview](./docker_container.md#multiplugin) and [Hetero Plugin overview](./docker_container.md#heteroplugin).<br>
 
 Apply instructions linked above without Docker specific steps.
 

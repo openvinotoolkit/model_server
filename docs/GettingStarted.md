@@ -22,10 +22,10 @@ OpenVINO&trade; Model Server includes the following components:
 ### Documentation Set Contents
 OpenVINO&trade; Model Server documentation set includes the following documents :
 
-- [Understanding Architecture of OpenVINO&trade; Model Server](./Architecture.md)
-- [Install the OpenVINO&trade; Model Server on Linux using Docker](./InstallationsLinuxDocker.md)
+- [Understanding Architecture of OpenVINO&trade; Model Server](./architecture.md)
+- [Install the OpenVINO&trade; Model Server on Linux using Docker](./docker_container.md)
 - [Installation of OpenVINO&trade; Model Server with Kubernetes](./InstallationsKubernetes.md)
-- [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./InstallationsModelServerVMAndBareMetal.md)
+- [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./host.md)
 - [OpenVINO&trade; Model Server gRPC Reference Guide](./ModelServerGRPCAPI.md)
 - [OpenVINO&trade; Model Server REST API Reference Guide](./ModelServerRESTAPI.md)
 

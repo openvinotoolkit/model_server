@@ -9,12 +9,12 @@
 - Services are designed via set of C++ classes managing AI models in Intermediate Representation format. [OpenVINO&trade; Inference Engine](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_inference_engine_intro.html) component executes the graphs operations.
 
 <p align="center">
-  <img width="548" height="564" src="./Images/serving-c.png">
+  <img width="548" height="564" src="serving-c.png">
 </p>
 
 **<div align="center">Figure 1: Docker Container (VM or Bare Metal Host)</div>**
 
-- OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Both Google Cloud Storage and S3 compatible storage are supported. Refer to [Preparing the Models Repository](./PreparingModelsRepository.md) for more details.
+- OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Both Google Cloud Storage and S3 compatible storage are supported. Refer to [Preparing the Models Repository](./models_repository.md) for more details.
 
 - OpenVINO&trade; Model Server is suitable for landing in Kubernetes environment. It can be also hosted on a bare metal server, virtual machine or inside a docker container. It is also suitable for landing in Kubernetes environment. 
 
