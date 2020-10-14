@@ -23,6 +23,6 @@ it ignores the batch_size value.
     - a dictionary of tuples e.g. {input1:(1,3,224,224),input2:(1,3,50,50)} - it defines a shape of every included input in the model
 
 *Note:* Some models do not support reshape operation. Learn more about supported model graph layers including all limitations
-on [Docs_IE_DG_ShapeInference](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html).
+on [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html).
 In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
 will get an error. The model server will also report such problem in the logs.
