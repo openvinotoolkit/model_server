@@ -16,8 +16,7 @@ OpenVINO&trade; Model Server is a scalable, high-performance solution for servin
 OpenVINO&trade; Model Server includes the following components:
 
 1. Deep Learning Inference Engine
-2. OpenCV 
-3. Inference Engine Serving 
+2. Inference Engine Serving 
 
 ### Documentation Set Contents
 OpenVINO&trade; Model Server documentation set includes the following documents :
