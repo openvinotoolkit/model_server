@@ -40,37 +40,9 @@ For additional endpoints, refer the [REST API](./ModelServerRESTAPI.md).
 
 ### Quick Start Guide <a name="quickstart"></a>
 
-```bash
- # Pull the latest version of OpenVINO&trade; Model Server from Dockerhub - 
-docker pull openvino/model_server:latest
+A quick start guide to download models and run OpenVINO&trade; Model Server is provided. It allows you to setup OpenVINO&trade; Model Server and  run a Face Detection Example.
 
-#  Download model files into a separate directory
-# OpenVINO&trade; Model Server requires models in model repositories. Refer to this link (Preparation of Models) or run following command to get started with an example
-
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
-
-#  Start the container serving gRPC on port 9000 
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
-
-#  Download the example client script to test and run the gRPC 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_requirements.txt -o client_requirements.txt
-
-# Download an image to be analyzed
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/people/people1.jpeg -o images/people1.jpeg
-
-# Install python client dependencies
-pip install -r client_requirements.txt
-
-#  Create a directory for results
-mkdir results
-
-# Run inference and store results in the newly created folder
-python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results
-
-# Check results folder for image with inference drawn over it.
-```
-
+Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
 
 ## Detailed steps to install OpenVINO&trade; Model Server using Docker container
 

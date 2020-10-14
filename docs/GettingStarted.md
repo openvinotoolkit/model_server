@@ -22,6 +22,7 @@ OpenVINO&trade; Model Server includes the following components:
 OpenVINO&trade; Model Server documentation set includes the following documents :
 
 - [Understanding Architecture of OpenVINO&trade; Model Server](./architecture.md)
+- [Quick Start Guide to Setup OpenVINO&trade; Model Server](./ovms_quickstart.md)
 - [Install the OpenVINO&trade; Model Server on Linux using Docker](./docker_container.md)
 - [Installation of OpenVINO&trade; Model Server with Kubernetes](./InstallationsKubernetes.md)
 - [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./host.md)
