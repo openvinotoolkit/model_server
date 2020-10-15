@@ -1,4 +1,4 @@
-# OpenVINO™ Model Server Exemplery Client 
+# OpenVINO™ Model Server Example Client 
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
 
