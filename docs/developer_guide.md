@@ -52,7 +52,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 | `--test_output=all` | log all tests |
 | `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  | 
 | `//src:ovms_test` | the test source |
-> **NOTE**: For more information, see the [bezel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
+> **NOTE**: For more information, see the [bazel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
 
 
 	
