@@ -71,13 +71,13 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 More information about GRPC API can be found [here](./ModelServerGRPCAPI.md)
 
-Refer to the [example client code](example_client) to learn how to use this API and submit the requests using the gRPC interface.
+Refer to the [example client code](./example_client.md) to learn how to use this API and submit the requests using the gRPC interface.
 
 ### REST
 
 More information about REST API can be found [here](./ModelServerRESTAPI.md)
 
-Refer to the [example client code](example_client) to learn how to use REST API 
+Refer to the [example client code](./example_client.md) to learn how to use REST API 
 
 ## Testing
 
