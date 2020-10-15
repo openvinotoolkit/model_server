@@ -56,7 +56,7 @@ Read more about *Predict API* usage [here](./example_client.md#predict-api)
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/tree/main/example_client) shows how to use these API and submit the requests using the gRPC interface.
+- [Example client code](./docs/example_client.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 
