@@ -58,7 +58,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about *Get Model Status API* usage [here](example_client.md#model-status-api-1)
+Read more about *Get Model Status API* usage [here](./../example_client/README.md#model-status-api-1)
 
 ## Model Metadata API <a name="model-metadata"></a>
 * Description 
@@ -180,4 +180,4 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
   "outputs": <value>|<(nested)list>|<object>
 }
 ```
-Read more about *Predict API* usage [here](./example_client.md#predict-api-1)
+Read more about *Predict API* usage [here](./../example_client/README.md#predict-api-1)
