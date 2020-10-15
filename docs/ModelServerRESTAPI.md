@@ -139,7 +139,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
   }
 }
 ```
-Read more about *Get Model Metadata API* usage [here](example_client#model-metadata-api-1)
+Read more about *Get Model Metadata API* usage [here](./../example_client/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
 * Description
