@@ -81,7 +81,7 @@ $ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://m
 ```
 ## Deploy Model Server with a Configuration File
 
-To serve multiple models you can run Model Server with a configuration file as described [here](./InstallationsLinuxDocker.md#configfile).
+To serve multiple models you can run Model Server with a configuration file as described [here](./docker_container.md#configfile).
 
 ### To deploy with config file:
 - Create a configuration file named config.json and fill it with proper information

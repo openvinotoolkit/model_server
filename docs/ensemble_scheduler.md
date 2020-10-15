@@ -37,7 +37,7 @@ Internal pipeline nodes are created by user. Currently there is only one node ty
 - For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. Server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
 - Diagram for this pipeline would look like this: 
 
-![diagram](./Images/model_ensemble_diagram.svg)
+![diagram](model_ensemble_diagram.svg)
 
 ### Step 1: Prepare the models
 1. Follow the commands below sequentially, to download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo):
@@ -62,7 +62,7 @@ Internal pipeline nodes are created by user. Currently there is only one node ty
 ~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir models/public/argmax/saved_model
 ```
 
-4. Execute following commands to convert models to IR format and [prepare models repository](./PreparingModelsRepository.md):
+4. Execute following commands to convert models to IR format and [prepare models repository](./models_repository.md):
 ```
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
 
@@ -303,4 +303,4 @@ Model Ensemble feature is still in preview. Expand to know more.
 
 ## See Also
 
-- [Optimization of Performance](./PerformanceInformation.md)
+- [Optimization of Performance](./performance_tuning.md)

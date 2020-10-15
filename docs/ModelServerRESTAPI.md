@@ -1,12 +1,16 @@
 # OpenVINO&trade; Model Server RESTful API Documentation
 
 ## Introduction
-In addition with [gRPC APIs](./ModelServerGRPCAPI.md) OpenVINO&trade; model server also supports RESTful APIs. This page describes these API endpoints and an end-to-end example on usage.
+In addition with [gRPC APIs](./ModelServerGRPCAPI.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column format of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
+
+> **Note** : Only numerical data type is supported.
 
 This document covers following API:
 * <a href="#model-status">Model Status API</a>
 * <a href="#model-metadata">Model MetaData API </a>
 * <a href="#predict">Predict API </a>
+
+> **Note** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
 ## Model Status API <a name="model-status"></a>
 * Description
@@ -54,8 +58,9 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
+Read more about *Get Model Status API* usage [here](./../example_client/README.md#model-status-api-1)
 
-## Model MetaData API <a name="model-metadata"></a>
+## Model Metadata API <a name="model-metadata"></a>
 * Description 
 
 Get the metadata of a model in the model server.
@@ -134,6 +139,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
   }
 }
 ```
+Read more about *Get Model Metadata API* usage [here](./../example_client/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
 * Description
@@ -174,112 +180,4 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
   "outputs": <value>|<(nested)list>|<object>
 }
 ```
-
-* Command
-```Bash
-python rest_serving_client.py --help
-usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
-                              [--labels_numpy_path LABELS_NUMPY_PATH]
-                              [--rest_url REST_URL] [--rest_port REST_PORT]
-                              [--input_name INPUT_NAME]
-                              [--output_name OUTPUT_NAME]
-                              [--transpose_input {False,True}]
-                              [--transpose_method {nchw2nhwc,nhwc2nchw}]
-                              [--iterations ITERATIONS]
-                              [--batchsize BATCHSIZE]
-                              [--model_name MODEL_NAME]
-                              [--request_format {row_noname,row_name,column_noname,column_name}]
-                              [--model_version MODEL_VERSION]
-```
-* Optional Arguments
-
-| Argument      | Description |
-| :---        |    :----   |
-| -h, --help       | Show help message and exit       |
-| --images_numpy_path IMAGES_NUMPY_PATH |   Numpy in shape [n,w,h,c] or [n,c,h,w]      |
-| --labels_numpy_path LABELS_NUMPY_PATH| Numpy in shape [n,1] - can be used to check model accuracy |
-| --rest_url REST_URL| Specify url to REST API service. Default: http://localhost | 
-| --rest_port REST_PORT| Specify port to REST API service. Default: 5555 |
-| --input_name INPUT_NAME| Specify input tensor name. Default: input |
-| --output_name OUTPUT_NAME| Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
-| --transpose_input {False,True}| Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. Default: True|
-| --transpose_method {nchw2nhwc,nhwc2nchw} | How the input transposition should be executed: nhwc2nchw or nhwc2nchw |
-| --iterations ITERATIONS| Number of requests iterations, as default use number of images in numpy memmap. Default: 0 (consume all frames)|
-| --batchsize BATCHSIZE| Number of images in a single request. Default: 1 |
-| --model_name MODEL_NAME| Define model name, must be same as is in service. Default: resnet|
-| --request_format {row_noname,row_name,column_noname,column_name}| Request format according to TF Serving API:row_noname,row_name,column_noname,column_name|
-| --model_version MODEL_VERSION| Model version to be used. Default: LATEST |
-
-
-* Sample Response
-```Bash
-output shape: (1, 1000)
-Iteration 1; Processing time: 57.42 ms; speed 17.41 fps
-imagenet top results in a single batch:
-('\t', 0, 'airliner', 404, '; Correct match.')
-```
-* Usage example 
-```Bash
-python rest_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
-('Image data range:', 0, ':', 255)
-Start processing:
-	Model name: resnet
-	Iterations: 10
-	Images numpy path: imgs.npy
-	Images in shape: (10, 3, 224, 224)
-
-output shape: (1, 1000)
-Iteration 1; Processing time: 57.42 ms; speed 17.41 fps
-imagenet top results in a single batch:
-('\t', 0, 'airliner', 404, '; Correct match.')
-output shape: (1, 1000)
-Iteration 2; Processing time: 57.65 ms; speed 17.35 fps
-imagenet top results in a single batch:
-('\t', 0, 'Arctic fox, white fox, Alopex lagopus', 279, '; Correct match.')
-output shape: (1, 1000)
-Iteration 3; Processing time: 59.21 ms; speed 16.89 fps
-imagenet top results in a single batch:
-('\t', 0, 'bee', 309, '; Correct match.')
-output shape: (1, 1000)
-Iteration 4; Processing time: 59.64 ms; speed 16.77 fps
-imagenet top results in a single batch:
-('\t', 0, 'golden retriever', 207, '; Correct match.')
-output shape: (1, 1000)
-Iteration 5; Processing time: 59.96 ms; speed 16.68 fps
-imagenet top results in a single batch:
-('\t', 0, 'gorilla, Gorilla gorilla', 366, '; Correct match.')
-output shape: (1, 1000)
-Iteration 6; Processing time: 59.41 ms; speed 16.83 fps
-imagenet top results in a single batch:
-('\t', 0, 'magnetic compass', 635, '; Correct match.')
-output shape: (1, 1000)
-Iteration 7; Processing time: 59.45 ms; speed 16.82 fps
-imagenet top results in a single batch:
-('\t', 0, 'peacock', 84, '; Correct match.')
-output shape: (1, 1000)
-Iteration 8; Processing time: 59.91 ms; speed 16.69 fps
-imagenet top results in a single batch:
-('\t', 0, 'pelican', 144, '; Correct match.')
-output shape: (1, 1000)
-Iteration 9; Processing time: 63.17 ms; speed 15.83 fps
-imagenet top results in a single batch:
-('\t', 0, 'snail', 113, '; Correct match.')
-output shape: (1, 1000)
-Iteration 10; Processing time: 52.59 ms; speed 19.01 fps
-imagenet top results in a single batch:
-('\t', 0, 'zebra', 340, '; Correct match.')
-
-processing time for all iterations
-average time: 58.30 ms; average speed: 17.15 fps
-median time: 59.00 ms; median speed: 16.95 fps
-max time: 63.00 ms; max speed: 15.00 fps
-min time: 52.00 ms; min speed: 19.00 fps
-time percentile 90: 59.40 ms; speed percentile 90: 16.84 fps
-time percentile 50: 59.00 ms; speed percentile 50: 16.95 fps
-time standard deviation: 2.61
-time variance: 6.81
-Classification accuracy: 100.00
-```
-
-
-
+Read more about *Predict API* usage [here](./../example_client/README.md#predict-api-1)

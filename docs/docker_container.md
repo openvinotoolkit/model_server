@@ -40,37 +40,9 @@ For additional endpoints, refer the [REST API](./ModelServerRESTAPI.md).
 
 ### Quick Start Guide <a name="quickstart"></a>
 
-```bash
- # Pull the latest version of OpenVINO&trade; Model Server from Dockerhub - 
-docker pull openvino/model_server:latest
+A quick start guide to download models and run OpenVINO&trade; Model Server is provided. It allows you to setup OpenVINO&trade; Model Server and  run a Face Detection Example.
 
-#  Download model files into a separate directory
-# OpenVINO&trade; Model Server requires models in model repositories. Refer to this link (Preparation of Models) or run following command to get started with an example
-
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
-
-#  Start the container serving gRPC on port 9000 
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
-
-#  Download the example client script to test and run the gRPC 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_requirements.txt -o client_requirements.txt
-
-# Download an image to be analyzed
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/people/people1.jpeg -o images/people1.jpeg
-
-# Install python client dependencies
-pip install -r client_requirements.txt
-
-#  Create a directory for results
-mkdir results
-
-# Run inference and store results in the newly created folder
-python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results
-
-# Check results folder for image with inference drawn over it.
-```
-
+Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
 
 ## Detailed steps to install OpenVINO&trade; Model Server using Docker container
 
@@ -92,7 +64,7 @@ docker pull openvino/model_server:latest
 
 ### Running the OpenVINO&trade; Model Server image for **Single** Model <a name="singlemodel"></a>
 
-Follow the [Preparation of Model guide](./PreparingModelsRepository.md) before running the docker image.
+Follow the [Preparation of Model guide](./models_repository.md) before running the docker image 
 
 Run the OpenVINO&trade; Model Server by running the following command: 
 
@@ -133,10 +105,10 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_
 |---|---|---|---|
 | `"model_name"/"name"` | `string` | model name exposed over gRPC and REST API.(use `model_name` in command line, `name` in json config)   | &check;|
 | `"model_path"/"base_path"` | `"/opt/ml/models/model"`<br>"gs://bucket/models/model"<br>"s3://bucket/models/model"<br>"azure://bucket/models/model" | If using a Google Cloud Storage, Azure Storage or S3 path, see the requirements below.(use `model_path` in command line, `base_path` in json config)  | &check;|
-| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of tuples, such as `{input1:(1,3,224,224),input2:(1,3,50,50)}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [docs_IE_DG_ShapeInference](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). ||
+| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of tuples, such as `{input1:(1,3,224,224),input2:(1,3,50,50)}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). ||
 | `"batch_size"` | `integer / "auto"` | Optional. By default, the batch size is derived from the model, defined through the OpenVINO Model Optimizer. `batch_size` is useful for sequential inference requests of the same batch size.<br><br>Some models, such as object detection, don't work correctly with the `batch_size` parameter. With these models, the output's first dimension doesn't represent the batch size. You can set the batch size for these models by using network reshaping and setting the `shape` parameter appropriately.<br><br>The default option of using the Model Optimizer to determine the batch size uses the size of the first dimension in the first input for the size. For example, if the input shape is `(1, 3, 225, 225)`, the batch size is set to `1`. If you set `batch_size` to a numerical value, the model batch size is changed when the service starts.<br><br>`batch_size` also accepts a value of `auto`. If you use `auto`, then the served model batch size is set according to the incoming data at run time. The model is reloaded each time the input data changes the batch size. You might see a delayed response upon the first request.<br>  ||
 | `"model_version_policy"` | <code>{"all": {}}<br>{"latest": { "num_versions": Integer}<br>{"specific": { "versions":[1, 3] }}</code> | Optional.<br><br>The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.<br><br>The accepted format is in json.<br><br>Examples:<br><code>{"latest": { "num_versions":2 } # server will serve only ywo latest versions of model<br><br>{"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model<br><br>{"all": {}} # server will serve all available versions of given model ||
-| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./PerformanceInformation.md)  ||
+| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md)  ||
 | `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
 
@@ -170,7 +142,10 @@ Add the Azure Storage path as the model_path and pass the Azure Storage credenti
 
 To start a Docker container with support for Azure Storage paths to your model use the AZURE_STORAGE_CONNECTION_STRING variable. This variable contains the connection string to the AS authentication storage account.
 
-Example connection string is: AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
+Example connection string is: 
+```
+AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
+```
 
 Example command with blob storage az://<bucket>/<model_path> :
 ```
@@ -285,7 +260,7 @@ When the config file is present, the docker container can be started in a simila
 
 ```bash
 
-docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config.json>:/opt/ml/config.json ovms:latest \
+docker run --rm -d  -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001  -v <config.json>:/opt/ml/config.json openvino/model_server:latest \
 --config_path /opt/ml/config.json --port 9001 --rest_port 8001
 
 ```
@@ -309,6 +284,19 @@ models/
 ```
 
 here the numerical values depict the version number of the model.
+
+### Updating configuration file
+OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications in runtime :
+
+- When new model is added to the configuration file config.json, OVMS will load and start serving the configured versions. It will also start monitoring for version changes in the configured model storage. If the new model has invalid configuration or it doesn't include any version, which can be successfully loaded, it will be ignored till next update in the configuration file is detected.
+
+- When a deployed model is deleted from config.json, it will be unloaded completely from OVMS after already started inference operations are completed.
+
+- OVMS can also detect changes in the configuration of deployed models. All model version will be reloaded when there is a change in batch_size, plugin_config, target_device, shape, model_version_policy or nireq parameters. When model path is changed, all versions will be reloaded according to the model_version_policy.
+
+- In case the new config.json is invalid (not compliant with json schema), no changes will be applied to the served models.
+
+**Note**: changes in the config file are checked regularly with an internal defined by the parameter --file_system_poll_wait_seconds.
 
 To know more about OpenVINO&trade; Model Server , you can refer [Version Policy](./ModelVersionPolicy.md) document.
 
@@ -371,7 +359,7 @@ rules:
 
 ```
 docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
@@ -396,7 +384,7 @@ To start server with HDDL you can use command similar to ss:
 
 ```
 docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
-ovms:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
+openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
 ```
 
 `--device=/dev/ion:/dev/ion` mounts the accelerator.
@@ -447,7 +435,7 @@ ovms-py:latest --config_path /opt/ml/config.json --port 9001
 Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
- /dev:/dev -p 9001:9001 ovms:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+ /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
