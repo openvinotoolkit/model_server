@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#ifndef SRC_VERSION_HPP_
+#define SRC_VERSION_HPP_
 #define PROJECT_NAME "OpenVINO Model Server"
-
 #define PROJECT_VER "REPLACE_PROJECT_VER"
 
 #define PROJECT_VER_MAJOR "REPLACE_PROJECT_MAJOR"
@@ -23,3 +23,4 @@
 #define PROJECT_VER_MINOR "REPLACE_PROJECT_MINOR"
 
 #define PROJECT_VER_PATCH "REPLACE_PROJECT_PATCH"
+#endif
