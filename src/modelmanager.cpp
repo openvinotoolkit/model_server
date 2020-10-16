@@ -494,27 +494,21 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             spdlog::error("Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
-            throw throw std::runtime_error(("Error occurred while loading model: {} versions; error: {}",
-                config.getName(),
-                status.string()));
+            throw std::runtime_error("Error occurred while loading model");
         }
         status = model->reloadVersions(versionsToReload, config);
         if (!status.ok()) {
             spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
-            throw throw std::runtime_error(("Error occurred while reloading model: {} versions; error: {}",
-                config.getName(),
-                status.string()));
+            throw std::runtime_error("Error occurred while reloading model");
         }
         status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
-            throw throw std::runtime_error(("Error occurred while unloading model: {} versions; error: {}",
-                config.getName(),
-                status.string()));
+            throw std::runtime_error("Error occurred while unloading model");
         }
 
         if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
@@ -526,9 +520,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                         config.getLocalPath(),
                         lfstatus);
                     status = lfstatus;
-                    throw throw std::runtime_error(("Error occurred while deleting local copy of cloud model: {} versions; error: {}",
-                        config.getLocalPath(),
-                        lfstatus.string()));
+                    throw std::runtime_error("Error occurred while deleting local copy of cloud model");
                 } else {
                     spdlog::info("Model removed from {}", config.getLocalPath());
                 }
@@ -540,9 +532,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 LocalFileSystem lfs;
                 auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
                 if (lfstatus != StatusCode::OK) {
-                    spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                        config.getLocalPath(),
-                        lfstatus);
+                    spdlog::error("Error occurred while deleting local copy of cloud model");
                     status = lfstatus;
                 } else {
                     spdlog::info("Model removed from {}", config.getLocalPath());
