@@ -74,6 +74,11 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
+PROJECT_VER ?= 2021
+PROJECT_VER_MAJOR ?= 1
+PROJECT_VER_MINOR ?= 1
+PROJECT_VER_PATCH ?= 1
+
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
@@ -150,6 +155,9 @@ endif
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg PROJECT_VER=${PROJECT_VER} \
+		--build-arg PROJECT_VER_MAJOR=${PROJECT_VER_MAJOR} \
+		--build-arg PROJECT_VER_MINOR=${PROJECT_VER_MINOR} \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \

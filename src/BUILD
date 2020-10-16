@@ -90,6 +90,7 @@ cc_library(
         "tensorinfo.hpp",
         "threadsafequeue.hpp",
         "timer.hpp",
+        "version.hpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
