@@ -488,43 +488,70 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     downloadModels(fs, config, versionsToStart);
     downloadModels(fs, config, versionsToReload);
 
-    status = model->addVersions(versionsToStart, config);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while loading model: {} versions; error: {}",
-            config.getName(),
-            status.string());
-        return status;
-    }
-    status = model->reloadVersions(versionsToReload, config);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
-            config.getName(),
-            status.string());
-        return status;
-    }
-    status = model->retireVersions(versionsToRetire);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
-            config.getName(),
-            status.string());
-        return status;
-    }
+    try {
+        status = model->addVersions(versionsToStart, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while loading model: {} versions; error: {}",
+                config.getName(),
+                status.string());
+            throw throw std::runtime_error(("Error occurred while loading model: {} versions; error: {}",
+                config.getName(),
+                status.string()));
+        }
+        status = model->reloadVersions(versionsToReload, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            throw throw std::runtime_error(("Error occurred while reloading model: {} versions; error: {}",
+                config.getName(),
+                status.string()));
+        }
+        status = model->retireVersions(versionsToRetire);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            throw throw std::runtime_error(("Error occurred while unloading model: {} versions; error: {}",
+                config.getName(),
+                status.string()));
+        }
 
-    if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
-        if (config.getLocalPath().compare(config.getBasePath())) {
-            LocalFileSystem lfs;
-            auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-            if (lfstatus != StatusCode::OK) {
-                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                    config.getLocalPath(),
-                    lfstatus);
-            } else {
-                spdlog::info("Model removed from {}", config.getLocalPath());
+        if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
+            if (config.getLocalPath().compare(config.getBasePath())) {
+                LocalFileSystem lfs;
+                auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+                if (lfstatus != StatusCode::OK) {
+                    spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                        config.getLocalPath(),
+                        lfstatus);
+                    status = lfstatus;
+                    throw throw std::runtime_error(("Error occurred while deleting local copy of cloud model: {} versions; error: {}",
+                        config.getLocalPath(),
+                        lfstatus.string()));
+                } else {
+                    spdlog::info("Model removed from {}", config.getLocalPath());
+                }
+            }
+        }
+    } catch (std::exception& e) {
+        if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
+            if (config.getLocalPath().compare(config.getBasePath())) {
+                LocalFileSystem lfs;
+                auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+                if (lfstatus != StatusCode::OK) {
+                    spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                        config.getLocalPath(),
+                        lfstatus);
+                    status = lfstatus;
+                } else {
+                    spdlog::info("Model removed from {}", config.getLocalPath());
+                }
             }
         }
     }
 
-    return StatusCode::OK;
+    return status;
 }
 
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
