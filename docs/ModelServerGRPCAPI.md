@@ -42,7 +42,7 @@ Read more about *Get Model Metadata API* usage [here](./../example_client/README
 
 Sends requests via TFS gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy.
 
- [Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
+[Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
  * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format.
  * *PredictResponse* includes a map of outputs serialized by 

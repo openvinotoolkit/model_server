@@ -26,14 +26,14 @@ A few key features:
 - [Model reshaping](docs/ShapeAndBatchSize.md). The server supports reshaping models in runtime. 
 - [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
-**Note: OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.** 
+**Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
 
 ## Build OpenVINO Model Server
 Build the docker image using command:
 ```bash
 make docker_build DLDT_PACKAGE_URL=<URL>
 ```
-called from the root directory of the repository.
+called from the root directory of this github repository.
 Note: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 
 It will generate the images, tagged as:
@@ -69,13 +69,13 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 ### GRPC 
 
-More information about GRPC API can be found [here](./docs/ModelServerGRPCAPI.md)
+Learn more about [GRPC API](docs/ModelServerGRPCAPI.md)
 
-Refer to the [GRPC example client code](./example_client/README.md#grpc-api-client-examples) to learn how to use and submit the requests using the gRPC interface.
+Refer to the [GRPC example client code](example_client/README.md#grpc-api-client-examples) to learn how to use and submit the requests using the gRPC interface.
 
 ### REST
 
-More information about REST API can be found [here](./docs/ModelServerRESTAPI.md)
+Learn more about [REST API](docs/ModelServerRESTAPI.md)
 
 Refer to the [REST API example client code](./example_client/README.md#rest-api-client-examples) to learn how to use REST API 
 
@@ -113,8 +113,6 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 * [RESTful API](https://restfulapi.net/)
 
 * [Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
-
-* [OpenVINO Model Server boosts AI](https://www.intel.ai/openvino-model-server-boosts-ai-inference-operations/)
 
 
 ## Contact

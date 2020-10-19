@@ -14,7 +14,7 @@ OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machi
 #### Operating Systems 
 
 * Ubuntu 18.04.x or higher, long-term support (LTS), 64-bit
-* CentOS 7.4, 64-bit (for target only)
+* CentOS 7.8, 64-bit (for target only)
 * Red Hat Enterprise Linux
 * ClearLinux
 * SUSE Linux

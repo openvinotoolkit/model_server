@@ -6,10 +6,10 @@ This page guides you through an example script to run face detection inference w
 - The script [face_detection.py](../example_client/face_detection.py) runs face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
-- The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
-the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server. To know more about batch_size and shape parameters refer to (link)
+- The script can adjust the input image size and change the bradko@spawanie-gdansk.platch size in the request. It demonstrates how to use
+the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
-- The example relies on the model [face_detection_0004](https://docs.openvinotoolkit.org/2018_R5/_docs_Retail_object_detection_face_sqnet10modif_ssd_0004_caffe_desc_face_detection_retail_0004.html).
+- The example relies on the model [face_detection_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/face-detection-retail-0004/description/face-detection-retail-0004.md).
 
 ### Running the Script
 
@@ -43,14 +43,8 @@ optional arguments:
 Start the OVMS service locally:
 
 ```bash
-mkdir -p model
-
-cd model
-
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
-
-
-docker run -d -v `pwd`/model:/models -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
+curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
+docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
 #### Run the client:
@@ -82,16 +76,11 @@ The Face Detection Example script can be a reference script to run various other
 - A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model using to IR format (.xml and .bin format). 
 - Refer to this link to convert your own model- [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)
 
-Create a **model** folder andd download Person-Vehicle-Detection Model:
+Create a **model** folder and download Person-Vehicle-Detection Model:
 
 
 ```bash
-mkdir model 
-
-cd model
-
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin https://download.01.org/opencv/2020/openvinotoolkit/2020.2/open_model_zoo/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o person-vehicle-bike-detection-crossroad-0078.bin -o person-vehicle-bike-detection-crossroad-0078.xml
-
+curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o model/1/person-vehicle-bike-detection-crossroad-0078.bin -o model/1/person-vehicle-bike-detection-crossroad-0078.xml
 ```
 
 ### Prepare Model Repository
@@ -106,7 +95,7 @@ Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shap
 
 ```bash
 
- docker run -d -v $(pwd)/model:/models/person-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
+ docker run -d -v $(pwd)/model:/models/person-detection -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
 
 ```
 

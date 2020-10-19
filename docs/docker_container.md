@@ -11,10 +11,6 @@
 * Intel® Neural Compute Stick 2.
 * Intel® Vision Accelerator Design with Intel® Movidius™ VPUs.
 
-### Operating Systems
-
-* Ubuntu 18.04.x long-term support (LTS), 64-bit.
-
 ### Overview 
 
 This guide provides step-by-step instructions on how to install OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this :
@@ -34,23 +30,22 @@ This guide provides step-by-step instructions on how to install OpenVINO&trade; 
 
 ##  Installing OpenVINO&trade; Model Server with existing Docker Container<a name="ExistingDocker"></a>
 
-A quick start guide to install model server and run it with face detection model is provided below. It includes scripts to query the gRPC endpoints and save results.
-
-For additional endpoints, refer the [REST API](./ModelServerRESTAPI.md).
-
 ### Quick Start Guide <a name="quickstart"></a>
 
-A quick start guide to download models and run OpenVINO&trade; Model Server is provided. It allows you to setup OpenVINO&trade; Model Server and  run a Face Detection Example.
+A quick start guide to download models and run OpenVINO&trade; Model Server is provided below. 
+It allows you to setup OpenVINO&trade; Model Server and run a Face Detection Example.
 
 Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
+
+For additional endpoints, refer the [REST API](./ModelServerRESTAPI.md).
 
 ## Detailed steps to install OpenVINO&trade; Model Server using Docker container
 
 ### Install Docker
 
-Install Docker for Ubuntu 18.04 using the following link :
+Install Docker using the following link :
 
-- [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- [Install Docker Engine](https://docs.docker.com/engine/install/)
 
 ### Pulling OpenVINO&trade; Model Server Image
 
@@ -69,8 +64,8 @@ Follow the [Preparation of Model guide](./models_repository.md) before running t
 Run the OpenVINO&trade; Model Server by running the following command: 
 
 ```
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_LEVEL=DEBUG -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
---model_path path_to_model --model_name model_name --port 9000 --rest_port 9001 --shape auto
+docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
+--model_path path_to_model --model_name model_name --port 9000 --rest_port 9001 --shape auto --log_level DEBUG
 ```
 
 #### Configuration Arguments for running the OpenVINO&trade; Model Server :
@@ -79,8 +74,8 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_
 - -d - Run the container in the background.
 - -v - Defines how to mount the models folder in the Docker container.
 - -p - Exposes the model serving port outside the Docker container.
-- openvino/model_server:latest - Represents the image name. This varies by tag and build process. The ovms binary is the Docker entry point. See the full list of ovms tags.
-- --model_path - Model location. This can be a Docker container that is mounted during start-up or a Google* Cloud Storage path in format gs://<bucket>/<model_path> or AWS S3 path s3://<bucket>/<model_path>. See the requirements below for using a cloud storage.
+- openvino/model_server:latest - Represents the image name. This varies by tag and build process. The ovms binary is the Docker entry point. See the full list of [ovms tags](https://hub.docker.com/repository/docker/openvino/model_server).
+- --model_path - Model location. This can be a Docker container path that is mounted during start-up or a Google* Cloud Storage path in format gs://<bucket>/<model_path> or AWS S3 path s3://<bucket>/<model_path> or az://<container>/<model_path> for Azure blob. See the requirements below for using a cloud storage.
 - --model_name - The name of the model in the model_path.
 - --port - gRPC server port.
 - --rest_port - REST server port.
@@ -92,9 +87,6 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -e LOG_
 - In above command port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
 - For preparing and saving models to serve with OpenVINO&trade; Model Server refer [this](./PreparingModelsRepository.md).
 - Add model_name for the client gRPC/REST API calls.
-
-
-
 
 
 ### Configuration Parameters :
@@ -162,12 +154,12 @@ docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
 --model_path azfs://share/model_path --model_name as_model --port 9001
-Add -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" to docker run command for proxy cloud storage connection.
 ```
+Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run command for proxy cloud storage connection.
 
-By default the https_proxy setting will be used. If you want to use http_proxy please set the AZURE_STORAGE_USE_HTTP_PROXY environment variable to any value and pass it to the container.
+By default the `https_proxy` variable will be used. If you want to use `http_proxy` please set the `AZURE_STORAGE_USE_HTTP_PROXY` environment variable to any value and pass it to the container.
 
-###  Google Cloud Storage path requirements
+### Google Cloud Storage path requirements
 
 Add the Google Cloud Storage path as the model_path and pass the Google Cloud Storage credentials to the Docker container.
 Exception: This is not required if you use GKE kubernetes cluster. GKE kubernetes clusters handle authorization.
@@ -181,8 +173,8 @@ docker run --rm -d  -p 9001:9001 \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
-AWS S3 and Minio storage path requirements
 ```
+### AWS S3 and Minio storage path requirements
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 
@@ -283,7 +275,7 @@ models/
         └── mapping_config.json
 ```
 
-here the numerical values depict the version number of the model.
+Here the numerical values depict the version number of the model.
 
 ### Updating configuration file
 OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications in runtime :
@@ -316,50 +308,50 @@ It will generate the images, tagged as :
 - openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 
-*The release package is compatible with linux machines on which glibc version is greater than or equal to the build image version. For debugging, an image with a suffix -build is also generated (i.e. openvino/model_server-build:latest).*
-
 Note: Images include OpenVINO 2021.1 release.
 
 ## Running OpenVINO&trade; Model Server with AI Accelerators
 
-###  Starting docker container with Neural Compute Stick<a name="ncs"></a>
+<details><summary>Using an Intel® Movidius™ Neural Compute Stick</summary>
 
-Plugin for [Intel® Movidius™ Neural Compute Stick](https://software.intel.com/en-us/neural-compute-stick), starting from 
-version 2019 R1.1 is distributed both in a binary package and [source code](https://github.com/opencv/dldt). 
-You can build the docker image of OpenVINO Model Server, including Myriad plugin, using any form of the OpenVINO toolkit distribution:
-- `make docker_build_bin dldt_package_url=<url>` 
-- `make docker_build_apt_ubuntu`
+#### Prepare to use an Intel® Movidius™ Neural Compute Stick
 
-Neural Compute Stick must be visible and accessible on host machine. You may need to update udev 
-rules:
-<details>
-<summary><i>Updating udev rules</i></summary>
+[Intel® Movidius™ Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
+plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
+
+The Intel® Movidius™ Neural Compute Stick must be visible and accessible on host machine. 
+
+Follow steps to update the udev rules if necessary</summary>
 </br>
 
-1. Create file __97-usbboot.rules__ and fill it with:
+1. Create a file named `97-usbboot.rules` that includes the following content:
 
 ```
    SUBSYSTEM=="usb", ATTRS{idProduct}=="2150", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1" 
    SUBSYSTEM=="usb", ATTRS{idProduct}=="2485", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
    SUBSYSTEM=="usb", ATTRS{idProduct}=="f63b", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
-```   
-2. In the same directory execute following: 
- ```
+```  
+ 
+2. In the same directory execute these commands: 
+
+```
    sudo cp 97-usbboot.rules /etc/udev/rules.d/
    sudo udevadm control --reload-rules
    sudo udevadm trigger
    sudo ldconfig
    rm 97-usbboot.rules
 ```
+NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
-</details>
 </br>
 
-3. To start server with NCS you can use command similar to:
+#### Start the server with an Intel® Movidius™ Neural Compute Stick
+
+To start server with Neural Compute Stick:
 
 ```
-docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 \
-openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
+--model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
 `--net=host` and `--privileged` parameters are required for USB connection to work properly. 
@@ -368,55 +360,63 @@ openvino/model_server:latest --model_path /opt/model --model_name my_model --por
 
 A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
 chooses to which one the model is loaded. 
+</details>
 
-### Starting docker container with HDDL<a name="hddl"></a>
-
-Plugin for High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj)
-is distributed only in a binary package. You can build the docker image of OpenVINO Model Server, including HDDL plugin, using OpenVINO toolkit binary distribution :
-- `make docker_build_bin dldt_package_url=<url>` 
+<details><summary>Starting docker container with HDDL</summary>
 
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's  required to set up environment 
  (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
   host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
 
-To start server with HDDL you can use command similar to ss:
+To start server with HDDL you can use command similar to:
 
 ```
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 \
-openvino/model_server:latest --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL --nireq 16
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
 
-`--device=/dev/ion:/dev/ion` mounts the accelerator.
+`--device=/dev/ion:/dev/ion` mounts the accelerator device.
 
 `-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
  host machine
 
-### Starting docker container with GPU<a name="gpu"></a>
+Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
-The GPU plugin uses the Intel® Compute Library for Deep Neural Networks (clDNN) to infer deep neural networks.
-It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics
+*Note:* OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
+It requires RW permissions in the docker container security context. It is recommended to start docker container in the
+same context like the account starting hddldaemon. For example if you start the hddldaemon as root, add `--user root` to 
+the `docker run` command.
 
-Before using GPU as OVMS target device, you need to install the required drivers. Next, start the docker container
-with additional parameter `--device /dev/dri` to pass the device context and set OVMS parameter `--target_device GPU`.
-The command example is listed below :
+</details>
+
+<details><summary>Starting docker container with GPU</summary>
+
+The [GPU plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_CL_DNN.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
+It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics.
+
+Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html).
+Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
+The command example is listed below:
 
 ```
-docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 \
-ie-serving-py:latest /ie-serving-py/start_server.sh ie_serving model --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
+</details>
 
-### Starting Docker Container using Multi-Device Plugin<a name="multiplugin"></a>
+<details><summary>Using Multi-Device Plugin</summary>
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MULTI.html).
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MULTI.html}.
 
-In order to use this feature in OpenVINO&trade; Model Server, following steps are required:
+In order to use this feature in OpenVino™ Model Server, following steps are required:
 
 Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
 
 Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+
 ```json
 {"model_config_list": [
    {"config": {
@@ -427,12 +427,12 @@ Below is exemplary config.json setting up Multi-Device Plugin for resnet model, 
    }]
 }
 ```
-Starting OpenVINO&trade; Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
+Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
 ```
 docker run -d  --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
-ovms-py:latest --config_path /opt/ml/config.json --port 9001 
+openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
 ```
-Or alternatively, when you are using just a single model, start OpenVINO&trade; Model Server using this command (config.json is not needed in this case):
+Or alternatively, when you are using just a single model, start OpenVINO™ Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
  /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
@@ -440,7 +440,9 @@ docker run -d  --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
 
-### Starting Docker Container Using Heterogeneous Plugin<a name="heteroplugin"></a>
+</details>
+
+<details><summary>Using Heterogeneous Plugin</summary>
 
 [HETERO plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
 That way different parts of the DL network can split and executed on optimized devices.
@@ -460,6 +462,7 @@ Below is a config example using heterogeneous plugin with GPU as a primary devic
    }]
 }
 ```
+</details>
 
 
 ## Security Considerations

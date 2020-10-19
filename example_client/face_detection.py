@@ -45,6 +45,7 @@ parser.add_argument('--width', required=False, help='How the input image width s
 parser.add_argument('--height', required=False, help='How the input image width should be resized in pixels', default=800, type=int)
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
+parser.add_argument('--model_name',required=False, default='face-detection', help='Specify the model name')
 
 args = vars(parser.parse_args())
 
@@ -70,7 +71,7 @@ processing_times = np.zeros((0),int)
 for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     iteration += 1
     request = predict_pb2.PredictRequest()
-    request.model_spec.name = "face-detection"
+    request.model_spec.name = args['model_name']
     img = imgs[x:(x + batch_size)]
     print("\nRequest shape", img.shape)
     request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
