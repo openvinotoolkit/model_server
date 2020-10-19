@@ -470,9 +470,9 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     return StatusCode::OK;
 }
 
-Status ModelManager::cleanupModelTmpFiles(std::shared_ptr<model_versions_t>& versionsToCleanup) {
+Status ModelManager::cleanupModelTmpFiles(ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToCleanup) {
     auto lfstatus = StatusCode::OK;
-    if ((versionsToCleanup->size() {
+    if (versionsToCleanup->size() > 0) {
         if (config.getLocalPath().compare(config.getBasePath())) {
             LocalFileSystem lfs;
             lfstatus = lfs.deleteFileFolder(config.getLocalPath());
@@ -513,10 +513,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
 
-        cleanupModelTmpFiles(versionsToStart);
-    } 
-    catch (std::exception& e) {
-        cleanupModelTmpFiles(versionsToStart);
+        cleanupModelTmpFiles(config, versionsToStart);
+    } catch (std::exception& e) {
+        cleanupModelTmpFiles(config, versionsToStart);
     }
 
     try {
@@ -528,9 +527,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
 
-        cleanupModelTmpFiles(versionsToReload);
+        cleanupModelTmpFiles(config, versionsToReload);
     } catch (std::exception& e) {
-        cleanupModelTmpFiles(versionsToReload)
+        cleanupModelTmpFiles(config, versionsToReload);
     }
 
     status = model->retireVersions(versionsToRetire);

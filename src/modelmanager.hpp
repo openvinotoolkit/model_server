@@ -67,7 +67,7 @@ private:
      * @return Status 
      */
     Status loadConfig(const std::string& jsonFilename);
-
+    Status cleanupModelTmpFiles(ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToCleanup);
     Status loadModelsConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
 
