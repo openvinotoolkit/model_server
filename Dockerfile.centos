@@ -122,7 +122,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
 RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ; \
     yum-config-manager --add-repo https://yum.repos.intel.com/openvino/2021/setup/intel-openvino-2021.repo && \
     rpm --import https://yum.repos.intel.com/openvino/2021/setup/RPM-GPG-KEY-INTEL-OPENVINO-2021 && \
-    yum install -y intel-openvino-runtime-centos7
+    yum install -y intel-openvino-runtime-centos7-2021.1.110.x86_64
 
 #################### END OF OPENVINO BINARY INSTALL
 
