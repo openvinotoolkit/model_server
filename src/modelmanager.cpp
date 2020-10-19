@@ -470,6 +470,23 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     return StatusCode::OK;
 }
 
+Status ModelManager::cleanupModelTmpFiles(std::shared_ptr<model_versions_t>& versionsToCleanup) {
+    auto lfstatus = StatusCode::OK;
+    if ((versionsToCleanup->size() {
+        if (config.getLocalPath().compare(config.getBasePath())) {
+            LocalFileSystem lfs;
+            lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+            if (lfstatus != StatusCode::OK) {
+                spdlog::error("Error occurred while deleting local copy of cloud model");
+            } else {
+                spdlog::info("Model removed from {}", config.getLocalPath());
+            }
+        }
+    }
+
+    return lfstatus;
+}
+
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
@@ -485,60 +502,46 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-    downloadModels(fs, config, versionsToStart);
-    downloadModels(fs, config, versionsToReload);
 
     try {
+        downloadModels(fs, config, versionsToStart);
+
         status = model->addVersions(versionsToStart, config);
         if (!status.ok()) {
             spdlog::error("Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
         }
+
+        cleanupModelTmpFiles(versionsToStart);
+    } 
+    catch (std::exception& e) {
+        cleanupModelTmpFiles(versionsToStart);
+    }
+
+    try {
+        downloadModels(fs, config, versionsToReload);
         status = model->reloadVersions(versionsToReload, config);
         if (!status.ok()) {
             spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
         }
-        status = model->retireVersions(versionsToRetire);
-        if (!status.ok()) {
-            spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
-                config.getName(),
-                status.string());
-        }
 
-        if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
-            if (config.getLocalPath().compare(config.getBasePath())) {
-                LocalFileSystem lfs;
-                auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-                if (lfstatus != StatusCode::OK) {
-                    spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                        config.getLocalPath(),
-                        lfstatus);
-                    status = lfstatus;
-                } else {
-                    spdlog::info("Model removed from {}", config.getLocalPath());
-                }
-            }
-        }
+        cleanupModelTmpFiles(versionsToReload);
     } catch (std::exception& e) {
-        if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
-            if (config.getLocalPath().compare(config.getBasePath())) {
-                LocalFileSystem lfs;
-                auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-                if (lfstatus != StatusCode::OK) {
-                    spdlog::error("Error occurred while deleting local copy of cloud model");
-                    status = lfstatus;
-                } else {
-                    spdlog::info("Model removed from {}", config.getLocalPath());
-                }
-            }
-        }
+        cleanupModelTmpFiles(versionsToReload)
+    }
+
+    status = model->retireVersions(versionsToRetire);
+    if (!status.ok()) {
+        spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
+            config.getName(),
+            status.string());
     }
 
     return status;
-}
+}  // namespace ovms
 
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
     std::shared_lock lock(modelsMtx);
