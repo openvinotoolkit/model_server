@@ -5,7 +5,8 @@
 > * An internet connection is required to follow the steps in this guide.
 
 ## Introduction
-OpenVINO&trade; Model Server is a Python* implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on FPGA and Movidius devices.
+OpenVINO&trade; Model Server is a Python* implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. 
+In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
 
 OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machine or inside a docker container. It is also suitable for landing in Kubernetes environment.
 
@@ -16,8 +17,7 @@ OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machi
 * Ubuntu 18.04.x or higher, long-term support (LTS), 64-bit
 * CentOS 7.8, 64-bit (for target only)
 * Red Hat Enterprise Linux
-* ClearLinux
-* SUSE Linux
+
 
 ## Overview
 This guide provides step-by-step instructions to install OpenVino&trade; Model Server on Virtual Machines or Bare Metal Hosts. Links are provided for different compatible hardwares. Following instructions are covered in this:

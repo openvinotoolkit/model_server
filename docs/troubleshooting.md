@@ -46,7 +46,7 @@ models/
 
 - When model files become accessible or fixed, server will try to load them again on the next [version update](./ModelVersionPolicy.md) attempt.
 
-- At startup, the server will enable gRPC and REST API endpoint, after all configured models and detected model versions are loaded successfully (in AVAILABLE state).
+- At startup, the server will enable gRPC and REST API endpoint (if `--rest_port` was provided), after all configured models and detected model versions are loaded successfully (in AVAILABLE state).
 
 - The server will fail to start if it can not list the content of configured model paths.
 
@@ -63,7 +63,7 @@ The possible issues could be :
 ## Resource Allocation<a name="resource-allocation"></a>
 - RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 
-- Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
+- Every version of the model enabled in the version policy creates a separate inference engine object. By default only the latest version is enabled.
 
 - OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, Docker or Kubernetes capabilities.
 

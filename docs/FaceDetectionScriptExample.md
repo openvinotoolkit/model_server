@@ -57,6 +57,8 @@ mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300
 
+or
+
 python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir images/people --output_dir results
 ```
 
@@ -74,7 +76,7 @@ The Face Detection Example script can be a reference script to run various other
 ### Download the model from OpenVINO&trade; Model Zoo.
 
 - A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model to IR format (.xml and .bin format). 
-- Refer to this link to convert your own model- [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)
+- Refer to [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)  to convert your own model.
 
 Create a **model** folder and download Person-Vehicle-Detection Model:
 
@@ -85,11 +87,11 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 
 ### Prepare Model Repository
 
-Refer this link to place your downloaded or converted in a repository to mount it to the OpenVINO&trade; Model Server- [Preparation of Models](./models_repository.md)
+Refer to [Preparation of Models](./models_repository.md) to place your downloaded or converted models in a repository to mount it to the OpenVINO&trade; Model Server.
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
-Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer this guide to know more about the parameters.
+Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](ShapeAndBatchSize.md) to know more about the parameters.
 
 - Run following command on your terminal
 
@@ -110,7 +112,7 @@ If the container is not running , check out the [troubleshooting guide](./troubl
 
 ### Run the example script
 
-Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the output shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./ModelServerGRPCAPI.md) and [REST API reference guide ](./ModelServerRESTAPI.md).
+Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./ModelServerGRPCAPI.md) and [REST API reference guide ](./ModelServerRESTAPI.md).
 
 Run the example script in terminal :
 
@@ -118,9 +120,6 @@ Run the example script in terminal :
    python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --model_name person-detection
 
 ```
-
-
-Note : Add the `model_name` parameter and pass the model name you have used while running the docker image.
 
 ### Output of the Script
 
