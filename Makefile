@@ -176,6 +176,11 @@ endif
     	--build-arg GPU=1 \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
+	cd dist/$(DIST_OS)/nginx-mtls-auth && docker build $(NO_CACHE_OPTION) -f Dockerfile . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg BASE_IMAGE="$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 
 test_checksec:
 	@echo "Running checksec on ovms binary..."
