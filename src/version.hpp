@@ -19,3 +19,22 @@
 #define PROJECT_VER_PATCH "REPLACE_PROJECT_PATCH"
 #define OPENVINO_NAME "REPLACE_OPENVINO_NAME"
 #endif  // SRC_VERSION_HPP_"
+
+#include <string>
+
+//http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.105.tgz
+std::string GetOpenVinoVersionFromPackageUrl()
+{
+    std::string version_keyword = "l_openvino_toolkit_p_"
+    std::string prefix = "OpenVINO backend "
+    std::string input_name = std::string(OPENVINO_NAME);
+    int ver_start = input_name.find_last_of(version_keyword);
+    int ver_end = input_name.find_last_of(".tgz");
+    if (ver_start == string::npos || ver_end == string::npos || ver_end <= ver_start) {
+        std::cout << "Warning:unsupported OpenVINO version string:" << OPENVINO_NAME << std::endl;
+        return prefix + "unknown";
+    }
+
+    std::string ov_version = input_name.substr(ver_start + version_keyword.size(), ver_end - (ver_start + version_keyword.size()));
+    return prefix + ov_version;
+}

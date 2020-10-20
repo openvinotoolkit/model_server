@@ -115,7 +115,8 @@ Config& Config::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->count("version")) {
-            std::cout << PROJECT_NAME << " " << PROJECT_VER << "." << PROJECT_VER_MAJOR << "." << PROJECT_VER_MINOR << "." << PROJECT_VER_PATCH << std::endl;
+            std::cout << PROJECT_NAME << PROJECT_VER_PATCH << std::endl;
+            std::cout << GetOpenVinoVersionFromPackageUrl() << std::endl;
             exit(EX_OK);
         }
 
