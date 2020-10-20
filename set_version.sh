@@ -14,4 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-sed -i -e 's/'$1'/'$2'/g' /ovms/src/version.hpp
+first="$1"
+shift
+rest="${@}"
+sed -i -e 's|'$first'|'"$rest"'|g' /ovms/src/version.hpp

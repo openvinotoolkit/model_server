@@ -129,20 +129,18 @@ endif
 	fi
 	@rm missing_headers.txt
 
-set-patch:
-ifeq ($(PROJECT_VER_PATCH), 1)
-	PROJECT_VER_PATCH := $(bash -c 'git rev-parse --short HEAD')
-endif
-    
 clang-format: venv
 	@echo "Formating files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build
-docker_build: set-patch
+docker_build:
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
+ifeq ($(PROJECT_VER_PATCH), 1)
+	$(eval PROJECT_VER_PATCH:=$(bash -c 'git rev-parse --short HEAD'))
+endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
