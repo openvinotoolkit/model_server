@@ -44,7 +44,7 @@ Start the OVMS service locally:
 
 ```bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
-docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
+docker run -d -v $(pwd)/model:/models -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
 #### Run the client:
@@ -73,7 +73,7 @@ The Face Detection Example script can be a reference script to run various other
 
 ### Download the model from OpenVINO&trade; Model Zoo.
 
-- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model using to IR format (.xml and .bin format). 
+- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model to IR format (.xml and .bin format). 
 - Refer to this link to convert your own model- [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)
 
 Create a **model** folder and download Person-Vehicle-Detection Model:

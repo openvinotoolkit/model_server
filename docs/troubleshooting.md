@@ -53,7 +53,7 @@ models/
 
 ## Client Request Issues<a name="client-request"></a>
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling. 
-- The information about the failure reason is passed to the gRPC client in the response. It is also logged on the model server in the DEBUG mode.
+- The information about the failure reason is passed to the client in the response. It is also logged on the model server in the DEBUG mode.
 
 The possible issues could be :
 * Incorrect shape of the input data.
@@ -65,7 +65,7 @@ The possible issues could be :
 
 - Every version of the model creates a separate inference engine object, so it is recommended to mount only the desired model versions.
 
-- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, docker or kubernetes capabilities.
+- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, Docker or Kubernetes capabilities.
 
 ## Usage Monitoring<a name="usage-monitoring"></a>
 - It is possible to track the usage of the models including processing time while DEBUG mode is enabled.

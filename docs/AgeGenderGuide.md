@@ -6,7 +6,7 @@ This documentation presents how to use OpenVINO&trade; Model Server to execute i
 ## Steps
 
 #### Download the pretrained model for age and gender recognition
-1. Download both component of the model(xml and bin file) using curl in `model` directory
+1. Download both components of the model(xml and bin file) using curl in `model` directory
 
 ```Bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o model/1/age-gender-recognition-retail-0013.bin -o model/1/age-gender-recognition-retail-0013.xml
@@ -22,7 +22,7 @@ docker pull openvino/model_server:latest
 #### Start OVMS docker container with downloaded model
 Start OVMS container with image pulled in previous step and mount `model` directory :
 ```Bash 
-docker run --rm -d -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 9001:9001 openvino/model_server:latest --model_path models/age_gender --model_name age_gender --port 9000 --rest_port 9001
+docker run --rm -d -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 9001:9001 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 9001
 ```
 
 ####  Download Sample Image
