@@ -23,8 +23,7 @@
 #include <string>
 
 //http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.105.tgz
-std::string GetOpenVinoVersionFromPackageUrl()
-{
+std::string GetOpenVinoVersionFromPackageUrl() {
     std::string version_keyword = "l_openvino_toolkit_p_";
     std::string extension_keyword = ".tgz";
     std::string prefix = "OpenVINO backend ";
@@ -36,6 +35,6 @@ std::string GetOpenVinoVersionFromPackageUrl()
         return prefix + "unknown";
     }
 
-    std::string ov_version = input_name.substr(ver_start + version_keyword.size() , input_name.size() - ver_start - version_keyword.size() - extension_keyword.size());
+    std::string ov_version = input_name.substr(ver_start + version_keyword.size(), input_name.size() - ver_start - version_keyword.size() - extension_keyword.size());
     return prefix + ov_version;
 }
