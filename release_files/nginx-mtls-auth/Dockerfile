@@ -19,6 +19,7 @@ FROM $BASE_IMAGE
 USER root
 RUN	set -e ; \
 	set -x ; \
+	mkdir /certs ; \
 	yum install -y epel-release ;\
         yum install -y nginx wget ; \
         yum clean all ; \
@@ -26,5 +27,6 @@ RUN	set -e ; \
 	chmod +x /usr/bin/dumb-init ;
 
 COPY ovms_wrapper /
-ENTRYPOINT ["/usr/bin/dumb-init", "--", "bash", "-c", "/ovms_wrapper"]
+COPY model_server.conf.template /
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/ovms_wrapper"]
 

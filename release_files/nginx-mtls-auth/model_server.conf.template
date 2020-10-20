@@ -1,0 +1,20 @@
+stream {
+    server {
+        listen              NGINX_LISTEN_GRPC_PORT ssl;
+        ssl_certificate     /certs/server.pem;
+        ssl_certificate_key /certs/server.key;
+	ssl_client_certificate /certs/client_cert_ca.pem;
+	ssl_verify_client on;
+	ssl_verify_depth 1;
+	proxy_pass 127.0.0.1:MODEL_SERVER_GRPC_PORT;
+    }
+    server {
+        listen              NGINX_LISTEN_REST_PORT ssl;
+        ssl_certificate     /certs/server.pem;
+        ssl_certificate_key /certs/server.key;
+	ssl_client_certificate /certs/client_cert_ca.pem;
+	ssl_verify_client on;
+	ssl_verify_depth 1;
+	proxy_pass 127.0.0.1:MODEL_SERVER_REST_PORT;
+    }
+}

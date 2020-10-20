@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#set -x
-
+set -x
+echo "ARGS: $@"
+ls -lahR /models/
 SIGINT_HANDLER_CALLED=0
 MODEL_SERVER_PID=
 NGINX_PID=
@@ -47,6 +48,14 @@ function sigint_handler() {
 trap sigint_handler SIGINT
 
 (
+	sleep 1
+	echo "Processing Nginx configuration..."
+	echo "include /etc/nginx/model_server.conf;" >> /etc/nginx/nginx.conf
+	cp /model_server.conf.template /etc/nginx/model_server.conf
+	sed -i 's/MODEL_SERVER_GRPC_PORT/9000/g' /etc/nginx/model_server.conf
+	sed -i 's/NGINX_LISTEN_GRPC_PORT/9443/g' /etc/nginx/model_server.conf
+	sed -i 's/MODEL_SERVER_REST_PORT/8080/g' /etc/nginx/model_server.conf
+	sed -i 's/NGINX_LISTEN_REST_PORT/8443/g' /etc/nginx/model_server.conf
 	echo "Starting Nginx..."
 	nginx -g 'daemon off;' &
 	NGINX_PID=$!
@@ -61,7 +70,8 @@ trap sigint_handler SIGINT
 
 (
 	echo "Starting Model Server..."
-	runuser -p ovms -c '/ovms/bin/./ovms' "$@" &
+	#runuser -p ovms -c "'/ovms/bin/./ovms $@'" &
+	runuser -p ovms -c "/ovms/bin/./ovms $*" &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
