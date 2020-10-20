@@ -6,11 +6,9 @@ Choose one option to get a Docker image:
 
 <details><summary>Build an image</summary>
 
-To build your own image, use the following command in the git repository root folder, replacing `DLDT_PACKAGE_URL=<URL>` 
-with the URL to OpenVINO Toolkit package that you can get after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download). 
-
+To build your own image, use the following command in the git repository root folder.
 ```bash
-make docker_build DLDT_PACKAGE_URL=<URL>
+make docker_build
 ```
 
 called from the root directory of the repository.
