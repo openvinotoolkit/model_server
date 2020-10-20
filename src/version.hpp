@@ -15,12 +15,7 @@
 //*****************************************************************************
 #ifndef SRC_VERSION_HPP_
 #define SRC_VERSION_HPP_
-#define PROJECT_NAME "OpenVINO Model Server"
-#define PROJECT_VER "REPLACE_PROJECT_VER"
-
-#define PROJECT_VER_MAJOR "REPLACE_PROJECT_MAJOR"
-
-#define PROJECT_VER_MINOR "REPLACE_PROJECT_MINOR"
-
+#define PROJECT_NAME "REPLACE_PROJECT_NAME"
 #define PROJECT_VER_PATCH "REPLACE_PROJECT_PATCH"
+#define OPENVINO_NAME "REPLACE_OPENVINO_NAME"
 #endif  // SRC_VERSION_HPP_"
