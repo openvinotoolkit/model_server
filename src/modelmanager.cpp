@@ -512,11 +512,11 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 config.getName(),
                 status.string());
         }
-
-        cleanupModelTmpFiles(config, versionsToStart);
     } catch (std::exception& e) {
-        cleanupModelTmpFiles(config, versionsToStart);
+        spdlog::error("Exception occurred while loading model: {};", e.what());
     }
+
+    cleanupModelTmpFiles(config, versionsToStart);
 
     try {
         downloadModels(fs, config, versionsToReload);
@@ -527,11 +527,11 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
 
-        cleanupModelTmpFiles(config, versionsToReload);
     } catch (std::exception& e) {
-        cleanupModelTmpFiles(config, versionsToReload);
+        spdlog::error("Exception occurred while reloading model: {};", e.what());
     }
 
+    cleanupModelTmpFiles(config, versionsToReload);
     status = model->retireVersions(versionsToRetire);
     if (!status.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
