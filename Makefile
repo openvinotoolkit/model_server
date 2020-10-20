@@ -139,7 +139,7 @@ docker_build:
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
 ifeq ($(PROJECT_VER_PATCH), 1)
-	$(eval PROJECT_VER_PATCH:=$(bash -c 'git rev-parse --short HEAD'))
+	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
 endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)

@@ -190,9 +190,6 @@ COPY set_version.sh /tmp
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
-RUN echo ${PROJECT_NAME}
-RUN echo ${PROJECT_VER_PATCH}
-RUN echo ${OPENVINO_NAME}
 RUN bash /tmp/set_version.sh REPLACE_PROJECT_NAME ${PROJECT_NAME}
 RUN bash /tmp/set_version.sh REPLACE_PROJECT_PATCH ${PROJECT_VER_PATCH}
 RUN bash /tmp/set_version.sh REPLACE_OPENVINO_NAME ${OPENVINO_NAME}
