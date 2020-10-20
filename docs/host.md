@@ -40,10 +40,8 @@ This guide provides step-by-step instructions to install OpenVino&trade; Model S
    ```
 3. To install Model Server, you could use precompiled version or built it on your own inside a docker container. Build a docker container with automated steps using the command :
    ```Bash
-   make docker_build DLDT_PACKAGE_URL=<URL>
+   make docker_build
    ````
-   The `URL` above represents a link to the OpenVINO Toolkit package that you can get after  registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download). The binary package will be located in the docker image `openvino/model_server-build:latest` in the folder `./dist`.
-
 4. The `make docker_build` target will also make a copy of the binary package in a dist subfolder in the model server root directory.
 
 5. Navigate to the folder containing binary package and unpack the included tar.gz file using the command :

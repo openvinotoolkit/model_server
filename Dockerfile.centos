@@ -27,6 +27,7 @@ ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
+ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-2021.1.110.x86_64
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
@@ -109,14 +110,20 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
-
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+# OV toolkit package
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     tar -zxf l_openvino_toolkit*.tgz && \
     cd l_openvino_toolkit* && \
     sed -i 's/decline/accept/g' silent.cfg && \
     ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+
+# yum package
+RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ; \
+    yum-config-manager --add-repo https://yum.repos.intel.com/openvino/2021/setup/intel-openvino-2021.repo && \
+    rpm --import https://yum.repos.intel.com/openvino/2021/setup/RPM-GPG-KEY-INTEL-OPENVINO-2021 && \
+    yum install -y $YUM_OV_PACKAGE
 
 #################### END OF OPENVINO BINARY INSTALL
 
@@ -143,7 +150,7 @@ RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.
 # OPENSSL
 WORKDIR /openssl
 
-RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1
+RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1h
 RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$(nproc --all) && make --jobs=$(nproc --all) install || true && make --jobs=$(nproc --all) install_runtime
 
 ####### Azure SDK
