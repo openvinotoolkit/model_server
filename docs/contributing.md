@@ -121,3 +121,66 @@ Prerequisites: dpkg -i http://archive.ubuntu.com/ubuntu/pool/universe/c/checksec
 Always run make sdl-check command before you submit changes.
 
 Prerequisites: pip3 install bandit
+
+## Logging Policy
+
+### Levels
+
+</br>
+
+#### `ERROR`
+Log at this level errors related to the internal model server state.
+</br>
+Example:
+
+- exceptions thrown during accesing local files
+- errors during models updates (failed to load/reload model)
+</br>
+
+</br>
+
+#### `WARN`
+Log at this level informations about conditions that may lead to an error or behavior unwanted or unexpected by the user.
+</br>
+Example:
+
+- problems with configurations
+- version directories with invalid name
+</br>
+
+#### `INFO` 
+Log at this level actions that changes state of application.
+</br>
+Example:
+
+- (re)loading config/model
+- entry/exit points
+</br>
+
+#### `DEBUG`
+Log at this level information about what happens in the program that may help during debbuging.
+</br>
+
+Example:
+
+- receiving/processing requests
+- duration of specific operations (deserialization, serialization, inference etc.)
+</br>
+
+####  `TRACE`
+Log at this level very specific information about what happens in the program, including code-related names. (Only for development purpose)
+</br>
+
+Example:
+
+- executing functions
+- timestamps
+- intermediate states of the objects
+
+### Modules
+For OVMS modules use different logger that appends module prefix to the message. Example modules: 
+- GCS
+- S3
+- Azure
+- Model Manager
+- Ensemble
