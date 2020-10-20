@@ -6,7 +6,7 @@ This page guides you through an example script to run face detection inference w
 - The script [face_detection.py](../example_client/face_detection.py) runs face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
-- The script can adjust the input image size and change the bradko@spawanie-gdansk.platch size in the request. It demonstrates how to use
+- The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
 - The example relies on the model [face_detection_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/face-detection-retail-0004/description/face-detection-retail-0004.md).
