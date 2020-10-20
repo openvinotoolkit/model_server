@@ -25,7 +25,9 @@ git_repository(
     remote = "https://github.com/tensorflow/serving.git",
     tag = "2.2.0-rc2",
     patch_args = ["-p1"],
-    patches = ["net_http.patch"]
+    patches = ["net_http.patch", "listen.patch"]
+    #                             ^^^^^^^^^^^^
+    #                       make bind address configurable
 )
 
 # Tensorflow core

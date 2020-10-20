@@ -202,7 +202,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
-    builder.AddListeningPort("0.0.0.0:" + std::to_string(config.port()), grpc::InsecureServerCredentials());
+    builder.AddListeningPort(config.grpcBindAddress() + ":" + std::to_string(config.port()), grpc::InsecureServerCredentials());
     builder.RegisterService(&predict_service);
     builder.RegisterService(&model_service);
     for (const GrpcChannelArgument& channel_argument : channel_arguments) {
@@ -226,7 +226,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     spdlog::debug("Starting grpc servers: {}", grpcServersCount);
 
     if (!isPortAvailable(config.port())) {
-        throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
+        throw std::runtime_error("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
     }
     for (uint i = 0; i < grpcServersCount; ++i) {
         std::unique_ptr<Server> server = builder.BuildAndStart();
@@ -235,7 +235,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
         }
         servers.push_back(std::move(server));
     }
-    spdlog::info("Server started on port {}", config.port());
+    spdlog::info("Server started on port {} (bind address: {})", config.port(), config.grpcBindAddress());
 
     return servers;
 }
@@ -245,12 +245,14 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
 
     auto& config = ovms::Config::instance();
     if (config.restPort() != 0) {
-        const std::string server_address = "localhost:" + std::to_string(config.restPort());
+        // if (config.restAddress() !=  TODO FIXME
+
+        const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
 
         int workers = config.restWorkers() ? config.restWorkers() : 10;
         spdlog::info("Will start {} REST workers", workers);
 
-        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restPort(), workers, REST_TIMEOUT);
+        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, REST_TIMEOUT);
         if (restServer != nullptr) {
             spdlog::info("Started REST server at {}", server_address);
         } else {

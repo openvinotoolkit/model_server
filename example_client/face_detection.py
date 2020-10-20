@@ -23,7 +23,7 @@ import os
 from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics
+from client_utils import print_statistics, prepare_certs
 
 
 def load_image(file_path):
@@ -46,10 +46,25 @@ parser.add_argument('--height', required=False, help='How the input image width 
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 parser.add_argument('--model_name',required=False, default='face-detection', help='Specify the model name')
-
+parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
+parser.add_argument('--server_cert', required=False, help='Path to server certificate')
+parser.add_argument('--client_cert', required=False, help='Path to client certificate')
+parser.add_argument('--client_key', required=False, help='Path to client key')
 args = vars(parser.parse_args())
 
-channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
+
+channel = None
+if args.get('tls'):
+    server_ca_cert, client_key, client_cert = prepare_certs(server_cert=args['server_cert'],
+                                                            client_key=args['client_key'],
+                                                            client_ca=args['client_cert'])
+    creds = grpc.ssl_channel_credentials(root_certificates=server_ca_cert,
+                                         private_key=client_key, certificate_chain=client_cert)
+    channel = grpc.secure_channel(address, creds)
+else:
+    channel = grpc.insecure_channel(address)
+
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 files = os.listdir(args['input_images_dir'])

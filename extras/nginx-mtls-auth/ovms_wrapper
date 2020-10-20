@@ -1,0 +1,195 @@
+#!/bin/bash
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#set -x
+SIGINT_HANDLER_CALLED=0
+MODEL_SERVER_PID=
+NGINX_PID=
+MODEL_SERVER_EXIT_CODE=
+NGINX_EXIT_CODE=
+JOB_FINISHED=0
+
+# Pass SIGINT from user to Model Server:
+function sigint_handler() {
+        echo "SigInt hanlder"
+	SIGINT_HANDLER_CALLED=1
+	MODEL_SERVER_PID=`cat /tmp/model_server_pid`
+        echo "Stopping Model Server, PID: $MODEL_SERVER_PID"
+        kill -s SIGINT $MODEL_SERVER_PID  2>&1 >/dev/null
+	sleep 1
+	if [ -z $MODEL_SERVER_PID ] ; then
+		kill -s KILL $MODEL_SERVER_PID 2>&1 >/dev/null
+	fi
+	NGINX_PID=`cat /tmp/nginx_pid`
+        echo "Stopping nginx, PID: $NGINX_PID"
+        kill -s QUIT $NGINX_PID  2>&1 >/dev/null
+	sleep 1
+	if [ -z $NGINX_PID ] ; then
+		kill -s KILL $NGINX_PID 2>&1 >/dev/null
+	fi
+	echo "Model server exit code: $MODEL_SERVER_EXIT_CODE"
+	exit $MODEL_SERVER_EXIT_CODE
+}
+trap sigint_handler SIGINT
+
+new_args=()
+ACTION_GRPC_PORT=
+ACTION_REST_PORT=
+DELETE_NEXT_ARG=
+
+GRPC_ORIGINAL_PORT=
+GRPC_OVMS_NEW_PORT=
+REST_ORIGINAL_PORT=
+REST_OVMS_NEW_PORT=
+
+	for a in $*
+	do
+	    echo "ARG: $a"
+            if [ "$DELETE_NEXT_ARG" != "" ] ; then
+                 DELETE_NEXT_ARG=
+                 continue
+            fi
+            if [ "$ACTION_GRPC_PORT" != "" ] ; then
+                 GRPC_ORIGINAL_PORT=$a
+                 ACTION_GRPC_PORT=
+                 continue
+            fi
+            if [ "$ACTION_REST_PORT" != "" ] ; then
+                 REST_ORIGINAL_PORT=$a
+                 ACTION_REST_PORT=
+                 continue
+            fi
+            if [ "$a" == "--port" ] ; then
+                 ACTION_GRPC_PORT=1
+                 continue
+            fi
+            if [ "$a" == "--rest_port" ] ; then
+                 ACTION_REST_PORT=1
+                 continue
+            fi
+            if [ "$a" == "--grpc_bind_address" ] ; then
+                 DELETE_NEXT_ARG=1
+                 continue
+            fi
+            if [ "$a" == "--rest_bind_address" ] ; then
+                 DELETE_NEXT_ARG=1
+                 continue
+            fi
+            new_args+=" $a"
+            echo "current args: ${new_args[@]}"
+	done
+	echo "${new_args[@]}"
+
+echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
+
+# select random non-allocated port:
+SELECTED_PORTS=$(python -c '
+import sys
+import random
+not_allowed = [int(x) for x in sys.argv[1:] ]
+first_port = random.choice([x for x in range(7000, 7999) if x not in not_allowed])
+not_allowed.append(first_port)
+second_port = random.choice([x for x in range(7000, 7999) if x not in not_allowed])
+print(str(first_port) + "," + str(second_port))
+' $GRPC_ORIGINAL_PORT $REST_ORIGINAL_PORT )
+GRPC_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f1`
+REST_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f2`
+
+if [ "$GRPC_ORIGINAL_PORT" != "" ] ; then
+	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+else
+	# default port shall be used if it is not provided:
+	GRPC_ORIGINAL_PORT=9178
+	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+fi
+if [ "$REST_ORIGINAL_PORT" != "" ] ; then
+	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
+fi
+
+(
+	sleep 1
+	echo "Processing Nginx configuration..."
+	cp /model_server.conf.template /model_server.conf
+	sed -i "s/MODEL_SERVER_GRPC_PORT/$GRPC_OVMS_NEW_PORT/g" /model_server.conf
+	sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /model_server.conf
+	sed -i "s/NGINX_LISTEN_GRPC_PORT/$GRPC_ORIGINAL_PORT/g" /model_server.conf
+	sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /model_server.conf
+	mv /model_server.conf /etc/nginx/conf.d/model_server.conf
+	echo "Starting Nginx..."
+	nginx -g 'daemon off;' &
+	NGINX_PID=$!
+	echo "Nginx PID: $NGINX_PID"
+	echo "$NGINX_PID" > /tmp/nginx_pid
+	wait $NGINX_PID
+	NGINX_EXIT_CODE=$?
+	echo "Nginx job finished with an exit code: $NGINX_EXIT_CODE"
+	echo "$NGINX_EXIT_CODE" > /tmp/nginx_exit_code
+	echo "nginx" >> /tmp/job_finished
+) &
+
+(
+	echo "Starting Model Server..."
+	runuser -p ovms -c "/ovms/bin/./ovms ${new_args[@]} --grpc_bind_address 127.0.0.1 " &
+	MODEL_SERVER_PID=$!
+	echo "Model Server PID: $MODEL_SERVER_PID"
+	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
+	wait $OVMS_PID
+	MODEL_SERVER_EXIT_CODE=$?
+	echo "Model server job finished with an exit code: $MODEL_SERVER_EXIT_CODE"
+	echo "$MODEL_SERVER_EXIT_CODE" > /tmp/model_server_exit_code
+	echo "model_server" >> /tmp/job_finished
+) &
+
+for (( ; ; )) ; do
+	if [ -f /tmp/job_finished ]; then
+		echo "Job exited: `cat /tmp/job_finished`"
+		break
+	else
+		sleep 1
+	fi
+done
+
+if [ "$SIGINT_HANDLER_CALLED" == "0" ] ; then
+	if [ -f /tmp/nginx_exit_code ] ; then
+		NGINX_EXIT_CODE=`cat /tmp/nginx_exit_code`
+		echo "Nginx crashed with exit code: $NGINX_EXIT_CODE"
+		MODEL_SERVER_PID=`cat /tmp/model_server_pid`
+	        echo "Stopping ovms, PID: $MODEL_SERVER_PID"
+	        kill -s SIGINT $MODEL_SERVER_PID  2>&1 >/dev/null
+	        sleep 1
+		if [ -z $MODEL_SERVER_PID ] ; then
+			kill -s KILL $MODEL_SERVER_PID  2>&1 >/dev/null
+		fi
+	        exit $NGINX_EXIT_CODE
+	fi
+	if [ -f /tmp/model_server_exit_code ]; then # model server crashed
+		MODEL_SERVER_EXIT_CODE=`cat /tmp/model_server_exit_code`
+		echo "Model server existed with exit code: $MODEL_SERVER_EXIT_CODE"
+		NGINX_PID=`cat /tmp/nginx_pid`
+	        echo "Stopping nginx, PID: $NGINX_PID"
+        	kill -s QUIT $NGINX_PID  2>&1 >/dev/null
+		sleep 1
+		if [ -z $NGINX_PID ] ; then
+			kill -s KILL $NGINX_PID
+		fi
+		exit $MODEL_SERVER_EXIT_CODE
+	fi
+fi
+
+echo "SIGINT handler detected, waiting for cleanup..."
+sleep 15
+echo "Logic error: unexpected exit condition!"
+exit 1

@@ -15,11 +15,14 @@
 //*****************************************************************************
 #include "config.hpp"
 
+#include <regex>
 #include <algorithm>
 #include <limits>
 #include <thread>
 
 #include <sysexits.h>
+
+#include <boost/algorithm/string.hpp>
 
 #include "version.hpp"
 
@@ -46,10 +49,18 @@ Config& Config::parse(int argc, char** argv) {
                 "gRPC server port",
                 cxxopts::value<uint64_t>()->default_value("9178"),
                 "PORT")
+            ("grpc_bind_address",
+                "Network interface address to bind to for the gRPC API",
+                cxxopts::value<std::string>()->default_value("0.0.0.0"),
+                "GRPC_BIND_ADDRESS")
             ("rest_port",
                 "REST server port, the REST server will not be started if rest_port is blank or set to 0",
                 cxxopts::value<uint64_t>()->default_value("0"),
                 "REST_PORT")
+            ("rest_bind_address",
+                "Network interface address to bind to for the REST API",
+                cxxopts::value<std::string>()->default_value("0.0.0.0"),
+                "REST_BIND_ADDRESS")
             ("grpc_workers",
                 "number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint>()->default_value("1"),
@@ -134,6 +145,28 @@ Config& Config::parse(int argc, char** argv) {
     return instance();
 }
 
+bool Config::check_hostname_or_ip(const std::string& input) {
+  if(input.size() > 255) {
+	return false;
+  }
+  bool all_numeric = true;
+  for(char c : input) {
+     if(c == '.') {
+       continue;
+     }
+     if(!::isdigit(c)) {
+        all_numeric = false;
+     }
+  }
+  if(all_numeric) {
+     std::regex valid_ip_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
+     return std::regex_match(input, valid_ip_regex);
+  } else {
+     std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
+     return std::regex_match(input, valid_hostname_regex);
+  }
+}
+
 void Config::validate() {
     // cannot set both config path & model_name/model_path
     if (result->count("config_path") && (result->count("model_name") || result->count("model_path"))) {
@@ -173,6 +206,20 @@ void Config::validate() {
     // check docker ports
     if (result->count("port") && ((this->port() > MAX_PORT_NUMBER) || (this->port() < 0))) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
+        exit(EX_USAGE);
+    }
+    if (result->count("rest_port") && ((this->restPort() > MAX_PORT_NUMBER) || (this->restPort() < 0))) {
+        std::cerr << "rest_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // check bind addresses:
+    if (result->count("rest_bind_address") && check_hostname_or_ip(this->restBindAddress()) == false  ) {
+        std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
+        exit(EX_USAGE);
+    }
+    if (result->count("grpc_bind_address") && check_hostname_or_ip(this->grpcBindAddress()) == false  ) {
+        std::cerr << "grpc_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         exit(EX_USAGE);
     }
     if (result->count("rest_port") && ((this->restPort() > MAX_PORT_NUMBER) || (this->restPort() < 0))) {
