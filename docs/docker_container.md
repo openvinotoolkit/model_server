@@ -295,12 +295,11 @@ To know more about OpenVINO&trade; Model Server , you can refer [Version Policy]
 
 ##  Building the OpenVINO&trade; Model Server Image<a name="sourcecode"></a>
 
-To build your own image, use the following command in the [git repository root folder](https://github.com/openvinotoolkit/model_server), replacing DLDT_PACKAGE_URL=<URL> with the URL to OpenVINO Toolkit package that you can get after registration on OpenVINO™ Toolkit website.
+To build your own image, use the following command in the [git repository root folder](https://github.com/openvinotoolkit/model_server), 
 
 ```bash
-   make docker_build DLDT_PACKAGE_URL=<URL>
+   make docker_build
 ```
-called from the root directory of the repository.
 
 It will generate the images, tagged as :
 
