@@ -528,7 +528,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 config.getName(),
                 status.string());
         }
-
     } catch (std::exception& e) {
         spdlog::error("Exception occurred while reloading model: {};", e.what());
     }
