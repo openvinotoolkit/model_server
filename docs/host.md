@@ -10,10 +10,8 @@ In order to install OVMS on a baremetal host or a Virtual Machine, you need to u
 You can build it inside a docker container. The building steps are automated 
 with a command:
 ```bash
-make docker_build DLDT_PACKAGE_URL=<URL>
+make docker_build
 ```
-The `URL` above represents a link to the OpenVINO Toolkit package that you can get after 
-registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download).
 The binary package will be located in the docker image openvino/model_server-build:latest in the folder  ./dist.
 The `make docker_build` target will also make a copy of the binary package in a `dist` subfolder in the model server root directory.
 Unpack the included tar.gz file and start ovms via: `/ovms/bin/ovms --help`
