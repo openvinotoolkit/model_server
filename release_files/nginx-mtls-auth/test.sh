@@ -12,8 +12,8 @@ docker run --rm -ti \
 	-v $(pwd)/server.pem:/certs/server.pem:ro \
 	-v $(pwd)/server.key:/certs/server.key:ro \
 	-v $(pwd)/client_cert_ca.pem:/certs/client_cert_ca.pem:ro \
-	-p 9443:9443 \
-	-p 8443:8443 \
+	-p 19000:9000 \
+	-p 15555:5555 \
 	openvino/model_server:rr-ovms-nginx-mtls \
-	--model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
+	--model_path /models/face-detection --model_name face-detection --port 9000 --rest_port 5556 --log_level DEBUG --shape auto
 
