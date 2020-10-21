@@ -44,8 +44,9 @@ INSTALL_RPMS_FROM_URL ?=
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.4
-DLDT_PACKAGE_URL ?= http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.105.tgz
+DLDT_PACKAGE_URL ?= ""
 OV_USE_BINARY ?= 1
+YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-2021.1.110.x86_64
 
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
@@ -155,6 +156,7 @@ endif
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg YUM_OV_PACKAGE=$(YUM_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VER_PATCH=${PROJECT_VER_PATCH} \

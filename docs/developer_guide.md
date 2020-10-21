@@ -20,11 +20,14 @@ If you have problems, see <a href="#debug">Debugging</a>
 ## Prepare Environment to Use the Tests <a name="test-prep"></a>
 
 ### Step 1: Compile source code
-1. Build the development `ovms-build` Docker* image
+1. Build the development `openvino/model_server-build` Docker* image
    ```bash
+   make docker_build 
+   or
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
    Note: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
+   
 2. Mount the source code in the Docker container:
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 

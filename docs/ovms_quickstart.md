@@ -44,9 +44,8 @@ docker pull openvino/model_server:latest
 or build the docker image openvino/model_server:latest with a command:
 
 ```bash
-make docker_build DLDT_PACKAGE_URL=<URL>
+make docker_build
 ```
-Note: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO™ Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
 
 ### Step 3: Download a Model
 
