@@ -477,7 +477,9 @@ Status ModelManager::cleanupModelTmpFiles(ModelConfig& config, std::shared_ptr<m
             LocalFileSystem lfs;
             lfstatus = lfs.deleteFileFolder(config.getLocalPath());
             if (lfstatus != StatusCode::OK) {
-                spdlog::error("Error occurred while deleting local copy of cloud model");
+                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                    config.getLocalPath(),
+                    lfstatus);
             } else {
                 spdlog::info("Model removed from {}", config.getLocalPath());
             }
