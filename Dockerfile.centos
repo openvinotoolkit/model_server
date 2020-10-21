@@ -38,9 +38,6 @@ ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
     
-RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ; \
-    OPENVINO_NAME=${YUM_OV_PACKAGE}
-
 RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
             boost-atomic \
             boost-chrono \
@@ -202,7 +199,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/infe
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
 RUN bash /tmp/set_version.sh REPLACE_PROJECT_NAME ${PROJECT_NAME}
 RUN bash /tmp/set_version.sh REPLACE_PROJECT_PATCH ${PROJECT_VER_PATCH}
-RUN bash /tmp/set_version.sh REPLACE_OPENVINO_NAME ${OPENVINO_NAME}
+RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ;bash /tmp/set_version.sh REPLACE_OPENVINO_NAME "$YUM_OV_PACKAGE"
+
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi;bash /tmp/set_version.sh REPLACE_OPENVINO_NAME ${OPENVINO_NAME}
 
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test

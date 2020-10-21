@@ -32,7 +32,7 @@ std::string GetOpenVinoVersionFromPackageUrl() {
     int ver_start = input_name.find(version_keyword);
     int ver_end = input_name.find(extension_keyword);
     if (ver_start == std::string::npos || ver_end == std::string::npos || ver_end <= ver_start) {
-        version_keyword ="intel-openvino-runtime-centos7-";
+        version_keyword = "intel-openvino-runtime-centos7-";
         extension_keyword = ".x86_64";
         ver_start = input_name.find(version_keyword);
         ver_end = input_name.find(extension_keyword);
