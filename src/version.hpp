@@ -22,7 +22,8 @@
 
 #include <string>
 
-//http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.105.tgz
+// OPENVINO_NAME in form of: http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.1.105.tgz
+// or intel-openvino-runtime-centos7-2021.1.110.x86_64
 std::string GetOpenVinoVersionFromPackageUrl() {
     std::string version_keyword = "l_openvino_toolkit_p_";
     std::string extension_keyword = ".tgz";
@@ -31,8 +32,14 @@ std::string GetOpenVinoVersionFromPackageUrl() {
     int ver_start = input_name.find(version_keyword);
     int ver_end = input_name.find(extension_keyword);
     if (ver_start == std::string::npos || ver_end == std::string::npos || ver_end <= ver_start) {
-        std::cout << "Warning:unsupported OpenVINO version string:" << OPENVINO_NAME << std::endl;
-        return prefix + "unknown";
+        version_keyword ="intel-openvino-runtime-centos7-";
+        extension_keyword = ".x86_64";
+        ver_start = input_name.find(version_keyword);
+        ver_end = input_name.find(extension_keyword);
+        if (ver_start == std::string::npos || ver_end == std::string::npos || ver_end <= ver_start) {
+            std::cout << "Warning:unsupported OpenVINO version string:" << OPENVINO_NAME << std::endl;
+            return prefix + "unknown";
+        }
     }
 
     std::string ov_version = input_name.substr(ver_start + version_keyword.size(), input_name.size() - ver_start - version_keyword.size() - extension_keyword.size());
