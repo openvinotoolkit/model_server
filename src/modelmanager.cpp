@@ -245,7 +245,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             return StatusCode::UNKNOWN_ERROR;
         }
 
-        //this is where library or custom loader is loaded
+        // this is where library or custom loader is loaded
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_GLOBAL);
         if (!handleCL) {
             SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
@@ -311,7 +311,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
     configFilename = jsonFilename;
     Status status;
-    //load the custom loader config, if available
+    // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
     if (status != StatusCode::OK) {
         return status;
@@ -602,7 +602,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         spdlog::info("Custom Loader to be used : {}", customLoaderName);
         model->setCustomLoaderInterfacePtr(customLoaderInterfacePtrs[customLoaderName]);
 
-        //check existing version for blacklist
+        // check existing version for blacklist
         for (const auto& [version, versionInstance] : model->getModelVersions()) {
             bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
                 versionInstance->getName().c_str(), version);

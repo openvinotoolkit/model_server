@@ -286,7 +286,7 @@ void custSampleLoader::threadFunction(future<void> futureObj) {
             }
         }
 
-        //After 2 cycles clear the blacklist and break
+        // After 2 cycles clear the blacklist and break
         if (count == 3) {
             cout << "custSampleLoader: Clearing the blacklist " << endl;
             models_blacklist.clear();
