@@ -68,6 +68,8 @@ private:
      */
     Status loadConfig(const std::string& jsonFilename);
     Status cleanupModelTmpFiles(ModelConfig& config);
+    Status reloadModelVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload);
+    Status addModelWithVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
     Status loadModelsConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
 

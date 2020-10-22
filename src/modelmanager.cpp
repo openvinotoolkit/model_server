@@ -488,6 +488,45 @@ Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
     return lfstatus;
 }
 
+Status ModelManager::addModelVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart ) {
+    Status status = StatusCode::OK;
+    try {
+        downloadModels(fs, config, versionsToStart);
+        status = model->addVersions(versionsToStart, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while loading model: {} versions; error: {}",
+                config.getName(),
+                status.string());
+        }
+    }
+    catch (std::exception& e) {
+        spdlog::error("Exception occurred while loading model: {};", e.what());
+    }
+
+    cleanupModelTmpFiles(config);
+    return status;
+}
+
+Status ModelManager::reloadModelVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+    Status status = StatusCode::OK;
+
+    try {
+        downloadModels(fs, config, versionsToReload);
+        auto status = model->reloadVersions(versionsToReload, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+        }
+    }
+    catch (std::exception& e) {
+        spdlog::error("Exception occurred while reloading model: {};", e.what());
+    }
+
+    cleanupModelTmpFiles(config);
+    return status;
+}
+
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
@@ -504,36 +543,15 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
-    try {
-        downloadModels(fs, config, versionsToStart);
-
-        blocking_status = model->addVersions(versionsToStart, config);
-        if (!blocking_status.ok()) {
-            spdlog::error("Error occurred while loading model: {} versions; error: {}",
-                config.getName(),
-                blocking_status.string());
-        }
-    } catch (std::exception& e) {
-        spdlog::error("Exception occurred while loading model: {};", e.what());
-    }
     if (versionsToStart->size() > 0) {
-        cleanupModelTmpFiles(config);
-    }
-
-    try {
-        downloadModels(fs, config, versionsToReload);
-        auto status = model->reloadVersions(versionsToReload, config);
-        if (!status.ok()) {
-            spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
-                config.getName(),
-                status.string());
+        auto blocking_status = addModelWithVersions(fs, config, versionsToStart);
+        if (!blocking_status.ok()) {
+            return blocking_status;
         }
-    } catch (std::exception& e) {
-        spdlog::error("Exception occurred while reloading model: {};", e.what());
     }
 
     if (versionsToReload->size() > 0) {
-        cleanupModelTmpFiles(config);
+        reloadModelVersions(fs, config, versionsToStart);
     }
 
     auto status = model->retireVersions(versionsToRetire);
