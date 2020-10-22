@@ -472,7 +472,7 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
 
 Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
     auto lfstatus = StatusCode::OK;
-    
+
     if (config.getLocalPath().compare(config.getBasePath())) {
         LocalFileSystem lfs;
         lfstatus = lfs.deleteFileFolder(config.getLocalPath());
@@ -511,7 +511,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         if (!blocking_status.ok()) {
             spdlog::error("Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
-                status.string());
+                blocking_status.string());
         }
     } catch (std::exception& e) {
         spdlog::error("Exception occurred while loading model: {};", e.what());
