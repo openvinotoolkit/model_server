@@ -607,7 +607,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
                 versionInstance->getName().c_str(), version);
             if (bres) {
-                spdlog::info("The model {} is blacklisted",versionInstance->getName());
+                spdlog::info("The model {} is blacklisted", versionInstance->getName());
                 requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
             }
         }

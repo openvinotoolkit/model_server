@@ -28,26 +28,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <assert.h>
-
 #include <chrono>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <map>
 #include <string>
-#include <vector>
 #include <thread>
-#include <future>
+#include <vector>
 
+#include <assert.h>
+#include <rapidjson/document.h>
 
 #include "../../customloaderinterface.hpp"
-#include <rapidjson/document.h>
 
 using namespace std;
 using namespace rapidjson;
 using namespace ovms;
 
-#define PATH_SIZE     10
+#define PATH_SIZE 10
 #define RSIZE_MAX_STR 4096
 
 #define CUSTLOADER_OK 1
@@ -56,31 +55,31 @@ using namespace ovms;
 typedef pair<string, int> model_id_t;
 
 class custSampleLoader : public CustomLoaderInterface {
-   private:
+private:
     vector<model_id_t> models_blacklist;
     vector<model_id_t> models_loaded;
 
-   protected:
+protected:
     int extract_input_params(char* basePath, int version, char* loaderOptions, char** binFile,
-                                char** xmlFile);
+        char** xmlFile);
     int load_files(char* binFile, char* xmlFile, char** xmlBuffer, char** binBuffer, int* xmlLen,
-                      int* binLen);
+        int* binLen);
 
     std::promise<void> exitSignal;
     std::future<void> futureObj;
     int watchIntervalSec = 0;
-    bool watcherStarted   = false;
+    bool watcherStarted = false;
     std::thread watcher_thread;
 
-   public:
+public:
     custSampleLoader();
     ~custSampleLoader();
     int loaderInit(char* loader_path);
     void loaderDeInit();
     int unloadModel(const char* modelName, int version);
     int loadModel(const char* modelName, const char* basePath, const int version,
-                     const char* loaderOptions, char** xmlBuffer, int* xmlLen, char** binBuffer,
-                     int* binLen);
+        const char* loaderOptions, char** xmlBuffer, int* xmlLen, char** binBuffer,
+        int* binLen);
     bool getModelBlacklistStatus(const char* modelName, int version);
 
     void threadFunction(std::future<void> futureObj);
@@ -111,12 +110,12 @@ int custSampleLoader::loaderInit(char* loader_path) {
 }
 
 int custSampleLoader::load_files(char* binFile, char* xmlFile, char** xmlBuffer,
-                                    char** binBuffer, int* xmlLen, int* binLen) {
+    char** binBuffer, int* xmlLen, int* binLen) {
     streampos size;
     ifstream bfile(binFile, ios::in | ios::binary | ios::ate);
     if (bfile.is_open()) {
-        size       = bfile.tellg();
-        *binLen    = size;
+        size = bfile.tellg();
+        *binLen = size;
         *binBuffer = new char[size];
         bfile.seekg(0, ios::beg);
         bfile.read(*binBuffer, size);
@@ -127,8 +126,8 @@ int custSampleLoader::load_files(char* binFile, char* xmlFile, char** xmlBuffer,
     }
     ifstream xfile(xmlFile, ios::in | ios::ate);
     if (xfile.is_open()) {
-        size       = xfile.tellg();
-        *xmlLen    = size;
+        size = xfile.tellg();
+        *xmlLen = size;
         *xmlBuffer = new char[size];
         xfile.seekg(0, ios::beg);
         xfile.read(*xmlBuffer, size);
@@ -140,10 +139,10 @@ int custSampleLoader::load_files(char* binFile, char* xmlFile, char** xmlBuffer,
     return CUSTLOADER_OK;
 }
 int custSampleLoader::extract_input_params(char* basePath, int version, char* loaderOptions,
-                                              char** binFile, char** xmlFile) {
-    size_t str_len  = 0;
+    char** binFile, char** xmlFile) {
+    size_t str_len = 0;
     size_t path_len = 0;
-    int ret      = CUSTLOADER_OK;
+    int ret = CUSTLOADER_OK;
     char path[RSIZE_MAX_STR];
     Document doc;
 
@@ -154,7 +153,7 @@ int custSampleLoader::extract_input_params(char* basePath, int version, char* lo
 
     snprintf(path, RSIZE_MAX_STR, "%s/%d", basePath, version);
     string fullpath = string(path);
-    path_len        = fullpath.length() + PATH_SIZE;
+    path_len = fullpath.length() + PATH_SIZE;
 
     // parse jason input string
     if (doc.Parse(loaderOptions).HasParseError()) {
@@ -166,9 +165,9 @@ int custSampleLoader::extract_input_params(char* basePath, int version, char* lo
 
     if (doc.HasMember("bin_file")) {
         string binName = doc["bin_file"].GetString();
-        size_t size    = path_len + binName.length();
+        size_t size = path_len + binName.length();
         string binPath = fullpath + "/" + binName;
-        *binFile       = new char[binPath.length() + 1];
+        *binFile = new char[binPath.length() + 1];
         if (binFile == NULL) {
             cout << "Error: could not allocate memory " << endl;
             return CUSTLOADER_ERROR;
@@ -179,9 +178,9 @@ int custSampleLoader::extract_input_params(char* basePath, int version, char* lo
 
     if (doc.HasMember("xml_file")) {
         string xmlName = doc["xml_file"].GetString();
-        size_t size    = path_len + xmlName.length();
+        size_t size = path_len + xmlName.length();
         string xmlPath = fullpath + "/" + xmlName;
-        *xmlFile       = new char[xmlPath.length() + 1];
+        *xmlFile = new char[xmlPath.length() + 1];
         if (xmlFile == NULL) {
             cout << "Error: could not allocate memory " << endl;
             return CUSTLOADER_ERROR;
@@ -193,11 +192,11 @@ int custSampleLoader::extract_input_params(char* basePath, int version, char* lo
 }
 
 int custSampleLoader::loadModel(const char* modelName, const char* basePath, const int version,
-                                   const char* loaderOptions, char** xmlBuffer, int* xmlLen,
-                                   char** binBuffer, int* binLen) {
+    const char* loaderOptions, char** xmlBuffer, int* xmlLen,
+    char** binBuffer, int* binLen) {
     cout << "custSampleLoader: Custom loadModel" << endl;
 
-    char* type    = NULL;
+    char* type = NULL;
     char* binFile = NULL;
     char* xmlFile = NULL;
 
@@ -216,32 +215,31 @@ int custSampleLoader::loadModel(const char* modelName, const char* basePath, con
     }
 
     /* Start the watcher thread after first moel load */
-    if (watcherStarted == false){
-    	int interval = 30;
-    	startWatcher(interval);
-    	this_thread::sleep_for(chrono::seconds(1));
+    if (watcherStarted == false) {
+        int interval = 30;
+        startWatcher(interval);
+        this_thread::sleep_for(chrono::seconds(1));
     }
-    
-    models_loaded.push_back(make_pair(string(modelName),version));
+
+    models_loaded.push_back(make_pair(string(modelName), version));
     return CUSTLOADER_OK;
 }
 
 int custSampleLoader::unloadModel(const char* modelName, int version) {
     cout << "custSampleLoader: Custom unloadModel" << endl;
 
-    model_id_t toFind = make_pair(string(modelName),version);
+    model_id_t toFind = make_pair(string(modelName), version);
 
     auto it = models_loaded.begin();
-    for (; it != models_loaded.end(); it++){
-	    if (*it == toFind)
-		    break;
+    for (; it != models_loaded.end(); it++) {
+        if (*it == toFind)
+            break;
     }
 
-    if (it == models_loaded.end()){
-	    cout << modelName << " is not loaded" <<endl;
-    }
-    else {
-	    models_loaded.erase(it);
+    if (it == models_loaded.end()) {
+        cout << modelName << " is not loaded" << endl;
+    } else {
+        models_loaded.erase(it);
     }
     return CUSTLOADER_OK;
 }
@@ -256,18 +254,18 @@ bool custSampleLoader::getModelBlacklistStatus(const char* modelName, int versio
     cout << "custSampleLoader: Custom getModelBlacklistStatus" << endl;
 
     if (models_blacklist.size() == 0)
-	    return false;
+        return false;
 
     model_id_t toFind = make_pair(string(modelName), version);
 
     auto it = models_blacklist.begin();
-    for (; it != models_blacklist.end(); it++){
-	    if (*it == toFind)
-		    break;
+    for (; it != models_blacklist.end(); it++) {
+        if (*it == toFind)
+            break;
     }
 
-    if (it == models_blacklist.end()){
-	return false;
+    if (it == models_blacklist.end()) {
+        return false;
     }
 
     /* model name and version in blacklist.. return true */
@@ -276,31 +274,30 @@ bool custSampleLoader::getModelBlacklistStatus(const char* modelName, int versio
 
 void custSampleLoader::threadFunction(future<void> futureObj) {
     cout << "custSampleLoader: Thread Start" << endl;
-    int count   = 1;
+    int count = 1;
     while (futureObj.wait_for(chrono::milliseconds(1)) == future_status::timeout) {
         cout << "custSampleLoader: Doing Some Work " << count++ << endl;
         this_thread::sleep_for(std::chrono::seconds(watchIntervalSec));
         // After 1 cycles forcing the thread to add first model as blacklisted
         if (count == 2) {
-	    if (models_loaded.size() >0) {
-		models_blacklist.push_back(models_loaded[0]);
-		cout << "custSampleLoader: Blacklisting the model " <<endl; 
-	    }
+            if (models_loaded.size() > 0) {
+                models_blacklist.push_back(models_loaded[0]);
+                cout << "custSampleLoader: Blacklisting the model " << endl;
+            }
         }
 
         //After 2 cycles clear the blacklist and break
         if (count == 3) {
-            cout << "custSampleLoader: Clearing the blacklist " <<endl;
-	    models_blacklist.clear();
+            cout << "custSampleLoader: Clearing the blacklist " << endl;
+            models_blacklist.clear();
         }
-
     }
     cout << "custSampleLoader: Thread END" << endl;
     watcherJoin();
 }
 
 void custSampleLoader::startWatcher(int interval) {
-    watchIntervalSec = interval; 
+    watchIntervalSec = interval;
 
     if ((!watcherStarted) && (watchIntervalSec > 0)) {
         future<void> futureObj = exitSignal.get_future();
@@ -321,4 +318,3 @@ void custSampleLoader::watcherJoin() {
         }
     }
 }
-
