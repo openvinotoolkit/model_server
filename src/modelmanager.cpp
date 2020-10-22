@@ -470,19 +470,18 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     return StatusCode::OK;
 }
 
-Status ModelManager::cleanupModelTmpFiles(ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToCleanup) {
+Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
     auto lfstatus = StatusCode::OK;
-    if (versionsToCleanup->size() > 0) {
-        if (config.getLocalPath().compare(config.getBasePath())) {
-            LocalFileSystem lfs;
-            lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-            if (lfstatus != StatusCode::OK) {
-                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                    config.getLocalPath(),
-                    lfstatus);
-            } else {
-                spdlog::info("Model removed from {}", config.getLocalPath());
-            }
+    
+    if (config.getLocalPath().compare(config.getBasePath())) {
+        LocalFileSystem lfs;
+        lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+        if (lfstatus != StatusCode::OK) {
+            spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                config.getLocalPath(),
+                lfstatus);
+        } else {
+            spdlog::info("Model removed from {}", config.getLocalPath());
         }
     }
 
@@ -492,9 +491,9 @@ Status ModelManager::cleanupModelTmpFiles(ModelConfig& config, std::shared_ptr<m
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
-    auto status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
-    if (!status.ok()) {
-        return status;
+    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
+    if (!blocking_status.ok()) {
+        return blocking_status;
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
 
@@ -508,8 +507,8 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     try {
         downloadModels(fs, config, versionsToStart);
 
-        status = model->addVersions(versionsToStart, config);
-        if (!status.ok()) {
+        blocking_status = model->addVersions(versionsToStart, config);
+        if (!blocking_status.ok()) {
             spdlog::error("Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
@@ -517,12 +516,13 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     } catch (std::exception& e) {
         spdlog::error("Exception occurred while loading model: {};", e.what());
     }
-
-    cleanupModelTmpFiles(config, versionsToStart);
+    if (versionsToStart->size() > 0) {
+        cleanupModelTmpFiles(config);
+    }
 
     try {
         downloadModels(fs, config, versionsToReload);
-        status = model->reloadVersions(versionsToReload, config);
+        auto status = model->reloadVersions(versionsToReload, config);
         if (!status.ok()) {
             spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -532,16 +532,19 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         spdlog::error("Exception occurred while reloading model: {};", e.what());
     }
 
-    cleanupModelTmpFiles(config, versionsToReload);
-    status = model->retireVersions(versionsToRetire);
+    if (versionsToReload->size() > 0) {
+        cleanupModelTmpFiles(config);
+    }
+
+    auto status = model->retireVersions(versionsToRetire);
     if (!status.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
             config.getName(),
             status.string());
     }
 
-    return status;
-}  // namespace ovms
+    return blocking_status;
+}
 
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
     std::shared_lock lock(modelsMtx);
