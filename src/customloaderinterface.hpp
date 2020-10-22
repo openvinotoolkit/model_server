@@ -81,7 +81,7 @@ public:
          */
     virtual bool getModelBlacklistStatus(const char* modelName, int version) {
         return false;
-    };
+    }
 
     /**
          * @brief Unload model resources by custom loader once model is unloaded by OVMS
