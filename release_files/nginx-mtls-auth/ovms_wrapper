@@ -50,20 +50,12 @@ trap sigint_handler SIGINT
 (
 	sleep 1
 	echo "Processing Nginx configuration..."
-	#echo "include /etc/nginx/model_server.conf;" >> /etc/nginx/nginx.conf
-	#cp /model_server.conf.template /etc/nginx/model_server.conf
-	#sed -i 's/MODEL_SERVER_GRPC_PORT/9001/g' /etc/nginx/model_server.conf
-	#sed -i 's/MODEL_SERVER_REST_PORT/5556/g' /etc/nginx/model_server.conf
-	#sed -i 's/NGINX_LISTEN_GRPC_PORT/9000/g' /etc/nginx/model_server.conf
-	#sed -i 's/NGINX_LISTEN_REST_PORT/5555/g' /etc/nginx/model_server.conf
-
-	cp /model_server.conf.template /etc/nginx/conf.d/model_server.conf
-	sed -i 's/MODEL_SERVER_GRPC_PORT/9001/g' /etc/nginx/conf.d/model_server.conf
-	sed -i 's/MODEL_SERVER_REST_PORT/5556/g' /etc/nginx/conf.d/model_server.conf
-	sed -i 's/NGINX_LISTEN_GRPC_PORT/9000/g' /etc/nginx/conf.d/model_server.conf
-	sed -i 's/NGINX_LISTEN_REST_PORT/5555/g' /etc/nginx/conf.d/model_server.conf
-
-
+	cp /model_server.conf.template /model_server.conf
+	sed -i 's/MODEL_SERVER_GRPC_PORT/9001/g' /model_server.conf
+	sed -i 's/MODEL_SERVER_REST_PORT/5556/g' /model_server.conf
+	sed -i 's/NGINX_LISTEN_GRPC_PORT/9000/g' /model_server.conf
+	sed -i 's/NGINX_LISTEN_REST_PORT/5555/g' /model_server.conf
+	mv /model_server.conf /etc/nginx/conf.d/model_server.conf
 	echo "Starting Nginx..."
 	nginx -g 'daemon off;' &
 	NGINX_PID=$!
