@@ -376,12 +376,12 @@ public:
         std::ostringstream oss;
         oss << "(";
         size_t i = 0;
-	if (shape.size() > 0) {
+        if (shape.size() > 0) {
             for (; i < shape.size() - 1; i++) {
                 oss << shape[i] << ",";
             }
             oss << shape[i];
-	}
+        }
         oss << ")";
 
         return oss.str();
@@ -391,12 +391,12 @@ public:
         std::ostringstream oss;
         oss << "(";
         size_t i = 0;
-	if (tensorShape.dim_size() > 0) {
+        if (tensorShape.dim_size() > 0) {
             for (; i < tensorShape.dim_size() - 1; i++) {
                 oss << tensorShape.dim(i).size() << ",";
             }
             oss << tensorShape.dim(i).size();
-	}
+        }
         oss << ")";
 
         return oss.str();
