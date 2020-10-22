@@ -488,7 +488,7 @@ Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
     return lfstatus;
 }
 
-Status ModelManager::addModelVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart ) {
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart ) {
     Status status = StatusCode::OK;
     try {
         downloadModels(fs, config, versionsToStart);
@@ -507,7 +507,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<FileSystem>& fs, ModelConf
     return status;
 }
 
-Status ModelManager::reloadModelVersions(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
     Status status = StatusCode::OK;
 
     try {
@@ -544,14 +544,14 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToStart->size() > 0) {
-        auto blocking_status = addModelWithVersions(fs, config, versionsToStart);
+        auto blocking_status = addModelWithVersions(model, fs, config, versionsToStart);
         if (!blocking_status.ok()) {
             return blocking_status;
         }
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(fs, config, versionsToStart);
+        reloadModelVersions(model, fs, config, versionsToStart);
     }
 
     auto status = model->retireVersions(versionsToRetire);
