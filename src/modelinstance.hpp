@@ -163,9 +163,15 @@ protected:
     std::string findModelFilePathWithExtension(const std::string& extension) const;
 
     /**
-         * @brief Stores required model files extensions to be able to load model
-         */
-    static constexpr std::array<const char*, 2> REQUIRED_MODEL_FILES_EXTENSIONS{".bin", ".xml"};
+      * @brief Stores required openVINO model files extensions to be able to load model
+      *        Order is important, first file on the list is passed to LoadNetwork
+      */
+    static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
+
+    /**
+      * @brief Stores required onnx model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
 
     /**
          * @brief Notifies model instance users who wait for loading
@@ -189,9 +195,9 @@ private:
     tensor_map_t outputsInfo;
 
     /**
-         * @brief Holds model required file names
-         */
-    std::map<std::string, std::string> modelFiles;
+      * @brief Holds model required file names. First is loaded
+      */
+    std::vector<std::string> modelFiles;
 
     /**
          * @brief OpenVINO inference execution stream pool
