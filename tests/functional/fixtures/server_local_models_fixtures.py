@@ -19,7 +19,7 @@ import os
 import pytest
 
 import config
-from model.models_information import Resnet, AgeGender
+from model.models_information import Resnet, ResnetONNX, AgeGender
 from object_model.server import Server
 
 
@@ -38,6 +38,20 @@ def start_server_single_model(request):
                     container_name_infix, config.start_container_command, env_variables)
     return server.start()
 
+@pytest.fixture(scope="class")
+def start_server_single_model_onnx(request):
+
+    start_server_command_args = {"model_name": ResnetONNX.name,
+                                 "model_path": ResnetONNX.model_path,
+                                 "plugin_config": "\"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"CPU_THROUGHPUT_AUTO\\\"}\""}
+    container_name_infix = "test-single-onnx"
+
+    # In this case, slower, non-default serialization method is used
+    env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
+
+    server = Server(request, start_server_command_args,
+                    container_name_infix, config.start_container_command, env_variables)
+    return server.start()
 
 @pytest.fixture(scope="class")
 def start_server_with_mapping(request):
