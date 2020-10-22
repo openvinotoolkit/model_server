@@ -13,6 +13,7 @@ server {
     ssl_client_certificate /certs/client_cert_ca.pem;
     ssl_verify_client on;
     ssl_verify_depth 1;
+    client_max_body_size 100M;
     location / {
          grpc_pass grpc://127.0.0.1:MODEL_SERVER_GRPC_PORT;
     }
@@ -27,6 +28,7 @@ server {
     ssl_client_certificate /certs/client_cert_ca.pem;
     ssl_verify_client on;
     ssl_verify_depth 1;
+    client_max_body_size 100M;
     location / {
          proxy_pass http://127.0.0.1:MODEL_SERVER_REST_PORT;
     }

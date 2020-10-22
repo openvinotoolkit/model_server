@@ -58,7 +58,6 @@ if args.get('tls'):
     server_ca_cert, client_key, client_cert = prepare_certs(server_cert=args['server_cert'],
                                                             client_key=args['client_key'],
                                                             client_ca=args['client_cert'])
-    print(server_ca_cert, client_key, client_cert)
     creds = grpc.ssl_channel_credentials(root_certificates=server_ca_cert,
                                          private_key=client_key, certificate_chain=client_cert)
     channel = grpc.secure_channel(address, creds)

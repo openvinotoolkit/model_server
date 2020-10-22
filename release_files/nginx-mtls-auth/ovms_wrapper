@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 set -x
-echo "ARGS: $@"
 ls -lahR /models/
 SIGINT_HANDLER_CALLED=0
 MODEL_SERVER_PID=

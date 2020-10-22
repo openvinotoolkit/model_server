@@ -42,10 +42,18 @@ Config& Config::parse(int argc, char** argv) {
                 "gRPC server port",
                 cxxopts::value<uint64_t>()->default_value("9178"),
                 "PORT")
+            ("grpc_bind_address",
+                "Network interface address to bind to for the gRPC API",
+                cxxopts::value<std::string>()->default_value("0.0.0.0"),
+                "GRPC_BIND_ADDRESS")
             ("rest_port",
                 "REST server port, the REST server will not be started if rest_port is blank or set to 0",
                 cxxopts::value<uint64_t>()->default_value("0"),
                 "REST_PORT")
+            ("rest_bind_address",
+                "Network interface address to bind to for the REST API",
+                cxxopts::value<std::string>()->default_value("0.0.0.0"),
+                "REST_BIND_ADDRESS")
             ("grpc_workers",
                 "number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint>()->default_value("1"),

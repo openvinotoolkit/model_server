@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
 #include <memory>
 
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
@@ -32,6 +33,6 @@ using http_server = tensorflow::serving::net_http::HTTPServerInterface;
  *  
  * @return std::unique_ptr<http_server> 
  */
-std::unique_ptr<http_server> createAndStartHttpServer(int port, int num_threads, int timeout_in_ms);
+std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms);
 
 }  // namespace ovms
