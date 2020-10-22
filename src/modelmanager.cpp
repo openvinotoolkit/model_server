@@ -549,7 +549,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToStart);
+        reloadModelVersions(model, fs, config, versionsToReload);
     }
 
     auto status = model->retireVersions(versionsToRetire);
