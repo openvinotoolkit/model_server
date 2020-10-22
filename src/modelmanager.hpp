@@ -52,6 +52,12 @@ protected:
      */
     std::map<std::string, std::shared_ptr<Model>> models;
 
+    /**
+     * @brief A collection of custom loader interface objects
+     *
+     */
+    std::map<std::string, std::shared_ptr<CustomLoaderInterface>> customLoaderInterfacePtrs;
+
     PipelineFactory pipelineFactory;
 
 private:
@@ -72,6 +78,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
     Status loadModelsConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
+    Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
     /**
      * @brief Watcher thread for monitor changes in config

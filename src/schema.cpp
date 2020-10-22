@@ -27,6 +27,29 @@
 namespace ovms {
 const char* MODELS_CONFIG_SCHEMA = R"({
 	"definitions": {
+		"custom_loader_config": {
+			"type": "object",
+			"required": ["config"],
+			"properties": {
+				"config": {
+					"type": "object",
+					"required": ["loader_name", "library_path"],
+					"properties": {
+						"loader_name": {
+							"type": "string"
+						},
+						"library_path": {
+							"type": "string"
+						},
+						"loader_config_file": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false
+				},
+				"additionalProperties": false
+			}
+		},
 		"model_config": {
 			"type": "object",
 			"required": ["config"],
@@ -58,6 +81,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						},
 						"plugin_config": {
 							"type": "object"
+						},
+						"custom_loader_options": {
+							"type": "object",
+							"items": {
+								"$ref": "#/definitions/custom_loader_options_config"
+							}
+
 						}
 					},
 					"additionalProperties": false
@@ -159,11 +189,27 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				}
 			},
 			"additionalProperties": false
+		},
+		"custom_loader_options_config": {
+			"type": "object",
+			"required": ["loader_name"],
+			"properties": {
+				"loader_name": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
 		}
 	},
 	"type": "object",
 	"required": ["model_config_list"],
 	"properties": {
+		"custom_loader_config_list": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/custom_loader_config"
+			}
+		},
 		"model_config_list": {
 			"type": "array",
 			"items": {

@@ -29,6 +29,7 @@ RUN mkdir -vp /ovms_release/bin
 RUN mkdir -vp /ovms_release/deps
 RUN mkdir -vp /ovms_release/lib
 RUN mkdir -vp /ovms_release/lib/hddl/config
+RUN mkdir -vp /ovms_release/custom_loader
 
 RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
@@ -54,6 +55,7 @@ RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$
 WORKDIR /ovms
 RUN cp -v /ovms/release_files/LICENSE /ovms_release/
 RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
+RUN cp -v /ovms/src/test/SampleCustomLoader/libsampleloader.so /ovms_release/custom_loader/
 
 RUN ls -lahR /ovms_release/
 

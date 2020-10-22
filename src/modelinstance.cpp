@@ -244,6 +244,34 @@ Status ModelInstance::loadOVCNNNetwork() {
     return StatusCode::OK;
 }
 
+Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
+    spdlog::debug("Try reading model using a custom loader");
+    try {
+        char* xmlBuffer = NULL;
+        int xmlLen = 0;
+        char* binBuffer = NULL;
+        int binLen = 0;
+
+        spdlog::info("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
+        int res = customLoaderInterfacePtr->loadModel(this->config.getName().c_str(),
+            this->config.getBasePath().c_str(),
+            getVersion(),
+            this->config.getCustomLoaderOptionsConfigStr().c_str(),
+            &xmlBuffer, &xmlLen, &binBuffer, &binLen);
+        if (res != 1) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        std::string strModel(xmlBuffer);
+        std::vector<uint8_t> weights(&binBuffer[0], &binBuffer[binLen]);
+        network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
+            make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+    } catch (std::exception& e) {
+        spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, targetDevice, pluginConfig));
 }
@@ -288,6 +316,11 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
 }
 
 Status ModelInstance::fetchModelFilepaths() {
+    if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        // not required if the model is loaded using a custom loader and can be returned from here
+        return StatusCode::OK;
+    }
+
     SPDLOG_DEBUG("Getting model files from path:{}", path);
     if (!dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
@@ -360,8 +393,14 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             loadOVEngine();
 
         status = StatusCode::OK;
-        if (!this->network)
-            status = loadOVCNNNetwork();
+        if (!this->network) {
+            if (this->config.isCustomLoaderRequiredToLoadModel()) {
+                // loading the model using the custom loader
+                status = loadOVCNNNetworkUsingCustomLoader();
+            } else
+                status = loadOVCNNNetwork();
+        }
+
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
@@ -550,6 +589,11 @@ void ModelInstance::unloadModel() {
     inputsInfo.clear();
     modelFiles.clear();
     status.setEnd();
+
+    if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        // once model is unloaded, notify custom loader object about the unload
+        customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
+    }
 }
 
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,

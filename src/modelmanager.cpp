@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <dlfcn.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
@@ -49,7 +50,7 @@ static bool watcherStarted = false;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-
+    watcherIntervalSec = 10;
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -225,6 +226,47 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
+Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
+    const auto itrp = configJson.FindMember("custom_loader_config_list");
+    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
+        SPDLOG_ERROR("Configuration file doesn't have custom loader property.");
+        return StatusCode::OK;
+    }
+
+    for (const auto& configs : itrp->value.GetArray()) {
+        // Load Customer Loaders as per the configuration
+        const std::string loaderName = configs["config"]["loader_name"].GetString();
+        SPDLOG_INFO("Reading Custom Loader:{} configuration", loaderName);
+
+        CustomLoaderConfig loaderConfig;
+        auto status = loaderConfig.parseNode(configs["config"]);
+        if (status != StatusCode::OK) {
+            SPDLOG_ERROR("Parsing loader:{} config failed", loaderName);
+            return StatusCode::UNKNOWN_ERROR;
+        }
+
+        //this is where library or custom loader is loaded
+        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_GLOBAL);
+        if (!handleCL) {
+            SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+
+        // load the symbols
+        create_t* customObj = (create_t*)dlsym(handleCL, "create");
+        const char* dlsym_error = dlerror();
+        if (dlsym_error) {
+            SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
+            return StatusCode::UNKNOWN_ERROR;
+        }
+
+        std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
+        customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
+        customLoaderInterfacePtrs.insert({loaderName, customerLoaderIfPtr});
+    }
+    return ovms::StatusCode::OK;
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
@@ -269,6 +311,11 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
     configFilename = jsonFilename;
     Status status;
+    //load the custom loader config, if available
+    status = loadCustomLoadersConfig(configJson);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     status = loadModelsConfig(configJson);
     if (status != StatusCode::OK) {
         return status;
@@ -547,6 +594,25 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToRetire;
 
     auto model = getModelIfExistCreateElse(config.getName());
+
+    if (config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
+        const std::string customLoaderName = customLoaderOptionsConfig["loader_name"];
+
+        spdlog::info("Custom Loader to be used : {}", customLoaderName);
+        model->setCustomLoaderInterfacePtr(customLoaderInterfacePtrs[customLoaderName]);
+
+        //check existing version for blacklist
+        for (const auto& [version, versionInstance] : model->getModelVersions()) {
+            bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
+                versionInstance->getName().c_str(), version);
+            if (bres) {
+                spdlog::info("The model {} is blacklisted",versionInstance->getName());
+                requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+            }
+        }
+    }
+
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToStart->size() > 0) {

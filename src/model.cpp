@@ -80,6 +80,11 @@ std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::stri
 Status Model::addVersion(const ModelConfig& config) {
     const auto& version = config.getVersion();
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
+    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory();
+    if (config.isCustomLoaderRequiredToLoadModel()) {
+        // if model requires custom loader, set the custom loader interface pointer object to modelInstance
+        modelInstance->setCustomLoaderInterfacePtr(customLoaderInterfacePtr);
+    }
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
         return status;

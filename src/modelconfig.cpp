@@ -406,6 +406,31 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         setBatchingMode(FIXED);
         setBatchSize(0);
     }
+
+    // if the config has models which require custom loader to be used, then load the same here
+    if (v.HasMember("custom_loader_options")) {
+        if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
+            SPDLOG_ERROR("Couldn't parse custom loader options config");
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node) {
+    if (!node.IsObject()) {
+        return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+    }
+    for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+        if (!it->value.IsString()) {
+            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+        }
+        customLoaderOptionsConfigMap[it->name.GetString()] = it->value.GetString();
+    }
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    node.Accept(writer);
+    customLoaderOptionsStr = buffer.GetString();
+
     return StatusCode::OK;
 }
 

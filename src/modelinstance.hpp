@@ -32,6 +32,8 @@
 #pragma GCC diagnostic pop
 
 #include "modelchangesubscription.hpp"
+#include "customloaderconfig.hpp"
+#include "customloaderinterface.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
@@ -188,6 +190,18 @@ protected:
          * @brief Holds currently loaded model configuration
          */
     ModelConfig config;
+
+    /**
+         * @brief Holds pointer to the custom loader interface
+         */
+    std::shared_ptr<CustomLoaderInterface> customLoaderInterfacePtr;
+
+    /**
+         * @brief Loads OV CNNNetwork Using the Custom Loader
+         *
+         * @return Status
+         */
+    Status loadOVCNNNetworkUsingCustomLoader();
 
 private:
     /**
@@ -470,5 +484,25 @@ public:
     void unsubscribe(PipelineDefinition& pd);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
+
+    /**
+         * @brief Set the custom loader interface pointer
+         *
+         * @param custom loader interface pointer
+         *
+         * @return status
+         */
+    void setCustomLoaderInterfacePtr(std::shared_ptr<CustomLoaderInterface> ptr) {
+        customLoaderInterfacePtr = ptr;
+    }
+
+    /**
+         * @brief Gets model config
+         *
+         * @return model config
+         */
+    virtual const std::shared_ptr<CustomLoaderInterface> getCustomLoaderInterfacePtr() const {
+        return customLoaderInterfacePtr;
+    }
 };
 }  // namespace ovms

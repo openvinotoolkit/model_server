@@ -194,6 +194,10 @@ WORKDIR /ovms
 COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/
 
+# Build CustomLoader SampleCustomLoader Library
+ENV PATH=${PATH}:/opt/rh/devtoolset-8/root/bin
+RUN cd src/test/SampleCustomLoader && make clean all
+
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
@@ -206,3 +210,4 @@ RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //
 COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
+
