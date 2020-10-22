@@ -1,4 +1,14 @@
 #!/bin/bash -x
+
+if [ -d './images/' ] ; then
+	echo "models are ready"
+else
+	echo "Downloading models..."
+	set -e
+	./get_model.sh
+	set +e
+fi
+
 #python3 ../../example_client/rest_get_model_status.py \
 #	--rest_url https://localhost --rest_port 15555 --client_certificate_file client.pem --client_key_file client.key --ignore_server_verification \
 #	--model_name face-detection

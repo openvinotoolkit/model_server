@@ -1,4 +1,16 @@
 #!/bin/bash -x
+
+./BUILD.sh
+
+if [ -d './images/' ] ; then
+        echo "models are ready"
+else
+        echo "Downloading models..."
+        set -e
+        ./get_model.sh
+        set +e
+fi
+
 openssl req -x509 -nodes -days 7 -newkey rsa:2048 -keyout server.key -out server.pem -subj "/C=US/CN=localhost"
 
 openssl genrsa -out client_cert_ca.key 2048
