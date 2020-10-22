@@ -22,7 +22,7 @@ import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics
+from client_utils import print_statistics, prepare_certs
 
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
@@ -52,9 +52,25 @@ parser.add_argument('--model_name', default='resnet', help='Define model name, m
                     dest='model_name')
 parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                     dest='pipeline_name')
+parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
+parser.add_argument('--server_cert', required=False, help='Path to server certificate')
+parser.add_argument('--client_cert', required=False, help='Path to client certificate')
+parser.add_argument('--client_key', required=False, help='Path to client key')
+
 args = vars(parser.parse_args())
 
-channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
+
+if args.get('tls'):
+    server_ca_cert, client_key, client_cert = prepare_certs(server_cert=args['server_cert'],
+                                                            client_key=args['client_cert'],
+                                                            client_ca=args['client_key'])
+    creds = grpc.ssl_channel_credentials(root_certificates=server_ca_cert,
+                                         private_key=client_key, certificate_chain=client_cert)
+    channel = grpc.secure_channel(address, creds)
+else:
+    channel = grpc.insecure_channel(address)
+
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
