@@ -17,4 +17,8 @@ stream {
 	ssl_verify_depth 1;
 	proxy_pass 127.0.0.1:MODEL_SERVER_REST_PORT;
     }
+	log_format basic '$remote_addr [$time_local] '
+	                 '$protocol $status $bytes_sent $bytes_received '
+	                 '$session_time';
+	access_log /var/log/nginx/stream.log basic flush=1s buffer=1k;
 }
