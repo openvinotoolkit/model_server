@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+source test_config.sh
+
 if [ -d './images/' ] ; then
 	echo "models are ready"
 else
@@ -27,7 +29,7 @@ fi
 #parser.add_argument('--client_cert', required=False, help='Path to client certificate')
 #parser.add_argument('--client_key', required=False, help='Path to client key')
 
-python3 ../../example_client/face_detection.py --grpc_port 19000 --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --tls \
+python3 ../../example_client/face_detection.py --grpc_port $GRPC_PORT --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --tls \
 	--server_cert server.pem --client_cert client.pem --client_key client.key
 #	--server_cert /home/rr/GH_OVMS/inference-model-manager/scripts/ojej/ca-cert-tf.crt \
 #	--client_cert /home/rr/GH_OVMS/inference-model-manager/scripts/ojej/client-tf.crt \

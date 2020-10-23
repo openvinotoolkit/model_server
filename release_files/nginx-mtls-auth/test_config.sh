@@ -1,0 +1,4 @@
+#!/bin/bash -x
+
+REST_PORT=2222
+GRPC_PORT=3333

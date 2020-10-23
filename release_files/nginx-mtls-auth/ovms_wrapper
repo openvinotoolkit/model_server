@@ -46,14 +46,82 @@ function sigint_handler() {
 }
 trap sigint_handler SIGINT
 
+new_args=()
+ACTION_GRPC_PORT=
+ACTION_REST_PORT=
+DELETE_NEXT_ARG=
+
+GRPC_ORIGINAL_PORT=
+GRPC_OVMS_NEW_PORT=
+REST_ORIGINAL_PORT=
+REST_OVMS_NEW_PORT=
+                 #new_args+=" $REPLACE_NEXT_ARG_WITH"
+
+	for a in $*
+	do
+	    echo "ARG: $a"
+            if [ "$DELETE_NEXT_ARG" != "" ] ; then
+                 DELETE_NEXT_ARG=
+                 continue
+            fi
+            if [ "$ACTION_GRPC_PORT" != "" ] ; then
+                 GRPC_ORIGINAL_PORT=$a
+                 ACTION_GRPC_PORT=
+                 continue
+            fi
+            if [ "$ACTION_REST_PORT" != "" ] ; then
+                 REST_ORIGINAL_PORT=$a
+                 ACTION_REST_PORT=
+                 continue
+            fi
+            if [ "$a" == "--port" ] ; then
+                 ACTION_GRPC_PORT=1
+                 continue
+            fi
+            if [ "$a" == "--rest_port" ] ; then
+                 ACTION_REST_PORT=1
+                 continue
+            fi
+            if [ "$a" == "--grpc_bind_address" ] ; then
+                 DELETE_NEXT_ARG=1
+                 continue
+            fi
+            if [ "$a" == "--rest_bind_address" ] ; then
+                 DELETE_NEXT_ARG=1
+                 continue
+            fi
+            new_args+=" $a"
+            echo "current args: ${new_args[@]}"
+	done
+	echo "${new_args[@]}"
+
+echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
+
+if [ "$GRPC_ORIGINAL_PORT" != "" ] ; then
+	# TODO: handle port colision
+	GRPC_OVMS_NEW_PORT=12000
+	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+else
+	# default port shall be used if it is not provided:
+	GRPC_ORIGINAL_PORT=9178
+	GRPC_OVMS_NEW_PORT=12000
+	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+fi
+if [ "$REST_ORIGINAL_PORT" != "" ] ; then
+	REST_OVMS_NEW_PORT=13000
+	new_args+=" --rest_port=$REST_OVMS_NEW_PORT "
+fi
+
+
+
 (
 	sleep 1
 	echo "Processing Nginx configuration..."
 	cp /model_server.conf.template /model_server.conf
-	sed -i 's/MODEL_SERVER_GRPC_PORT/9001/g' /model_server.conf
-	sed -i 's/MODEL_SERVER_REST_PORT/5556/g' /model_server.conf
-	sed -i 's/NGINX_LISTEN_GRPC_PORT/9000/g' /model_server.conf
-	sed -i 's/NGINX_LISTEN_REST_PORT/5555/g' /model_server.conf
+	sed -i "s/MODEL_SERVER_GRPC_PORT/$GRPC_OVMS_NEW_PORT/g" /model_server.conf
+	sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /model_server.conf
+	sed -i "s/NGINX_LISTEN_GRPC_PORT/$GRPC_ORIGINAL_PORT/g" /model_server.conf
+	sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /model_server.conf
 	mv /model_server.conf /etc/nginx/conf.d/model_server.conf
 	echo "Starting Nginx..."
 	nginx -g 'daemon off;' &
@@ -70,7 +138,7 @@ trap sigint_handler SIGINT
 (
 	echo "Starting Model Server..."
 	#runuser -p ovms -c "'/ovms/bin/./ovms $@'" &
-	runuser -p ovms -c "/ovms/bin/./ovms $*" &
+	runuser -p ovms -c "/ovms/bin/./ovms ${new_args[@]} --grpc_bind_address 127.0.0.1 --rest_bind_address 127.0.0.1 " &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid

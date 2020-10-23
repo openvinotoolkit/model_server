@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+source test_config.sh
+
 ./BUILD.sh
 
 if [ -d './images/' ] ; then
@@ -19,15 +21,18 @@ openssl genrsa -out client.key 2048
 openssl req -new -key client.key -out client.csr -subj "/C=US/CN=client"
 openssl x509 -req -in client.csr -CA client_cert_ca.pem -CAkey client_cert_ca.key -CAcreateserial -out client.pem -days 7 -sha256
 
+
 docker run --rm -ti \
 	-v $(pwd)/model/:/models/face-detection/1/ \
 	-v $(pwd)/server.pem:/certs/server.pem:ro \
 	-v $(pwd)/server.key:/certs/server.key:ro \
 	-v $(pwd)/client_cert_ca.pem:/certs/client_cert_ca.pem:ro \
-	-p 19000:9000 \
-	-p 15555:5555 \
-	-p 19001:9001 \
-	-p 15556:5556 \
+	-p $REST_PORT:$REST_PORT \
+	-p $GRPC_PORT:$GRPC_PORT \
 	openvino/model_server:rr-ovms-nginx-mtls \
-	--model_path /models/face-detection --model_name face-detection --grpc_bind_address 127.0.0.1 --port 9001 --rest_bind_address 127.0.0.1 --rest_port 5556 --log_level DEBUG --shape auto
+	--model_path /models/face-detection --model_name face-detection --grpc_bind_address 8.8.8.8 --port $GRPC_PORT --rest_bind_address 1.1.1.1 --rest_port $REST_PORT --log_level DEBUG --shape auto
+#                                                                                           ^^^^^^^                                       ^^^^^^^
+#                                                                                           [___________________________________________________}
+#                                                                                             those will be replaced by 127.0.0.1 by supervisor.
+#
 
