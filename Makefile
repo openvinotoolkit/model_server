@@ -44,6 +44,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.4
+
 DLDT_PACKAGE_URL ?= ""
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-2021.1.110.x86_64

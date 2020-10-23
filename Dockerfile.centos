@@ -124,7 +124,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 # yum package
-RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ; \
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ; \
     yum-config-manager --add-repo https://yum.repos.intel.com/openvino/2021/setup/intel-openvino-2021.repo && \
     rpm --import https://yum.repos.intel.com/openvino/2021/setup/RPM-GPG-KEY-INTEL-OPENVINO-2021 && \
     yum install -y $YUM_OV_PACKAGE
@@ -192,15 +192,13 @@ WORKDIR /ovms
 
 COPY src/ /ovms/src/
 COPY release_files/ /ovms/release_files/
-COPY set_version.sh /tmp
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
-RUN bash /tmp/set_version.sh REPLACE_PROJECT_NAME ${PROJECT_NAME}
-RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ;bash /tmp/set_version.sh REPLACE_OPENVINO_NAME `echo "$YUM_OV_PACKAGE" | sed -e 's/intel-openvino-runtime-centos7-//g' | sed 's/.x86_64//g'`
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's:REPLACE_OPENVINO_NAME:`echo "$YUM_OV_PACKAGE" | sed -e 's/intel-openvino-runtime-centos7-//g' | sed 's/.x86_64//g'`:g' /ovms/src/version.hpp" 
 
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi;bash /tmp/set_version.sh REPLACE_OPENVINO_NAME `echo ${OPENVINO_NAME} | sed -e 's|http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_||g' | sed 's/.tgz//g'`
-
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's#REPLACE_OPENVINO_NAME#`echo "$OPENVINO_NAME" | sed -e 's;http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_;;g'|sed 's:.tgz::g'`#g' /ovms/src/version.hpp"
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 
