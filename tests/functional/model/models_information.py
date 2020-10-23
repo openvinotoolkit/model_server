@@ -159,3 +159,16 @@ class ResnetGS:
     output_shape = (1, 1000)
     rest_request_format = 'row_name'
     model_path = "gs://ovms-public-eu/resnet50-binary"
+
+class ResnetONNX:
+    name = "resnet_onnx"
+    dtype = np.float32
+    input_name = "data"
+    input_shape = (1, 3, 224, 224)
+    output_name = "resnetv24_dense0_fwd"
+    output_shape = (1, 1000)
+    rest_request_format = 'row_name'
+    url = "https://github.com/onnx/models/raw/master/vision/classification/resnet/model/resnet50-v2-7"
+    download_extensions = [".onnx"]
+    version = 1
+    model_path = os.path.join(config.models_path, name)
