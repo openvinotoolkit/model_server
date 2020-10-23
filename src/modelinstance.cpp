@@ -226,7 +226,7 @@ std::unique_ptr<InferenceEngine::CNNNetwork> ModelInstance::loadOVCNNNetworkPtr(
 }
 
 Status ModelInstance::loadOVCNNNetwork() {
-    auto& modelFile = modelFiles[".xml"];
+    auto& modelFile = modelFiles[0];
     spdlog::debug("Try reading model file:{}", modelFile);
     try {
         network = loadOVCNNNetworkPtr(modelFile);
@@ -286,14 +286,33 @@ Status ModelInstance::fetchModelFilepaths() {
         spdlog::error("Missing model directory {}", path);
         return StatusCode::PATH_INVALID;
     }
-    for (auto extension : REQUIRED_MODEL_FILES_EXTENSIONS) {
+
+    bool found = true;
+    for (auto extension : OV_MODEL_FILES_EXTENSIONS) {
         auto file = findModelFilePathWithExtension(extension);
         if (file.empty()) {
-            spdlog::error("Could not find *{} file for model:{} version:{} in path:{}", extension, getName(), getVersion(), path);
-            return StatusCode::FILE_INVALID;
+            found = false;
         }
-        modelFiles[extension] = file;
+        modelFiles.push_back(file);
     }
+
+    if (!found) {
+        found = true;
+        modelFiles.clear();
+        for (auto extension : ONNX_MODEL_FILES_EXTENSIONS) {
+            auto file = findModelFilePathWithExtension(extension);
+            if (file.empty()) {
+                found = false;
+            }
+            modelFiles.push_back(file);
+        }
+    }
+
+    if (!found) {
+        spdlog::error("Could not find file for model:{} version:{} in path:{}", getName(), getVersion(), path);
+        return StatusCode::FILE_INVALID;
+    }
+
     return StatusCode::OK;
 }
 

@@ -21,12 +21,12 @@ import requests
 import shutil
 
 import config
-from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1
+from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1, ResnetONNX
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-models_to_download = [AgeGender, FaceDetection, PVBDetection, PVBFaceDetectionV1, PVBFaceDetectionV2]
+models_to_download = [AgeGender, FaceDetection, PVBDetection, PVBFaceDetectionV1, PVBFaceDetectionV2, ResnetONNX]
 
 
 def download_file(model_url_base, model_name, directory, extension, model_version = None, full_path = False):
