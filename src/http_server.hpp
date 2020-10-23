@@ -15,8 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 

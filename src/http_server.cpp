@@ -101,7 +101,7 @@ private:
 std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms) {
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
-    // options->AddBindInterface(address);
+    options->SetAddress(address);
     options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
 
     auto server = net_http::CreateEvHTTPServer(std::move(options));
