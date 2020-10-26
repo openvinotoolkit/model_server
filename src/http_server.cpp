@@ -23,12 +23,12 @@
 
 #include <spdlog/spdlog.h>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "tensorflow_serving/util/threadpool_executor.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "http_rest_api_handler.hpp"
 #include "status.hpp"

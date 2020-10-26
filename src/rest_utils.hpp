@@ -17,9 +17,9 @@
 
 #include <string>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "rest_parser.hpp"
 #include "status.hpp"

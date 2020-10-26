@@ -23,9 +23,9 @@
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "get_model_metadata_impl.hpp"
 #include "modelinstanceunloadguard.hpp"

@@ -21,10 +21,10 @@
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "status.hpp"
 #include "tensorinfo.hpp"

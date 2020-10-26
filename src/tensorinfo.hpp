@@ -21,9 +21,9 @@
 
 #include <inference_engine.hpp>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "modelconfig.hpp"
 

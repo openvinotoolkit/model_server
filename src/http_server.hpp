@@ -17,9 +17,9 @@
 
 #include <memory>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 namespace ovms {
 

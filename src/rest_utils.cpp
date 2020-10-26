@@ -17,9 +17,9 @@
 
 #include <spdlog/spdlog.h>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #define DEBUG
 #include "timer.hpp"

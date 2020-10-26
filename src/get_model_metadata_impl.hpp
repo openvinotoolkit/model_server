@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
-#pragma warning(push, 0)
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
-#pragma warning(pop)
+#pragma GCC diagnostic pop
 
 #include "modelmanager.hpp"
 #include "status.hpp"
