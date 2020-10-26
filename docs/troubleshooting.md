@@ -13,7 +13,7 @@ This document gives information about troubleshooting following issues while usi
 
 ## Model Import Issues<a name="model-import"></a>
 
-OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./ModelVersionPolicy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
+OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./model_version_policy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
 
 When new model version is detected, the server loads the model files and starts serving new model version. This operation might fail for the following reasons :
 - There is a problem with accessing model files (i. e. due to network connectivity issues to the  remote storage or insufficient permissions).
@@ -38,17 +38,15 @@ models/
 ```
 - In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as valid model version because it does not contain valid OpenVINO model files.
 
-- The server will not detect any version in `model2`because although the files in `model2` are correct, but they are not in a numerical directory.
+- The server will not detect any version in `model2`because, although the files in `model2` are correct, they are not in a numerical directory.
 
 - The root cause is reported in the server logs or in the response from a call to GetModelStatus function. 
 
 - A model version that is detected but not loaded will not be served. It will report status `LOADING` with error message: `Error occurred while loading version`.
 
-- When model files become accessible or fixed, server will try to load them again on the next [version update](./ModelVersionPolicy.md) attempt.
+- When model files become accessible or fixed, server will try to load them again on the next version update attempt.
 
-- At startup, the server will enable gRPC and REST API endpoint (if `--rest_port` was provided), after all configured models and detected model versions are loaded successfully (in AVAILABLE state).
-
-- The server will fail to start if it can not list the content of configured model paths.
+- Model import will fail if the OVMS process does not have read permissions to the model files and list permissions on the model folder and model version subfolder. 
 
 
 ## Client Request Issues<a name="client-request"></a>

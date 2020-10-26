@@ -17,13 +17,13 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 
 A few key features: 
 - Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
-- Deploy new [model versions](docs/ModelVersionPolicy.md) without changing client code.
+- Online deployment of new [model versions](docs/model_version_policy.md).
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
 [Docker containers](docs/docker_container.md).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
-- [Model reshaping](docs/ShapeAndBatchSize.md). The server supports reshaping models in runtime. 
+- [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
@@ -68,13 +68,13 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 ### GRPC 
 
-Learn more about [GRPC API](docs/ModelServerGRPCAPI.md)
+Learn more about [GRPC API](docs/model_server_grpc_api.md)
 
 Refer to the [GRPC example client code](example_client/README.md#grpc-api-client-examples) to learn how to use and submit the requests using the gRPC interface.
 
 ### REST
 
-Learn more about [REST API](docs/ModelServerRESTAPI.md)
+Learn more about [REST API](docs/model_server_rest_api.md)
 
 Refer to the [REST API example client code](./example_client/README.md#rest-api-client-examples) to learn how to use REST API 
 

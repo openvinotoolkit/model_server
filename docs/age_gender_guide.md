@@ -22,7 +22,7 @@ docker pull openvino/model_server:latest
 #### Start OVMS docker container with downloaded model
 Start OVMS container with image pulled in previous step and mount `model` directory :
 ```Bash 
-docker run --rm -d -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 9001:9001 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 9001
+docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 9001:9001 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 9001
 ```
 
 ####  Download Sample Image
@@ -47,7 +47,7 @@ import requests
 def getJpeg(path, size):
 
     img = cv2.imread(path, cv2.IMREAD_COLOR)
-    # retrived array has BGR format and 0-255 normalization
+    # retrieved array has BGR format and 0-255 normalization
     img = cv2.resize(img, (size, size))
     img = img.transpose(2,0,1).reshape(1,3,size,size)
     print(path, img.shape, "; data range:",np.amin(img),":",np.amax(img))

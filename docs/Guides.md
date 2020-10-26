@@ -8,7 +8,7 @@ This document gives information about various guides used in OpenVINO&trade; Mod
 
 - [Install the OpenVINO&trade; Model Server on Linux using Docker](./docker_container.md)
 
-- [Installation of OpenVINO&trade; Model Server with Kubernetes](./InstallationsKubernetes.md)
+- [Installation of OpenVINO&trade; Model Server with Kubernetes](./installations_kubernetes.md)
 
 - [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./host.md)
 

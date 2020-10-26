@@ -4,5 +4,5 @@
 
 This document gives information about API used in OpenVINO&trade; Model Server.
 
-- [gRPC API Reference Guide](./ModelServerGRPCAPI.md)
-- [REST API Reference Guide](./ModelServerRESTAPI.md)
+- [gRPC API Reference Guide](./model_server_grpc_api.md)
+- [REST API Reference Guide](./model_server_rest_api.md)

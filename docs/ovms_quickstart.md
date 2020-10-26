@@ -60,7 +60,7 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 Start the Model Server container:
 
 ```bash
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection -p 9000:9000 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
 --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
 ```
 

@@ -1,8 +1,8 @@
-# Installing OpenVINO&trade; Model Server for Linux using Docker Container
+# Deploying OpenVINO&trade; Model Server using Docker Container
 
 ## Introduction
 
- OpenVINO&trade; Model Server is a serving system for machine learning models.  OpenVINO&trade; Model Server  makes it easy to deploy new algorithms and experiments, while keeping the same server architecture and APIs. This guide will help you install  OpenVINO&trade; Model Server for Linux through docker containers.
+ OpenVINO&trade; Model Server is a serving system for machine learning models.  OpenVINO&trade; Model Server  makes it easy to deploy new algorithms and experiments, while keeping the same server architecture and APIs. This guide will help you deploy OpenVINO&trade; Model Server through docker containers.
 
 ## System Requirements
 
@@ -13,9 +13,9 @@
 
 ### Overview 
 
-This guide provides step-by-step instructions on how to install OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this :
+This guide provides step-by-step instructions on how to deploy OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this :
 
-- <a href="#ExistingDocker">Installing OpenVINO&trade; Model Server with existing Docker Container</a>
+- <a href="#ExistingDocker">Deploying OpenVINO&trade; Model Server with existing Docker Container</a>
 - <a href="#quickstart">Quick Start Guide for OpenVINO&trade; Model Server</a>
 - <a href="#singlemodel">Starting Docker Container with a Single Model
 - <a href="#configfile">Starting Docker container with a configuration file for multiple models</a>
@@ -28,7 +28,7 @@ This guide provides step-by-step instructions on how to install OpenVINO&trade; 
 
 
 
-##  Installing OpenVINO&trade; Model Server with existing Docker Container<a name="ExistingDocker"></a>
+##  Deploying OpenVINO&trade; Model Server with existing Docker Images<a name="ExistingDocker"></a>
 
 ### Quick Start Guide <a name="quickstart"></a>
 
@@ -37,9 +37,9 @@ It allows you to setup OpenVINO&trade; Model Server and run a Face Detection Exa
 
 Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
 
-For additional endpoints, refer the [REST API](./ModelServerRESTAPI.md).
+For additional endpoints, refer the [REST API](./model_server_rest_api.md).
 
-## Detailed steps to install OpenVINO&trade; Model Server using Docker container
+## Detailed steps to deploy OpenVINO&trade; Model Server using Docker container
 
 ### Install Docker
 
@@ -59,7 +59,7 @@ docker pull openvino/model_server:latest
 
 ### Running the OpenVINO&trade; Model Server image for **Single** Model <a name="singlemodel"></a>
 
-Follow the [Preparation of Model guide](./models_repository.md) before running the docker image 
+Follow the [Preparation of Model guide](models_repository.md) before running the docker image 
 
 Run the OpenVINO&trade; Model Server by running the following command: 
 
@@ -85,7 +85,7 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000
 
 - Publish the container's port to your host's **open ports**.
 - In above command port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
-- For preparing and saving models to serve with OpenVINO&trade; Model Server refer [this](./PreparingModelsRepository.md).
+- For preparing and saving models to serve with OpenVINO&trade; Model Server refer [this](models_repository.md).
 - Add model_name for the client gRPC/REST API calls.
 
 
@@ -104,7 +104,7 @@ docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000
 | `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
 
-#### To know more about batch size and shape parameters refer [Batch Size and Shape document](./ShapeAndBatchSize.md)
+#### To know more about batch size and shape parameters refer [Batch Size and Shape document](shape_and_batch_size.md)
 
 </details>
 
@@ -290,7 +290,7 @@ OpenVINO Model Server, starting from release 2021.1, monitors the changes in its
 
 **Note**: changes in the config file are checked regularly with an internal defined by the parameter --file_system_poll_wait_seconds.
 
-To know more about OpenVINO&trade; Model Server , you can refer [Version Policy](./ModelVersionPolicy.md) document.
+To know more about OpenVINO&trade; Model Server , you can refer [Version Policy](./model_version_policy.md) document.
 
 
 ##  Building the OpenVINO&trade; Model Server Image<a name="sourcecode"></a>

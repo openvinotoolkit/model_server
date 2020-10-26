@@ -5,12 +5,17 @@ Model version policy makes it possible to decide which versions of model will be
 Accepted values :
 
 {"all": {}}
+
 {"latest": { "num_versions": Integer}}
+
 {"specific": { "versions": List }}
+
 Examples:
 
 {"latest": { "num_versions":2 }} # server will serve only 2 latest versions of model
+
 {"specific": { "versions":[1, 3] }} # server will serve only 1 and 3 versions of given model
+
 {"all": {}} # server will serve all available versions of given model
 
 ## Updating model versions

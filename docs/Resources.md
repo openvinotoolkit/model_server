@@ -16,5 +16,5 @@ These samples include python scripts and installation steps to use OpenVINO&trad
 
 ## Pre-trained Models
 
-- [Intel's Pre-trained Models from Open Model Zoo](https://docs.openvinotoolkit.org/2020.4/omz_models_intel_index.html)
-- [Public Pre-trained Models Available with OpenVINO&trade; from Open Model Zoo](https://docs.openvinotoolkit.org/2020.4/omz_models_public_index.html)
+- [Intel's Pre-trained Models from Open Model Zoo](https://docs.openvinotoolkit.org/latest/omz_models_intel_index.html)
+- [Public Pre-trained Models Available with OpenVINO&trade; from Open Model Zoo](https://docs.openvinotoolkit.org/latest/omz_models_public_index.html)

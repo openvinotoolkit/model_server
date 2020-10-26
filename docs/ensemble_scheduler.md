@@ -9,11 +9,11 @@ This guide gives information about following :
     * Pre-defined Node Types
     * Other Node Types
 * <a href="#example">Example Use Case</a>
-    1. Prepare the models
-    2. Define required models and pipeline
-    3. Start model server
-    4. Requesting the service
-    5. Analyze pipeline execution in server logs
+    * Prepare the models
+    * Define a pipeline
+    * Start model server
+    * Requesting the service
+    * Analyze pipeline execution in server logs
 
 
 ## Node Types <a name="node-type"></a>
@@ -29,7 +29,9 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 ### Other node types
 Internal pipeline nodes are created by user. Currently there is only one node type that a user can create:
 * DL model
-    - This node contains underlying OpenVINO&trade; model and performs inference on selected target device. This can be defined in configuration file. Each model input needs to be mapped to some node's `data_item` - be it input from gRPC/REST request or another `DL model` output. Results of this node's inference may be mapped to another node's input or `response` node meaning it will be exposed in gRPC/REST response. 
+    - This node contains underlying OpenVINO&trade; model and performs inference on selected target device. This can be defined in configuration file. 
+    Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST request or another `DL model` output. 
+    Results of this node's inference may be mapped to another node's input or `response` node meaning it will be exposed in gRPC/REST response. 
 
 ## Example use case<a name="example"></a>
 
@@ -59,7 +61,7 @@ Internal pipeline nodes are created by user. Currently there is only one node ty
 ```
 3. Prepare argmax model with `(1, 1001)` input shapes to match output of googlenet and resnet output shapes. Generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. <a name="point-3"></a>
 ```
-~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir models/public/argmax/saved_model
+~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir ~/models/public/argmax/saved_model
 ```
 
 4. Execute following commands to convert models to IR format and [prepare models repository](./models_repository.md):
@@ -68,7 +70,7 @@ Internal pipeline nodes are created by user. Currently there is only one node ty
 
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/tf_argmax --output_dir /models/public/argmax/1
+~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/argmax --output_dir /models/public/argmax/1
 
 ~$ mv ~/models/public/googlenet-v2-tf/FP32 ~/models/public/googlenet-v2-tf/1 && mv ~/models/public/resnet-50-tf/FP32 ~/models/public/resnet-50-tf/1
 
@@ -99,7 +101,7 @@ models/public
 ### Step 2: Define required models and pipeline <a name="define-models"></a>
 Pipelines need to be defined in configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
-1. Execute the following command and copy the content in config.json as given below
+Use the config.json as given below
 ```
 ~$ cat models/config.json 
 {

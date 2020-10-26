@@ -13,6 +13,10 @@ Install client dependencies using the command :
 pip3 install -r client_requirements.txt
 ```
 
+In the examples listed below, OVMS can be started using a command:
+```bash
+docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+```
 
 ## gRPC API Client Examples <a name="grpc-api"></a>
 
@@ -45,11 +49,6 @@ usage: get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
 python get_model_status.py --grpc_port 9000 --model_name resnet
 
 Getting model status for model: resnet
-
-Model version: 2
-State AVAILABLE
-Error code:  0
-Error message:
 
 Model version: 1
 State AVAILABLE
@@ -85,7 +84,7 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 - Usage Example
 
 ```bash
-python get_serving_meta.py --grpc_port 9001 --model_name resnet --model_version 1
+python get_serving_meta.py --grpc_port 9000 --model_name resnet --model_version 1
 
 Getting model metadata for model: resnet
 Inputs metadata:
@@ -108,9 +107,11 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
                               [--transpose_input {False,True}]
+                              [--transpose_method {nchw2nhwc,nhwc2nchw}]
                               [--iterations ITERATIONS]
                               [--batchsize BATCHSIZE]
                               [--model_name MODEL_NAME]
+                              [--pipeline_name PIPELINE_NAME]
 ```
 
 - Optional Arguments
@@ -125,16 +126,17 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 | --input_name | Specify input tensor name. Default: input |
 | --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
 | --transpose_input {False,True}|  Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. Default: True|
-| --transpose_method {nchw2nhwc,nhwc2nchw} | How the input transposition should be executed: nhwc2nchw or nhwc2nchw |
+| --transpose_method {nchw2nhwc,nhwc2nchw} | How the input transposition should be executed: nhwc2nchw or nhwc2nchw. Default nhwc2nchw|
 | --iterations | Number of requests iterations, as default use number of images in numpy memmap. Default: 0 (consume all frames)|
 | --batchsize | Number of images in a single request. Default: 1 |
 | --model_name | Define model name, must be same as is in service. Default: resnet|
+| --pipeline_name | Define pipeline name, must be same as is in service |
 
 
 - Usage example
 
 ```bash
-python grpc_serving_client.py --grpc_port 9001 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy lbs.npy
+python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path lbs.npy
 Start processing:
 	Model name: resnet
 	Iterations: 10
@@ -215,42 +217,42 @@ usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
 - Usage example
 
 ```bash
-python jpeg_classification.py --grpc_port 9001 --input_name data --output_name prob
+python jpeg_classification.py --grpc_port 9000 --input_name data --output_name prob
 	Model name: resnet
 	Images list file: input_images.txt
 
 images/airliner.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 73.00 ms; speed 2.00 fps 13.79
-Detected: 895  Should be: 404
-images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 7.0 : 255.0
-Processing time: 52.00 ms; speed 2.00 fps 19.06
+Processing time: 20.00 ms; speed 2.00 fps 49.03
+Detected: 404  Should be: 404
+images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
+Processing time: 22.00 ms; speed 2.00 fps 45.2
 Detected: 279  Should be: 279
 images/bee.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 82.00 ms; speed 2.00 fps 12.2
+Processing time: 14.00 ms; speed 2.00 fps 69.12
 Detected: 309  Should be: 309
 images/golden_retriever.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 86.00 ms; speed 2.00 fps 11.69
+Processing time: 22.00 ms; speed 2.00 fps 45.68
 Detected: 207  Should be: 207
 images/gorilla.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 65.00 ms; speed 2.00 fps 15.39
+Processing time: 18.00 ms; speed 2.00 fps 56.02
 Detected: 366  Should be: 366
 images/magnetic_compass.jpeg (1, 3, 224, 224) ; data range: 0.0 : 247.0
-Processing time: 51.00 ms; speed 2.00 fps 19.7
+Processing time: 20.00 ms; speed 2.00 fps 50.78
 Detected: 635  Should be: 635
 images/peacock.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 61.00 ms; speed 2.00 fps 16.28
+Processing time: 21.00 ms; speed 2.00 fps 47.1
 Detected: 84  Should be: 84
 images/pelican.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 61.00 ms; speed 2.00 fps 16.41
+Processing time: 24.00 ms; speed 2.00 fps 41.32
 Detected: 144  Should be: 144
 images/snail.jpeg (1, 3, 224, 224) ; data range: 0.0 : 248.0
-Processing time: 56.00 ms; speed 2.00 fps 17.74
+Processing time: 20.00 ms; speed 2.00 fps 49.16
 Detected: 113  Should be: 113
 images/zebra.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 73.00 ms; speed 2.00 fps 13.68
+Processing time: 21.00 ms; speed 2.00 fps 48.16
 Detected: 340  Should be: 340
-
-Overall accuracy= 90.0
+Overall accuracy= 100.0 %
+Average latency= 19.8 ms
 ```
 ### Multiple input example for HDDL
 
@@ -278,8 +280,8 @@ python multi_inputs.py --help
 | -h,--help       | Show help message and exit       |
 | -n NETWORK_NAME, --network_name NETWORK_NAME   |   Network name      |
 | -l INPUT_LAYER, --input_layer INPUT_LAYER | Input layer name |
-| -o OUTPUT_LAYER, --output_layer OUTPUT_LAYER | Output layer name | 
-| -d INPUT_DIMENSION, --input_dimension INPUT_DIMENSION | Input image dimension |
+| -o OUTPUT_LAYER, --output_layer OUTPUT_LAYER | Output layer name |
+| -d FRAME_SIZE, --frame_size FRAME_SIZE | Input frame width and height that matches used model |
 | -c NUM_CAMERAS, --num_cameras NUM_CAMERAS | Number of cameras to be used |
 | -f FILE, --file FILE | Path to the video file |
 | -i IP, --ip IP| IP address of the ovms|
@@ -290,9 +292,9 @@ python multi_inputs.py --help
 ```bash
 ==============
 TERMINAL 1: <openvino_installation_root>/openvino/inference_engine/external/hddl/bin/hddldaemon
-TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml -e DEVICE=HDDL
-            -e FILE_SYSTEM_POLL_WAIT_SECONDS=0 -p 8001:8001 -p 9001:9001 ie-serving-py:latest /ie-serving-py/start_server.sh
-            ie_serving model --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001
+TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml
+            -p 8001:8001 -p 9001:9001 openvino/model_server:latest 
+            --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001 --target_device HDDL
 TERMINAL 3: python3.6 multi_inputs.py -n SSDMobileNet -l image_tensor -o DetectionOutput -d 300 -c 1
             -f /var/repos/github/sample-videos/face-demographics-walking.mp4 -i 127.0.0.1 -p 9001
 
@@ -336,7 +338,18 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
 - Usage Example 
 ```bash
 python rest_get_model_status.py --rest_port 8000 --model_version 1
-{'model_version_status': [{'version': '1', 'state': 'AVAILABLE', 'status': {'error_code': 'OK', 'error_message': ''}}]}
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 ```
 
 ### Model Metadata API
@@ -361,59 +374,67 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 ```Bash
 python rest_get_serving_meta.py --rest_port 8000
 {
-  "modelSpec": {
-    "name": "resnet",
-    "version": "1"
-  },
-  "metadata": {
-    "signature_def": {
-      "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
-      "signatureDef": {
-#
-        "serving_default": {
-          "inputs": {
-            "data": {
-              "name": "data_2:0",
-              "dtype": "DT_FLOAT",
-              "tensorShape": {
-                "dim": [
-                  {
-                    "size": "1"
-                  },
-                  {
-                    "size": "3"
-                  },
-                  {
-                    "size": "224"
-                  },
-                  {
-                    "size": "224"
-                  }
-                ]
-              }
-            }
-          },
-          "outputs": {
-            "prob": {
-              "name": "prob_2:0",
-              "dtype": "DT_FLOAT",
-              "tensorShape": {
-                "dim": [
-                  {
-                    "size": "1"
-                  },
-                  {
-                    "size": "1000"
-                  }
-                ]
-              }
-            }
-          },
-          "methodName": "tensorflow/serving/predict"
-        }
+ "modelSpec": {
+  "name": "resnet",
+  "signatureName": "",
+  "version": "1"
+ },
+ "metadata": {
+  "signature_def": {
+   "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+   "signatureDef": {
+    "serving_default": {
+     "inputs": {
+      "data": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "3",
+          "name": ""
+         },
+         {
+          "size": "224",
+          "name": ""
+         },
+         {
+          "size": "224",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "data"
       }
+     },
+     "outputs": {
+      "prob": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "1000",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "prob"
+      }
+     },
+     "methodName": ""
     }
+   }
   }
+ }
 }
 ```
 
