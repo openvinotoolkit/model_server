@@ -437,9 +437,13 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     for (const auto& entry : dirs) {
         try {
             ovms::model_version_t version = std::stoll(entry);
+            if (version <= 0) {
+                SPDLOG_WARN("Expected version directory name to be a number greater than 0. Got:{}", version);
+                continue;
+            }
             versions.push_back(version);
         } catch (const std::invalid_argument& e) {
-            spdlog::warn("Expected version directory to be in number format. Got:{}", entry);
+            spdlog::warn("Expected version directory name to be in number format. Got:{}", entry);
         } catch (const std::out_of_range& e) {
             spdlog::error("Directory name is out of range for supported version format. Got:{}", entry);
         }
@@ -470,12 +474,67 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     return StatusCode::OK;
 }
 
+Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
+    auto lfstatus = StatusCode::OK;
+
+    if (config.getLocalPath().compare(config.getBasePath())) {
+        LocalFileSystem lfs;
+        lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+        if (lfstatus != StatusCode::OK) {
+            spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
+                config.getLocalPath(),
+                lfstatus);
+        } else {
+            spdlog::info("Model removed from {}", config.getLocalPath());
+        }
+    }
+
+    return lfstatus;
+}
+
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
+    Status status = StatusCode::OK;
+    try {
+        downloadModels(fs, config, versionsToStart);
+        status = model->addVersions(versionsToStart, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while loading model: {} versions; error: {}",
+                config.getName(),
+                status.string());
+        }
+    } catch (std::exception& e) {
+        spdlog::error("Exception occurred while loading model: {};", e.what());
+    }
+
+    cleanupModelTmpFiles(config);
+    return status;
+}
+
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+    Status status = StatusCode::OK;
+
+    try {
+        downloadModels(fs, config, versionsToReload);
+        auto status = model->reloadVersions(versionsToReload, config);
+        if (!status.ok()) {
+            spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+        }
+    } catch (std::exception& e) {
+        spdlog::error("Exception occurred while reloading model: {};", e.what());
+    }
+
+    cleanupModelTmpFiles(config);
+    return status;
+}
+
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
-    auto status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
-    if (!status.ok()) {
-        return status;
+    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
+    if (!blocking_status.ok()) {
+        return blocking_status;
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
 
@@ -485,46 +544,26 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     auto model = getModelIfExistCreateElse(config.getName());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-    downloadModels(fs, config, versionsToStart);
-    downloadModels(fs, config, versionsToReload);
 
-    status = model->addVersions(versionsToStart, config);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while loading model: {} versions; error: {}",
-            config.getName(),
-            status.string());
-        return status;
+    if (versionsToStart->size() > 0) {
+        auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
+        if (!blocking_status.ok()) {
+            return blocking_status;
+        }
     }
-    status = model->reloadVersions(versionsToReload, config);
-    if (!status.ok()) {
-        spdlog::error("Error occurred while reloading model: {}; versions; error: {}",
-            config.getName(),
-            status.string());
-        return status;
+
+    if (versionsToReload->size() > 0) {
+        reloadModelVersions(model, fs, config, versionsToReload);
     }
-    status = model->retireVersions(versionsToRetire);
+
+    auto status = model->retireVersions(versionsToRetire);
     if (!status.ok()) {
         spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
             config.getName(),
             status.string());
-        return status;
     }
 
-    if ((versionsToStart->size() > 0) || (versionsToReload->size() > 0)) {
-        if (config.getLocalPath().compare(config.getBasePath())) {
-            LocalFileSystem lfs;
-            auto lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-            if (lfstatus != StatusCode::OK) {
-                spdlog::error("Error occurred while deleting local copy of cloud model: {} reason {}",
-                    config.getLocalPath(),
-                    lfstatus);
-            } else {
-                spdlog::info("Model removed from {}", config.getLocalPath());
-            }
-        }
-    }
-
-    return StatusCode::OK;
+    return blocking_status;
 }
 
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
