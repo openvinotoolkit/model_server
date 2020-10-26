@@ -26,7 +26,9 @@
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include "../modelmanager.hpp"
 #include "../tensorinfo.hpp"

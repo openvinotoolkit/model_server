@@ -23,7 +23,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include <gmock/gmock-generated-function-mockers.h>
 

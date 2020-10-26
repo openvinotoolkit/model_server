@@ -17,7 +17,9 @@
 
 #include <memory>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
+#pragma warning(pop)
 
 namespace ovms {
 

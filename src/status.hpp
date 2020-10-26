@@ -21,7 +21,9 @@
 
 #include <grpcpp/server_context.h>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#pragma warning(pop)
 
 namespace ovms {
 

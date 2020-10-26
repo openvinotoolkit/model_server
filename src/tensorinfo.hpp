@@ -21,7 +21,9 @@
 
 #include <inference_engine.hpp>
 
+#pragma warning(push, 0)
 #include "tensorflow/core/framework/tensor.h"
+#pragma warning(pop)
 
 #include "modelconfig.hpp"
 

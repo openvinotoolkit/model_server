@@ -17,7 +17,9 @@
 
 #include <string>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include "rest_parser.hpp"
 #include "status.hpp"

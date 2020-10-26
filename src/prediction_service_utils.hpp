@@ -19,7 +19,9 @@
 #include <string>
 #include <utility>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"

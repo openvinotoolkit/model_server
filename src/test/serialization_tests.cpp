@@ -22,7 +22,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include "../serialization.hpp"
 #include "ovtestutils.hpp"

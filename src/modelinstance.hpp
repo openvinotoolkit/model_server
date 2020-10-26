@@ -25,8 +25,10 @@
 
 #include <inference_engine.hpp>
 
+#pragma warning(push, 0)
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"

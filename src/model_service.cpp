@@ -22,9 +22,11 @@
 #include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
 
+#pragma warning(push, 0)
 #include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
+#pragma warning(pop)
 
 #include "modelmanager.hpp"
 #include "status.hpp"

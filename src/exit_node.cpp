@@ -20,7 +20,9 @@
 
 #include <spdlog/spdlog.h>
 
+#pragma warning(push, 0)
 #include "tensorflow/core/framework/tensor.h"
+#pragma warning(pop)
 
 namespace ovms {
 
