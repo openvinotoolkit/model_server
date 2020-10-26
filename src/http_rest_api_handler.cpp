@@ -76,7 +76,7 @@ Status HttpRestApiHandler::validateUrlAndMethod(
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
         try {
-            model_version = std::atol(model_version_str.c_str());
+            model_version = std::stoll(model_version_str.c_str());
         } catch (std::exception& e) {
             spdlog::error("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;

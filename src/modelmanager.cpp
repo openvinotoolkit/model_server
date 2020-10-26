@@ -437,9 +437,13 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     for (const auto& entry : dirs) {
         try {
             ovms::model_version_t version = std::stoll(entry);
+            if (version <= 0) {
+                SPDLOG_WARN("Expected version directory name to be a number greater than 0. Got:{}", version);
+                continue;
+            }
             versions.push_back(version);
         } catch (const std::invalid_argument& e) {
-            spdlog::warn("Expected version directory to be in number format. Got:{}", entry);
+            spdlog::warn("Expected version directory name to be in number format. Got:{}", entry);
         } catch (const std::out_of_range& e) {
             spdlog::error("Directory name is out of range for supported version format. Got:{}", entry);
         }
