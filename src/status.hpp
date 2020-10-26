@@ -22,7 +22,7 @@
 #include <grpcpp/server_context.h>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wno-implicit-function-declaration"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #pragma GCC diagnostic pop
 
