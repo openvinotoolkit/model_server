@@ -17,12 +17,16 @@
 FROM centos:7 as base_build
 
 LABEL version="1.0.0"
-LABEL description="OpenVINO Model Server"
+
+ARG PROJECT_NAME="OpenVINO Model Server 2021.1"
+
+LABEL description=${PROJECT_NAME}
 
 ARG ov_source_branch=2020.4
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
+ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
 ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
@@ -120,7 +124,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 # yum package
-RUN if [ "$ov_use_binary" == "1" ] && [ -n $DLDT_PACKAGE_URL ] ; then true ; else exit 0 ; fi ; \
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ; \
     yum-config-manager --add-repo https://yum.repos.intel.com/openvino/2021/setup/intel-openvino-2021.repo && \
     rpm --import https://yum.repos.intel.com/openvino/2021/setup/RPM-GPG-KEY-INTEL-OPENVINO-2021 && \
     yum install -y $YUM_OV_PACKAGE
@@ -191,6 +195,10 @@ COPY release_files/ /ovms/release_files/
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's:REPLACE_OPENVINO_NAME:`echo "$YUM_OV_PACKAGE" | sed -e 's/intel-openvino-runtime-centos7-//g' | sed 's/.x86_64//g'`:g' /ovms/src/version.hpp" 
+
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's#REPLACE_OPENVINO_NAME#`echo "$OPENVINO_NAME" | sed -e 's;http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_;;g'|sed 's:.tgz::g'`#g' /ovms/src/version.hpp"
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 

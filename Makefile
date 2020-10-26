@@ -44,6 +44,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 2020.4
+
 DLDT_PACKAGE_URL ?= ""
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-2021.1.110.x86_64
@@ -74,6 +75,9 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
+
+DEFAULT_PROJECT_NAME ?="OpenVINO Model Server 2021.1."
+PROJECT_NAME ?= ""
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
@@ -136,6 +140,10 @@ docker_build:
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
+ifeq ($(PROJECT_NAME), "")
+	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
+	@bash -c '$(eval PROJECT_NAME:=${DEFAULT_PROJECT_NAME}${PROJECT_VER_PATCH})'
+endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
@@ -152,6 +160,7 @@ endif
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg YUM_OV_PACKAGE=$(YUM_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
