@@ -15,9 +15,8 @@
 # limitations under the License.
 #
 
-BASE_IMAGE?="
-BASE_IMAGE=${1:-"openvino/model_server:ovms"}
-OUTPUT_IMAGE=${2:-"openvino/model_server:nginx-mtls"}
+BASE_IMAGE=${1:-openvino/model_server:latest}
+OUTPUT_IMAGE=${2:-openvino/model_server:nginx-mtls}
 
 docker build  -f Dockerfile . \
         --build-arg http_proxy="$http_proxy" --build-arg https_proxy="$https_proxy" \
