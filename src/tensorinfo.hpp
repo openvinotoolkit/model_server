@@ -393,7 +393,7 @@ public:
     static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape) {
         std::ostringstream oss;
         oss << "(";
-        size_t i = 0;
+        int i = 0;
         if (tensorShape.dim_size() > 0) {
             for (; i < tensorShape.dim_size() - 1; i++) {
                 oss << tensorShape.dim(i).size() << ",";
