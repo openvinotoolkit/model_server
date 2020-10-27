@@ -1,4 +1,20 @@
 #!/bin/bash -x
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 
 source test_config.sh
 
@@ -11,28 +27,6 @@ else
 	set +e
 fi
 
-#python3 ../../example_client/rest_get_model_status.py \
-#	--rest_url https://localhost --rest_port 15555 --client_certificate_file client.pem --client_key_file client.key --ignore_server_verification \
-#	--model_name face-detection
-
-#python3 ../../example_client/rest_get_model_status.py \
-#	--rest_url https://localhost --rest_port 15555 --client_certificate_file client.pem --client_key_file client.key --ca ./server.pem \
-#	--model_name face-detection
-
-#python3 ../../example_client/rest_get_model_status.py \
-#	--rest_url https://localhost --rest_port 15555 --client_certificate_file client.pem --client_key_file client.key --ca ./server.pem \
-#	 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
-
-
-#parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
-#parser.add_argument('--server_cert', required=False, help='Path to server certificate')
-#parser.add_argument('--client_cert', required=False, help='Path to client certificate')
-#parser.add_argument('--client_key', required=False, help='Path to client key')
-
 python3 ../../example_client/face_detection.py --grpc_port $GRPC_PORT --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --tls \
 	--server_cert server.pem --client_cert client.pem --client_key client.key
-#	--server_cert /home/rr/GH_OVMS/inference-model-manager/scripts/ojej/ca-cert-tf.crt \
-#	--client_cert /home/rr/GH_OVMS/inference-model-manager/scripts/ojej/client-tf.crt \
-#	--client_key /home/rr/GH_OVMS/inference-model-manager/scripts/ojej/client-tf.key
 
-# --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results

@@ -11,8 +11,9 @@ WARNING: Only minimal nginx configuration is presented. Your are responsible for
 == Quick Start
 
 1. Ensure you have `openvino/model_server` image available; either locally, or you have an Internet connection to download official image.
-2. In terminal 1, execute `build_generate_certs_and_start_secure_model_server.sh` script. It will build extra nginx layer, generate certificates (insecure, for testing only), download sample model and start the container.
-3. In terminal 2, execute either/or `./test_grpc.sh or `./test_rest.sh`. Those will try to connect to abovemenationed container and use our example python client to test the system.
+2. Run `./build.sh` to build nginx image extra layer.
+3. In terminal 1, execute `./generate_certs_and_start_secure_model_server.sh` script. It will generate certificates (insecure, for testing only), download sample model and start the container.
+4. In terminal 2, execute either/or `./test_grpc.sh or `./test_rest.sh`. Those will try to connect to abovemenationed container and use our example python client to test the system.
 
 NOTE: Please ensure that your proxy setting are correct, both during model download and during `docker build` operation - adjust build.sh if needed.
 

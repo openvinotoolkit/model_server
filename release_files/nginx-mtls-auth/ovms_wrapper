@@ -55,7 +55,6 @@ GRPC_ORIGINAL_PORT=
 GRPC_OVMS_NEW_PORT=
 REST_ORIGINAL_PORT=
 REST_OVMS_NEW_PORT=
-                 #new_args+=" $REPLACE_NEXT_ARG_WITH"
 
 	for a in $*
 	do
