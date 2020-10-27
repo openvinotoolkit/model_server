@@ -26,7 +26,7 @@
 
 #include "status.hpp"
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wreorder"
 #include "was/blob.h"
 #include "was/common.h"
 #include "was/storage_account.h"
