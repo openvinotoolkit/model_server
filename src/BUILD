@@ -114,7 +114,10 @@ cc_library(
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
-    ]
+    ],
+    copts = [
+        "-Werror",
+    ],
 )
 
 cc_binary(
@@ -129,7 +132,8 @@ cc_binary(
         "-lcrypto",
     ],
     copts = [
-        "-Wconversion"
+        "-Wconversion",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib"
