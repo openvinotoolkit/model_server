@@ -28,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wreorder"
+#pragma GCC diagnostic ignored "-Wunused-value"
 #include <was/file.h>
 #include "was/blob.h"
 #include "was/common.h"
