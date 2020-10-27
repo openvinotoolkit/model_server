@@ -26,6 +26,7 @@
 #include "status.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wreorder"
 #include <was/file.h>
 #include "was/blob.h"
