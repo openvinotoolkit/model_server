@@ -1,0 +1,38 @@
+= Sample of using securing Model Server with nginx
+
+Dockerfile and scripts in this directory are an example of using Nginx mTLS module to implement authentication and authorization of OpenVINO Model Server.
+
+This can secure both GRPC and REST endpoints. Model Server will present server certificate, and allow connection only from clients who perform full TLS handshake (successful client certificate authentication).
+
+WARNING: Those contain certificate generation automation for development and testing purposes. Do not use those in production - follow best practices of your organization. For ensuring "fast fail", certificates generated here will expire after a single day.
+
+WARNING: Only minimal nginx configuration is presented. Your are responsible for developing and using a secure configuration.
+
+== Quick Start
+
+1. Ensure you have `openvino/model_server` image available; either locally, or you have an Internet connection to download official image.
+2. In terminal 1, execute `build_generate_certs_and_start_secure_model_server.sh` script. It will build extra nginx layer, generate certificates (insecure, for testing only), download sample model and start the container.
+3. In terminal 2, execute either/or `./test_grpc.sh or `./test_rest.sh`. Those will try to connect to abovemenationed container and use our example python client to test the system.
+
+NOTE: Please ensure that your proxy setting are correct, both during model download and during `docker build` operation - adjust build.sh if needed.
+
+== Design
+
+Dockerfile in this directory is building on top of existing OpenVINO Model Server image. Default result image name is `openvino/model_server:nginx-mtls`.
+
+In this image, wrapper script is being executed by container-friendly init system (dumb-init was selected as an example). It is reponsible for providing compatible command-line interface for Model Server CLI, while transparently exposing only encrypted endpoints.
+When started, it parses command line options and adjusts both Nginx and Model Server execution parameters, then runs both processes and tracks their progress. Model Server process is running as a non-priviledged user `ovms`, but initially `root` is being used to perform administrative actions.
+
+GRPC over mTLS is always exposed; REST is exposed when usual --rest_port parameter is passed as an command argument to the model server.
+
+Wrapper is ensuring that model server is binding to loopback interface on some unallocated ports internally. Nginx configuration is exposing ports specified by Model Server command line arguments; it's listening on all IPv4 interfaces (0.0.0.0).
+
+Wrapper will also handle nginx -or- model server crashes, exiting container in a graceful way (if possible; another external subsystem should be responsible for restarting it).
+
+== Reference test scripts: test_grpc.sh and test_rest.sh
+
+Please check those to learn how to use our example python client to connect to Model Server secured by mTLS. Please check applicable python client sample file to learn how to set those in your application.
+
+
+
+
