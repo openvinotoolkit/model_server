@@ -20,7 +20,7 @@
 #include <string>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wno-implicit-function-declaration"
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
 #pragma GCC diagnostic pop
 

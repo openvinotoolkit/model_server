@@ -26,7 +26,7 @@
 #include <inference_engine.hpp>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wno-implicit-function-declaration"
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
