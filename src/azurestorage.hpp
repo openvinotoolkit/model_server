@@ -25,9 +25,12 @@
 #include <was/file.h>
 
 #include "status.hpp"
-#include "was/blob.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include #include "was/blob.h"
 #include "was/common.h"
 #include "was/storage_account.h"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 
