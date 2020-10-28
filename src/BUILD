@@ -195,4 +195,9 @@ cc_test(
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror",
+    ],
 )
