@@ -142,7 +142,11 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
         }
         std::vector<model_version_t> versions;
         for (auto& version : m->value.GetArray()) {
-            versions.push_back(version.GetInt64());
+            if (version.IsUint64() && version.GetUint64() > 0) {
+                versions.push_back(version.GetUint64());
+            } else {
+                spdlog::warn("Model policy specified in config contains invalid version. Version should be a number greater than 0.");
+            }
         }
         modelVersionPolicy = std::make_shared<SpecificModelVersionPolicy>(versions);
         return StatusCode::OK;
@@ -318,8 +322,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
     if (v.HasMember("target_device"))
         this->setTargetDevice(v["target_device"].GetString());
-    if (v.HasMember("version"))
-        this->setVersion(v["version"].GetInt64());
+    if (v.HasMember("version")) {
+        this->setVersion(v["version"].GetUint64());
+    }
     if (v.HasMember("nireq"))
         this->setNireq(v["nireq"].GetUint64());
 

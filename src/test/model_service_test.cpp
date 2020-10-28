@@ -25,8 +25,10 @@
 #pragma GCC diagnostic pop
 
 #include "../model_service.hpp"
+#include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "gtest/gtest.h"
+#include "test_utils.hpp"
 
 using namespace ovms;
 
@@ -47,6 +49,9 @@ static void test_LoadModels() {
 }
 
 ::grpc::Status test_PerformModelStatusRequest(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
+    auto config = DUMMY_MODEL_CONFIG;
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.reloadModelWithVersions(config);
     spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
     ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
     spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
@@ -119,11 +124,26 @@ TEST(ModelService, non_existing_version) {
 
     auto model_spec = req.mutable_model_spec();
     model_spec->Clear();
-    model_spec->set_name("existing_model");
+    model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(9894689454358);  // non-existing version
 
     ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-    EXPECT_EQ(ret.ok(), false);
+    EXPECT_EQ(ret.error_code(), grpc::StatusCode::NOT_FOUND);
+}
+
+TEST(ModelService, negative_version) {
+    test_LoadModels();
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(-1);  // negative version
+
+    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
+    EXPECT_EQ(ret.error_code(), grpc::StatusCode::NOT_FOUND);
 }
 
 TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
@@ -139,15 +159,6 @@ TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
     EXPECT_EQ(has_requested_version, true);
     EXPECT_EQ(requested_version, 1);
     EXPECT_EQ(requested_model_name, "dummy");
-}
-
-TEST(RestModelStatus, CreateGrpcRequestNegativeVersion) {
-    std::string model_name = "dummy";
-    const std::optional<int64_t> model_version = -5;
-    tensorflow::serving::GetModelStatusRequest request_grpc;
-    tensorflow::serving::GetModelStatusRequest* request_p = &request_grpc;
-    Status status = GetModelStatusImpl::createGrpcRequest(model_name, model_version, request_p);
-    EXPECT_EQ(status, StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST(RestModelStatus, CreateGrpcRequestNoVersion) {

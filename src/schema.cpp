@@ -114,7 +114,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 					"enum": ["DL model", "Demultiplexer", "Batch dispatcher"]
 				},
 				"version": {
-					"type": "integer"
+					"type": "integer",
+					"minimum": 1
 				},
 				"inputs": {
 					"type": "array",

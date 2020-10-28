@@ -56,10 +56,6 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
-        if (model_version.value() < 0) {
-            spdlog::error("Version in GetModelStatus request cannot be negative. Provided value {}", model_version.value());
-            return StatusCode::MODEL_VERSION_MISSING;
-        }
         request->mutable_model_spec()->mutable_version()->set_value(model_version.value());
     }
     return StatusCode::OK;
@@ -90,7 +86,7 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
     }
 
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
-    if (has_requested_version || requested_version != 0) {
+    if (has_requested_version && requested_version != 0) {
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
         std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
         if (!model_instance) {

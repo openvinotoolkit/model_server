@@ -56,6 +56,7 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     const auto modelInstanceIt = modelVersions.find(defaultVersion);
 
     if (modelVersions.end() == modelInstanceIt) {
+        SPDLOG_WARN("Default version:{} for model:{} not found", defaultVersion, getName());
         return nullptr;
     }
     return modelInstanceIt->second;

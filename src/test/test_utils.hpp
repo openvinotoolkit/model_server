@@ -44,7 +44,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "CPU",                 // target device
     "1",                   // batchsize
     1,                     // NIREQ
-    0,                     // model_version unuesed since version are read from path
+    1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
 };
 

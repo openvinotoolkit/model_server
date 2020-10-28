@@ -72,5 +72,5 @@ OpenVINO&trade; model server is enabling the versions present in the configured 
 [version policy](docker_container.md#model-version-policy).
 By default, the latest version is served.
 
-While the client _is not_ defining the model version in the request specification, OpenVINO&trade; Model Server will run the inference
+While the client _is not_ defining the model version in the request specification or the requested version is 0, OpenVINO&trade; Model Server will run the inference
  on the default one which is the latest.
