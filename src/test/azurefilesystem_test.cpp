@@ -49,8 +49,6 @@ std::string getAnonFilePath() { return std::string("azfs://my-sample-share/my-sa
 
 std::string getAnonDirPath() { return std::string("azfs://my-sample-share/my-sample-directory"); }
 
-std::string getAnonBlobFilePath() { return std::string("az://my-sample-container/my-sample-directory/my_test_file.txt"); }
-
 std::string getBlobDirPath() { return std::string("az://my-sample-container/my-sample-directory"); }
 
 std::string getPrivateFilePath() { return std::string("azfs://my-sample-share/my-sample-directory/my-sample-subdirectory/my_test_file2.txt"); }
