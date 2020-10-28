@@ -27,6 +27,8 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 class PredictValidation : public ::testing::Test {
     class MockModelInstance : public ovms::ModelInstance {
     public:
@@ -428,3 +430,4 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
     auto status = instance.validate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
 }
+#pragma GCC diagnostic pop
