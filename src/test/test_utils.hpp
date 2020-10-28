@@ -93,13 +93,13 @@ static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
     }
     return shape;
 }
-#pragma GCC diagnostic pop
 
 static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedField<google::protobuf::int32>* container) {
     std::vector<google::protobuf::int32> result(container->size(), 0);
     std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
     return result;
 }
+#pragma GCC diagnostic pop
 
 template <typename T>
 static std::vector<T> asVector(const std::string& tensor_content) {
