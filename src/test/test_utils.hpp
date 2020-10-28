@@ -26,7 +26,10 @@
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
 #include "../tensorinfo.hpp"
@@ -50,6 +53,8 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::shape_t>&& tensors,
     InferenceEngine::Precision precision = InferenceEngine::Precision::FP32) {
@@ -95,17 +100,6 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     return result;
 }
 
-template <typename T>
-static std::vector<T> asVector(const std::string& tensor_content) {
-    std::vector<T> v(tensor_content.size() / sizeof(T) + 1);
-    std::memcpy(
-        reinterpret_cast<char*>(v.data()),
-        reinterpret_cast<const char*>(tensor_content.data()),
-        tensor_content.size());
-    v.resize(tensor_content.size() / sizeof(T));
-    return v;
-}
-
 // returns path to a file.
 static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
     std::ofstream configFile{filename};
@@ -118,6 +112,18 @@ static std::string createConfigFileWithContent(const std::string& content, std::
         SPDLOG_INFO("Closing configFile succeed");
     }
     return filename;
+}
+#pragma GCC diagnostic pop
+
+template <typename T>
+static std::vector<T> asVector(const std::string& tensor_content) {
+    std::vector<T> v(tensor_content.size() / sizeof(T) + 1);
+    std::memcpy(
+        reinterpret_cast<char*>(v.data()),
+        reinterpret_cast<const char*>(tensor_content.data()),
+        tensor_content.size());
+    v.resize(tensor_content.size() / sizeof(T));
+    return v;
 }
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {

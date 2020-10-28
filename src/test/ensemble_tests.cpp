@@ -78,7 +78,7 @@ protected:
 
     std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
         std::stringstream ss;
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             if (actual_output[i] != expected_output[i]) {
                 ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
                 break;

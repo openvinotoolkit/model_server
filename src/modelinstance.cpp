@@ -618,7 +618,7 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
 */
 
     size_t expectedValueCount = 1;
-    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         expectedValueCount *= requestInput.tensor_shape().dim(i).size();
     }
 

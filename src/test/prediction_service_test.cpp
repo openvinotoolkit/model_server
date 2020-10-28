@@ -32,7 +32,8 @@
 
 using testing::Each;
 using testing::Eq;
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
 class TestPredict : public ::testing::Test {
 public:
     void SetUp() {
@@ -152,7 +153,7 @@ public:
         ASSERT_EQ(response.outputs().count("a"), 1);
         const auto& output_tensor = response.outputs().at("a");
         ASSERT_EQ(output_tensor.tensor_shape().dim_size(), shape.size());
-        for (size_t i = 0; i < shape.size(); i++) {
+        for (unsigned int i = 0; i < shape.size(); i++) {
             EXPECT_EQ(output_tensor.tensor_shape().dim(i).size(), shape[i]);
         }
     }
@@ -478,3 +479,4 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
     checkOutputShape(response, {3, 10});
 }
+#pragma GCC diagnostic pop
