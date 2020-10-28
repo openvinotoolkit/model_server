@@ -102,14 +102,13 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 
 // returns path to a file.
 static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
-    std::ofstream configFile{ filename };
+    std::ofstream configFile{filename};
     SPDLOG_INFO("Creating config file:{}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
         SPDLOG_INFO("Closing configFile failed");
-    }
-    else {
+    } else {
         SPDLOG_INFO("Closing configFile succeed");
     }
     return filename;
