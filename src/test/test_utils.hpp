@@ -99,6 +99,21 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
     return result;
 }
+
+// returns path to a file.
+static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
+    std::ofstream configFile{ filename };
+    SPDLOG_INFO("Creating config file:{}\n with content:\n{}", filename, content);
+    configFile << content << std::endl;
+    configFile.close();
+    if (configFile.fail()) {
+        SPDLOG_INFO("Closing configFile failed");
+    }
+    else {
+        SPDLOG_INFO("Closing configFile succeed");
+    }
+    return filename;
+}
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -110,20 +125,6 @@ static std::vector<T> asVector(const std::string& tensor_content) {
         tensor_content.size());
     v.resize(tensor_content.size() / sizeof(T));
     return v;
-}
-
-// returns path to a file.
-static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
-    std::ofstream configFile{filename};
-    SPDLOG_INFO("Creating config file:{}\n with content:\n{}", filename, content);
-    configFile << content << std::endl;
-    configFile.close();
-    if (configFile.fail()) {
-        SPDLOG_INFO("Closing configFile failed");
-    } else {
-        SPDLOG_INFO("Closing configFile succeed");
-    }
-    return filename;
 }
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
