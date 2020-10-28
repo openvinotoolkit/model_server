@@ -116,6 +116,8 @@ cc_library(
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
     ],
     copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
         "-Werror",
     ],
 )
