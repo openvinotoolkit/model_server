@@ -45,21 +45,23 @@ std::string getCredentials() {
     return path;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 std::string getAnonFilePath() { return std::string("azfs://my-sample-share/my-sample-directory/my_test_file.txt"); }
 
 std::string getAnonDirPath() { return std::string("azfs://my-sample-share/my-sample-directory"); }
 
-//std::string getAnonBlobFilePath() { return std::string("az://my-sample-container/my-sample-directory/my_test_file.txt"); }
+std::string getAnonBlobFilePath() { return std::string("az://my-sample-container/my-sample-directory/my_test_file.txt"); }
 
-//std::string getBlobDirPath() { return std::string("az://my-sample-container/my-sample-directory"); }
+std::string getBlobDirPath() { return std::string("az://my-sample-container/my-sample-directory"); }
 
 std::string getPrivateFilePath() { return std::string("azfs://my-sample-share/my-sample-directory/my-sample-subdirectory/my_test_file2.txt"); }
 
 std::string getPrivateDirPath() { return std::string("azfs://my-sample-share/my-sample-directory/my-sample-subdirectory"); }
 
-//std::string getPrivateBlobFilePath() { return std::string("az://my-sample-container/my-sample-directory/my-sample-subdirectory/my_test_file2.txt"); }
+std::string getPrivateBlobFilePath() { return std::string("az://my-sample-container/my-sample-directory/my-sample-subdirectory/my_test_file2.txt"); }
 
-//std::string getPrivateBlobDirPath() { return std::string("az://my-sample-container/my-sample-directory/my-sample-subdirectory"); }
+std::string getPrivateBlobDirPath() { return std::string("az://my-sample-container/my-sample-directory/my-sample-subdirectory"); }
 
 void check_file_access(const std::string& path, ovms::FileSystem* fs) {
     SPDLOG_TRACE("Checking file AS access for {}", path);
@@ -152,3 +154,4 @@ TEST(DISABLED_AzureFileSystem, file_details) {
     check_file_access(getPrivateFilePath(), fs.get());
     check_dir_access(getPrivateDirPath(), fs.get());
 }
+#pragma GCC diagnostic pop
