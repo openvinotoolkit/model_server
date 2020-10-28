@@ -161,16 +161,13 @@ public:
         for (const auto& seg : segments) {
             if (joined.empty()) {
                 joined = seg;
-            }
-            else if (isAbsolutePath(seg)) {
+            } else if (isAbsolutePath(seg)) {
                 if (joined[joined.size() - 1] == '/') {
                     joined.append(seg.substr(1));
-                }
-                else {
+                } else {
                     joined.append(seg);
                 }
-            }
-            else {
+            } else {
                 if (joined[joined.size() - 1] != '/') {
                     joined.append("/");
                 }

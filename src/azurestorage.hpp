@@ -30,6 +30,7 @@
 #pragma GCC diagnostic ignored "-Wreorder"
 #pragma GCC diagnostic ignored "-Wunused-value"
 #include <was/file.h>
+
 #include "was/blob.h"
 #include "was/common.h"
 #include "was/storage_account.h"
