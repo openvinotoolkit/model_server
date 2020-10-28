@@ -60,7 +60,7 @@ TEST_F(DISABLED_OvmsConfigTest, bufferTest) {
 }
 
 TEST_F(DISABLED_OvmsConfigTest, emptyInput) {
-    const char* n_argv[] = {"ovms"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms"};
     int arg_count = 1;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
 
@@ -68,7 +68,7 @@ TEST_F(DISABLED_OvmsConfigTest, emptyInput) {
 }
 
 TEST_F(DISABLED_OvmsConfigTest, helpInput) {
-    const char* n_argv[] = {"ovms", "help"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "help"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
 
@@ -76,97 +76,97 @@ TEST_F(DISABLED_OvmsConfigTest, helpInput) {
 }
 
 TEST_F(DISABLED_OvmsConfigTest, badInput) {
-    const char* n_argv[] = {"ovms", "--bad_option"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--bad_option"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeTwoParams) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_name", "some_name"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--model_name", "some_name"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use either config_path or model_path");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeMissingPathAndName) {
-    const char* n_argv[] = {"ovms", "--rest_port", "8080"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--rest_port", "8080"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeMissingName) {
-    const char* n_argv[] = {"ovms", "--model_path", "/path/to/model"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--model_path", "/path/to/model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeMissingPath) {
-    const char* n_argv[] = {"ovms", "--model_name", "model"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--model_name", "model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeSamePorts) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port and rest_port cannot");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeMultiParams) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "10"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--batch_size", "10"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, missingParams) {
-    const char* n_argv[] = {"ovms", "--batch_size", "10"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--batch_size", "10"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativePortMin) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options: Argument ‘-1’");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeRestPortMin) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options: Argument ‘-1’ ");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativePortRange) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "65536"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range from 0");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeRestPortRange) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "65536"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--rest_port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range from 0");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativePortMax) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "72817"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port number out of range");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeRestPortMax) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "72817"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--rest_port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeGrpcWorkersMax) {
-    const char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000"};
+    const char* n_argv[] = reinterpret_cast<const char*>{"ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "grpc_workers count should be from 1");
 }
 
 TEST_F(DISABLED_OvmsConfigTest, negativeUint64Max) {
-    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
+    const char* n_argv[] = reinterpret_cast<const char*reinterpret_cast<const char*>{"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
