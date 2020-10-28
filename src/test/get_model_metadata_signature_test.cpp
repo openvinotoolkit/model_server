@@ -84,10 +84,10 @@ TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
     auto isShape = [](
                        const tensorflow::TensorShapeProto& actual,
                        const std::vector<size_t>&& expected) -> bool {
-        if (actual.dim_size() != expected.size()) {
+        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
             return false;
         }
-        for (size_t i = 0; i < actual.dim_size(); i++) {
+        for (int i = 0; i < actual.dim_size(); i++) {
             if (actual.dim(i).size() != expected[i]) {
                 return false;
             }
