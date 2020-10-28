@@ -31,43 +31,43 @@ namespace ovms {
 
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
-        spdlog::debug("ModelConfig {} reload required due to name mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to name mismatch", this->name);
         return true;
     }
     if (this->basePath != rhs.basePath) {
-        spdlog::debug("ModelConfig {} reload required due to original base path mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to original base path mismatch", this->name);
         return true;
     }
     if (this->targetDevice != rhs.targetDevice) {
-        spdlog::debug("ModelConfig {} reload required due to target device mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to target device mismatch", this->name);
         return true;
     }
     if (this->batchingMode != rhs.batchingMode) {
-        spdlog::debug("ModelConfig {} reload required due to batching mode mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
     if (this->batchSize != rhs.batchSize) {
-        spdlog::debug("ModelConfig {} reload required due to batch size mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
     if (this->nireq != rhs.nireq) {
-        spdlog::debug("ModelConfig {} reload required due to nireq mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to nireq mismatch", this->name);
         return true;
     }
     if (this->pluginConfig != rhs.pluginConfig) {
-        spdlog::debug("ModelConfig {} reload required due to plugin config mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
     if (this->layout != rhs.layout) {
-        spdlog::debug("ModelConfig {} reload required due to no named layout mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to no named layout mismatch", this->name);
         return true;
     }
     if (this->layouts != rhs.layouts) {
-        spdlog::debug("ModelConfig {} reload required due to named layout mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
     if (!isShapeConfigurationEqual(rhs)) {
-        spdlog::debug("ModelConfig {} reload required due to shape configuration mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
 
@@ -100,7 +100,7 @@ std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBa
         try {
             effectiveBatchSize = std::stoi(configBatchSize);
         } catch (const std::invalid_argument& e) {
-            SPDLOG_ERROR("Wrong batch size parameter provided. Model batch size will be set to default.");
+            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
         }
     }
     return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
@@ -145,7 +145,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
             if (version.IsUint64() && version.GetUint64() > 0) {
                 versions.push_back(version.GetUint64());
             } else {
-                spdlog::warn("Model policy specified in config contains invalid version. Version should be a number greater than 0.");
+                SPDLOG_WARN("Model policy specified in config contains invalid version. Version should be a number greater than 0.");
             }
         }
         modelVersionPolicy = std::make_shared<SpecificModelVersionPolicy>(versions);
@@ -333,7 +333,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         if (v["shape"].IsString()) {
             ShapeInfo shapeInfo;
             if (!parseShape(shapeInfo, v["shape"].GetString()).ok()) {
-                SPDLOG_ERROR("There was an error parsing shape {}", v["shape"].GetString());
+                SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
             }
             this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
         } else {
@@ -351,7 +351,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     // check if legacy format is used
                     if (s.value.IsString()) {
                         if (!ModelConfig::parseShape(shapeInfo, s.value.GetString()).ok()) {
-                            SPDLOG_ERROR("There was an error parsing shape {}", v["shape"].GetString());
+                            SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
                         }
                     } else {
                         for (auto& sh : s.value.GetArray()) {
@@ -380,7 +380,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("plugin_config")) {
         if (!parsePluginConfig(v["plugin_config"]).ok()) {
-            SPDLOG_ERROR("Couldn't parse plugin config");
+            SPDLOG_WARN("Couldn't parse plugin config");
         }
     }
 
@@ -391,7 +391,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         v["model_version_policy"].Accept(writer);
         const auto& status = parseModelVersionPolicy(buffer.GetString());
         if (!status.ok()) {
-            SPDLOG_ERROR("Couldn't parse model version policy. {}", status.string());
+            SPDLOG_WARN("Couldn't parse model version policy. {}", status.string());
         }
     } else {
         modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
@@ -400,9 +400,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
     bool shapeSet = (getShapes().size() > 0);
 
-    spdlog::debug("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
-        spdlog::warn("Both shape and batch size have been defined. Batch size parameter will be ignored.");
+        SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
         setBatchSize(0);
     }

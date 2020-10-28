@@ -63,6 +63,9 @@ public:
     bool isAbsolutePath(const std::string& path);
     std::vector<std::string> FindSubdirectories(std::string path);
 
+protected:
+    const std::string extractAzureStorageExceptionMessage(const as::storage_exception& e);
+
 private:
     virtual StatusCode parseFilePath(const std::string& path) = 0;
 };

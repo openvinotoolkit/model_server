@@ -97,6 +97,8 @@ cc_library(
         "threadsafequeue.hpp",
         "timer.hpp",
         "version.hpp",
+        "logging.hpp",
+        "logging.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -120,7 +122,7 @@ cc_library(
         "@openvino//:openvino",
     ],
     local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
     ],
     copts = [
         "-Wall",
@@ -189,6 +191,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
+        "test/environment.hpp",
     ],
     data = [
         "test/dummy/1/dummy.xml",

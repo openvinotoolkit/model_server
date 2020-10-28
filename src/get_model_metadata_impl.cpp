@@ -36,12 +36,8 @@ Status GetModelMetadataImpl::getModelStatus(
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
-        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
-        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
-        if (!pipelineDefinition) {
-            return StatusCode::MODEL_NAME_MISSING;
-        }
-        return buildResponse(*pipelineDefinition, response, manager);
+        SPDLOG_WARN("model {} is  missing", name);
+        return StatusCode::MODEL_NAME_MISSING;
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
@@ -49,14 +45,14 @@ Status GetModelMetadataImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_INFO("GetModelMetadata requested model: name {}; version {} is missing", name, version);
+            SPDLOG_WARN("model {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_INFO("GetModelMetadata requested model: name {}; default version is missing", name);
+            SPDLOG_WARN("model {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
@@ -176,7 +172,7 @@ Status GetModelMetadataImpl::serializeResponse2Json(const tensorflow::serving::G
     opts.always_print_primitive_fields = true;
     const auto& status = MessageToJsonString(*response, output, opts);
     if (!status.ok()) {
-        spdlog::error("Failed to convert proto to json. Error: ", status.ToString());
+        SPDLOG_ERROR("Failed to convert proto to json. Error: ", status.ToString());
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
     return StatusCode::OK;

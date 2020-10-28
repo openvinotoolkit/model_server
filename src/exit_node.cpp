@@ -32,14 +32,14 @@ Status ExitNode::fetchResults(BlobMap&) {
     for (const auto& kv : this->inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
-        spdlog::debug("[Node: {}] Serializing response from pipeline. Output name:{}", getName(), output_name);
+        SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name:{}", getName(), output_name);
         auto& proto = (*this->response->mutable_outputs())[output_name];
         auto status = serialize(blob, proto);
         if (!status.ok()) {
             return status;
         }
 
-        spdlog::debug("[Node: {}] Serialized blob to proto: blob name {}", getName(), output_name);
+        SPDLOG_DEBUG("[Node: {}] Serialized blob to proto: blob name {}", getName(), output_name);
     }
 
     return StatusCode::OK;
@@ -81,7 +81,7 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
         std::stringstream ss;
         ss << "Actual: " << TensorInfo::getPrecisionAsString(blob->getTensorDesc().getPrecision());
         const std::string details = ss.str();
-        spdlog::debug("[Node: {}] Unsupported serialization precision - {}", getName(), details);
+        SPDLOG_DEBUG("[Node: {}] Unsupported serialization precision - {}", getName(), details);
         Status status = Status(StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, details);
         return status;
     }

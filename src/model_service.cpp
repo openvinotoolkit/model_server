@@ -67,7 +67,7 @@ Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::Get
     opts.always_print_primitive_fields = true;
     const auto& status = MessageToJsonString(*response, output, opts);
     if (!status.ok()) {
-        spdlog::error("Failed to convert proto to json. Error: ", status.ToString());
+        SPDLOG_ERROR("Failed to convert proto to json. Error: ", status.ToString());
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
     return StatusCode::OK;
@@ -81,7 +81,7 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
     std::string requested_model_name = request->model_spec().name();
     auto model_ptr = ModelManager::getInstance().findModelByName(requested_model_name);
     if (!model_ptr) {
-        SPDLOG_INFO("requested model {} was not found", requested_model_name);
+        SPDLOG_WARN("requested model {} was not found", requested_model_name);
         return StatusCode::MODEL_NAME_MISSING;
     }
 
@@ -90,7 +90,7 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
         std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
         if (!model_instance) {
-            SPDLOG_INFO("requested model {} in version {} was not found.", requested_model_name, requested_version);
+            SPDLOG_WARN("requested model {} in version {} was not found.", requested_model_name, requested_version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
         const auto& status = model_instance->getStatus();
@@ -113,7 +113,7 @@ Status GetModelStatusImpl::getModelStatus(const tensorflow::serving::GetModelSta
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(
     ::grpc::ServerContext* context, const tensorflow::serving::ReloadConfigRequest* request,
     tensorflow::serving::ReloadConfigResponse* response) {
-    spdlog::info("Requested HandleReloadConfigRequest - but this service is reloading config automatically by itself, therefore this operation has no *EXTRA* affect.");
+    SPDLOG_INFO("Requested HandleReloadConfigRequest - but this service is reloading config automatically by itself, therefore this operation has no *EXTRA* affect.");
     return grpc::Status::OK;  // we're reloading config all the time; for a total client compatibility, this means returning success here.
 }
 

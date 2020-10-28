@@ -118,28 +118,28 @@ public:
     }
 
     void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        spdlog::debug("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
         state = ModelVersionState::LOADING;
         errorCode = error_code;
         logStatus();
     }
 
     void setAvailable(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        spdlog::debug("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
         state = ModelVersionState::AVAILABLE;
         errorCode = error_code;
         logStatus();
     }
 
     void setUnloading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        spdlog::debug("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
         state = ModelVersionState::UNLOADING;
         errorCode = error_code;
         logStatus();
     }
 
     void setEnd(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        spdlog::debug("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
         state = ModelVersionState::END;
         errorCode = error_code;
         logStatus();
@@ -147,7 +147,7 @@ public:
 
 private:
     void logStatus() {
-        spdlog::info("STATUS CHANGE: Version {} of model {} status change. New status: ( \"state\": \"{}\", \"error_code\": \"{}\" )",
+        SPDLOG_INFO("STATUS CHANGE: Version {} of model {} status change. New status: ( \"state\": \"{}\", \"error_code\": \"{}\" )",
             this->version,
             this->modelName,
             ModelVersionStateToString(state),

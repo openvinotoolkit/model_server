@@ -78,7 +78,7 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
         try {
             model_version = std::stoll(model_version_str.c_str());
         } catch (std::exception& e) {
-            spdlog::error("Couldn't parse model version {}", model_version_str);
+            SPDLOG_ERROR("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
         }
     }
@@ -96,7 +96,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, response);
         } else {
-            spdlog::error("Requested REST resource {} not found", std::string(request_path));
+            SPDLOG_WARN("Requested REST resource {} not found", std::string(request_path));
             return StatusCode::REST_NOT_FOUND;
         }
     } else if (request_components.http_method == "GET") {
@@ -162,7 +162,7 @@ Status HttpRestApiHandler::processPredictRequest(
     timer.start("total");
     using std::chrono::microseconds;
 
-    spdlog::debug("Processing REST request for model: {}; version: {}",
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
         modelName, modelVersion.value_or(0));
 
     ModelManager& modelManager = ModelManager::getInstance();
@@ -171,13 +171,13 @@ Status HttpRestApiHandler::processPredictRequest(
     Status status;
 
     if (modelManager.modelExists(modelName)) {
-        SPDLOG_INFO("Found model with name: {}. Searching for requested version...", modelName);
+        SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto);
     } else if (modelManager.pipelineDefinitionExists(modelName)) {
-        SPDLOG_INFO("Found pipeline with name: {}", modelName);
+        SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto);
     } else {
-        SPDLOG_INFO("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
+        SPDLOG_WARN("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
         status = StatusCode::MODEL_NAME_MISSING;
     }
     if (!status.ok())
@@ -188,7 +188,7 @@ Status HttpRestApiHandler::processPredictRequest(
         return status;
 
     timer.stop("total");
-    spdlog::debug("Total REST request processing time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
+    SPDLOG_DEBUG("Total REST request processing time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
     return StatusCode::OK;
 }
 
@@ -208,7 +208,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         modelInstanceUnloadGuard);
 
     if (!status.ok()) {
-        SPDLOG_INFO("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
+        SPDLOG_WARN("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
         return status;
     }
     Timer timer;
@@ -220,7 +220,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     }
     requestOrder = requestParser.getOrder();
     timer.stop("parse");
-    spdlog::debug("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
@@ -247,7 +247,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     }
     requestOrder = requestParser.getOrder();
     timer.stop("parse");
-    spdlog::debug("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
@@ -290,7 +290,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     const std::optional<std::string_view>& model_version_label,
     std::string* response) {
     // model_version_label currently is not in use
-    spdlog::debug("Processing model status request");
+    SPDLOG_DEBUG("Processing model status request");
     tensorflow::serving::GetModelStatusRequest grpc_request;
     tensorflow::serving::GetModelStatusResponse grpc_response;
     Status status;

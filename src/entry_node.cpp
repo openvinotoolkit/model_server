@@ -41,12 +41,12 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
-                spdlog::debug("[Node: {}] Missing input with specific name", getName(), details);
+                SPDLOG_DEBUG("[Node: {}] Missing input with specific name", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
             const auto& tensor_proto = request->inputs().at(output_name);
             InferenceEngine::Blob::Ptr blob;
-            spdlog::debug("[Node: {}] Deserializing input:{}", getName(), output_name);
+            SPDLOG_DEBUG("[Node: {}] Deserializing input:{}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
                 return status;
@@ -54,7 +54,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
 
             outputs[output_name] = blob;
 
-            spdlog::debug("[Node: {}]: blob with name {} has been prepared", getName(), output_name);
+            SPDLOG_DEBUG("[Node: {}]: blob with name {} has been prepared", getName(), output_name);
         }
     }
 
@@ -65,7 +65,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
     InferenceEngine::TensorDesc description;
     if (proto.tensor_content().size() == 0) {
         const std::string details = "Tensor content size can't be 0";
-        spdlog::debug("[Node: {}] {}", getName(), details);
+        SPDLOG_DEBUG("[Node: {}] {}", getName(), details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
@@ -84,7 +84,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
         std::stringstream ss;
         ss << "Expected: " << tensor_count * tensorflow::DataTypeSize(proto.dtype()) << "; Actual: " << proto.tensor_content().size();
         const std::string details = ss.str();
-        spdlog::debug("[Node {}] Invalid size of tensor proto - {}", getName(), details);
+        SPDLOG_DEBUG("[Node {}] Invalid size of tensor proto - {}", getName(), details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
@@ -119,18 +119,18 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             std::stringstream ss;
             ss << "Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());
             const std::string details = ss.str();
-            spdlog::debug("[Node: {}] Unsupported deserialization precision - {}", getName(), details);
+            SPDLOG_DEBUG("[Node: {}] Unsupported deserialization precision - {}", getName(), details);
             return Status(StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, details);
         }
         }
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        spdlog::debug("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+        SPDLOG_DEBUG("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
             getName(), status.string(), e.what());
         return status;
     } catch (std::logic_error& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        spdlog::debug("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+        SPDLOG_DEBUG("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
             getName(), status.string(), e.what());
         return status;
     }

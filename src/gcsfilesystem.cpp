@@ -31,8 +31,7 @@
 #include <string>
 #include <vector>
 
-#include <spdlog/spdlog.h>
-
+#include "logging.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
@@ -66,7 +65,7 @@ google::cloud::storage::ClientOptions createDefaultOrAnonymousClientOptions() {
         auto credentials =
             google::cloud::storage::v1::oauth2::CreateAnonymousCredentials();
         if (!credentials) {
-            SPDLOG_ERROR("Unable to create default GCS credentials");
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to create default GCS credentials");
             throw std::runtime_error("Unable to create default GCS credentials");
         }
         auto options = google::cloud::storage::ClientOptions(credentials);
@@ -75,7 +74,7 @@ google::cloud::storage::ClientOptions createDefaultOrAnonymousClientOptions() {
         auto credentials =
             google::cloud::storage::v1::oauth2::GoogleDefaultCredentials();
         if (!credentials) {
-            SPDLOG_ERROR("Unable to create default GCS credentials");
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to create default GCS credentials");
             throw std::runtime_error("Unable to create default GCS credentials");
         }
         auto options = google::cloud::storage::ClientOptions(*credentials);
@@ -87,15 +86,15 @@ google::cloud::storage::ClientOptions createDefaultOrAnonymousClientOptions() {
 
 GCSFileSystem::GCSFileSystem() :
     client_{createDefaultOrAnonymousClientOptions()} {
-    SPDLOG_TRACE("GCSFileSystem default ctor");
+    SPDLOG_LOGGER_TRACE(gcs_logger, "GCSFileSystem default ctor");
 }
 
 GCSFileSystem::GCSFileSystem(const gcs::v1::ClientOptions& options) :
     client_{options, gcs::StrictIdempotencyPolicy()} {
-    SPDLOG_TRACE("GCSFileSystem ctor with custom options");
+    SPDLOG_LOGGER_TRACE(gcs_logger, "GCSFileSystem ctor with custom options");
 }
 
-GCSFileSystem::~GCSFileSystem() { SPDLOG_TRACE("GCSFileSystem dtor"); }
+GCSFileSystem::~GCSFileSystem() { SPDLOG_LOGGER_TRACE(gcs_logger, "GCSFileSystem dtor"); }
 
 StatusCode GCSFileSystem::fileExists(const std::string& path, bool* exists) {
     *exists = false;
@@ -103,7 +102,7 @@ StatusCode GCSFileSystem::fileExists(const std::string& path, bool* exists) {
 
     auto status = this->parsePath(path, &bucket, &object);
     if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to parse path: {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to parse path: {} -> {}", path,
             ovms::Status(status).string());
         return status;
     }
@@ -117,12 +116,12 @@ StatusCode GCSFileSystem::fileExists(const std::string& path, bool* exists) {
     bool is_directory;
     auto dir_status = this->isDirectory(path, &is_directory);
     if (dir_status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: isDirectory failed: {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "isDirectory failed: {} -> {}", path,
             ovms::Status(status).string());
         return dir_status;
     }
     *exists = is_directory;
-    SPDLOG_TRACE("GCS: fileExits {} -> {}", path, is_directory);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "fileExits {} -> {}", path, is_directory);
     return StatusCode::OK;
 }
 
@@ -132,12 +131,12 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
     std::string bucket, object;
     auto status = this->parsePath(path, &bucket, &object);
     if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to parse path: {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to parse path: {} -> {}", path,
             ovms::Status(status).string());
         return status;
     }
     if (path.empty()) {
-        SPDLOG_TRACE("GCS: path is empty -> always a directory");
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Path is empty -> always a directory");
         *is_directory = true;
         return StatusCode::OK;
     }
@@ -154,19 +153,19 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
 StatusCode
 GCSFileSystem::getDirectoryContents(const std::string& path,
     std::set<std::string>* contents) {
-    SPDLOG_TRACE("GCS: getting directory contents {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Getting directory contents {}", path);
     std::string bucket, directory_path, full_directory;
     auto status = this->parsePath(path, &bucket, &directory_path);
     if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to get directory content {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to get directory content {} -> {}", path,
             ovms::Status(status).string());
         return status;
     }
     full_directory = appendSlash(directory_path);
     for (auto&& meta : client_.ListObjects(bucket, gcs::Prefix(full_directory))) {
         if (!meta) {
-            SPDLOG_WARN("GCS: Unable to get directory content -> object metadata "
-                        "is empty. Error: {}",
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to get directory content -> object metadata "
+                                            "is empty. Error: {}",
                 meta.status().message());
             return StatusCode::GCS_INVALID_ACCESS;
         }
@@ -181,16 +180,16 @@ GCSFileSystem::getDirectoryContents(const std::string& path,
         int name_end = name.find("/", name_start);
         contents->insert(name.substr(name_start, name_end - name_start));
     }
-    SPDLOG_TRACE("GCS: directory contents fetched, items: {}", contents->size());
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Directory contents fetched, items: {}", contents->size());
     return StatusCode::OK;
 }
 
 StatusCode GCSFileSystem::getDirectorySubdirs(const std::string& path,
     std::set<std::string>* subdirs) {
-    SPDLOG_TRACE("GCS: listing directory subdirs: {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Listing directory subdirs: {}", path);
     auto status = this->getDirectoryContents(path, subdirs);
     if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to list directory subdir content {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory subdir content {} -> {}", path,
             ovms::Status(status).string());
         return status;
     }
@@ -198,7 +197,7 @@ StatusCode GCSFileSystem::getDirectorySubdirs(const std::string& path,
         bool is_directory;
         auto status = this->isDirectory(joinPath({path, *item}), &is_directory);
         if (status != StatusCode::OK) {
-            SPDLOG_WARN("GCS: Unable to list directory subdir content {} -> {}", path,
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory subdir content {} -> {}", path,
                 ovms::Status(status).string());
             return status;
         }
@@ -208,16 +207,16 @@ StatusCode GCSFileSystem::getDirectorySubdirs(const std::string& path,
             ++item;
         }
     }
-    SPDLOG_TRACE("GCS: listing directory subdirs ok: {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Listing directory subdirs ok: {}", path);
     return StatusCode::OK;
 }
 
 StatusCode GCSFileSystem::getDirectoryFiles(const std::string& path,
     std::set<std::string>* files) {
-    SPDLOG_TRACE("GCS: listing directory: {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Listing directory: {}", path);
     auto status = this->getDirectoryContents(path, files);
     if (status != StatusCode::OK) {
-        SPDLOG_WARN("GCS: Unable to list directory content {} -> {}", path,
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory content {} -> {}", path,
             ovms::Status(status).string());
         return status;
     }
@@ -225,7 +224,7 @@ StatusCode GCSFileSystem::getDirectoryFiles(const std::string& path,
         bool is_directory;
         auto status = this->isDirectory(joinPath({path, *item}), &is_directory);
         if (status != StatusCode::OK) {
-            SPDLOG_WARN("GCS: Unable to list directory content {} -> {}", path,
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory content {} -> {}", path,
                 ovms::Status(status).string());
             return status;
         }
@@ -235,20 +234,20 @@ StatusCode GCSFileSystem::getDirectoryFiles(const std::string& path,
             ++item;
         }
     }
-    SPDLOG_TRACE("GCS: listing directory ok for {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "listing directory ok for {}", path);
     return StatusCode::OK;
 }
 
 StatusCode GCSFileSystem::readTextFile(const std::string& path,
     std::string* contents) {
-    SPDLOG_TRACE("GCS: Downloading file {}", path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Downloading file {}", path);
     bool exists;
     auto status = fileExists(path, &exists);
     if (status != StatusCode::OK) {
         return status;
     }
     if (!exists) {
-        SPDLOG_WARN("GCS: Downloading file -> file does not exist at {}", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Downloading file -> file does not exist at {}", path);
         return StatusCode::GCS_FILE_NOT_FOUND;
     }
     std::string bucket, object;
@@ -258,7 +257,7 @@ StatusCode GCSFileSystem::readTextFile(const std::string& path,
     }
     gcs::ObjectReadStream stream = client_.ReadObject(bucket, object);
     if (!stream) {
-        SPDLOG_WARN("GCS: Downloading file has failed: ", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Downloading file has failed: ", path);
         return StatusCode::GCS_FILE_INVALID;
     }
     std::string data = "";
@@ -267,18 +266,18 @@ StatusCode GCSFileSystem::readTextFile(const std::string& path,
         data += c;
     }
     *contents = data;
-    SPDLOG_TRACE("GCS: File {} has been downloaded (bytes={})", path,
+    SPDLOG_LOGGER_TRACE(gcs_logger, "File {} has been downloaded (bytes={})", path,
         data.size());
     return StatusCode::OK;
 }
 
 StatusCode GCSFileSystem::downloadFile(const std::string& remote_path,
     const std::string& local_path) {
-    SPDLOG_TRACE("GCS: Saving file {} to {}", remote_path, local_path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Saving file {} to {}", remote_path, local_path);
     std::string contents;
     auto read_status = this->readTextFile(remote_path, &contents);
     if (read_status != StatusCode::OK) {
-        SPDLOG_ERROR("Failed to get object at {}", remote_path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Failed to get object at {}", remote_path);
         return read_status;
     }
     std::ofstream output_file(local_path.c_str(), std::ios::binary);
@@ -292,7 +291,7 @@ StatusCode GCSFileSystem::downloadModelVersions(const std::string& path,
     const std::vector<model_version_t>& versions) {
     auto sc = createTempPath(local_path);
     if (sc != StatusCode::OK) {
-        spdlog::error("Failed to create a temporary path {}", sc);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Failed to create a temporary path {}", sc);
         return sc;
     }
 
@@ -312,7 +311,7 @@ StatusCode GCSFileSystem::downloadModelVersions(const std::string& path,
         auto status = downloadFileFolder(versionpath, lpath);
         if (status != StatusCode::OK) {
             result = status;
-            spdlog::error("Failed to download model version {}", versionpath);
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Failed to download model version {}", versionpath);
         }
     }
 
@@ -320,15 +319,15 @@ StatusCode GCSFileSystem::downloadModelVersions(const std::string& path,
 }
 
 StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std::string& local_path) {
-    SPDLOG_TRACE("GCS: Downloading dir {} and saving to {}", path, local_path);
+    SPDLOG_LOGGER_TRACE(gcs_logger, "Downloading dir {} and saving to {}", path, local_path);
     bool is_dir;
     auto status = this->isDirectory(path, &is_dir);
     if (status != StatusCode::OK) {
-        SPDLOG_ERROR("File/folder does not exist at {}", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "File/folder does not exist at {}", path);
         return StatusCode::GCS_FILE_NOT_FOUND;
     }
     if (!is_dir) {
-        SPDLOG_ERROR("Path is not a directory: {}", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Path is not a directory: {}", path);
         return StatusCode::GCS_FILE_NOT_FOUND;
     }
 
@@ -347,7 +346,7 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
     for (auto&& d : dirs) {
         std::string remote_dir_path = joinPath({path, d});
         std::string local_dir_path = joinPath({local_path, d});
-        SPDLOG_TRACE("Processing directory {} from {} -> {}", d, remote_dir_path,
+        SPDLOG_LOGGER_TRACE(gcs_logger, "Processing directory {} from {} -> {}", d, remote_dir_path,
             local_dir_path);
         auto mkdir_status = CreateLocalDir(local_dir_path);
         if (mkdir_status != StatusCode::OK) {
@@ -356,7 +355,7 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
         auto download_dir_status =
             this->downloadFileFolder(remote_dir_path, local_dir_path);
         if (download_dir_status != StatusCode::OK) {
-            SPDLOG_ERROR("Unable to download directory from {} to {}",
+            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to download directory from {} to {}",
                 remote_dir_path, local_dir_path);
             return download_dir_status;
         }
@@ -368,12 +367,12 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
             })) {
             std::string remote_file_path = joinPath({path, f});
             std::string local_file_path = joinPath({local_path, f});
-            SPDLOG_TRACE("Processing file {} from {} -> {}", f, remote_file_path,
+            SPDLOG_LOGGER_TRACE(gcs_logger, "Processing file {} from {} -> {}", f, remote_file_path,
                 local_file_path);
             auto download_status =
                 this->downloadFile(remote_file_path, local_file_path);
             if (download_status != StatusCode::OK) {
-                SPDLOG_ERROR("Unable to save file from {} to {}", remote_file_path,
+                SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to save file from {} to {}", remote_file_path,
                     local_file_path);
                 return download_status;
             }
@@ -383,11 +382,11 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
 }
 
 StatusCode GCSFileSystem::deleteFileFolder(const std::string& path) {
-    SPDLOG_DEBUG("GCS: deleting local file folder {}", path);
+    SPDLOG_LOGGER_DEBUG(gcs_logger, "Deleting local file folder {}", path);
     if (::remove(path.c_str()) == 0) {
         return StatusCode::OK;
     } else {
-        SPDLOG_INFO("GCS: unable to remove local path: {}", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to remove local path: {}", path);
         return StatusCode::FILE_INVALID;
     }
 }
