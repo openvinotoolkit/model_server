@@ -89,7 +89,7 @@ protected:
             return;
         }
         size_t numberOfElements = 1;
-        for (size_t i = 0; i < proto.tensor_shape().dim_size(); i++) {
+        for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
             numberOfElements *= proto.tensor_shape().dim(i).size();
         }
         *proto.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(proto.dtype()), '1');

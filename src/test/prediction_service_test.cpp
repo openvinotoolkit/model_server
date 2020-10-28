@@ -152,7 +152,7 @@ public:
         ASSERT_EQ(response.outputs().count("a"), 1);
         const auto& output_tensor = response.outputs().at("a");
         ASSERT_EQ(output_tensor.tensor_shape().dim_size(), shape.size());
-        for (size_t i = 0; i < shape.size(); i++) {
+        for (int i = 0; i < shape.size(); i++) {
             EXPECT_EQ(output_tensor.tensor_shape().dim(i).size(), shape[i]);
         }
     }

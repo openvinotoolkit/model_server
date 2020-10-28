@@ -215,7 +215,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
         if (actual.dim_size() != expected.size()) {
             return false;
         }
-        for (size_t i = 0; i < actual.dim_size(); i++) {
+        for (int i = 0; i < actual.dim_size(); i++) {
             if (actual.dim(i).size() != expected[i]) {
                 return false;
             }
