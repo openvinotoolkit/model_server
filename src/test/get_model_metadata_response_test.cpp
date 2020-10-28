@@ -212,7 +212,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
     auto isShape = [](
                        const tensorflow::TensorShapeProto& actual,
                        const std::vector<size_t>&& expected) -> bool {
-        if ((static_cast<unsigned int>actual.dim_size() != expected.size()) {
+        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
             return false;
         }
         for (int i = 0; i < actual.dim_size(); i++) {
