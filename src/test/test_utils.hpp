@@ -53,6 +53,8 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::shape_t>&& tensors,
     InferenceEngine::Precision precision = InferenceEngine::Precision::FP32) {
@@ -91,6 +93,7 @@ static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
     }
     return shape;
 }
+#pragma GCC diagnostic pop
 
 static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedField<google::protobuf::int32>* container) {
     std::vector<google::protobuf::int32> result(container->size(), 0);
