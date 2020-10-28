@@ -32,7 +32,8 @@
 
 using testing::Each;
 using testing::Eq;
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
 class TestPredict : public ::testing::Test {
 public:
     void SetUp() {
@@ -478,3 +479,4 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
     checkOutputShape(response, {3, 10});
 }
+#pragma GCC diagnostic pop
