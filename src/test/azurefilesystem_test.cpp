@@ -46,7 +46,7 @@ std::string getCredentials() {
 }
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
 std::string getAnonFilePath() { return std::string("azfs://my-sample-share/my-sample-directory/my_test_file.txt"); }
 
 std::string getAnonDirPath() { return std::string("azfs://my-sample-share/my-sample-directory"); }
