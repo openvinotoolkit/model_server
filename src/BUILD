@@ -95,6 +95,8 @@ cc_library(
         "schema.cpp",
         "serialization.hpp",
         "server.cpp",
+        "statefulmodelinstance.cpp",
+        "statefulmodelinstance.hpp",
         "status.cpp",
         "status.hpp",
         "stringutils.hpp",

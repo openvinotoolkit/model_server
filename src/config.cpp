@@ -123,7 +123,15 @@ Config& Config::parse(int argc, char** argv) {
             ("plugin_config",
                 "a dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG");
+                "PLUGIN_CONFIG")
+            ("stateful",
+                "flag indicating model is stateful",
+                cxxopts::value<bool>()->default_value("false"),
+                "STATEFUL")
+            ("stateful_timeout",
+                "Determines how long stateful model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
+                cxxopts::value<uint32_t>(),
+                "STATEFUL_TIMEOUT");
 
         // clang-format on
 

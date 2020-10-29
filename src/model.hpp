@@ -25,6 +25,7 @@
 #include "filesystem.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelinstance.hpp"
+#include "statefulmodelinstance.hpp"
 
 namespace ovms {
 class PipelineDefinition;
@@ -32,6 +33,9 @@ class PipelineDefinition;
      */
 class Model {
 private:
+
+    // Flag indicating whether model is stateful or not
+    bool stateful;
     /**
      * @brief Mutex for protecting concurrent modfying and accessing modelVersions
      */
@@ -99,7 +103,7 @@ public:
     /**
          * @brief Constructor
          */
-    Model(const std::string& name) :
+    Model(const std::string& name, bool stateful = false) :
         name(name),
         defaultVersion(0),
         subscriptionManager(std::string("model: ") + name) {}

@@ -407,6 +407,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         }
     }
 
+    if (v.HasMember("stateful"))
+        this->setStateful(v["stateful"].GetBool());
+
+    if (v.HasMember("nireq"))
+        this->setStatefulTimeout(v["stateful_timeout"].GetUint64());
+
     if (v.HasMember("model_version_policy")) {
         rapidjson::StringBuffer buffer;
         buffer.Clear();

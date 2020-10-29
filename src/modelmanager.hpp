@@ -46,7 +46,7 @@ protected:
      */
     ModelManager() = default;
 
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool stateful);
 
     /**
      * @brief A collection of models
@@ -262,8 +262,8 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name) {
-        return std::make_shared<Model>(name);
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool stateful) {
+        return std::make_shared<Model>(name, stateful);
     }
 
     /**

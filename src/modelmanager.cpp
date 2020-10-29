@@ -534,11 +534,11 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
-std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
+std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool stateful) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models.insert({modelName, modelFactory(modelName)});
+        models.insert({modelName, modelFactory(modelName, stateful)});
     }
     return models[modelName];
 }
