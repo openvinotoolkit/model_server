@@ -105,6 +105,10 @@ private:
          */
     plugin_config_t pluginConfig;
 
+    bool stateful;
+
+    uint32_t statefulTimeout;
+
     /**
          * @brief Layout for single input
          */
@@ -165,6 +169,8 @@ public:
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
+        bool stateful = false,
+        uint32_t statefulTimeout = 0,
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -174,6 +180,8 @@ public:
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         pluginConfig({}),
+        stateful(stateful),
+        statefulTimeout(statefulTimeout),
         layout(""),
         shapes({}),
         layouts({}),
@@ -426,6 +434,23 @@ public:
     void setPluginConfig(const plugin_config_t& pluginConfig) {
         this->pluginConfig = pluginConfig;
     }
+
+    const bool isStateful() const {
+         return this->stateful;
+    }
+
+    void setStateful(bool stateful) {
+         this->stateful = stateful;
+    }
+
+    uint64_t getStatefulTimeout() const {
+        return this->statefulTimeout;
+    }
+
+    void setStatefulTimeout(const uint32_t statefulTimeout) {
+        this->statefulTimeout = statefulTimeout;
+    }
+
 
     /**
          * @brief Parses json node for plugin config keys and values

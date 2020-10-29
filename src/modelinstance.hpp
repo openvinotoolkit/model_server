@@ -113,6 +113,28 @@ protected:
     size_t batchSize = 0;
 
     /**
+      * @brief Stores required openVINO model files extensions to be able to load model
+      *        Order is important, first file on the list is passed to LoadNetwork
+      */
+    static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
+
+    /**
+      * @brief Stores required onnx model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
+
+    /**
+         * @brief Notifies model instance users who wait for loading
+         */
+    std::condition_variable modelLoadedNotify;
+
+    /**
+         * @brief Holds currently loaded model configuration
+         */
+    ModelConfig config;
+
+
+    /**
          * @brief Load OV CNNNetwork ptr
          *
          * @return CNNNetwork ptr
@@ -162,26 +184,23 @@ protected:
          */
     std::string findModelFilePathWithExtension(const std::string& extension) const;
 
-    /**
-      * @brief Stores required openVINO model files extensions to be able to load model
-      *        Order is important, first file on the list is passed to LoadNetwork
-      */
-    static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
+    virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs);
 
-    /**
-      * @brief Stores required onnx model files extensions to be able to load model
-      */
-    static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
-    /**
-         * @brief Notifies model instance users who wait for loading
-         */
-    std::condition_variable modelLoadedNotify;
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
-    /**
-         * @brief Holds currently loaded model configuration
-         */
-    ModelConfig config;
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput,
+        const Mode& batchingMode);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
 private:
     /**
@@ -241,22 +260,6 @@ private:
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput,
-        const Mode& batchingMode);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     uint32_t getNumOfParallelInferRequests(const ModelConfig& config);
     uint32_t getNumOfParallelInferRequestsUnbounded(const ModelConfig& config);

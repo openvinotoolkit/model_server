@@ -83,7 +83,9 @@ Status ModelManager::startFromConfig() {
         config.modelPath(),
         config.targetDevice(),
         config.batchSize(),
-        config.nireq());
+        config.nireq(),
+        config.stateful(),
+        config.statefulTimeout());
 
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
@@ -386,11 +388,11 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
-std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
+std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool stateful) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models.insert({modelName, modelFactory(modelName)});
+        models.insert({modelName, modelFactory(modelName, stateful)});
     }
     return models[modelName];
 }
@@ -542,7 +544,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
 
-    auto model = getModelIfExistCreateElse(config.getName());
+    auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToStart->size() > 0) {

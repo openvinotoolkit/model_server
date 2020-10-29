@@ -58,6 +58,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						},
 						"plugin_config": {
 							"type": "object"
+						},
+						"stateful": {
+							"type": "boolean"
+						},
+						"stateful_timeout": {
+							"type": "integer"
 						}
 					},
 					"additionalProperties": false

@@ -546,6 +546,17 @@ void ModelInstance::unloadModel() {
     status.setEnd();
 }
 
+const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
+    if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
+        const std::string details = ss.str();
+        spdlog::debug("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
+        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+    }
+    return StatusCode::OK;
+}
+
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput) {
     // Network and request must have the same precision
@@ -656,15 +667,11 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     Status finalStatus = StatusCode::OK;
-
     // Network and request must have the same amount of inputs
-    if (request->inputs_size() < 0 || getInputsInfo().size() != static_cast<size_t>(request->inputs_size())) {
-        std::stringstream ss;
-        ss << "Expected: " << getInputsInfo().size() << "; Actual: " << request->inputs_size();
-        const std::string details = ss.str();
-        spdlog::debug("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
-    }
+    auto expectedNumberOfInputs = getInputsInfo().size();
+    finalStatus = validateNumberOfInputs(request, expectedNumberOfInputs);
+    if (!finalStatus.ok())
+        return finalStatus;
 
     for (const auto& pair : getInputsInfo()) {
         const auto& name = pair.first;

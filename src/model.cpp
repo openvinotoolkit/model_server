@@ -62,9 +62,14 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     return modelInstanceIt->second;
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory() {
-    SPDLOG_DEBUG("Producing new ModelInstance");
-    return std::move(std::make_shared<ModelInstance>());
+std::shared_ptr<ModelInstance> Model::modelInstanceFactory() {
+    if (stateful) {
+        spdlog::info("Producing new StatefulModelInstance");
+        return std::move(std::static_pointer_cast<ModelInstance>(std::make_shared<StatefulModelInstance>()));
+    } else {
+        spdlog::info("Producing new ModelInstance");
+        return std::move(std::make_shared<ModelInstance>());
+    }
 }
 
 Status Model::addVersion(const ModelConfig& config) {

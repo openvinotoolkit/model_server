@@ -208,10 +208,22 @@ public:
          * 
          * @return const std::string& 
          */
+
     const std::string& pluginConfig() {
         if (result->count("plugin_config"))
             return result->operator[]("plugin_config").as<std::string>();
         return empty;
+    }
+
+    bool stateful() {
+        return result->operator[]("stateful").as<bool>();
+    }
+
+    uint32_t statefulTimeout() {
+        if (!result->count("stateful_timeout")) {
+            return 0;
+        }
+        return result->operator[]("stateful_timeout").as<uint32_t>();
     }
 
     /**
