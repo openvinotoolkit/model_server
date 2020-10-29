@@ -72,13 +72,21 @@ Status getModelInstance(ovms::ModelManager& manager,
         if (modelInstance == nullptr) {
             return StatusCode::MODEL_VERSION_MISSING;
         }
-    } else {
+
+        return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+    } 
+    
+    Status status = StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    auto retries = 5;
+    while (status == StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE && retries--) {
         modelInstance = model->getDefaultModelInstance();
         if (modelInstance == nullptr) {
             return StatusCode::MODEL_VERSION_MISSING;
         }
+        status = modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
     }
-    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+
+    return status;
 }
 
 Status getPipeline(ovms::ModelManager& manager,
