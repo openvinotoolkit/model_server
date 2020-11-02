@@ -144,7 +144,7 @@ Install Clang-Format 6.0 using command :
 
 ### Levels
 
-</br>
+<br>
 
 #### `ERROR`
 Log at this level errors related to the internal model server state.
@@ -153,8 +153,6 @@ Example:
 
 - exceptions thrown during accesing local files
 - errors during models updates (failed to load/reload model)
-</br>
-
 </br>
 
 #### `WARN`
