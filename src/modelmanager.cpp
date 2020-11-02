@@ -656,7 +656,4 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     return it != models.end() ? it->second : nullptr;
 }
 
-//Status ModelManager::unloadCustomLoader(const std::string& loaderName){
-//}
-
 }  // namespace ovms

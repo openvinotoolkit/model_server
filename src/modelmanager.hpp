@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <utility>
 
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>

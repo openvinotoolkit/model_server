@@ -132,7 +132,6 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED, "Cannot load the custom library"},
     {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
-
 };
 
 const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
