@@ -45,6 +45,8 @@ std::string getCredentials() {
     return path;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 std::string getAnonFilePath() { return std::string("azfs://my-sample-share/my-sample-directory/my_test_file.txt"); }
 
 std::string getAnonDirPath() { return std::string("azfs://my-sample-share/my-sample-directory"); }
@@ -152,3 +154,4 @@ TEST(DISABLED_AzureFileSystem, file_details) {
     check_file_access(getPrivateFilePath(), fs.get());
     check_dir_access(getPrivateDirPath(), fs.get());
 }
+#pragma GCC diagnostic pop

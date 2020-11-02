@@ -30,55 +30,6 @@ namespace ovms {
 namespace fs = std::filesystem;
 
 using files_list_t = std::set<std::string>;
-namespace {
-
-std::string appendSlash(const std::string& name) {
-    if (name.empty() || (name.back() == '/')) {
-        return name;
-    }
-
-    return (name + "/");
-}
-
-bool isAbsolutePath(const std::string& path) {
-    return !path.empty() && (path[0] == '/');
-}
-
-std::string joinPath(std::initializer_list<std::string> segments) {
-    std::string joined;
-
-    for (const auto& seg : segments) {
-        if (joined.empty()) {
-            joined = seg;
-        } else if (isAbsolutePath(seg)) {
-            if (joined[joined.size() - 1] == '/') {
-                joined.append(seg.substr(1));
-            } else {
-                joined.append(seg);
-            }
-        } else {
-            if (joined[joined.size() - 1] != '/') {
-                joined.append("/");
-            }
-            joined.append(seg);
-        }
-    }
-
-    return joined;
-}
-
-StatusCode CreateLocalDir(const std::string& path) {
-    int status =
-        mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
-    if (status == -1) {
-        SPDLOG_ERROR("Failed to create local folder: {} {} ", path,
-            strerror(errno));
-        return StatusCode::PATH_INVALID;
-    }
-    return StatusCode::OK;
-}
-
-}  // namespace
 
 class FileSystem {
 public:
@@ -152,11 +103,30 @@ public:
     virtual StatusCode downloadFileFolder(const std::string& path, const std::string& local_path) = 0;
 
     /**
+    * @brief Download model versions
+    *
+    * @param path
+    * @param local_path
+    * @param versions
+    * @return StatusCode
+    */
+    virtual StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) = 0;
+
+    /**
+     * @brief Delete a folder
+     *
+     * @param path
+     * @return StatusCode
+     */
+
+    virtual StatusCode deleteFileFolder(const std::string& path) = 0;
+    /**
      * @brief Create a Temp Path
      * 
      * @param local_path 
      * @return StatusCode 
      */
+
     static StatusCode createTempPath(std::string* local_path) {
         std::string file_template = "/tmp/fileXXXXXX";
         char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
@@ -173,23 +143,51 @@ public:
         return StatusCode::OK;
     }
 
-    /**
-     * @brief Download model versions
-     * 
-     * @param path 
-     * @param local_path 
-     * @param versions 
-     * @return StatusCode 
-     */
-    virtual StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) = 0;
+    std::string appendSlash(const std::string& name) {
+        if (name.empty() || (name.back() == '/')) {
+            return name;
+        }
 
-    /**
-     * @brief Delete a folder
-     * 
-     * @param path 
-     * @return StatusCode 
-     */
-    virtual StatusCode deleteFileFolder(const std::string& path) = 0;
+        return (name + "/");
+    }
+
+    bool isAbsolutePath(const std::string& path) {
+        return !path.empty() && (path[0] == '/');
+    }
+
+    std::string joinPath(std::initializer_list<std::string> segments) {
+        std::string joined;
+
+        for (const auto& seg : segments) {
+            if (joined.empty()) {
+                joined = seg;
+            } else if (isAbsolutePath(seg)) {
+                if (joined[joined.size() - 1] == '/') {
+                    joined.append(seg.substr(1));
+                } else {
+                    joined.append(seg);
+                }
+            } else {
+                if (joined[joined.size() - 1] != '/') {
+                    joined.append("/");
+                }
+                joined.append(seg);
+            }
+        }
+
+        return joined;
+    }
+
+    StatusCode CreateLocalDir(const std::string& path) {
+        int status =
+            mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
+        if (status == -1) {
+            SPDLOG_ERROR("Failed to create local folder: {} {} ", path,
+                strerror(errno));
+            return StatusCode::PATH_INVALID;
+        }
+        return StatusCode::OK;
+    }
 
     static const std::vector<std::string> acceptedFiles;
 };

@@ -603,7 +603,6 @@ StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
     }
 
     int share_end = path.find_first_of("/", share_start);
-    int file_start = path.find_last_of("/");
     int file_end = path.length();
 
     fullPath_ = path.substr(share_end + 1, file_end - share_end - 1);

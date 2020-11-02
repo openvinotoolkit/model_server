@@ -17,9 +17,12 @@
 #include <fstream>
 #include <iostream>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
+#pragma GCC diagnostic pop
 
 #include "../model_service.hpp"
 #include "../modelmanager.hpp"

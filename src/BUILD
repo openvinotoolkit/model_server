@@ -115,7 +115,12 @@ cc_library(
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
-    ]
+    ],
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror",
+    ],
 )
 
 cc_binary(
@@ -130,7 +135,8 @@ cc_binary(
         "-lcrypto",
     ],
     copts = [
-        "-Wconversion"
+        "-Wconversion",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib"
@@ -189,5 +195,10 @@ cc_test(
     deps = [
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
+    ],
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror",
     ],
 )

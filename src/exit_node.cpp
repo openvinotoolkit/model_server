@@ -20,7 +20,10 @@
 
 #include <spdlog/spdlog.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 

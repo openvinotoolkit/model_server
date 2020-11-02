@@ -21,7 +21,10 @@
 
 #include <inference_engine.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#pragma GCC diagnostic pop
 
 #include "modelconfig.hpp"
 
@@ -390,7 +393,7 @@ public:
     static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape) {
         std::ostringstream oss;
         oss << "(";
-        size_t i = 0;
+        int i = 0;
         if (tensorShape.dim_size() > 0) {
             for (; i < tensorShape.dim_size() - 1; i++) {
                 oss << tensorShape.dim(i).size() << ",";

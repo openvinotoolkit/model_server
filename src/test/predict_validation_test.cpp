@@ -27,6 +27,8 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 class PredictValidation : public ::testing::Test {
     class MockModelInstance : public ovms::ModelInstance {
     public:
@@ -89,7 +91,7 @@ protected:
             return;
         }
         size_t numberOfElements = 1;
-        for (size_t i = 0; i < proto.tensor_shape().dim_size(); i++) {
+        for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
             numberOfElements *= proto.tensor_shape().dim(i).size();
         }
         *proto.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(proto.dtype()), '1');
@@ -428,3 +430,4 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
     auto status = instance.validate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
 }
+#pragma GCC diagnostic pop

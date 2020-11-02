@@ -28,6 +28,8 @@ using testing::ContainerEq;
 using testing::Return;
 using testing::ReturnRef;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 class DISABLED_OvmsConfigTest : public ::testing::Test {
 public:
     void SetUp() override {
@@ -170,3 +172,5 @@ TEST_F(DISABLED_OvmsConfigTest, negativeUint64Max) {
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
+
+#pragma GCC diagnostic pop

@@ -19,7 +19,10 @@
 #include <string>
 #include <utility>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"

@@ -17,7 +17,10 @@
 
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 #include "rest_parser.hpp"
 #include "status.hpp"
