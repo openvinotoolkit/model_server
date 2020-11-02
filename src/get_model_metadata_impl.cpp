@@ -58,10 +58,6 @@ Status GetModelMetadataImpl::getModelStatus(
         }
     }
 
-    if (ModelVersionState::AVAILABLE != instance->getStatus().getState()) {
-        return StatusCode::MODEL_MISSING;
-    }
-
     return buildResponse(instance, response);
 }
 
@@ -107,8 +103,10 @@ Status GetModelMetadataImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     tensorflow::serving::GetModelMetadataResponse* response) {
 
+    const uint WAIT_FOR_LOADED_TIMEOUT_MILLISECONDS = 1;
+
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
-    auto status = instance->waitForLoaded(1, unloadGuard);
+    auto status = instance->waitForLoaded(WAIT_FOR_LOADED_TIMEOUT_MILLISECONDS, unloadGuard);
     if (!status.ok()) {
         return status;
     }
