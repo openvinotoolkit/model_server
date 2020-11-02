@@ -50,7 +50,6 @@ static bool watcherStarted = false;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    watcherIntervalSec = 10;
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -229,7 +228,6 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
 Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("custom_loader_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
-        SPDLOG_ERROR("Configuration file doesn't have custom loader property.");
         return StatusCode::OK;
     }
 
@@ -242,27 +240,36 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             SPDLOG_ERROR("Parsing loader:{} config failed", loaderName);
-            return StatusCode::UNKNOWN_ERROR;
+            return status;
         }
 
-        // this is where library or custom loader is loaded
-        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_GLOBAL);
-        if (!handleCL) {
-            SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
-            return StatusCode::UNKNOWN_ERROR;
-        }
+        SPDLOG_ERROR("CHECK IF LOADER IS ALREADY LOADED");
+        auto loaderIt = customLoaderInterfacePtrs.find(loaderName);
+        if (customLoaderInterfacePtrs.end() == loaderIt) {
+            // this is where library or custom loader is loaded
+            void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+            if (!handleCL) {
+                SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+                return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+            }
 
-        // load the symbols
-        create_t* customObj = (create_t*)dlsym(handleCL, "create");
-        const char* dlsym_error = dlerror();
-        if (dlsym_error) {
-            SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
-            return StatusCode::UNKNOWN_ERROR;
-        }
+            // load the symbols
+            createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
+            const char* dlsym_error = dlerror();
+            if (dlsym_error) {
+                SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
+                return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
+            }
 
-        std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
-        customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
-        customLoaderInterfacePtrs.insert({loaderName, customerLoaderIfPtr});
+            std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
+            try {
+                customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
+            } catch (...) {
+                SPDLOG_ERROR("Cannot create or initialize the custom loader");
+                return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+            }
+            customLoaderInterfacePtrs.insert({loaderName, std::make_pair(handleCL, customerLoaderIfPtr)});
+        }
     }
     return ovms::StatusCode::OK;
 }
@@ -597,19 +604,26 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     if (config.isCustomLoaderRequiredToLoadModel()) {
         custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
-        const std::string customLoaderName = customLoaderOptionsConfig["loader_name"];
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
 
-        spdlog::info("Custom Loader to be used : {}", customLoaderName);
-        model->setCustomLoaderInterfacePtr(customLoaderInterfacePtrs[customLoaderName]);
+        auto loaderIt = customLoaderInterfacePtrs.find(loaderName);
+        if (customLoaderInterfacePtrs.end() != loaderIt) {
+            spdlog::info("Custom Loader to be used : {}", loaderName);
+            model->setCustomLoaderInterfacePtr(customLoaderInterfacePtrs[loaderName].second);
 
-        // check existing version for blacklist
-        for (const auto& [version, versionInstance] : model->getModelVersions()) {
-            bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
-                versionInstance->getName().c_str(), version);
-            if (bres) {
-                spdlog::info("The model {} is blacklisted", versionInstance->getName());
-                requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+            // check existing version for blacklist
+            for (const auto& [version, versionInstance] : model->getModelVersions()) {
+                bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
+                    versionInstance->getName().c_str(), version);
+                if (bres) {
+                    spdlog::info("The model {} is blacklisted", versionInstance->getName());
+                    requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+                }
             }
+        } else {
+            spdlog::error("Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
+            model->retireAllVersions();
+            return StatusCode::OK;
         }
     }
 
@@ -641,5 +655,8 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     auto it = models.find(name);
     return it != models.end() ? it->second : nullptr;
 }
+
+//Status ModelManager::unloadCustomLoader(const std::string& loaderName){
+//}
 
 }  // namespace ovms

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
 #ifndef SRC_CUSTOMLOADERINTERFACE_HPP_
 #define SRC_CUSTOMLOADERINTERFACE_HPP_
@@ -34,13 +35,11 @@ public:
          * @brief Constructor
          */
     CustomLoaderInterface() {
-        printf("Created custom loader object................\n");
     }
     /**
          * @brief Destructor
          */
     virtual ~CustomLoaderInterface() {
-        printf("Deleted custom loader object................\n");
     }
 
     /**
@@ -100,8 +99,8 @@ public:
 };
 
 // the types of the class factories
-typedef CustomLoaderInterface* create_t();
-typedef void destroy_t(CustomLoaderInterface*);
+typedef CustomLoaderInterface* createCustomLoader_t();
+typedef void destroyCustomLoader_t(CustomLoaderInterface*);
 
 }  // namespace ovms
 

@@ -130,10 +130,15 @@ public:
         * @return Status
         */
     Status parseNode(const rapidjson::Value& v) {
-        this->setLoaderName(v["loader_name"].GetString());
-        this->setLibraryPath(v["library_path"].GetString());
-        if (v.HasMember("config_path"))
-            this->setLoaderConfigFile(v["loader_config_file"].GetString());
+        try {
+            this->setLoaderName(v["loader_name"].GetString());
+            this->setLibraryPath(v["library_path"].GetString());
+            if (v.HasMember("config_path"))
+                this->setLoaderConfigFile(v["loader_config_file"].GetString());
+        } catch (...) {
+            spdlog::error("There was an error parsing the custom loader config");
+            return StatusCode::JSON_INVALID;
+        }
         return StatusCode::OK;
     }
 };

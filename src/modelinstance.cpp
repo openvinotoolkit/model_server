@@ -265,6 +265,10 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         std::vector<uint8_t> weights(&binBuffer[0], &binBuffer[binLen]);
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
             make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+        //deleting the buffers got from custom loader
+        delete[] xmlBuffer;
+        delete[] binBuffer;
+        weights.clear();
     } catch (std::exception& e) {
         spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;

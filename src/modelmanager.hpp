@@ -56,7 +56,7 @@ protected:
      * @brief A collection of custom loader interface objects
      *
      */
-    std::map<std::string, std::shared_ptr<CustomLoaderInterface>> customLoaderInterfacePtrs;
+    std::map<std::string, std::pair<void*, std::shared_ptr<CustomLoaderInterface>>> customLoaderInterfacePtrs;
 
     PipelineFactory pipelineFactory;
 

@@ -725,7 +725,7 @@ public:
          *
          * @return const std::string
          */
-    const std::string getCustomLoaderOptionsConfigStr() const {
+    const std::string& getCustomLoaderOptionsConfigStr() const {
         return this->customLoaderOptionsStr;
     }
 
