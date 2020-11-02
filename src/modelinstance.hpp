@@ -337,7 +337,7 @@ public:
          *
          * @return status
          */
-    const ModelVersionStatus& getStatus() const {
+    virtual const ModelVersionStatus& getStatus() const {
         return status;
     }
 

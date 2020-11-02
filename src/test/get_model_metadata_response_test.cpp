@@ -41,6 +41,7 @@ class GetModelMetadataResponse : public ::testing::Test {
         MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
         MOCK_METHOD(const std::string&, getName, (), (const, override));
         MOCK_METHOD(ovms::model_version_t, getVersion, (), (const, override));
+        MOCK_METHOD(const ovms::ModelVersionStatus&, getStatus, (), (const, override));
     };
 
     tensor_desc_map_t inputTensors;
@@ -48,10 +49,11 @@ class GetModelMetadataResponse : public ::testing::Test {
     ovms::tensor_map_t networkInputs;
     ovms::tensor_map_t networkOutputs;
 
+protected:
     std::string modelName = "resnet";
     ovms::model_version_t modelVersion = 23;
+    ovms::ModelVersionStatus modelStatus{modelName, modelVersion, ovms::ModelVersionState::AVAILABLE};
 
-protected:
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
 
@@ -101,6 +103,8 @@ protected:
             .WillByDefault(ReturnRef(modelName));
         ON_CALL(*instance, getVersion())
             .WillByDefault(Return(modelVersion));
+        ON_CALL(*instance, getStatus())
+            .WillByDefault(ReturnRef(modelStatus));
     }
 };
 
@@ -235,6 +239,16 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
     EXPECT_TRUE(isShape(
         outputs.at("Output_FP32_2_20_3").tensor_shape(),
         {2, 20, 3}));
+}
+
+TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedAnymore) {
+    modelStatus.setEnd();
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+}
+
+TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedYet) {
+    modelStatus.setLoading();
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(GetModelMetadataResponse, serialize2Json) {

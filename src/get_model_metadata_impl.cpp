@@ -62,9 +62,7 @@ Status GetModelMetadataImpl::getModelStatus(
         return StatusCode::MODEL_MISSING;
     }
 
-    buildResponse(instance, response);
-
-    return StatusCode::OK;
+    return buildResponse(instance, response);
 }
 
 Status GetModelMetadataImpl::validate(
@@ -105,9 +103,15 @@ void GetModelMetadataImpl::convert(
     }
 }
 
-void GetModelMetadataImpl::buildResponse(
+Status GetModelMetadataImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     tensorflow::serving::GetModelMetadataResponse* response) {
+
+    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+    auto status = instance->waitForLoaded(1, unloadGuard);
+    if (!status.ok()) {
+        return status;
+    }
 
     response->Clear();
     response->mutable_model_spec()->set_name(instance->getName());
@@ -118,6 +122,7 @@ void GetModelMetadataImpl::buildResponse(
     convert(instance->getOutputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
 
     (*response->mutable_metadata())["signature_def"].PackFrom(def);
+    return StatusCode::OK;
 }
 
 Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {

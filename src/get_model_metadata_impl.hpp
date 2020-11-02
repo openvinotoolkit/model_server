@@ -40,7 +40,7 @@ public:
         const tensor_map_t& from,
         proto_signature_map_t* to);
 
-    static void buildResponse(
+    static Status buildResponse(
         std::shared_ptr<ModelInstance> instance,
         tensorflow::serving::GetModelMetadataResponse* response);
 
