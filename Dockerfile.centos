@@ -196,7 +196,7 @@ COPY release_files/ /ovms/release_files/
 
 # Build CustomLoader SampleCustomLoader Library
 ENV PATH=${PATH}:/opt/rh/devtoolset-8/root/bin
-RUN cd src/test/SampleCustomLoader && make clean all
+RUN cd src/example/SampleCustomLoader && make clean all
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/
 RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
