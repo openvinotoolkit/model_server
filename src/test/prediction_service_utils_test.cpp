@@ -191,7 +191,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
-        config.getName(), ovms::ModelInstance::WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS / 4);
+        config.getName(), ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS / 4);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
