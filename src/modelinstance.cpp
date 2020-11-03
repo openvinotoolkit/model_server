@@ -425,7 +425,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading();
     while (!canUnloadInstance()) {
-        SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} inferences in progress.",
+        SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} requests in progress.",
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
@@ -532,7 +532,7 @@ void ModelInstance::unloadModel() {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setUnloading();
     while (!canUnloadInstance()) {
-        SPDLOG_INFO("Waiting to unload model:{} version:{}. Blocked by:{} inferences in progres.",
+        SPDLOG_INFO("Waiting to unload model:{} version:{}. Blocked by:{} requests in progres.",
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
