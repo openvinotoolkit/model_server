@@ -458,7 +458,5 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
-
-    static const int WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS = 100;
 };
 }  // namespace ovms

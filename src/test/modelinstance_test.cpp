@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include "../get_model_metadata_impl.hpp"
 #include "../modelinstance.hpp"
 #include "test_utils.hpp"
 
@@ -78,6 +79,43 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
     modelInstance.increasePredictRequestsHandlesCount();
     modelInstance.decreasePredictRequestsHandlesCount();
     EXPECT_TRUE(modelInstance.canUnloadInstance());
+}
+
+TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
+    static std::thread thread;
+    static std::shared_ptr<ovms::ModelInstance> instance;
+
+    class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
+    public:
+        // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
+        const ovms::tensor_map_t& getInputsInfo() const override {
+            thread = std::thread([]() {
+                instance->unloadModel();
+            });
+            // We need to wait for thread to start and trigger model unloading
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            return ovms::ModelInstance::getInputsInfo();
+        }
+    };
+    instance = std::make_shared<MockModelInstanceTriggeringUnload>();
+    ovms::Status status = instance->loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, instance->getStatus().getState());
+    tensorflow::serving::GetModelMetadataResponse response;
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    thread.join();
+    EXPECT_EQ(ovms::ModelVersionState::END, instance->getStatus().getState());
+
+    // We expect unload to wait for response building by checking if packed data is correct.
+    // If unloadModel didn't wait for building to complete we would have empty input/output map.
+    tensorflow::serving::SignatureDefMap def;
+    response.metadata().at("signature_def").UnpackTo(&def);
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+    EXPECT_EQ(inputs.size(), 1);
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(inputs.begin()->second.name(), DUMMY_MODEL_INPUT_NAME);
+    EXPECT_EQ(outputs.begin()->second.name(), DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TEST_F(TestUnloadModel, CheckIfCanUnload) {
