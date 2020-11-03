@@ -31,6 +31,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
@@ -65,6 +66,8 @@ private:
     std::map<std::string, shape_t> shapes;
 };
 
+class PipelineDefinition;
+
 /**
      * @brief This class contains all the information about inference engine model
      */
@@ -88,7 +91,7 @@ protected:
     /**
          * @brief Model name
          */
-    std::string name;
+    const std::string name;
 
     /**
          * @brief A path for the model
@@ -98,7 +101,7 @@ protected:
     /**
          * @brief A model version
          */
-    model_version_t version = -1;
+    const model_version_t version = -1;
 
     /**
          * @brief A model status
@@ -280,11 +283,16 @@ private:
          */
     Status recoverFromReloadingError(const Status& status);
 
+    ModelChangeSubscription subscriptionManager;
+
 public:
     /**
          * @brief A default constructor
          */
-    ModelInstance() = default;
+    ModelInstance(const std::string& name, model_version_t version) :
+        name(name),
+        version(version),
+        subscriptionManager(std::string("model: ") + name + std::string("version: ") + std::to_string(version)) {}
 
     /**
          * @brief Destroy the Model Instance object
@@ -456,6 +464,10 @@ public:
          */
     Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
+
+    void subscribe(PipelineDefinition& pd);
+
+    void unsubscribe(PipelineDefinition& pd);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
 };

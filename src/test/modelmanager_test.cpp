@@ -391,7 +391,8 @@ class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig) {
+    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
         config = modelConfig;
     }

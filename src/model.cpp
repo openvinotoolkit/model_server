@@ -17,9 +17,19 @@
 
 #include <map>
 #include <memory>
+#include <sstream>
 #include <utility>
 
 namespace ovms {
+
+void Model::subscribe(PipelineDefinition& pd) {
+    subscriptionManager.subscribe(pd);
+}
+
+void Model::unsubscribe(PipelineDefinition& pd) {
+    subscriptionManager.unsubscribe(pd);
+}
+
 const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMapCopy() const {
     std::shared_lock lock(modelVersionsMtx);
     std::map<model_version_t, const ModelInstance&> modelInstancesMapCopy;
@@ -62,22 +72,23 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     return modelInstanceIt->second;
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory() {
+std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
     SPDLOG_DEBUG("Producing new ModelInstance");
-    return std::move(std::make_shared<ModelInstance>());
+    return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
 }
 
 Status Model::addVersion(const ModelConfig& config) {
-    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory();
+    const auto& version = config.getVersion();
+    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
         return status;
     }
-    const auto& version = config.getVersion();
     std::unique_lock lock(modelVersionsMtx);
     modelVersions[version] = std::move(modelInstance);
     lock.unlock();
     updateDefaultVersion();
+    subscriptionManager.notifySubscribers();
     return StatusCode::OK;
 }
 
@@ -116,6 +127,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
         modelVersion->unloadModel();
         updateDefaultVersion();
     }
+    subscriptionManager.notifySubscribers();
     return result;
 }
 
@@ -125,6 +137,7 @@ void Model::retireAllVersions() {
         versionModelInstancePair.second->unloadModel();
         updateDefaultVersion();
     }
+    subscriptionManager.notifySubscribers();
 }
 
 Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
@@ -157,6 +170,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         }
         updateDefaultVersion();
     }
+    subscriptionManager.notifySubscribers();
     return result;
 }
 

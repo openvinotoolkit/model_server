@@ -43,6 +43,13 @@ const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
+void ModelInstance::subscribe(PipelineDefinition& pd) {
+    subscriptionManager.subscribe(pd);
+}
+
+void ModelInstance::unsubscribe(PipelineDefinition& pd) {
+    subscriptionManager.unsubscribe(pd);
+}
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
@@ -339,6 +346,7 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 }
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    subscriptionManager.notifySubscribers();
     this->path = config.getPath();
     this->targetDevice = config.getTargetDevice();
     this->config = config;
@@ -397,8 +405,6 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     }
     this->status = ModelVersionStatus(config.getName(), config.getVersion());
     this->status.setLoading();
-    this->name = config.getName();
-    this->version = config.getVersion();
     return loadModelImpl(config);
 }
 

@@ -40,13 +40,16 @@ class MockModelInstanceInState : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInState(ovms::ModelVersionState state) {
+    MockModelInstanceInState(ovms::ModelVersionState state) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
     }
 };
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
+    MockModelInstance() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
     MOCK_METHOD(bool, canUnloadInstance, (), (const));
 };
 
@@ -55,7 +58,7 @@ public:
 class TestUnloadModel : public ::testing::Test {};
 
 TEST_F(TestUnloadModel, SuccessfulUnload) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.unloadModel();
@@ -63,7 +66,7 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
 }
 
 TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -72,7 +75,7 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
 }
 
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -87,6 +90,8 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
+        MockModelInstanceTriggeringUnload() :
+            ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
         // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
             thread = std::thread([]() {
@@ -131,6 +136,8 @@ TEST_F(TestUnloadModel, CheckIfCanUnload) {
 
 class MockModelInstanceCheckingUnloadingState : public ovms::ModelInstance {
 public:
+    MockModelInstanceCheckingUnloadingState() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
     virtual bool canUnloadInstance() const {
         EXPECT_EQ(ovms::ModelVersionState::UNLOADING, getStatus().getState());
         return true;
@@ -150,6 +157,10 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
 class TestLoadModel : public ::testing::Test {};
 
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
+public:
+    MockModelInstanceThrowingFileNotFoundForLoadingCNN() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
+
 protected:
     std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile) override {
         throw std::runtime_error("File was not found");
@@ -165,6 +176,10 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
 }
 
 class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
+public:
+    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
+
 protected:
     void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
         throw std::runtime_error("File was not found");
@@ -179,7 +194,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
-    ovms::ModelInstance mockModelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
 
     const std::string modelPath = "/tmp/test_load_model";
     std::filesystem::create_directories(modelPath);
@@ -205,12 +220,12 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         version,    // version
         modelPath,  // local path
     };
-    auto status = mockModelInstance.loadModel(config);
+    auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
-    ovms::ModelInstance mockModelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
 
     const std::string modelPath = "/tmp/test_load_model";
     std::filesystem::create_directories(modelPath);
@@ -236,14 +251,14 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         version,    // version
         modelPath,  // local path
     };
-    auto status = mockModelInstance.loadModel(config);
+    auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
@@ -251,7 +266,7 @@ TEST_F(TestLoadModel, SuccessfulLoad) {
 TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     auto config = DUMMY_MODEL_CONFIG;
     config.setNireq(100000 + 1);
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::INVALID_NIREQ);
@@ -263,14 +278,14 @@ class TestReloadModel : public ::testing::Test {};
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
     std::filesystem::path dir = std::filesystem::current_path();
     std::string dummy_model = dir.u8string() + "/src/test/dummy";
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     modelInstance.unloadModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
@@ -279,7 +294,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -291,7 +306,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("{\"b\": \"auto\"}");
     std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
@@ -303,7 +318,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -317,7 +332,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
-    ovms::ModelInstance modelInstance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("auto");
     std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};

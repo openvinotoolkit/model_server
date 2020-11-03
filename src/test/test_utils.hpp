@@ -53,6 +53,8 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 
+constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static ovms::tensor_map_t prepareTensors(
