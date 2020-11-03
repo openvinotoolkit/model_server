@@ -21,6 +21,8 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
+#include "test_utils.hpp"
+#include "mockmodelinstancechangingstates.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -35,13 +37,22 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     using tensor_desc_map_t = std::unordered_map<std::string, Info>;
 
-    class MockModelInstance : public ovms::ModelInstance {
+    class MockModelInstance : public MockModelInstanceChangingStates {
     public:
+        MockModelInstance() {
+            status = ovms::ModelVersionStatus("UNUSED_NAME", 23, ovms::ModelVersionState::AVAILABLE);
+        }
+
+        // Keeps the model in loading state forever
+        ovms::Status loadModel(const ovms::ModelConfig& config) override {
+            status.setLoading();
+            return ovms::StatusCode::OK;
+        }
+
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
         MOCK_METHOD(const std::string&, getName, (), (const, override));
         MOCK_METHOD(ovms::model_version_t, getVersion, (), (const, override));
-        MOCK_METHOD(const ovms::ModelVersionStatus&, getStatus, (), (const, override));
     };
 
     tensor_desc_map_t inputTensors;
@@ -52,7 +63,6 @@ class GetModelMetadataResponse : public ::testing::Test {
 protected:
     std::string modelName = "resnet";
     ovms::model_version_t modelVersion = 23;
-    ovms::ModelVersionStatus modelStatus{modelName, modelVersion, ovms::ModelVersionState::AVAILABLE};
 
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
@@ -103,8 +113,6 @@ protected:
             .WillByDefault(ReturnRef(modelName));
         ON_CALL(*instance, getVersion())
             .WillByDefault(Return(modelVersion));
-        ON_CALL(*instance, getStatus())
-            .WillByDefault(ReturnRef(modelStatus));
     }
 };
 
@@ -242,12 +250,12 @@ TEST_F(GetModelMetadataResponse, HasCorrectShape) {
 }
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedAnymore) {
-    modelStatus.setEnd();
+    instance->unloadModel();
     EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedYet) {
-    modelStatus.setLoading();
+    instance->loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
