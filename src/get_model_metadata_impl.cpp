@@ -103,10 +103,10 @@ Status GetModelMetadataImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     tensorflow::serving::GetModelMetadataResponse* response) {
 
-    const uint WAIT_FOR_LOADED_TIMEOUT_MILLISECONDS = 0;
-
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
-    auto status = instance->waitForLoaded(WAIT_FOR_LOADED_TIMEOUT_MILLISECONDS, unloadGuard);
+
+    // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
+    auto status = instance->waitForLoaded(0, unloadGuard);
     if (!status.ok()) {
         return status;
     }
