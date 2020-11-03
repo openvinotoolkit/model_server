@@ -1,0 +1,6 @@
+tensorflow-serving-api==2.*
+jsonschema==3.2.0
+falcon==2.0.0
+cheroot==8.4.5
+marshmallow==3.9.0
+

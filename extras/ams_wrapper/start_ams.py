@@ -74,11 +74,11 @@ def main():
     args = parse_args()
     if args.ovms_model_devices:
         modify_ovms_config_json(args.ovms_model_devices)
-    ovms_process = subprocess.Popen(['/ie-serving-py/start_server.sh', 'ie_serving', 'config',
+    ovms_process = subprocess.Popen(['/ovms/bin/ovms',
                                      '--config_path', '/opt/ams_models/ovms_config.json',
                                      '--grpc_workers', str(args.grpc_workers),
                                      '--port', str(args.ovms_port)])
-    ams_process = subprocess.Popen(['/ie-serving-py/.venv/bin/python', '-m', 'src.wrapper', '--port',
+    ams_process = subprocess.Popen(['python3', '-m', 'src.wrapper', '--port',
                                     str(args.ams_port), '--workers', str(args.workers)],
                                    cwd='/ams_wrapper')
     retcodes = [ovms_process.wait(), ams_process.wait()]
@@ -87,3 +87,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
