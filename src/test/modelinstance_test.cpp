@@ -87,10 +87,12 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
+        // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
             thread = std::thread([]() {
                 instance->unloadModel();
             });
+            // We need to wait for thread to start and trigger model unloading
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             return ovms::ModelInstance::getInputsInfo();
         }
@@ -104,6 +106,8 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
     thread.join();
     EXPECT_EQ(ovms::ModelVersionState::END, instance->getStatus().getState());
 
+    // We expect unload to wait for response building by checking if packed data is correct.
+    // If unloadModel didn't wait for building to complete we would have empty input/output map.
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
