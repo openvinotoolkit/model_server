@@ -1,94 +1,118 @@
 # Landing OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines
 
-## Requirements
+> **NOTES**:
+> * These steps apply to Ubuntu*, CentOS* and RedHat*
+> * An internet connection is required to follow the steps in this guide.
 
-OpenVINO&trade; Model Server installation is fully tested on Ubuntu18.04 and Centos7, however there are no anticipated issues on other 
-Linux distributions like ClearLinux*, RedHat* or SUSE Linux*.
+## Introduction
+OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. 
+In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
 
-## Model Server Installation
-In order to install OVMS on a baremetal host or a Virtual Machine, you need to unpack the binary package in OVMS.
-You can build it inside a docker container. The building steps are automated 
-with a command:
-```bash
-make docker_build
+OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machine or inside a docker container. It is also suitable for landing in Kubernetes environment.
+
+## System Requirements
+
+#### Operating Systems 
+
+* Ubuntu 18.04.x or higher, long-term support (LTS), 64-bit
+* CentOS 7.8, 64-bit (for target only)
+* Red Hat Enterprise Linux
+
+
+## Overview
+This guide provides step-by-step instructions to install OpenVino&trade; Model Server on Virtual Machines or Bare Metal Hosts. Links are provided for different compatible hardwares. Following instructions are covered in this:
+- <a href="#model-server-installation">Model Server Installation</a>
+- <a href="#start-the-serving">Start the Serving</a>
+- <a href="#using-ncs2">Using Neural Compute Sticks</a>
+- <a href="#using-hddl">Using HDDL accelerators</a>
+- <a href="#using-igpu">Using iGPU accelerators</a>
+- <a href="#using-plugin">Using Multi-Device and Heterogeneous Plugin</a>
+
+## Model Server Installation<a name="model-server-installation"></a>
+1. Clone model server git repository using command :
+   ```Bash
+   git clone https://github.com/openvinotoolkit/model_server
+   ```
+
+2. Navigate to model server directory using command :
+   ```Bash
+   cd model_server
+   ```
+3. To install Model Server, you could use precompiled version or built it on your own inside a docker container. Build a docker container with automated steps using the command :
+   ```Bash
+   make docker_build
+   ````
+4. The `make docker_build` target will also make a copy of the binary package in a dist subfolder in the model server root directory.
+
+5. Navigate to the folder containing binary package and unpack the included tar.gz file using the command :
+   ```Bash
+   cd dist/centos && tar -xzvf ovms.tar.gz
+   ```
+
+## Start the Serving<a name="start-the-serving"></a>
+1. The server can be started using the command : 
+```Bash
+/ovms/bin/ovms -help
 ```
-The binary package will be located in the docker image openvino/model_server-build:latest in the folder  ./dist.
-The `make docker_build` target will also make a copy of the binary package in a `dist` subfolder in the model server root directory.
-Unpack the included tar.gz file and start ovms via: `/ovms/bin/ovms --help`
+2. The server can be started in interactive mode, as  a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
+Refer to [Installing OpenVINO&trade; Model Server for Linux using Docker Container](./docker_container.md) to get more details about the docker image built in <a href="#model-server-installation">Model Server Installation</a>.
 
-The server can be started in interactive mode, as a background process or a daemon initiated by `systemctl/initd` depending
-on the Linux distribution and specific hosting requirements.
+While preparing environment you can use steps from this [Dockerfile](https://github.com/openvinotoolkit/model_server/blob/main/Dockerfile.centos) as a reference.
 
-Refer to [docker_container.md](docker_container.md) to get more details.
+## Using Neural Compute Sticks 2<a name="using-ncs2"></a>
 
-While preparing environment you can use steps from this [Dockerfile](../release_files/Dockerfile.centos) as a reference.
+* OpenVINO Model Server can employ AI accelerators [Intel® Neural Compute Stick and Intel® Neural Compute Stick 2](https://software.intel.com/content/www/us/en/develop/hardware/neural-compute-stick.html).
 
+* To use Movidus Neural Compute Sticks with OpenVINO Model Server you need to have OpenVINO Toolkit with Movidius VPU support installed, you need to enable them performing [additional steps for NCS](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html).
 
-## Using Neural Compute Sticks 2
+* On server startup, you need to specify that you want to load model on Neural Compute Stick for inference execution. You can do that by setting `target_device` parameter to `MYRIAD`. If it's not specified, OpenVINO will try to load model on CPU.
 
-OpenVINO Model Server can employ AI accelerators [Intel® Neural Compute Stick and Intel® Neural  Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick).
-
-To use Movidus Neural Compute Sticks with OpenVINO Model Server, beside unpacking the binary package, you need to enable them by performing 
-[additional steps for NCS](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html#additional-NCS-steps).
-
-On OVMS server startup, you need to specify that you want to load model on Neural Compute 
-Stick for inference execution. You can do that by setting `target_device` parameter to `MYRIAD`. By default, OpenVINO will load model on CPU.
-
-Example:
+Example :
 ```
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
+You can also run it in [Docker container](./docker_container.md).
 
-You can also [run it in Docker container](docker_container.md#starting-docker-container-with-ncs)
+>Note:
+>* Checkout supported configurations. Look at [VPU Plugins documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html) to see if your model is supported. If not, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) and convert your model to desired format.
+>* A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit chooses to which one the model is loaded.
 
-**Note**: Checkout [VPU plugin documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html) 
-to see if your model is supported. Next, take a look at [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
-and convert your model to the OpenVINO Intermediate Representation format.
+## Using HDDL accelerators<a name="using-hddl"></a>
+- OpenVINO Model Server can employ High-Density Deep Learning (HDDL) accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj). To use HDDL accelerators with OpenVINO&trade; Model Server perform [additional steps for Intel® Movidius™ VPU](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html).
 
+- Check status of `hddldaemon`, it should be running and `/dev/ion` character device is present on the host.
 
-## Using HDDL accelerators
+- On server startup, you need to specify that you want to load model on HDDL card for inference execution. You can do that by setting `target_device` parameter to `HDDL`. If it's not specified, OpenVINO will try to load model on CPU.
 
-OpenVINO Model Server can employ High-Density Deep Learning (HDDL)
-accelerators based on [Intel Movidius Myriad VPUs](https://www.intel.ai/intel-movidius-myriad-vpus/#gs.xrw7cj).
-Beside the OVMS binary package, you need to run [additional steps for Intel® Movidius™ VPU](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux_ivad_vpu.html).
-Make sure the hddldaemon is running and `/dev/ion` character device is present on the host.
-
-On the OVMS server startup, you need to specify that you want to load model on
-HDDL card for inference execution. You can do that by setting `target_device` parameter to `HDDL`. By default, OpenVINO will load model on CPU.
-
-Example:
+Example :
 ```
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
+You can also run it in [Docker container](./docker_container.md).
 
-You can also [run it in Docker container](docker_container.md#starting-docker-container-with-hddl)
+>Note: Check out supported configurations. Look at VPU Plugins to see if your model is supported. If not, take a look at OpenVINO Model Optimizer and convert your model to desired format.
 
-**Note**: Check out [VPU plugin documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html)
-to see if your model is supported and convert your model to the OpenVINO format via the 
-[OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) .
-
-## Using iGPU accelerators
-
-OpenVINO Model Server can use Intel GPU to run inference operations via a [GPU plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_CL_DNN.html).
-Beside the OVMS binary package, you need to run [additional steps for Intel® GPU](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html#additional-GPU-steps).
+## Using iGPU accelerators<a name="using-igpu"></a>
+- OpenVINO Model Server can use Intel GPU to run inference operations via a [GPU plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_CL_DNN.html). Beside the OVMS binary package, you need to run [additional steps for Intel® GPU](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html#additional-GPU-steps).
 
 
-On the OVMS server startup, specify that you want to load model on
+- On the OVMS server startup, specify that you want to load model on
 the GPU for inference execution. Set `target_device` parameter to `GPU`.
 
-Example:
+Example :
 ```
 ovms --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-You can also [run it in Docker container](docker_container.md#using-gpu-for-inference-execution)
+You can also run it in [Docker container](./docker_container.md).
 
-**Note**: Check out [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
-Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) 
-and convert your model to the OpenVINO format.
+>**Note**: Check out [supported configurations](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) and convert your model to the OpenVINO format.
 
-## Using Multi-Device and Heterogeneous Plugin
+## Using Multi-Device and Heterogeneous Plugin<a name="using-plugin"></a>
 
-See also [Multi-Device Plugin and Hetero Plugin overview](docker_container.md#support-for-ai-accelerators).<br>
+See [Multi-Device Plugin overview](./docker_container.md#multiplugin) and [Hetero Plugin overview](./docker_container.md#heteroplugin).<br>
+
 Apply instructions linked above without Docker specific steps.
+

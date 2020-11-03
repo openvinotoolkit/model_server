@@ -29,7 +29,7 @@ $ docker run hello-world
 If you see a test image and an informational message, Docker is ready to use. Go to [download and build the OpenVINO Model Server](#step-2-download-and-build-the-openvino-model-server). 
 If you don't see the test image and message:
 
-1. [Install the Docker* Engine on your development machine](https://docs.docker.com/engine/install/ubuntu/).
+1. [Install the Docker* Engine on your development machine](https://docs.docker.com/engine/install/).
 2. [Use the Docker post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
 
 Continue to Step 2 to download and build the OpenVINO Model Server.
@@ -49,10 +49,10 @@ make docker_build
 
 ### Step 3: Download a Model
 
-Download the model components to the `model` directory. Example command using curl:
+Download the model components to the `model/1` directory. Example command using curl:
 
 ```
-curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/face-detection-retail-0004.xml -o model/face-detection-retail-0004.bin
+curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
 ```
 
 ### Step 4: Start the Model Server Container
@@ -60,7 +60,7 @@ curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/op
 Start the Model Server container:
 
 ```bash
-docker run -d -v <folder_with_downloaded_model>:/models/face-detection/1 -p 9000:9000 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
 --model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
 ```
 

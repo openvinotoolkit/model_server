@@ -1,22 +1,21 @@
-# Architecture Concept
+# OpenVINO&trade; Model Server Architecture
 
-OpenVINO&trade; Model Server is a C++ implementation of gRPC and RESTful API interfaces defined by Tensorflow serving.
-In the backend it uses _Inference Engine libraries_ from OpenVINO&trade; toolkit, which speeds up the execution on CPU,
-and enables it on AI accelerators like NCS, iGPU, HDDL. 
+- OpenVINO&trade; Model Server is a C++ implementation of gRPC and RESTful API interfaces defined by [Tensorflow Serving](https://www.tensorflow.org/tfx/guide/serving).
 
-gRPC code skeleton is created based on TensorFlow Serving core framework with tunned implementation of requests handling. 
-Services are designed via set of C++ classes managing AI models in Intermediate Representation 
-format. OpenVINO Inference Engine component executes the graphs operations.
+- OpenVINO&trade; Model Server uses [Inference Engine](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_inference_engine_intro.html) libraries from OpenVINO&trade; toolkit in the backend, which speeds up the execution on CPU and enables it on AI accelerators like [Neural Compute Stick 2](https://software.intel.com/content/www/us/en/develop/hardware/neural-compute-stick.html), iGPU(Integrated Graphics Processing Unit) and [HDDL](https://docs.openvinotoolkit.org/2018_R5/_docs_IE_DG_supported_plugins_HDDL.html).
 
-**Figure 1: Docker Container (VM or Bare Metal Host)**
-![architecture chart](serving-c.png)
+- API requests in gRPC code skeleton are created based on [TensorFlow Serving Core Framework](https://www.tensorflow.org/tfx/guide/serving) with tunned implementation of requests handling.
 
-OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted 
-remotely on object storage services. Google Cloud Storage, Azure Blob Storage and S3 compatible storage are supported. 
+- Services are designed via set of C++ classes managing AI models in Intermediate Representation format. [OpenVINO&trade; Inference Engine](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_inference_engine_intro.html) component executes the graphs operations.
 
-OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machine or inside a docker container. 
-It is also suitable for landing in Kubernetes environment. 
+<p align="center">
+  <img width="548" height="564" src="serving-c.png">
+</p>
 
-The only two exposed network interfaces are gRPC and RESTful API, which currently _does not_ include authorization, 
-authentication, or data encryption. Those functions are expected to be implemented outside of the model server 
-(for example via Kubernetes* ingress or nginx forwarding proxy). 
+**<div align="center">Figure 1: Docker Container (VM or Bare Metal Host)</div>**
+
+- OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Both Google Cloud Storage and S3 compatible storage are supported. Refer to [Preparing the Models Repository](./models_repository.md) for more details.
+
+- OpenVINO&trade; Model Server is suitable for landing in Kubernetes environment. It can be also hosted on a bare metal server, virtual machine or inside a docker container. 
+
+- The only two exposed network interfaces are [gRPC](./model_server_grpc_api.md) and [RESTful API](./model_server_rest_api.md), which currently _do not_ include authorization, authentication, or data encryption. Those functions are expected to be implemented outside of the model server.

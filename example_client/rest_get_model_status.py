@@ -40,4 +40,4 @@ except ValueError:
     print("The server response is not json format: {}",format(result.text))
     exit(1)
 
-print(result_dic)
+print(result.text)
