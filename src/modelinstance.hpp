@@ -28,6 +28,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "processing_spec.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
@@ -457,7 +458,13 @@ public:
     Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
-    const Status validate(const tensorflow::serving::PredictRequest* request);
+     virtual const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+
+     virtual const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
+          InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
+
+     virtual const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
+          InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
 
     static const int WAIT_FOR_MODEL_LOADED_TIMEOUT_MILLISECONDS = 100;
 };

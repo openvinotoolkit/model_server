@@ -27,7 +27,19 @@ class StatefulModelInstance : public ModelInstance {
 private:
      static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 protected:
-     // Override validateNumberOfInputs method to handle special inputs
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs);
+     // Override validateNumberOfInputs method to allow special inputs
+	const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) override;
+
+	// Validate special keys and fill preprocessing spec with data needed for further sequence handling
+	const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+
+	// Overriding validate method to extract information necessary for sequence handling 
+	const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
+
+	const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
+          InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override;
+
+    const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
+          InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override;
 };
 }  // namespace ovms
