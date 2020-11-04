@@ -15,7 +15,7 @@ RUN swupd bundle-add \
     unzip \
     which
 # Set up Bazel
-ENV BAZEL_VERSION 0.24.1
+ENV BAZEL_VERSION 3.0.0
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -24,22 +24,22 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN git clone -b 2.0.0 https://github.com/tensorflow/serving
+RUN git clone -b 2.3.0 https://github.com/tensorflow/serving
 WORKDIR serving
-RUN pip3 install wheel
+RUN pip3 install wheel numpy
 RUN mkdir -vp /.cache/bazel/
 RUN bazel build --color=yes --curses=yes \
     --verbose_failures \
     tensorflow_serving/tools/pip_package:build_pip_package
 RUN bazel-bin/tensorflow_serving/tools/pip_package/build_pip_package /tmp/pip
 
-RUN swupd repair -V 32750 --force
-
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0
 RUN git clone --recurse-submodules -j4 https://github.com/opencv/dldt --branch 2020.2 --single-branch --depth 1 /openvino
 
 # Use package for centos7 on clearlinux - seems to be working just fine.
 RUN sed -i "/^            set(OPENCV_SUFFIX \"centos7\")/a         elseif (\"Clear Linux OS 33060\" STREQUAL \"Clear Linux OS 33060\")\\n            set(OPENCV_SUFFIX \"centos7\")" /openvino/inference-engine/cmake/dependencies.cmake
+
+RUN swupd bundle-add c-extras-gcc9 && rm /usr/bin/g++ && ln -s /usr/bin/g++-9 /usr/bin/g++
 
 WORKDIR /openvino/build
 RUN pip3 install --no-cache-dir -r /openvino/inference-engine/ie_bridges/python/requirements.txt
@@ -67,7 +67,7 @@ RUN mkdir -p out/runtime \
 
 RUN mkdir -p rpms/tf && pwd && source /etc/os-release \
     && cd rpms/tf \
-    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget tensorflow-2.0.1-98.x86_64.rpm numpy-*  openblas-* Werkzeug* protobuf*  absl-py* wrapt* gast* astor* termcolor* Keras_Applications* Keras_Preprocessing*"
+    && lftp -c "o https://download.clearlinux.org/releases/current/clear/x86_64/os/Packages/; mget tensorflow-2.3.1-102.x86_64.rpm numpy-*  openblas-* Werkzeug* protobuf*  absl-py* wrapt* gast* astor* termcolor* Keras_Applications* Keras_Preprocessing*"
 
 RUN mkdir -p out/tf \
     && for p in `ls rpms/tf/*.rpm`; do rpm2cpio $p | (cd out/tf/; cpio -i -d -u --quiet); done \
