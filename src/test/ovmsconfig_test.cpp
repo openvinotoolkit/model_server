@@ -13,16 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <regex>
-#include <algorithm>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sysexits.h>
 
 #include "spdlog/spdlog.h"
+
 #include "../config.hpp"
 
 using testing::_;
@@ -175,22 +176,19 @@ TEST_F(DISABLED_OvmsConfigTest, negativeUint64Max) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
 
-
 class OvmsParamsTest : public ::testing::Test {
 };
 
 TEST_F(OvmsParamsTest, hostname_ip_regex) {
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("0.0.0.0"), true);
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("127.0.0.1"), true);
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("localhost"), true);
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("example.com"), true);
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("    "), false);
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("(%$#*F"), false);
-  std::string too_long = "";
-  std::fill(too_long.begin(), too_long.begin()+256, 'a' );
-  EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip(too_long), false);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("0.0.0.0"), true);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("127.0.0.1"), true);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("localhost"), true);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("example.com"), true);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("    "), false);
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("(%$#*F"), false);
+    std::string too_long = "";
+    std::fill(too_long.begin(), too_long.begin() + 256, 'a');
+    EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip(too_long), false);
 }
 
-
 #pragma GCC diagnostic pop
-

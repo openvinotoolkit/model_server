@@ -15,14 +15,13 @@
 //*****************************************************************************
 #include "config.hpp"
 
-#include <regex>
 #include <algorithm>
 #include <limits>
+#include <regex>
 #include <thread>
 
-#include <sysexits.h>
-
 #include <boost/algorithm/string.hpp>
+#include <sysexits.h>
 
 #include "version.hpp"
 
@@ -146,25 +145,25 @@ Config& Config::parse(int argc, char** argv) {
 }
 
 bool Config::check_hostname_or_ip(const std::string& input) {
-  if(input.size() > 255) {
-	return false;
-  }
-  bool all_numeric = true;
-  for(char c : input) {
-     if(c == '.') {
-       continue;
-     }
-     if(!::isdigit(c)) {
-        all_numeric = false;
-     }
-  }
-  if(all_numeric) {
-     std::regex valid_ip_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-     return std::regex_match(input, valid_ip_regex);
-  } else {
-     std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
-     return std::regex_match(input, valid_hostname_regex);
-  }
+    if (input.size() > 255) {
+        return false;
+    }
+    bool all_numeric = true;
+    for (char c : input) {
+        if (c == '.') {
+            continue;
+        }
+        if (!::isdigit(c)) {
+            all_numeric = false;
+        }
+    }
+    if (all_numeric) {
+        std::regex valid_ip_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
+        return std::regex_match(input, valid_ip_regex);
+    } else {
+        std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
+        return std::regex_match(input, valid_hostname_regex);
+    }
 }
 
 void Config::validate() {
@@ -214,11 +213,11 @@ void Config::validate() {
     }
 
     // check bind addresses:
-    if (result->count("rest_bind_address") && check_hostname_or_ip(this->restBindAddress()) == false  ) {
+    if (result->count("rest_bind_address") && check_hostname_or_ip(this->restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         exit(EX_USAGE);
     }
-    if (result->count("grpc_bind_address") && check_hostname_or_ip(this->grpcBindAddress()) == false  ) {
+    if (result->count("grpc_bind_address") && check_hostname_or_ip(this->grpcBindAddress()) == false) {
         std::cerr << "grpc_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         exit(EX_USAGE);
     }
