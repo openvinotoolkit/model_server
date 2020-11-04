@@ -32,6 +32,8 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
+const int DEFAULT_MODEL_GET_RETRIES = 5;
+
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
@@ -77,13 +79,16 @@ Status getModelInstance(ovms::ModelManager& manager,
     }
 
     Status status = StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
-    auto retries = 5;
+    auto retries = DEFAULT_MODEL_GET_RETRIES;
     while (status == StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE && retries--) {
         modelInstance = model->getDefaultModelInstance();
         if (modelInstance == nullptr) {
             return StatusCode::MODEL_VERSION_MISSING;
         }
         status = modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+        if (status == StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE) {
+            SPDLOG_INFO("The default version from model {} is retired. Retrying.", modelName);
+        }
     }
 
     return status;
