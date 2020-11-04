@@ -61,6 +61,7 @@ build --host_cxxopt=-std=c++17
 build --cxxopt=-fno-strict-overflow
 build --cxxopt=-fno-delete-null-pointer-checks
 build --cxxopt=-fwrapv
+build --cxxopt=-fstack-protector
 
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
