@@ -65,8 +65,9 @@ To build your own image, use the following command in the [git repository root f
 
 It will generate the images, tagged as :
 
-- openvino/model_server:latest - with CPU, NCS and HDDL support
-- openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support
+- openvino/model_server:latest - with CPU, NCS and HDDL support,
+- openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support,
+- openvino/model_server:latest-nginx-mtls - with CPU, NCS and HDDL support and a reference nginx setup of mTLS integration,
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 </details>
 
