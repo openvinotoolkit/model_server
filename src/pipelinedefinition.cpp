@@ -102,21 +102,28 @@ void PipelineDefinition::makeSubscriptions(ModelManager& manager) {
             if (subscriptions.find({node.modelName, node.modelVersion.value_or(0)}) != subscriptions.end()) {
                 continue;
             }
-            std::unique_ptr<ModelInstanceUnloadGuard> nodeModelInstanceUnloadGuard;
-            std::shared_ptr<ModelInstance> nodeModelInstance;
-            auto status = getModelInstance(manager, node.modelName, node.modelVersion.value_or(0), nodeModelInstance,
-                nodeModelInstanceUnloadGuard);
-            if (!status.ok()) {
+            auto model = manager.findModelByName(node.modelName);
+            if (nullptr == model) {
                 std::stringstream ss;
                 ss << "Pipeline: " << getName() << "Failed to make subscription to model: " << node.modelName;
                 if (node.modelVersion) {
                     ss << " version: " << node.modelVersion.value();
                 }
-                SPDLOG_INFO(ss.str());
+                SPDLOG_WARN(ss.str());
                 continue;
             }
             if (node.modelVersion) {
-                nodeModelInstance->subscribe(*this);
+                auto modelInstance = model->getModelInstanceByVersion(node.modelVersion.value());
+                if (nullptr == modelInstance) {
+                    std::stringstream ss;
+                    ss << "Pipeline: " << getName() << "Failed to make subscription to model: " << node.modelName;
+                    if (node.modelVersion) {
+                        ss << " version: " << node.modelVersion.value();
+                    }
+                    SPDLOG_WARN(ss.str());
+                    continue;
+                }
+                modelInstance->subscribe(*this);
             } else {
                 auto model = manager.findModelByName(node.modelName);
                 model->subscribe(*this);
