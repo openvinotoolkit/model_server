@@ -29,20 +29,17 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     }
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
 
-    Status validationResult = pipelineDefinition->validateNodes(manager);
-    if (validationResult != StatusCode::OK) {
-        return validationResult;
-    }
-
-    validationResult = pipelineDefinition->validateForCycles();
-    if (validationResult != StatusCode::OK) {
-        return validationResult;
-    }
     pipelineDefinition->makeSubscriptions(manager);
+    Status validationResult = pipelineDefinition->validate(manager);
+    if (!validationResult.ok()) {
+        SPDLOG_ERROR("Loading pipeline definition:{} failed:{}", pipelineName, validationResult.string());
+        return validationResult;
+    }
 
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
+    SPDLOG_INFO("Loading pipeline definition:{} succeeded", pipelineName);
     return StatusCode::OK;
 }
 
