@@ -190,8 +190,8 @@ cc_test(
     data = [
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
-        "test/sum/1/sum.xml",
-        "test/sum/1/sum.bin",
+        "test/add_two_inputs_model/1/add.xml",
+        "test/add_two_inputs_model/1/add.bin",
     ],
     linkopts = [
         "-lxml2",

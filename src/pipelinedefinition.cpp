@@ -355,13 +355,15 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager&
             case NodeKind::DL: {
                 auto instance = manager.findModelInstance(dependant_node_info->modelName, dependant_node_info->modelVersion.value_or(0));
                 if (!instance) {
-                    SPDLOG_DEBUG("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
+                    // TODO: Change to SPDLOG_DEBUG before release
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependant_node_info->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
                 auto status = instance->waitForLoaded(0, unloadGuard);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
+                    // TODO: Change to SPDLOG_DEBUG before release
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
 
@@ -372,7 +374,8 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager&
             }
             default: {
                 // Pipeline validation does not allow connections into entry node.
-                throw std::logic_error("Unexpected dependant node kind");
+                SPDLOG_ERROR("Unexpected dependant node kind (name:{})", this->getName());
+                return StatusCode::UNKNOWN_ERROR;
             }
             }
         }

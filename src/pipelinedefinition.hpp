@@ -91,7 +91,7 @@ public:
 
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
-    const std::string& getName() { return pipelineName; }
+    const std::string& getName() const { return pipelineName; }
 
     void notifyUsedModelChanged() {}
 

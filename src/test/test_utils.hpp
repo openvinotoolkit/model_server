@@ -37,7 +37,7 @@
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
-const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/sum";
+const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
