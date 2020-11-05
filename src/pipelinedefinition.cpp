@@ -326,4 +326,59 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
     }
     return StatusCode::OK;
 }
+
+Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager& manager) const {
+    // Assumptions: this can only be called on available pipeline definition.
+    // Add check if available when pipeline status will be implemented.
+
+    static const auto byName = [](const std::string& name) {
+        return [name](const NodeInfo& nodeInfo) {
+            return nodeInfo.nodeName == name;
+        };
+    };
+
+    for (const auto& [dependant_node_name, all_mappings] : connections) {
+        const auto& dependant_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependant_node_name));
+        for (const auto& [dependency_node_name, specific_dependency_mapping] : all_mappings) {
+            const auto& dependency_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependency_node_name));
+            if (dependency_node_info->kind != NodeKind::ENTRY) {
+                continue;
+            }
+
+            switch (dependant_node_info->kind) {
+            case NodeKind::EXIT: {
+                for (const auto& [alias, real_name] : specific_dependency_mapping) {
+                    inputsInfo.insert({alias, TensorInfo::getUnspecifiedTensorInfo()});
+                }
+                break;
+            }
+            case NodeKind::DL: {
+                auto instance = manager.findModelInstance(dependant_node_info->modelName, dependant_node_info->modelVersion.value_or(0));
+                if (!instance) {
+                    SPDLOG_DEBUG("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
+                    return StatusCode::MODEL_MISSING;
+                }
+                std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+                auto status = instance->waitForLoaded(0, unloadGuard);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
+                    return status;
+                }
+
+                for (const auto& [alias, real_name] : specific_dependency_mapping) {
+                    inputsInfo[alias] = instance->getInputsInfo().at(real_name);
+                }
+                break;
+            }
+            default: {
+                // Pipeline validation does not allow connections into entry node.
+                throw std::logic_error("Unexpected dependant node kind");
+            }
+            }
+        }
+    }
+
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

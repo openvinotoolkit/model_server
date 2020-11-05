@@ -97,5 +97,7 @@ public:
 
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
+
+    Status getInputsInfo(tensor_map_t& inputsInfo, ModelManager& manager) const;
 };
 }  // namespace ovms

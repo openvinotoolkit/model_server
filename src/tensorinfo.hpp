@@ -404,6 +404,11 @@ public:
 
         return oss.str();
     }
+
+    static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo() {
+        static std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>("", InferenceEngine::Precision::UNSPECIFIED, shape_t{});
+        return info;
+    }
 };
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;

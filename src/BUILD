@@ -154,6 +154,7 @@ cc_test(
         "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
+        "test/ensemble_metadata_test.cpp",
         "test/get_model_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
@@ -189,6 +190,8 @@ cc_test(
     data = [
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
+        "test/sum/1/sum.xml",
+        "test/sum/1/sum.bin",
     ],
     linkopts = [
         "-lxml2",

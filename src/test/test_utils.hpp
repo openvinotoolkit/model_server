@@ -37,6 +37,7 @@
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
+const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/sum";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -48,10 +49,26 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     dummy_model_location,  // local path
 };
 
+const ovms::ModelConfig SUM_MODEL_CONFIG{
+    "sum",
+    sum_model_location,  // base path
+    "CPU",               // target device
+    "1",                 // batchsize
+    1,                   // NIREQ
+    1,                   // model_version unused since version are read from path
+    sum_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
+
+constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
+constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
+constexpr const char* SUM_MODEL_OUTPUT_NAME = "sum";
+constexpr const int SUM_MODEL_INPUT_SIZE = 10;
+constexpr const int SUM_MODEL_OUTPUT_SIZE = 10;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
