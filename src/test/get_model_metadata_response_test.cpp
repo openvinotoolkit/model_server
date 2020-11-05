@@ -39,8 +39,9 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
-        MockModelInstance() {
-            status = ovms::ModelVersionStatus("UNUSED_NAME", 23, ovms::ModelVersionState::AVAILABLE);
+        MockModelInstance() :
+            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION) {
+            status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::AVAILABLE);
         }
 
         // Keeps the model in loading state forever

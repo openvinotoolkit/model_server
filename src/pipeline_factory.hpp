@@ -29,67 +29,12 @@
 #pragma GCC diagnostic pop
 
 #include "pipeline.hpp"
+#include "pipelinedefinition.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
 class ModelManager;
-
-using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>;
-
-enum class NodeKind {
-    ENTRY,
-    DL,
-    EXIT
-};
-
-const std::string DL_NODE_CONFIG_TYPE = "DL model";
-
-Status toNodeKind(const std::string& str, NodeKind& nodeKind);
-
-struct NodeInfo {
-    NodeKind kind;
-    std::string nodeName;
-    std::string modelName;
-    std::optional<model_version_t> modelVersion;
-    std::unordered_map<std::string, std::string> outputNameAliases;
-
-    NodeInfo(NodeKind kind,
-        const std::string& nodeName,
-        const std::string& modelName = "",
-        std::optional<model_version_t> modelVersion = std::nullopt,
-        std::unordered_map<std::string, std::string> outputNameAliases = {}) :
-        kind(kind),
-        nodeName(nodeName),
-        modelName(modelName),
-        modelVersion(modelVersion),
-        outputNameAliases(outputNameAliases) {}
-};
-
-class PipelineDefinition {
-    std::string pipelineName;
-    std::vector<NodeInfo> nodeInfos;
-    pipeline_connections_t connections;
-
-private:
-    Status validateNode(ModelManager& manager, NodeInfo& node);
-
-public:
-    PipelineDefinition(const std::string& pipelineName,
-        const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections) :
-        pipelineName(pipelineName),
-        nodeInfos(nodeInfos),
-        connections(connections) {}
-
-    Status create(std::unique_ptr<Pipeline>& pipeline,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response,
-        ModelManager& manager) const;
-
-    Status validateNodes(ModelManager& manager);
-    Status validateForCycles();
-};
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;

@@ -22,11 +22,12 @@
 #include <utility>
 #include <vector>
 
+#include "modelchangesubscription.hpp"
 #include "modelinstance.hpp"
 
 namespace ovms {
-/**
-     * @brief This class represent inference models
+class PipelineDefinition;
+/*     * @brief This class represent inference models
      */
 class Model {
 private:
@@ -81,7 +82,9 @@ protected:
          *
          * @return modelInstance
          */
-    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory();
+    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion);
+
+    ModelChangeSubscription subscriptionManager;
 
 public:
     /**
@@ -89,7 +92,8 @@ public:
          */
     Model(const std::string& name) :
         name(name),
-        defaultVersion(0) {}
+        defaultVersion(0),
+        subscriptionManager(std::string("model: ") + name) {}
 
     /**
          * @brief Destroy the Model object
@@ -171,5 +175,8 @@ public:
          * @return status
          */
     Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config);
+
+    void subscribe(PipelineDefinition& pd);
+    void unsubscribe(PipelineDefinition& pd);
 };
 }  // namespace ovms

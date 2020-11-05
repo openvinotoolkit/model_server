@@ -24,6 +24,7 @@
 #include "../modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
 #include "test_utils.hpp"
+
 class GetModelInstanceTest : public ::testing::Test {};
 
 class MockModel : public ovms::Model {};
@@ -57,10 +58,12 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
 }
 
 class MockModelInstanceFakeLoad : public ovms::ModelInstance {
+public:
+    MockModelInstanceFakeLoad() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
+
 protected:
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
-        name = config.getName();
-        version = config.getVersion();
         status = ovms::ModelVersionStatus(name, version);
         status.setAvailable();
         return ovms::StatusCode::OK;
@@ -71,7 +74,7 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<MockModelInstanceFakeLoad>();
     }
 };
@@ -107,10 +110,12 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
 }
 
 class ModelInstanceLoadedStuckInLoadingState : public ovms::ModelInstance {
+public:
+    ModelInstanceLoadedStuckInLoadingState() :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION) {}
+
 protected:
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
-        name = config.getName();
-        version = config.getVersion();
         status = ovms::ModelVersionStatus(name, version);
         status.setLoading();
         return ovms::StatusCode::OK;
@@ -121,7 +126,7 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>();
     }
 };
@@ -140,13 +145,11 @@ const int AVAILABLE_STATE_DELAY_MILLISECONDS = 5;
 class ModelInstanceLoadedWaitInLoadingState : public ovms::ModelInstance {
 public:
     ModelInstanceLoadedWaitInLoadingState(const uint modelInstanceLoadDelayInMilliseconds) :
-        ModelInstance(),
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
 
 protected:
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
-        this->name = config.getName();
-        this->version = config.getVersion();
         this->status = ovms::ModelVersionStatus(name, version);
         this->status.setLoading();
         std::thread([this]() {
@@ -167,7 +170,7 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(modelInstanceLoadDelayInMilliseconds);
     }
 

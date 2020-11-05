@@ -32,6 +32,8 @@ using ::testing::ReturnRef;
 class PredictValidation : public ::testing::Test {
     class MockModelInstance : public ovms::ModelInstance {
     public:
+        MockModelInstance() :
+            ModelInstance("UNUSED_NAME", 42) {}
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(size_t, getBatchSize, (), (const, override));
         MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));

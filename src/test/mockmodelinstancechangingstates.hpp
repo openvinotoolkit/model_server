@@ -22,25 +22,22 @@
 #include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../status.hpp"
+#include "test_utils.hpp"
 
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
-    static const ovms::model_version_t UNUSED_VERSION = 987789;
-
 public:
-    MockModelInstanceChangingStates() {
-        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, ovms::ModelVersionState::START);
+    MockModelInstanceChangingStates(const std::string& modelName = "UNUSED_NAME", const ovms::model_version_t modelVersion = UNUSED_MODEL_VERSION) :
+        ModelInstance(modelName, modelVersion) {
+        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceChangingStates() {}
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
         this->status = ovms::ModelVersionStatus(config.getName(), config.getVersion());
         this->status.setLoading();
-        this->name = config.getName();
-        this->version = config.getVersion();
         status.setAvailable();
         return ovms::StatusCode::OK;
     }
     ovms::Status reloadModel(const ovms::ModelConfig& config, const ovms::DynamicModelParameter& parameter = ovms::DynamicModelParameter()) override {
-        version = config.getVersion();
         status.setLoading();
         status.setAvailable();
         return ovms::StatusCode::OK;
@@ -58,7 +55,8 @@ public:
     virtual ~MockModelWithInstancesJustChangingStates() {}
 
 protected:
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() override {
-        return std::move(std::make_shared<MockModelInstanceChangingStates>());
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION); }
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version) override {
+        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version));
     }
 };
