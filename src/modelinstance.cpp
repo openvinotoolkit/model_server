@@ -472,6 +472,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
+    spdlog::info("Memory states vector size: {}", execNetwork->QueryState().size());
     return status;
 }
 
@@ -749,7 +750,7 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
     return StatusCode::OK;
 }
 
-const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     Status finalStatus = StatusCode::OK;
     // Network and request must have the same amount of inputs
     if (request->inputs_size() < 0 || getInputsInfo().size() != static_cast<size_t>(request->inputs_size())) {
@@ -817,4 +818,14 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
     }
     return finalStatus;
 }
+
+const Status ModelInstance::preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
+    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+        return StatusCode::OK;
+    }
+
+const Status ModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
+    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+        return StatusCode::OK;
+    }
 }  // namespace ovms

@@ -117,7 +117,8 @@ Status inference(
     Timer timer;
     using std::chrono::microseconds;
 
-    auto status = modelVersion.validate(requestProto);
+    ProcessingSpec processingSpec;
+    auto status = modelVersion.validate(requestProto, &processingSpec);
     status = reloadModelIfRequired(status, modelVersion, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
@@ -131,6 +132,7 @@ Status inference(
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
+    modelVersion.preInferenceProcessing(requestProto, inferRequest, &processingSpec);
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, modelVersion.getInputsInfo(), inferRequest);
     timer.stop("deserialize");
@@ -154,6 +156,7 @@ Status inference(
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
+    modelVersion.postInferenceProcessing(responseProto, inferRequest, &processingSpec);
     return StatusCode::OK;
 }
 

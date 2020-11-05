@@ -19,6 +19,19 @@
 using namespace InferenceEngine;
 
 namespace ovms {
+
+uint64_t extractSequenceId(const tensorflow::TensorProto& proto) {
+    if(proto.uint64_val_size() == 1)
+        return proto.uint64_val(0);
+    return 0;
+}
+
+uint32_t extractSequenceControlInput(const tensorflow::TensorProto& proto) {
+    if(proto.uint32_val_size() == 1)
+        return proto.uint32_val(0);
+    return 0;
+}
+
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
     auto completeInputsNumber = expectedNumberOfInputs;
@@ -28,4 +41,66 @@ const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::ser
     }
     return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
 }
+
+const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
+
+    uint64_t sequenceId = 0;
+    uint32_t sequenceControlInput = 0;
+
+    auto it = request->inputs().find("sequence_id");
+    if (it != request->inputs().end())
+        sequenceId = extractSequenceId(it->second);
+    it = request->inputs().find("sequence_control_input");
+    if (it != request->inputs().end())
+        sequenceControlInput = extractSequenceControlInput(it->second);
+
+    spdlog::info("Received sequence id: {}", sequenceId);
+
+    if (sequenceControlInput == 1) { // First request in the sequence 
+        // if sequenceId == 0, sequenceManager will need to generate unique id 
+        if (sequenceId != 0) {
+            // TO DO: Validate if sequenceId is already in use
+        }
+        processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+        return StatusCode::OK;
+    } else if (sequenceControlInput == 2 || sequenceControlInput == 0) { // Intermediate and last request in the sequence 
+        if(sequenceId != 0) {
+            // TO DO: check if sequence with provided ID exists
+            processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+            return StatusCode::OK;
+        } else {
+            // return 404 Missing sequence status
+            return StatusCode::NOT_IMPLEMENTED;
+        }
+    }  else { 
+        // 400 Bad Request - invalid control input
+        return StatusCode::NOT_IMPLEMENTED;
+    }
 }
+
+const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
+    auto status = validateSpecialKeys(request, processingSpecPtr);
+    if (!status.ok())
+        return status; 
+    return ModelInstance::validate(request, processingSpecPtr);
+}
+
+
+const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
+    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+    // Set infer request memory state to the last state saved by the sequence
+    return StatusCode::OK;
+}
+
+const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
+    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+    
+    SequenceProcessingSpec& spec = processingSpecPtr->getSequenceProcessingSpec();
+
+    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
+    tensorProto.add_uint64_val(spec.sequenceId);
+
+    return StatusCode::OK;
+}
+
+} //namespace ovms
