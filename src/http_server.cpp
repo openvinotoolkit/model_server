@@ -101,9 +101,10 @@ private:
     std::unique_ptr<HttpRestApiHandler> handler_;
 };
 
-std::unique_ptr<http_server> createAndStartHttpServer(int port, int num_threads, int timeout_in_ms) {
+std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms) {
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
+    options->SetAddress(address);
     options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
 
     auto server = net_http::CreateEvHTTPServer(std::move(options));
@@ -123,7 +124,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(int port, int num_threads,
         handler_options);
 
     if (server->StartAcceptingRequests()) {
-        spdlog::info("REST server listening on port {} with {} threads", port, num_threads);
+        spdlog::info("REST server listening on {}:{} with {} threads", address, port, num_threads);
         return server;
     }
 

@@ -79,6 +79,13 @@ public:
     void validate();
 
     /**
+         * @brief checks if input is a proper hostname or IP address value
+         *
+         * @return bool
+         */
+    bool check_hostname_or_ip(const std::string& input);
+
+    /**
          * @brief Get the config path
          * 
          * @return std::string 
@@ -99,12 +106,33 @@ public:
     }
 
     /**
+         * @brief Get the gRPC network interface address to bind to
+         * 
+         * @return const std::string&
+         */
+    const std::string grpcBindAddress() {
+        if (result->count("grpc_bind_address"))
+            return result->operator[]("grpc_bind_address").as<std::string>();
+        return "0.0.0.0";
+    }
+    /**
          * @brief Gets the REST port
          * 
          * @return uint64_t
          */
     uint64_t restPort() {
         return result->operator[]("rest_port").as<uint64_t>();
+    }
+
+    /**
+         * @brief Get the rest network interface address to bind to
+         * 
+         * @return const std::string&
+         */
+    const std::string restBindAddress() {
+        if (result->count("rest_bind_address"))
+            return result->operator[]("rest_bind_address").as<std::string>();
+        return "0.0.0.0";
     }
 
     /**
