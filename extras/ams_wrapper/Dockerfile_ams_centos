@@ -23,5 +23,5 @@ ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/mo
 ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-adas-0001/FP32/face-detection-adas-0001.bin /opt/models/face_detection_adas/1/
 ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-adas-0001/FP32/face-detection-adas-0001.xml /opt/models/face_detection_adas/1/
 RUN chown -R ovms /opt/models/
-USER ovms
-ENTRYPOINT ["/ams_wrapper/start_ams.py"]
+#USER ovms
+#ENTRYPOINT ["/ams_wrapper/start_ams.py"]
