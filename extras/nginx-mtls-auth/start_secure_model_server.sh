@@ -19,8 +19,6 @@ MTLS_IMAGE=${1:-"openvino/model_server:nginx-mtls"}
 
 echo "Loading configuration file from test_config.sh..."
 source test_config.sh
-echo "Building mTLS docker layer..."
-./build.sh
 
 if [ -d './images/' ] ; then
         echo "Models are ready - no need to download."

@@ -24,9 +24,16 @@ RUN	set -e ; \
         yum install -y nginx wget ; \
         yum clean all ; \
 	wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 ; \
-	chmod +x /usr/bin/dumb-init ;
+	chmod +x /usr/bin/dumb-init ; \
+	touch /run/nginx.pid ; \
+	chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ ; \
+        sed -i 's,listen       80 default_server;,listen       unix:/tmp/nginx-default.sock;,' /etc/nginx/nginx.conf ; \
+        sed -i 's,listen       \[::\]:80 default_server;,,' /etc/nginx/nginx.conf ; \
+        sed -i 's,pid /run/nginx.pid;,pid /tmp/nginx.pid;,' /etc/nginx/nginx.conf ; \
+        sed -i 's,user nginx;,,' /etc/nginx/nginx.conf ;
 
 COPY ovms_wrapper /
 COPY model_server.conf.template /
+USER ovms
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/ovms_wrapper"]
 

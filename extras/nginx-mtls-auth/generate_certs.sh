@@ -26,5 +26,7 @@ openssl req -x509 -new -nodes -key client_cert_ca.key -sha256 -days 1 -out clien
 openssl genrsa -out client.key 4096
 openssl req -new -key client.key -out client.csr -subj "/C=US/CN=client"
 openssl x509 -req -in client.csr -CA client_cert_ca.pem -CAkey client_cert_ca.key -CAcreateserial -out client.pem -days 1 -sha256
+
+chmod 666 client_cert_ca.pem server.pem server.key
 echo "Key material is ready."
 

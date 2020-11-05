@@ -119,15 +119,16 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
 fi
 
+openssl dhparam -out /tmp/dhparam.pem 2048
+
 (
 	sleep 1
 	echo "Processing Nginx configuration..."
-	cp /model_server.conf.template /model_server.conf
-	sed -i "s/MODEL_SERVER_GRPC_PORT/$GRPC_OVMS_NEW_PORT/g" /model_server.conf
-	sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /model_server.conf
-	sed -i "s/NGINX_LISTEN_GRPC_PORT/$GRPC_ORIGINAL_PORT/g" /model_server.conf
-	sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /model_server.conf
-	mv /model_server.conf /etc/nginx/conf.d/model_server.conf
+	cp /model_server.conf.template /etc/nginx/conf.d/model_server.conf
+	sed -i "s/MODEL_SERVER_GRPC_PORT/$GRPC_OVMS_NEW_PORT/g" /etc/nginx/conf.d/model_server.conf
+	sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /etc/nginx/conf.d/model_server.conf
+	sed -i "s/NGINX_LISTEN_GRPC_PORT/$GRPC_ORIGINAL_PORT/g" /etc/nginx/conf.d/model_server.conf
+	sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /etc/nginx/conf.d/model_server.conf
 	echo "Starting Nginx..."
 	nginx -g 'daemon off;' &
 	NGINX_PID=$!
@@ -142,7 +143,7 @@ fi
 
 (
 	echo "Starting Model Server..."
-	runuser -p ovms -c "/ovms/bin/./ovms ${new_args[@]} --grpc_bind_address 127.0.0.1 " &
+	/ovms/bin/./ovms ${new_args[@]} --grpc_bind_address 127.0.0.1 &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
