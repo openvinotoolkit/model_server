@@ -18,7 +18,7 @@ import os
 
 import pytest
 
-from utils.model_management import wait_endpoint_setup
+from utils.model_management import wait_endpoint_setup, ovms_condition
 from utils.parametrization import get_ports_for_fixture
 
 IMAGES_DIR = os.path.join(os.path.dirname(
@@ -41,10 +41,10 @@ def start_ams_service(request, get_image, get_test_dir, get_docker_context):
             ports={'{}/tcp'.format(port): port},
             remove=True,
             environment=['LOG_LEVEL=DEBUG'],
-            command=command)
+            entrypoint=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, condition=ovms_condition)
     assert running is True, "docker container was not started successfully"
     return container, {"port": port}
 
@@ -71,7 +71,7 @@ def start_ams_service_without_ovms(request, get_image, get_test_dir, get_docker_
             ports={'{}/tcp'.format(port): port},
             remove=True,
             environment=['LOG_LEVEL=DEBUG'],
-            command=command)
+            entrypoint=command)
     request.addfinalizer(container.kill)
 
     running = wait_endpoint_setup(container, ams_condition)
@@ -96,10 +96,10 @@ def start_ams_service_with_wrong_model_name(request, get_image, get_test_dir, ge
             ports={'{}/tcp'.format(port): port},
             remove=True,
             environment=['LOG_LEVEL=DEBUG'],
-            command=command)
+            entrypoint=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, condition=ovms_condition)
     assert running is True, "docker container was not started successfully"
     return container, {"port": port}
 

@@ -30,5 +30,4 @@ case $i in
 esac
 done
 
-. /ie-serving-py/.venv/bin/activate 
-cd /ams_wrapper && python -m src.wrapper --port $AMS_PORT
+cd /ams_wrapper && python3 -m src.wrapper --port $AMS_PORT

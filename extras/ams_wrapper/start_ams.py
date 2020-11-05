@@ -58,8 +58,6 @@ def parse_args():
                         help='Port for OVMS to listen on')
     parser.add_argument('--workers', type=int, default=20,
                         help='AMS service workers')
-    parser.add_argument('--grpc_workers', type=int, default=10,
-                        help='OVMS service workers')
     parser.add_argument('--ovms_model_devices', type=str,
                         help='Colon delimited list of model devices, '
                         'in following format: \'<model_1_name>=<device_name>;<model_2_name>=<device_name>\'',
@@ -76,7 +74,6 @@ def main():
         modify_ovms_config_json(args.ovms_model_devices)
     ovms_process = subprocess.Popen(['/ovms/bin/ovms',
                                      '--config_path', '/opt/ams_models/ovms_config.json',
-                                     '--grpc_workers', str(args.grpc_workers),
                                      '--port', str(args.ovms_port)])
     ams_process = subprocess.Popen(['python3', '-m', 'src.wrapper', '--port',
                                     str(args.ams_port), '--workers', str(args.workers)],

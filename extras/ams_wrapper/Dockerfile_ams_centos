@@ -22,6 +22,5 @@ ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/mo
 ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml /opt/models/person_vehicle_bike_detection/1/
 ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-adas-0001/FP32/face-detection-adas-0001.bin /opt/models/face_detection_adas/1/
 ADD https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-adas-0001/FP32/face-detection-adas-0001.xml /opt/models/face_detection_adas/1/
-RUN chown -R ovms /opt/models/
-#USER ovms
-#ENTRYPOINT ["/ams_wrapper/start_ams.py"]
+
+ENTRYPOINT ["/ams_wrapper/start_ams.py"]

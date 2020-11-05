@@ -17,7 +17,7 @@
 import shutil
 import os
 import pytest
-from utils.model_management import wait_endpoint_setup
+from utils.model_management import wait_endpoint_setup, ovms_condition
 from utils.parametrization import get_tests_suffix, get_ports_for_fixture
 
 
@@ -75,7 +75,7 @@ def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
+    command = "/ovms/bin/ovms " \
               "--model_name vehicle-attributes " \
               "--model_path /opt/ml/vehicle-attributes-recognition-barrier-0039 " \
               "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
@@ -92,14 +92,10 @@ def start_server_single_vehicle_attrib_model(request, get_image, get_test_dir,
                    '{}/tcp'.format(rest_port): rest_port},
             remove=True,
             volumes=volumes_dict,
-            # In this case, slower,
-            # non-default serialization method is used
-            environment=[
-                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
-            command=command)
+            entrypoint=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, condition=ovms_condition)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}
@@ -118,7 +114,7 @@ def start_server_single_vehicle_model(request, get_image, get_test_dir,
 
     grpc_port, rest_port = get_ports_for_fixture(port_suffix="05")
 
-    command = "/ie-serving-py/start_server.sh ie_serving model " \
+    command = "/ovms/bin/ovms " \
               "--model_name vehicle-detection " \
               "--model_path /opt/ml/vehicle-detection-adas-binary-0001 " \
               "--port " + str(grpc_port) + " --rest_port " + str(rest_port) + \
@@ -135,14 +131,10 @@ def start_server_single_vehicle_model(request, get_image, get_test_dir,
                    '{}/tcp'.format(rest_port): rest_port},
             remove=True,
             volumes=volumes_dict,
-            # In this case, slower,
-            # non-default serialization method is used
-            environment=[
-                'SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto'],
-            command=command)
+            entrypoint=command)
     request.addfinalizer(container.kill)
 
-    running = wait_endpoint_setup(container)
+    running = wait_endpoint_setup(container, condition=ovms_condition)
     assert running is True, "docker container was not started successfully"
 
     return container, {"grpc_port": grpc_port, "rest_port": rest_port}

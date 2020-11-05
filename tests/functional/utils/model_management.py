@@ -31,6 +31,9 @@ def serving_condition(container):
     logs = str(container.logs())
     return "server listens on port" in logs
 
+def ovms_condition(container):
+    logs = str(container.logs())
+    return "Server started on port" in logs
 
 def wait_endpoint_setup(container, condition=serving_condition, timeout=900):
     start_time = time.time()

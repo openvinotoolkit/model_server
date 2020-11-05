@@ -203,7 +203,7 @@ Refer to the plugin documentation and examples from [OVMS documentation](../../d
 # OpenVINO™ Model Server - AI Extension parameters
  
 
-OpenVINO™ Model Server - AI Extension is started vi a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
+OpenVINO™ Model Server - AI Extension is started by default with a command `/ams_wrapper/start_ams.py`. It accepts the following parameters:
 
 ```
 
@@ -214,10 +214,6 @@ OpenVINO™ Model Server - AI Extension is started vi a command `/ams_wrapper/st
                         Port for OVMS to listen on (default: 9000)
 
   --workers WORKERS     AMS service workers (default: 20)
-
-  --grpc_workers GRPC_WORKERS
-
-                        OVMS service workers (default: 10)
 
   --ovms_model_devices OVMS_MODEL_DEVICES
 
@@ -230,7 +226,7 @@ OpenVINO™ Model Server - AI Extension is started vi a command `/ams_wrapper/st
 ```
 Docker container can be initiated via a command:
 ```bash
-docker run <image_name> /ams_wrapper/start_ams.py
+docker run <image_name>
 ```
 
 ## Performance tuning
@@ -241,22 +237,22 @@ for [OVMS](../../docs/performance_tuning.md) and [OpenVINO plugins](https://docs
 
 ## Building docker image
 
-The image in Azure Marketplance is built using the make target:
-
-`make docker_build_ams_clearlinux` – clearlinux base image with Opensource version of OpenVINO™ 
-
-
-It is also possible to build the image on centos base using the command below. It requires the OpenVINO™ toolkit binary
-package url which can be received after user [registration](https://software.intel.com/content/www/us/en/develop/tools/openvino-toolkit/choose-download/linux.html)
-
-`make docker_build_ams DLDT_PACKAGE_URL= <url to binary OV package>` - centos base image with a binary OV package 
+It is also possible to build the image on centos base using the command below. 
+`make docker_build_ams` - centos base image with OVMS v2021.1
 
 
 ## Testing
 
-Run all functional tests 
+Run unit tests 
 
 `make ams_test` 
+
+Run functional tests
+
+```
+. .venv/bin/activate
+py.test functional/test_single_model_vehicle_attributes.py functional/test_ams_inference.py --image <image>
+```
 
 
 Test response from the deployed component:

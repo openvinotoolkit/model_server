@@ -29,6 +29,7 @@ class TestVehicleAttributes():
         img = cv2.resize(img, (width, height))
         img = img.transpose(2, 0, 1).reshape(1, 3, height, width)
         # change shape to NCHW
+        img = img.astype(np.float32)
         return img
 
     def test_run_inference(self, vehicle_attributes_model_downloader,
@@ -58,7 +59,7 @@ class TestVehicleAttributes():
         stub = create_grpc_channel('localhost:{}'.format(ports["grpc_port"]),
                                    PREDICTION_SERVICE)
 
-        imgs_v1_384 = np.ones((1, 3, 72, 72))
+        imgs_v1_384 = np.ones((1, 3, 72, 72), dtype=np.float32)
         in_name = 'input'
         out_color = 'color'
         out_type = 'type'

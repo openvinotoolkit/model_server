@@ -241,10 +241,10 @@ class TestAmsInference:
         assert highest_probability > 0.67
         assert tag_value == "vehicle"
         assert detections_count == 1
-        assert 0.034460186958313 - epsilon <= highest_box["w"] <= 0.034460186958313 + epsilon
-        assert 0.0431380569934845 - epsilon <= highest_box["h"] <= 0.0431380569934845 + epsilon
-        assert 0.783527314662933 - epsilon <= highest_box["l"] <= 0.783527314662933 + epsilon
-        assert 0.173053205013275 - epsilon <= highest_box["t"] <= 0.173053205013275 + epsilon
+        assert 0.029917120933532715 - epsilon <= highest_box["w"] <= 0.029917120933532715 + epsilon
+        assert 0.04090207815170288 - epsilon <= highest_box["h"] <= 0.04090207815170288 + epsilon
+        assert 0.7869596481323242 - epsilon <= highest_box["l"] <= 0.7869596481323242 + epsilon
+        assert 0.17354586720466614 - epsilon <= highest_box["t"] <= 0.17354586720466614 + epsilon
 
     def test_faceDetection(self, start_ams_service, object_detection_image_one_entity):
         with open(object_detection_image_one_entity, mode='rb') as image_file:
