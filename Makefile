@@ -31,6 +31,8 @@ NO_PROXY := "$(no_proxy)"
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
 BASE_OS ?= centos
 
+BASE_IMAGE ?= centos:7
+
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
