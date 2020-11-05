@@ -69,6 +69,7 @@ cc_library(
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
         "prediction_service_utils.cpp",
+        "processing_spec.hpp",
         "rest_parser.cpp",
         "rest_parser.hpp",
         "rest_utils.cpp",
