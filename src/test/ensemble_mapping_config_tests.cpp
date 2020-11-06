@@ -87,7 +87,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
         {NodeKind::EXIT, "response"},
     };
 
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
     connections["dummyA"] = {
         {"request", {{"vector", "input_tensor"}}}};
@@ -151,7 +151,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
         {NodeKind::EXIT, "response"},
     };
 
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
     connections["dummyA"] = {
         {"request", {{"vector", "b"}}}};
@@ -186,7 +186,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
         {NodeKind::EXIT, "response"},
     };
 
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
     connections["dummyA"] = {
         {"request", {{"vector", "input_tensor"}}}};
@@ -196,4 +196,56 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
         {"dummyB", {{"a", "response_tensor_name"}}}};
 
     EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::INVALID_MISSING_OUTPUT);
+}
+
+TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAndGetMetadata) {
+    // Create mapping config for model
+    createConfigFileWithContent(R"({
+        "inputs": {"b": "input_tensor"},
+        "outputs": {"a": "output_tensor"}
+    })",
+        mappingConfigPath);
+
+    // Load models
+    auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setBasePath(modelPath);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummyA", "dummy"},
+        {NodeKind::DL, "dummyB", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummyA"] = {
+        {"request", {{"vector", "input_tensor"}}}};
+    connections["dummyB"] = {
+        {"dummyA", {{"output_tensor", "input_tensor"}}}};
+    connections["response"] = {
+        {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(managerWithDummyModel), StatusCode::OK);
+
+    tensor_map_t inputs, outputs;
+    ASSERT_EQ(def->getInputsInfo(inputs, managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(def->getOutputsInfo(outputs, managerWithDummyModel), StatusCode::OK);
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_NE(inputs.find("vector"), inputs.end());
+    ASSERT_NE(outputs.find("response_tensor_name"), outputs.end());
+
+    const auto& vector = inputs.at("vector");
+    EXPECT_EQ(vector->getShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(vector->getPrecision(), InferenceEngine::Precision::FP32);
+
+    const auto& response_tensor_name = outputs.at("response_tensor_name");
+    EXPECT_EQ(response_tensor_name->getShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
