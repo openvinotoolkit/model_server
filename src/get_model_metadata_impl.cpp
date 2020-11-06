@@ -84,13 +84,14 @@ Status GetModelMetadataImpl::validate(
 void GetModelMetadataImpl::convert(
     const tensor_map_t& from,
     proto_signature_map_t* to) {
-    for (const auto& pair : from) {
-        auto tensor = pair.second;
-        auto& input = (*to)[tensor->getMappedName()];
+    for (const auto& [name, tensor] : from) {
+        auto& input = (*to)[name];
 
         input.set_dtype(tensor->getPrecisionAsDataType());
 
-        *input.mutable_name() = tensor->getMappedName();
+        // Since this method is used for models and pipelines we cannot rely on tensor getMappedName().
+        // In both cases we can rely on tensor_map key values as final names.
+        *input.mutable_name() = name;
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
         for (auto dim : tensor->getShape()) {

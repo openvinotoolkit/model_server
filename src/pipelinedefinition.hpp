@@ -91,11 +91,13 @@ public:
 
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
-    const std::string& getName() { return pipelineName; }
+    const std::string& getName() const { return pipelineName; }
 
     void notifyUsedModelChanged() {}
 
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
+
+    Status getInputsInfo(tensor_map_t& inputsInfo, ModelManager& manager) const;
 };
 }  // namespace ovms

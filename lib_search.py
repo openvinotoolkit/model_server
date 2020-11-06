@@ -47,7 +47,7 @@ def check_dir(start_dir):
                      '.npy', '.png', '.svg', '.bin', '.jpeg', '.jpg', 'license.txt', 'md', '.groovy', '.json' ,'bazel-',
                      'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
-                     'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch',
+                     'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', ]
                    
     exclude_directories = ['/dist/']
