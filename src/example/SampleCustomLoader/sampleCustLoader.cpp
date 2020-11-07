@@ -141,7 +141,6 @@ int custSampleLoader::load_files(char* binFile, char* xmlFile, char** xmlBuffer,
 
 int custSampleLoader::extract_input_params(char* basePath, int version, char* loaderOptions,
     char** binFile, char** xmlFile) {
-    size_t str_len = 0;
     size_t path_len = 0;
     int ret = CUSTLOADER_OK;
     char path[RSIZE_MAX_STR];
@@ -197,7 +196,6 @@ int custSampleLoader::loadModel(const char* modelName, const char* basePath, con
     char** binBuffer, int* binLen) {
     cout << "custSampleLoader: Custom loadModel" << endl;
 
-    char* type = NULL;
     char* binFile = NULL;
     char* xmlFile = NULL;
 

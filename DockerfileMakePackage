@@ -55,7 +55,7 @@ RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$
 WORKDIR /ovms
 RUN cp -v /ovms/release_files/LICENSE /ovms_release/
 RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
-RUN cp -v /ovms/src/example/SampleCustomLoader/libsampleloader.so /ovms_release/custom_loader/
+RUN find /ovms/bazel-bin/src -name 'libsampleloader.so' -type f -exec cp -v {} /ovms_release/custom_loader \;
 
 RUN ls -lahR /ovms_release/
 

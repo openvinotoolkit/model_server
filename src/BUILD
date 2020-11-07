@@ -134,6 +134,18 @@ cc_library(
 )
 
 cc_binary(
+    name = "libsampleloader.so",
+    srcs = [
+	"example/SampleCustomLoader/sampleCustLoader.cpp",
+	"customloaderinterface.hpp",
+    ],
+    linkshared = 1,
+    deps = [
+        "@rapidjson//:rapidjson",
+    ],
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
