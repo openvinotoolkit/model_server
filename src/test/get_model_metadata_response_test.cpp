@@ -122,6 +122,11 @@ TEST_F(GetModelMetadataResponse, HasModelSpec) {
     EXPECT_TRUE(response.has_model_spec());
 }
 
+TEST_F(GetModelMetadataResponse, HasCorrectName) {
+    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    EXPECT_EQ(response.model_spec().name(), "resnet");
+}
+
 TEST_F(GetModelMetadataResponse, HasVersion) {
     ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
     EXPECT_TRUE(response.model_spec().has_version());

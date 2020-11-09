@@ -124,6 +124,41 @@ Status GetModelMetadataImpl::buildResponse(
     return StatusCode::OK;
 }
 
+Status GetModelMetadataImpl::buildResponse(
+    const PipelineDefinition& pipelineDefinition,
+    tensorflow::serving::GetModelMetadataResponse* response,
+    const ModelManager& manager) {
+
+    // TODO: Uncomment before release
+    // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
+    // std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    // auto status = pipelineDefinition->waitForLoaded(0, unloadGuard);
+    // if (!status.ok()) {
+    //     return status;
+    // }
+
+    tensor_map_t inputs, outputs;
+    auto status = pipelineDefinition.getInputsInfo(inputs, manager);
+    if (!status.ok()) {
+        return status;
+    }
+    status = pipelineDefinition.getOutputsInfo(outputs, manager);
+    if (!status.ok()) {
+        return status;
+    }
+
+    response->Clear();
+    response->mutable_model_spec()->set_name(pipelineDefinition.getName());
+    response->mutable_model_spec()->mutable_version()->set_value(1);
+
+    tensorflow::serving::SignatureDefMap def;
+    convert(inputs, ((*def.mutable_signature_def())["serving_default"]).mutable_inputs());
+    convert(outputs, ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
+
+    (*response->mutable_metadata())["signature_def"].PackFrom(def);
+    return StatusCode::OK;
+}
+
 Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
