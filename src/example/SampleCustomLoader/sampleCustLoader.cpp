@@ -91,9 +91,11 @@ extern "C" CustomLoaderInterface* createCustomLoader() {
     return new custSampleLoader();
 }
 
+#if 0
 extern "C" void destroyCustomLoader(CustomLoaderInterface* p) {
-    delete p;
+    std::cout << "destroyCustomLoader is Called" << std::endl;
 }
+#endif
 
 custSampleLoader::custSampleLoader() {
     cout << "custSampleLoader: Instance of Custom SampleLoader created" << endl;
@@ -245,7 +247,8 @@ int custSampleLoader::unloadModel(const char* modelName, int version) {
 
 void custSampleLoader::loaderDeInit() {
     cout << "custSampleLoader: Custom loaderDeInit" << endl;
-    watcherJoin();
+    if (watcherStarted == true)
+	    watcherJoin();
     return;
 }
 

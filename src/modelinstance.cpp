@@ -253,12 +253,15 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         char* binBuffer = NULL;
         int binLen = 0;
 
-        spdlog::info("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
+        SPDLOG_INFO("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
-	SPDLOG_INFO("Ravikb::(3) customerLoaderIfPtr refcount = {}",customLoaderInterfacePtr.use_count());
+	
+	if (customLoaderInterfacePtr == nullptr){
+		SPDLOG_INFO("Loader {} is not in loaded customloaders list",customLoaderName);
+		throw std::invalid_argument("customloader not exisiting");
+	}
 
-        // Ravikb--> todo: customLoaderInterfacePtr is NULL take care of exception
         int res = customLoaderInterfacePtr->loadModel(this->config.getName().c_str(),
             this->config.getBasePath().c_str(),
             getVersion(),
@@ -604,9 +607,13 @@ void ModelInstance::unloadModel() {
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
-	SPDLOG_INFO("Ravikb::(5) customerLoaderIfPtr refcount = {}",customLoaderInterfacePtr.use_count());
-        // once model is unloaded, notify custom loader object about the unload
-        customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
+	if (customLoaderInterfacePtr == nullptr){
+		SPDLOG_INFO("The loader {} is nolonger available",customLoaderName);
+	}
+	else {
+		// once model is unloaded, notify custom loader object about the unload
+		customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
+	}
     }
 }
 

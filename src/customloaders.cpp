@@ -57,7 +57,7 @@ std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& na
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
-        return NULL;
+        return nullptr;
     }
 
     return customLoaderInterfacePtrs[name].second;
@@ -78,27 +78,23 @@ Status CustomLoaders::move(const std::string& name) {
 
 Status CustomLoaders::finalize() {
 
-#if 0
     // By now the remaining loaders in current list are not there in new config. Delete them
     for (auto it = customLoaderInterfacePtrs.begin(); it != customLoaderInterfacePtrs.end(); it++) {
 	    SPDLOG_INFO("Loader {} is not there in new list.. deleting the same",it->first);
 	    auto loaderPtr = (it->second).second;
-	    SPDLOG_INFO("Ravikb::(3) customerLoaderIfPtr refcount = {}",loaderPtr.use_count());
-	    customLoaderInterfacePtrs.erase(it);
-	    loaderPtr.reset();
-	    // TODO--> Ravikb:: Call close function from the library handle
+	    loaderPtr->loaderDeInit();
+	    //loaderPtr.reset();
     }
-#endif
+
     SPDLOG_INFO("Clearing the list");
     customLoaderInterfacePtrs.clear();
     
-    SPDLOG_INFO("ADding new list to  the old list");
+    SPDLOG_INFO("Adding new list to  the old list");
     // now assign new map to servicing map.
     customLoaderInterfacePtrs.insert(newCustomLoaderInterfacePtrs.begin(),newCustomLoaderInterfacePtrs.end());
     newCustomLoaderInterfacePtrs.clear();
     return StatusCode::OK;
 }
-
 
 std::vector<std::string>& CustomLoaders::getNames() {
     currentCustomLoaderNames.clear();

@@ -247,7 +247,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         }
 
         SPDLOG_INFO("CHECK IF LOADER IS ALREADY LOADED");
-        if (customloaders.find(loaderName) == NULL) {
+        if (customloaders.find(loaderName) == nullptr) {
             // this is where library or custom loader is loaded
             void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
             if (!handleCL) {
@@ -614,12 +614,12 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
 
     if (config.isCustomLoaderRequiredToLoadModel()) {
-        auto& customloaders = ovms::CustomLoaders::instance();
         custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
         const std::string loaderName = customLoaderOptionsConfig["loader_name"];
 
+        auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(loaderName);
-        if (loaderPtr != NULL) {
+        if (loaderPtr != nullptr) {
             spdlog::info("Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
 
