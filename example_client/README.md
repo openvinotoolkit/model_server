@@ -8,7 +8,7 @@ It covers following topics:
 
 ## Requirement
 
-Install client dependencies using the command :
+Install client dependencies using the command below in the example_client directory:
 ```
 pip3 install -r client_requirements.txt
 ```
