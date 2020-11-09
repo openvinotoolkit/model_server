@@ -281,6 +281,7 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
         This test creates pipeline definition with one DL model node which has model that is unavailable due to:
             a) no model version available
             b) model version is retired
+            c) model is not loaded yet
         Test ensures we receive error status by calling getInputsInfo and getOutputsInfo.
     */
 
@@ -313,8 +314,8 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_MISSING);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_MISSING);
+    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_MISSING);
+    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_MISSING);
 
     config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
@@ -322,6 +323,12 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_NE(instance, nullptr);
     instance->unloadModel();
 
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-    ASSERT_EQ(def->getOutputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+
+    config.setLocalPath("/tmp/non_existing_path_j3nmc783n");
+    ASSERT_EQ(instance->loadModel(config), StatusCode::PATH_INVALID);
+
+    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
