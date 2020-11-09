@@ -97,6 +97,6 @@ public:
 
 // the types of the class factories
 typedef CustomLoaderInterface* createCustomLoader_t();
-//typedef void destroyCustomLoader_t(CustomLoaderInterface*);
+// typedef void destroyCustomLoader_t(CustomLoaderInterface*);
 
 }  // namespace ovms

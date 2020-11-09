@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <cxxopts.hpp>
@@ -77,13 +78,11 @@ Status CustomLoaders::move(const std::string& name) {
 }
 
 Status CustomLoaders::finalize() {
-
     // By now the remaining loaders in current list are not there in new config. Delete them
     for (auto it = customLoaderInterfacePtrs.begin(); it != customLoaderInterfacePtrs.end(); it++) {
         SPDLOG_INFO("Loader {} is not there in new list.. deleting the same", it->first);
         auto loaderPtr = (it->second).second;
         loaderPtr->loaderDeInit();
-        //loaderPtr.reset();
     }
 
     SPDLOG_INFO("Clearing the list");
