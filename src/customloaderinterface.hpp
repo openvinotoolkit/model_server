@@ -15,9 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#ifndef SRC_CUSTOMLOADERINTERFACE_HPP_
-#define SRC_CUSTOMLOADERINTERFACE_HPP_
-
 #include <iostream>
 #include <map>
 #include <string>
@@ -103,5 +100,3 @@ typedef CustomLoaderInterface* createCustomLoader_t();
 typedef void destroyCustomLoader_t(CustomLoaderInterface*);
 
 }  // namespace ovms
-
-#endif  // SRC_CUSTOMLOADERINTERFACE_HPP_

@@ -83,7 +83,7 @@ Status Model::addVersion(const ModelConfig& config) {
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory();
     if (config.isCustomLoaderRequiredToLoadModel()) {
         // if model requires custom loader, set the custom loader interface pointer object to modelInstance
-        modelInstance->setCustomLoaderInterfacePtr(customLoaderInterfacePtr);
+        modelInstance->setCustomLoaderName(customLoaderName);
     }
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {

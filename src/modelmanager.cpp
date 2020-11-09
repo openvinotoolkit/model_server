@@ -33,6 +33,7 @@
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
+#include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
@@ -231,8 +232,10 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         return StatusCode::OK;
     }
 
+    // Load Customer Loaders as per the configuration
+    SPDLOG_INFO("Using Customloaders");
+    auto& customloaders = ovms::CustomLoaders::instance();
     for (const auto& configs : itrp->value.GetArray()) {
-        // Load Customer Loaders as per the configuration
         const std::string loaderName = configs["config"]["loader_name"].GetString();
         SPDLOG_INFO("Reading Custom Loader:{} configuration", loaderName);
 
@@ -243,9 +246,8 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             return status;
         }
 
-        SPDLOG_ERROR("CHECK IF LOADER IS ALREADY LOADED");
-        auto loaderIt = customLoaderInterfacePtrs.find(loaderName);
-        if (customLoaderInterfacePtrs.end() == loaderIt) {
+        SPDLOG_INFO("CHECK IF LOADER IS ALREADY LOADED");
+        if (customloaders.find(loaderName) == NULL) {
             // this is where library or custom loader is loaded
             void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
             if (!handleCL) {
@@ -262,15 +264,24 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             }
 
             std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
+	    SPDLOG_INFO("Ravikb::(1) customerLoaderIfPtr refcount = {}",customerLoaderIfPtr.use_count());
             try {
                 customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
             } catch (...) {
                 SPDLOG_ERROR("Cannot create or initialize the custom loader");
                 return StatusCode::CUSTOM_LOADER_INIT_FAILED;
             }
-            customLoaderInterfacePtrs.insert({loaderName, std::make_pair(handleCL, customerLoaderIfPtr)});
+            customloaders.add(loaderName, customerLoaderIfPtr, handleCL);
+	    SPDLOG_INFO("Ravikb::(2) customerLoaderIfPtr refcount = {}",customerLoaderIfPtr.use_count());
         }
+	else {
+	    // Loader is already in the existing loaders. Move it to new loaders. 
+	    // Reload of customloader is not supported yet
+	    customloaders.move(loaderName);
+	}
     }
+    // All loaders are the done. Finalize the list by deleting removed loaders in config
+    customloaders.finalize();
     return ovms::StatusCode::OK;
 }
 
@@ -603,18 +614,18 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
 
     if (config.isCustomLoaderRequiredToLoadModel()) {
+        auto& customloaders = ovms::CustomLoaders::instance();
         custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
         const std::string loaderName = customLoaderOptionsConfig["loader_name"];
 
-        auto loaderIt = customLoaderInterfacePtrs.find(loaderName);
-        if (customLoaderInterfacePtrs.end() != loaderIt) {
+        auto loaderPtr = customloaders.find(loaderName);
+        if (loaderPtr != NULL) {
             spdlog::info("Custom Loader to be used : {}", loaderName);
-            model->setCustomLoaderInterfacePtr(customLoaderInterfacePtrs[loaderName].second);
+            model->setCustomLoaderName(loaderName);
 
             // check existing version for blacklist
             for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                bool bres = versionInstance->getCustomLoaderInterfacePtr()->getModelBlacklistStatus(
-                    versionInstance->getName().c_str(), version);
+                bool bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName().c_str(), version);
                 if (bres) {
                     spdlog::info("The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());

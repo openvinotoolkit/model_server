@@ -87,10 +87,10 @@ protected:
     ModelChangeSubscription subscriptionManager;
 
     /**
-         * @brief Holds the custom loader interface pointer
+         * @brief Holds the custom loader interface Name
          *
          */
-    std::shared_ptr<CustomLoaderInterface> customLoaderInterfacePtr;
+    std::string customLoaderName;
 
 public:
     /**
@@ -185,14 +185,14 @@ public:
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);
     /**
-         * @brief Set the custom loader interface pointer
+         * @brief Set the custom loader name
          *
-         * @param custom loader interface pointer
+         * @param custom loader name
          *
          * @return status
          */
-    void setCustomLoaderInterfacePtr(std::shared_ptr<CustomLoaderInterface> ptr) {
-        customLoaderInterfacePtr = ptr;
+    void setCustomLoaderName(std::string name) {
+        customLoaderName = name;
     }
 };
 }  // namespace ovms

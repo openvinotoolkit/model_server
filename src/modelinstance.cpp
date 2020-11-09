@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include "config.hpp"
+#include "customloaders.hpp"
 #include "stringutils.hpp"
 
 using namespace InferenceEngine;
@@ -253,6 +254,11 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         int binLen = 0;
 
         spdlog::info("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
+	SPDLOG_INFO("Ravikb::(3) customerLoaderIfPtr refcount = {}",customLoaderInterfacePtr.use_count());
+
+        // Ravikb--> todo: customLoaderInterfacePtr is NULL take care of exception
         int res = customLoaderInterfacePtr->loadModel(this->config.getName().c_str(),
             this->config.getBasePath().c_str(),
             getVersion(),
@@ -596,6 +602,9 @@ void ModelInstance::unloadModel() {
     status.setEnd();
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
+	SPDLOG_INFO("Ravikb::(5) customerLoaderIfPtr refcount = {}",customLoaderInterfacePtr.use_count());
         // once model is unloaded, notify custom loader object about the unload
         customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
     }

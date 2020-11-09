@@ -32,6 +32,7 @@
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
+#include "customloaders.hpp"
 
 namespace ovms {
 class IVersionReader;
@@ -52,12 +53,6 @@ protected:
      * 
      */
     std::map<std::string, std::shared_ptr<Model>> models;
-
-    /**
-     * @brief A collection of custom loader interface objects
-     *
-     */
-    std::map<std::string, std::pair<void*, std::shared_ptr<CustomLoaderInterface>>> customLoaderInterfacePtrs;
 
     PipelineFactory pipelineFactory;
 

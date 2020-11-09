@@ -21,6 +21,8 @@ cc_library(
         "config.cpp",
         "config.hpp",
         "customloaderconfig.hpp",
+	"customloaders.hpp",
+	"customloaders.cpp",
         "customloaderinterface.hpp",
         "deserialization.hpp",
         "dl_node.cpp",

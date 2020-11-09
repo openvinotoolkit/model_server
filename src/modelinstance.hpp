@@ -192,9 +192,9 @@ protected:
     ModelConfig config;
 
     /**
-         * @brief Holds pointer to the custom loader interface
+         * @brief Holds pointer to the custom loader Name
          */
-    std::shared_ptr<CustomLoaderInterface> customLoaderInterfacePtr;
+    std::string customLoaderName;
 
     /**
          * @brief Loads OV CNNNetwork Using the Custom Loader
@@ -486,23 +486,23 @@ public:
     const Status validate(const tensorflow::serving::PredictRequest* request);
 
     /**
-         * @brief Set the custom loader interface pointer
+         * @brief Set the custom loader interface name
          *
-         * @param custom loader interface pointer
+         * @param custom loader interface name
          *
          * @return status
          */
-    void setCustomLoaderInterfacePtr(std::shared_ptr<CustomLoaderInterface> ptr) {
-        customLoaderInterfacePtr = ptr;
+    void setCustomLoaderName(std::string name) {
+        customLoaderName = name;
     }
 
     /**
-         * @brief Gets model config
+         * @brief Gets customloader name associated with this instance
          *
-         * @return model config
+         * @return model name
          */
-    virtual const std::shared_ptr<CustomLoaderInterface> getCustomLoaderInterfacePtr() const {
-        return customLoaderInterfacePtr;
+    virtual const std::string& getCustomLoaderName() const {
+        return customLoaderName;
     }
 };
 }  // namespace ovms
