@@ -16,8 +16,11 @@
 //*****************************************************************************
 #include "pipelinedefinition.hpp"
 
+#include <chrono>
 #include <set>
+#include <thread>
 
+#include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
@@ -31,12 +34,91 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
 }
 
+Status PipelineDefinition::validate(ModelManager& manager) {
+    struct ValidationResultNotifier {
+        ValidationResultNotifier() {}
+        ~ValidationResultNotifier() {
+            if (passed) {
+                // status.notifyValidationPassed();
+            } else {
+                // status.notifyValidationFailed();
+            }
+        }
+        bool passed = false;
+    };
+    ValidationResultNotifier notifier;
+    Status validationResult = validateNodes(manager);
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+
+    validationResult = validateForCycles();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    notifier.passed = true;
+    return validationResult;
+}
+
+Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
+    resetSubscriptions(manager);
+    // this->status.notifyLoadInProgress();
+    while (requestsHandlesCounter > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+
+    this->nodeInfos = std::move(nodeInfos);
+    this->connections = std::move(connections);
+    makeSubscriptions(manager);
+
+    return validate(manager);
+}
+
+Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
+    unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
+    /*
+    const uint waitLoadedTimestepMicroseconds = 10;
+    const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
+    uint waitCheckpointsCounter = waitCheckpoints;
+    while (waitCheckpointsCounter-- != 0) {
+        if (status.getState() == ModelVersionState::AVAILABLE) {
+            SPDLOG_INFO("Succesfully waited for pipeline:{}", getName()); // TODO change to DEBUG after part 2
+            break;
+        }
+        unloadGuard.reset();
+        if (status.getState() > ModelVersionState::AVAILABLE) {
+            SPDLOG_INFO("Waiting for pipeline:{} ended since it started unloading.", getName()); // TODO change to DEBUG after part 2
+            return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+        }
+        SPDLOG_INFO("Waiting for available state for pipeline:{}, with timestep:{} timeout:{} check count:{}",
+                getName(), waitLoadedTimestepMicroseconds, waitForModelLoadedTimeoutMicroseconds, waitCheckpointsCounter); // TODO change to DEBUG after part 2 finished
+        status.waitForLoadedNotify(waitLoadedTimestepMicroseconds);
+        unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard(*this);
+    }
+    if (status.getState() != ModelVersionState::AVAILABLE) {
+        if (status.getState() > ModelVersionState::AVAILABLE) {
+            SPDLOG_INFO("Waiting for pipeline:{} ended since it started unloading.", getName()); // TODO change to DEBUG after part 2
+            return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+        } else if (status.getState() > ModelVersionState::AVAILABLE) {
+            SPDLOG_INFO("Waiting for pipeline:{} ended due to timeout.", getName()); // TODO change to DEBUG after part 2
+            return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+        }
+    }
+    */
+    return StatusCode::OK;
+}
+
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
-    ModelManager& manager) const {
-    std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
+    ModelManager& manager) {
+    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    Status status = waitForLoaded(unloadGuard);
+    if (!status.ok()) {
+        return status;
+    }
 
+    std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
     EntryNode* entry = nullptr;
     ExitNode* exit = nullptr;
     for (const auto& info : nodeInfos) {
@@ -78,7 +160,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }
-    return StatusCode::OK;
+    return status;
 }
 
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
@@ -96,6 +178,16 @@ void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     subscriptions.clear();
 }
 
+static std::string createSubscriptionErrorMessage(const std::string& pipelineName, const NodeInfo& nodeInfo) {
+    std::stringstream ss;
+    ss << "Pipeline: " << pipelineName << " Failed to make subscription to model: " << nodeInfo.modelName;
+    if (nodeInfo.modelVersion) {
+        ss << " version: " << nodeInfo.modelVersion.value();
+    }
+    ss << " because it was missing";
+    return ss.str();
+}
+
 void PipelineDefinition::makeSubscriptions(ModelManager& manager) {
     for (auto& node : nodeInfos) {
         if (node.kind == NodeKind::DL) {
@@ -104,28 +196,17 @@ void PipelineDefinition::makeSubscriptions(ModelManager& manager) {
             }
             auto model = manager.findModelByName(node.modelName);
             if (nullptr == model) {
-                std::stringstream ss;
-                ss << "Pipeline: " << getName() << "Failed to make subscription to model: " << node.modelName;
-                if (node.modelVersion) {
-                    ss << " version: " << node.modelVersion.value();
-                }
-                SPDLOG_WARN(ss.str());
+                SPDLOG_WARN(createSubscriptionErrorMessage(getName(), node));
                 continue;
             }
             if (node.modelVersion) {
                 auto modelInstance = model->getModelInstanceByVersion(node.modelVersion.value());
                 if (nullptr == modelInstance) {
-                    std::stringstream ss;
-                    ss << "Pipeline: " << getName() << "Failed to make subscription to model: " << node.modelName;
-                    if (node.modelVersion) {
-                        ss << " version: " << node.modelVersion.value();
-                    }
-                    SPDLOG_WARN(ss.str());
+                    SPDLOG_WARN(createSubscriptionErrorMessage(getName(), node));
                     continue;
                 }
                 modelInstance->subscribe(*this);
             } else {
-                auto model = manager.findModelByName(node.modelName);
                 model->subscribe(*this);
             }
             subscriptions.insert({node.modelName, node.modelVersion.value_or(0)});
@@ -300,7 +381,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
         auto result = validateNode(manager, node);
-        if (result != StatusCode::OK) {
+        if (!result.ok()) {
             return result;
         }
         if (node.kind == NodeKind::ENTRY) {

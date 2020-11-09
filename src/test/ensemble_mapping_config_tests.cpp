@@ -249,3 +249,125 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     EXPECT_EQ(response_tensor_name->getShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
+
+TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {
+    // Load models
+    auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setBasePath(modelPath);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+
+    // Create pipeline definition
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummyA", "dummy"},
+        {NodeKind::DL, "dummyB", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    connections["dummyA"] = {
+        {"request", {{"vector", "input_tensor"}}}};
+    connections["dummyB"] = {
+        {"dummyA", {{"output_tensor", "input_tensor"}}}};
+    connections["response"] = {
+        {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
+
+    // Validation fails since mapping is expected
+    PipelineDefinition pd("UNUSED_NAME", info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    EXPECT_TRUE(status.getCode() == ovms::StatusCode::INVALID_MISSING_INPUT ||
+                status.getCode() == ovms::StatusCode::INVALID_MISSING_OUTPUT)
+        << status.string();
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INVALID_MISSING_OUTPUT) << status.string();
+
+    // Create mapping config for model
+    createConfigFileWithContent(R"({
+        "inputs": {"b": "input_tensor"},
+        "outputs": {"a": "output_tensor"}
+    })",
+        mappingConfigPath);
+
+    // reload pipeline definition after adding mapping
+    // we need to trigger reload - just adding model mapping won't do the trick
+    // hence setting nireq
+    modelConfig.setNireq(modelConfig.getNireq() + 1);
+    status = managerWithDummyModel.reloadModelWithVersions(modelConfig);
+    ASSERT_TRUE(status.ok()) << status.string();
+    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    // Prepare request
+    std::unique_ptr<Pipeline> pipeline;
+    tensorflow::serving::PredictRequest request;
+    tensorflow::serving::PredictResponse response;
+    auto& input_proto = (*request.mutable_inputs())["vector"];
+    input_proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    input_proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    input_proto.mutable_tensor_shape()->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
+
+    std::vector<float> input_data(DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input_data.begin(), input_data.end(), 1);  // 1, 2, 3, ..., 10
+    input_proto.mutable_tensor_content()->assign((char*)input_data.data(), sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
+
+    // Execute pipeline
+    pd.create(pipeline, &request, &response, managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    // Compare response
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.outputs().count("response_tensor_name"), 1);
+    const auto& output_proto = response.outputs().at("response_tensor_name");
+    ASSERT_EQ(output_proto.dtype(), tensorflow::DataType::DT_FLOAT);
+    ASSERT_THAT(asVector(output_proto.tensor_shape()), ElementsAre(1, 10));
+
+    std::vector<float> output_data(DUMMY_MODEL_INPUT_SIZE);
+    std::transform(input_data.begin(), input_data.end(), output_data.begin(), [](float& v) { return v + 2.0; });  // 3, 4, ... 12
+    ASSERT_EQ(asVector<float>(output_proto.tensor_content()), output_data);
+}
+
+TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_ReloadPipelineAfterRemovalOfModelMappingWillFail) {
+    // disabled - check CVS-41658
+    // Create mapping config for model
+    createConfigFileWithContent(R"({
+        "inputs": {"b": "input_tensor"},
+        "outputs": {"a": "output_tensor"}
+    })",
+        mappingConfigPath);
+    // Load models
+    auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setBasePath(modelPath);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+
+    // Create pipeline definition
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummyA", "dummy"},
+        {NodeKind::DL, "dummyB", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+
+    connections["dummyA"] = {
+        {"request", {{"vector", "input_tensor"}}}};
+    connections["dummyB"] = {
+        {"dummyA", {{"output_tensor", "input_tensor"}}}};
+    connections["response"] = {
+        {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
+
+    // Ensure definition created without errors
+    PipelineDefinition pd("UNUSED_NAME", info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    // reload pipeline definition after removing mapping
+    // we need to trigger reload - just adding model mapping won't do the trick
+    // hence setting nireq
+    ASSERT_TRUE(std::filesystem::remove(mappingConfigPath));
+    modelConfig.setNireq(modelConfig.getNireq() + 1);
+    status = managerWithDummyModel.reloadModelWithVersions(modelConfig);
+    ASSERT_TRUE(status.ok()) << status.string();
+    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    EXPECT_TRUE(status.getCode() == ovms::StatusCode::INVALID_MISSING_INPUT ||
+                status.getCode() == ovms::StatusCode::INVALID_MISSING_OUTPUT)
+        << status.string();
+}

@@ -67,6 +67,8 @@ cc_library(
         "pipeline.hpp",
         "pipelinedefinition.cpp",
         "pipelinedefinition.hpp",
+        "pipelinedefinitionunloadguard.cpp",
+        "pipelinedefinitionunloadguard.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
         "prediction_service.cpp",
