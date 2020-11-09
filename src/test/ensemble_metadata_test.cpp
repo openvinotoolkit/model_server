@@ -72,7 +72,7 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     /*
         This test creates pipeline definition with multiple connections refering to entry node.
         This way we use the same input tensors in nodes on different levels of depth.
-        Test ensures that metadata returned by PipelineDefinition::getInptusInfo does not return duplicated information.
+        Test ensures that metadata returned by PipelineDefinition::getInptusInfo/getOutptusInfo does not return duplicated information.
     */
     ConstructorEnabledModelManager manager;
 
@@ -147,11 +147,11 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     EXPECT_EQ(original_input_for_N2->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
 }
 
-TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputInfo) {
+TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     /*
         This test creates pipeline definition with no DL model nodes.
         The only thing that pipeline does is passing request data into response with no inferences in between.
-        Test ensures such pipeline will return named input information but with undefined shape and precision.
+        Test ensures such pipeline will return named input and output information but with undefined shape and precision.
     */
     ConstructorEnabledModelManager manager;
 
@@ -192,7 +192,7 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     /*
         This test creates pipeline definition with 4 parallel DL model nodes, all refering to entry node.
         All nodes require 2 inputs, all from different sources, so in total we need 8 different pipeline inputs.
-        Test ensures that metadata returned by PipelineDefinition::getInptusInfo contains all 8 required inputs.
+        Test ensures that metadata returned by PipelineDefinition::getInptusInfo contains all 8 required inputs and one output.
     */
     ConstructorEnabledModelManager manager;
 
@@ -281,7 +281,7 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
         This test creates pipeline definition with one DL model node which has model that is unavailable due to:
             a) no model version available
             b) model version is retired
-        Test ensures we receive error status by calling getInputsInfo.
+        Test ensures we receive error status by calling getInputsInfo and getOutputsInfo.
     */
 
     const model_version_t UNAVAILABLE_DUMMY_VERSION = 99;
