@@ -19,16 +19,16 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <spdlog/spdlog.h>
 
 #include <cxxopts.hpp>
+#include <spdlog/spdlog.h>
 
 #include "customloaderinterface.hpp"
 
 namespace ovms {
 
 Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInsterface, void* library) {
-    SPDLOG_INFO("Adding loder {} to loaders list",name);
+    SPDLOG_INFO("Adding loder {} to loaders list", name);
     auto loaderIt = newCustomLoaderInterfacePtrs.find(name);
     if (loaderIt == newCustomLoaderInterfacePtrs.end()) {
         newCustomLoaderInterfacePtrs.insert({name, std::make_pair(library, loaderInsterface)});
@@ -40,7 +40,7 @@ Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterfac
 }
 
 Status CustomLoaders::remove(std::string& name) {
-    SPDLOG_INFO("Removing loder {} from loaders list",name);
+    SPDLOG_INFO("Removing loder {} from loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     // The loader is not there. Return error. --> Ravikb: Change to appropriate error
@@ -53,7 +53,7 @@ Status CustomLoaders::remove(std::string& name) {
 }
 
 std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& name) {
-    SPDLOG_INFO("looking for loder {} in loaders list",name);
+    SPDLOG_INFO("looking for loder {} in loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
@@ -64,7 +64,7 @@ std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& na
 }
 
 Status CustomLoaders::move(const std::string& name) {
-    SPDLOG_INFO("Moving loder {} from old to new loaders list",name);
+    SPDLOG_INFO("Moving loder {} from old to new loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
@@ -80,18 +80,18 @@ Status CustomLoaders::finalize() {
 
     // By now the remaining loaders in current list are not there in new config. Delete them
     for (auto it = customLoaderInterfacePtrs.begin(); it != customLoaderInterfacePtrs.end(); it++) {
-	    SPDLOG_INFO("Loader {} is not there in new list.. deleting the same",it->first);
-	    auto loaderPtr = (it->second).second;
-	    loaderPtr->loaderDeInit();
-	    //loaderPtr.reset();
+        SPDLOG_INFO("Loader {} is not there in new list.. deleting the same", it->first);
+        auto loaderPtr = (it->second).second;
+        loaderPtr->loaderDeInit();
+        //loaderPtr.reset();
     }
 
     SPDLOG_INFO("Clearing the list");
     customLoaderInterfacePtrs.clear();
-    
+
     SPDLOG_INFO("Adding new list to  the old list");
     // now assign new map to servicing map.
-    customLoaderInterfacePtrs.insert(newCustomLoaderInterfacePtrs.begin(),newCustomLoaderInterfacePtrs.end());
+    customLoaderInterfacePtrs.insert(newCustomLoaderInterfacePtrs.begin(), newCustomLoaderInterfacePtrs.end());
     newCustomLoaderInterfacePtrs.clear();
     return StatusCode::OK;
 }

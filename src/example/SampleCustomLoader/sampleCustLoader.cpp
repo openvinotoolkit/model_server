@@ -248,7 +248,7 @@ int custSampleLoader::unloadModel(const char* modelName, int version) {
 void custSampleLoader::loaderDeInit() {
     cout << "custSampleLoader: Custom loaderDeInit" << endl;
     if (watcherStarted == true)
-	    watcherJoin();
+        watcherJoin();
     return;
 }
 

@@ -28,11 +28,11 @@
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
+#include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
-#include "customloaders.hpp"
 
 namespace ovms {
 class IVersionReader;

@@ -264,7 +264,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             }
 
             std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
-	    SPDLOG_INFO("Ravikb::(1) customerLoaderIfPtr refcount = {}",customerLoaderIfPtr.use_count());
+            SPDLOG_INFO("Ravikb::(1) customerLoaderIfPtr refcount = {}", customerLoaderIfPtr.use_count());
             try {
                 customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
             } catch (...) {
@@ -272,13 +272,12 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
                 return StatusCode::CUSTOM_LOADER_INIT_FAILED;
             }
             customloaders.add(loaderName, customerLoaderIfPtr, handleCL);
-	    SPDLOG_INFO("Ravikb::(2) customerLoaderIfPtr refcount = {}",customerLoaderIfPtr.use_count());
+            SPDLOG_INFO("Ravikb::(2) customerLoaderIfPtr refcount = {}", customerLoaderIfPtr.use_count());
+        } else {
+            // Loader is already in the existing loaders. Move it to new loaders.
+            // Reload of customloader is not supported yet
+            customloaders.move(loaderName);
         }
-	else {
-	    // Loader is already in the existing loaders. Move it to new loaders. 
-	    // Reload of customloader is not supported yet
-	    customloaders.move(loaderName);
-	}
     }
     // All loaders are the done. Finalize the list by deleting removed loaders in config
     customloaders.finalize();

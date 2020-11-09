@@ -256,11 +256,11 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         SPDLOG_INFO("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
-	
-	if (customLoaderInterfacePtr == nullptr){
-		SPDLOG_INFO("Loader {} is not in loaded customloaders list",customLoaderName);
-		throw std::invalid_argument("customloader not exisiting");
-	}
+
+        if (customLoaderInterfacePtr == nullptr) {
+            SPDLOG_INFO("Loader {} is not in loaded customloaders list", customLoaderName);
+            throw std::invalid_argument("customloader not exisiting");
+        }
 
         int res = customLoaderInterfacePtr->loadModel(this->config.getName().c_str(),
             this->config.getBasePath().c_str(),
@@ -607,13 +607,12 @@ void ModelInstance::unloadModel() {
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
-	if (customLoaderInterfacePtr == nullptr){
-		SPDLOG_INFO("The loader {} is nolonger available",customLoaderName);
-	}
-	else {
-		// once model is unloaded, notify custom loader object about the unload
-		customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
-	}
+        if (customLoaderInterfacePtr == nullptr) {
+            SPDLOG_INFO("The loader {} is nolonger available", customLoaderName);
+        } else {
+            // once model is unloaded, notify custom loader object about the unload
+            customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
+        }
     }
 }
 
