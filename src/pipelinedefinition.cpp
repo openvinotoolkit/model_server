@@ -337,26 +337,26 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
         };
     };
 
-    for (const auto& [dependant_node_name, all_mappings] : connections) {
-        const auto& dependant_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependant_node_name));
-        for (const auto& [dependency_node_name, specific_dependency_mapping] : all_mappings) {
-            const auto& dependency_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependency_node_name));
-            if (dependency_node_info->kind != NodeKind::ENTRY) {
+    for (const auto& [dependantNodeName, allMappings] : connections) {
+        const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
+        for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
+            const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
+            if (dependencyNodeInfo->kind != NodeKind::ENTRY) {
                 continue;
             }
 
-            switch (dependant_node_info->kind) {
+            switch (dependantNodeInfo->kind) {
             case NodeKind::EXIT: {
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
+                for (const auto& [alias, realName] : specificDependencyMapping) {
                     inputsInfo.insert({alias, TensorInfo::getUnspecifiedTensorInfo()});
                 }
                 break;
             }
             case NodeKind::DL: {
-                auto instance = manager.findModelInstance(dependant_node_info->modelName, dependant_node_info->modelVersion.value_or(0));
+                auto instance = manager.findModelInstance(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependant_node_info->modelName, this->getName());
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependantNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
@@ -367,8 +367,8 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
                     return status;
                 }
 
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
-                    inputsInfo[alias] = instance->getInputsInfo().at(real_name);
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    inputsInfo[alias] = instance->getInputsInfo().at(realName);
                 }
                 break;
             }
@@ -394,27 +394,27 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
         };
     };
 
-    for (const auto& [dependant_node_name, all_mappings] : connections) {
-        const auto& dependant_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependant_node_name));
-        if (dependant_node_info->kind != NodeKind::EXIT) {
+    for (const auto& [dependantNodeName, allMappings] : connections) {
+        const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
+        if (dependantNodeInfo->kind != NodeKind::EXIT) {
             continue;
         }
 
-        for (const auto& [dependency_node_name, specific_dependency_mapping] : all_mappings) {
-            const auto& dependency_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependency_node_name));
+        for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
+            const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
 
-            switch (dependency_node_info->kind) {
+            switch (dependencyNodeInfo->kind) {
             case NodeKind::ENTRY: {
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
-                    outputsInfo.insert({real_name, TensorInfo::getUnspecifiedTensorInfo()});
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    outputsInfo.insert({realName, TensorInfo::getUnspecifiedTensorInfo()});
                 }
                 break;
             }
             case NodeKind::DL: {
-                auto instance = manager.findModelInstance(dependency_node_info->modelName, dependency_node_info->modelVersion.value_or(0));
+                auto instance = manager.findModelInstance(dependencyNodeInfo->modelName, dependencyNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", dependency_node_info->modelName, this->getName());
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
@@ -425,9 +425,9 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
                     return status;
                 }
 
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
-                    const auto& final_name = dependency_node_info->outputNameAliases.count(alias) > 0 ? dependency_node_info->outputNameAliases.at(alias) : alias;
-                    outputsInfo[real_name] = instance->getOutputsInfo().at(final_name);
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    const auto& finalName = dependencyNodeInfo->outputNameAliases.count(alias) > 0 ? dependencyNodeInfo->outputNameAliases.at(alias) : alias;
+                    outputsInfo[realName] = instance->getOutputsInfo().at(finalName);
                 }
                 break;
             }
