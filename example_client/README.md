@@ -18,6 +18,11 @@ In the examples listed below, OVMS can be started using a command:
 docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
 ```
 
+Since access to www resources is needed for the samples to operate add proxy settings variables to the above command if required:
+```bash
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+```
+
 ## gRPC API Client Examples <a name="grpc-api"></a>
 
 ### Model Status API 
