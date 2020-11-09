@@ -168,7 +168,7 @@ public:
      *
      * @return pointer to ModelInstance or nullptr if not found 
      */
-    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) {
+    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const {
         auto model = findModelByName(name);
         if (!model) {
             return nullptr;

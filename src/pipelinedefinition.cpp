@@ -327,7 +327,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager& manager) const {
+Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
 
@@ -337,26 +337,26 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager&
         };
     };
 
-    for (const auto& [dependant_node_name, all_mappings] : connections) {
-        const auto& dependant_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependant_node_name));
-        for (const auto& [dependency_node_name, specific_dependency_mapping] : all_mappings) {
-            const auto& dependency_node_info = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependency_node_name));
-            if (dependency_node_info->kind != NodeKind::ENTRY) {
+    for (const auto& [dependantNodeName, allMappings] : connections) {
+        const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
+        for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
+            const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
+            if (dependencyNodeInfo->kind != NodeKind::ENTRY) {
                 continue;
             }
 
-            switch (dependant_node_info->kind) {
+            switch (dependantNodeInfo->kind) {
             case NodeKind::EXIT: {
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
+                for (const auto& [alias, realName] : specificDependencyMapping) {
                     inputsInfo.insert({alias, TensorInfo::getUnspecifiedTensorInfo()});
                 }
                 break;
             }
             case NodeKind::DL: {
-                auto instance = manager.findModelInstance(dependant_node_info->modelName, dependant_node_info->modelVersion.value_or(0));
+                auto instance = manager.findModelInstance(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependant_node_info->modelName, this->getName());
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependantNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
@@ -367,14 +367,73 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, ModelManager&
                     return status;
                 }
 
-                for (const auto& [alias, real_name] : specific_dependency_mapping) {
-                    inputsInfo[alias] = instance->getInputsInfo().at(real_name);
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    inputsInfo[alias] = instance->getInputsInfo().at(realName);
                 }
                 break;
             }
             default: {
                 // Pipeline validation does not allow connections into entry node.
                 SPDLOG_ERROR("Unexpected dependant node kind (name:{})", this->getName());
+                return StatusCode::UNKNOWN_ERROR;
+            }
+            }
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const {
+    // Assumptions: this can only be called on available pipeline definition.
+    // Add check if available when pipeline status will be implemented.
+
+    static const auto byName = [](const std::string& name) {
+        return [name](const NodeInfo& nodeInfo) {
+            return nodeInfo.nodeName == name;
+        };
+    };
+
+    for (const auto& [dependantNodeName, allMappings] : connections) {
+        const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
+        if (dependantNodeInfo->kind != NodeKind::EXIT) {
+            continue;
+        }
+
+        for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
+            const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
+
+            switch (dependencyNodeInfo->kind) {
+            case NodeKind::ENTRY: {
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    outputsInfo.insert({realName, TensorInfo::getUnspecifiedTensorInfo()});
+                }
+                break;
+            }
+            case NodeKind::DL: {
+                auto instance = manager.findModelInstance(dependencyNodeInfo->modelName, dependencyNodeInfo->modelVersion.value_or(0));
+                if (!instance) {
+                    // TODO: Change to SPDLOG_DEBUG before release
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
+                    return StatusCode::MODEL_MISSING;
+                }
+                std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+                auto status = instance->waitForLoaded(0, unloadGuard);
+                if (!status.ok()) {
+                    // TODO: Change to SPDLOG_DEBUG before release
+                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", instance->getName(), this->getName());
+                    return status;
+                }
+
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    const auto& finalName = dependencyNodeInfo->outputNameAliases.count(alias) > 0 ? dependencyNodeInfo->outputNameAliases.at(alias) : alias;
+                    outputsInfo[realName] = instance->getOutputsInfo().at(finalName);
+                }
+                break;
+            }
+            default: {
+                // Pipeline validation does not allow connections from exit node.
+                SPDLOG_ERROR("Unexpected dependency node kind (name:{})", this->getName());
                 return StatusCode::UNKNOWN_ERROR;
             }
             }
