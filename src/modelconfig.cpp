@@ -358,7 +358,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                             shapeInfo.shape.push_back(sh.GetUint64());
                         }
                     }
-                    this->addShape(s.name.GetString(), shapeInfo);
+                    if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
+                        this->addShape(s.name.GetString(), shapeInfo);
+                    } else {
+                        SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
+                    }
                 }
             }
         }
