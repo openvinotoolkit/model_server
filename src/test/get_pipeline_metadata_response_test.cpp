@@ -26,12 +26,12 @@ using namespace rapidjson;
 
 class GetPipelineMetadataResponse : public ::testing::Test {
 protected:
-    class MockPipelineDefinition : public PipelineDefinition {
+    class MockPipelineDefinitionGetInputsOutputsInfo : public PipelineDefinition {
         tensor_map_t inputsInfo, outputsInfo;
         Status status = StatusCode::OK;
 
     public:
-        MockPipelineDefinition() :
+        MockPipelineDefinitionGetInputsOutputsInfo() :
             PipelineDefinition("pipeline_name", {}, {}) {}
 
         Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const override {
@@ -54,11 +54,11 @@ protected:
         }
     };
 
-    MockPipelineDefinition pipelineDefinition;
+    MockPipelineDefinitionGetInputsOutputsInfo pipelineDefinition;
     tensorflow::serving::GetModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
 
-    void SetUp() override {
+    virtual void prepare() {
         pipelineDefinition.mockMetadata({{"Input_FP32_1_3_224_224",
                                              std::make_shared<TensorInfo>("Input_FP32_1_3_224_224", InferenceEngine::Precision::FP32, shape_t{1, 3, 224, 224})},
                                             {"Input_U8_1_3_62_62",
@@ -72,52 +72,54 @@ protected:
                 {"Output_Unspecified",
                     TensorInfo::getUnspecifiedTensorInfo()}});
     }
+
+    void SetUp() override {
+        this->prepare();
+    }
 };
 
-TEST_F(GetPipelineMetadataResponse, HasModelSpec) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+class GetPipelineMetadataResponseBuild : public GetPipelineMetadataResponse {
+protected:
+    void prepare() override {
+        GetPipelineMetadataResponse::prepare();
+        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    }
+};
+
+TEST_F(GetPipelineMetadataResponseBuild, HasModelSpec) {
     EXPECT_TRUE(response.has_model_spec());
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectName) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectName) {
     EXPECT_EQ(response.model_spec().name(), "pipeline_name");
 }
 
-TEST_F(GetPipelineMetadataResponse, HasVersion) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+TEST_F(GetPipelineMetadataResponseBuild, HasVersion) {
     EXPECT_TRUE(response.model_spec().has_version());
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectVersion) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectVersion) {
     EXPECT_EQ(response.model_spec().version().value(), 1);
 }
 
-TEST_F(GetPipelineMetadataResponse, HasOneMetadataInfo) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+TEST_F(GetPipelineMetadataResponseBuild, HasOneMetadataInfo) {
     EXPECT_EQ(response.metadata_size(), 1);
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectMetadataSignatureName) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectMetadataSignatureName) {
     EXPECT_NE(
         response.metadata().find("signature_def"),
         response.metadata().end());
 }
 
-TEST_F(GetPipelineMetadataResponse, HasOneSignatureDef) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
+TEST_F(GetPipelineMetadataResponseBuild, HasOneSignatureDef) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
     EXPECT_EQ(def.signature_def_size(), 1);
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectSignatureDefName) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectSignatureDefName) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -126,9 +128,7 @@ TEST_F(GetPipelineMetadataResponse, HasCorrectSignatureDefName) {
         def.signature_def().end());
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectTensorNames) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectTensorNames) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -158,9 +158,7 @@ TEST_F(GetPipelineMetadataResponse, HasCorrectTensorNames) {
         "Output_Unspecified");
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectPrecision) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectPrecision) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -187,9 +185,7 @@ TEST_F(GetPipelineMetadataResponse, HasCorrectPrecision) {
         tensorflow::DT_INVALID);
 }
 
-TEST_F(GetPipelineMetadataResponse, HasCorrectShape) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
+TEST_F(GetPipelineMetadataResponseBuild, HasCorrectShape) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -250,8 +246,7 @@ TEST_F(GetPipelineMetadataResponse, DISABLED_PipelineNotLoadedYet) {
     EXPECT_TRUE(false) << "Not implemented";
 }
 
-TEST_F(GetPipelineMetadataResponse, serialize2Json) {
-    ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+TEST_F(GetPipelineMetadataResponseBuild, serialize2Json) {
     std::string json_output;
     const tensorflow::serving::GetModelMetadataResponse* response_p = &response;
     ovms::Status error_status = ovms::GetModelMetadataImpl::serializeResponse2Json(response_p, &json_output);
