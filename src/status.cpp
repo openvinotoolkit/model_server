@@ -40,6 +40,8 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::MODEL_VERSION_MISSING, "Model with requested version is not found"},
     {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, "Model with requested version is retired"},
     {StatusCode::MODEL_VERSION_NOT_LOADED_YET, "Model with requested version is not loaded yet"},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, "Pipeline is retired"},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, "Pipeline is not loaded yet"},
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
@@ -146,6 +148,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::MODEL_VERSION_MISSING, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
 
@@ -219,6 +223,8 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
 

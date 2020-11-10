@@ -74,6 +74,16 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     return validate(manager);
 }
 
+void PipelineDefinition::retire(ModelManager& manager) {
+    resetSubscriptions(manager);
+    // this->status.notifyRetire();
+    while (requestsHandlesCounter > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    this->nodeInfos.clear();
+    this->connections.clear();
+}
+
 Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
     /*

@@ -93,6 +93,7 @@ public:
         tensorflow::serving::PredictResponse* response,
         ModelManager& manager);
     Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
+    void retire(ModelManager& manager);
     Status validate(ModelManager& manager);
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
