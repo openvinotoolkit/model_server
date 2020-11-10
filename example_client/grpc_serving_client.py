@@ -22,8 +22,8 @@ import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics
-
+from client_utils import print_statistics, prepare_certs
+from kaldi_python_io import ArchiveReader
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
                                              'It displays performance statistics and optionally the model accuracy')
@@ -58,6 +58,15 @@ channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_p
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
+
+ark_reader = ArchiveReader("rm_lstm4f/test_feat_1_10.ark")
+
+for key, obj in ark_reader:
+    print("\n{0}: {1}".format(key, obj.shape))
+    print("\n{0}".format(obj))
+
+
+exit(0)
 
 # optional preprocessing depending on the model
 imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
