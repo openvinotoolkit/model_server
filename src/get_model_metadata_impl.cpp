@@ -31,29 +31,32 @@ Status GetModelMetadataImpl::getModelStatus(
     }
 
     const auto& name = request->model_spec().name();
-
+    model_version_t version = request->model_spec().has_version() ? request->model_spec().version().value() : 0;
     auto& manager = ovms::ModelManager::getInstance();
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
-        SPDLOG_INFO("model {} is  missing", name);
-        return StatusCode::MODEL_NAME_MISSING;
+        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
+        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
+        if (!pipelineDefinition) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        return buildResponse(*pipelineDefinition, response, manager);
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
-    if (request->model_spec().has_version() && request->model_spec().version().value() != 0) {
-        ovms::model_version_t version = request->model_spec().version().value();
-        SPDLOG_DEBUG("requested: name {}; version {}", name, version);
+    if (version != 0) {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_INFO("model {}; version {} is missing", name, version);
+            SPDLOG_INFO("GetModelMetadata requested model: name {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
-        SPDLOG_DEBUG("requested: name {}; default version", name);
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_INFO("model {}; default version is missing", name);
+            SPDLOG_INFO("GetModelMetadata requested model: name {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
