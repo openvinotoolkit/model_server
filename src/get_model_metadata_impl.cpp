@@ -125,20 +125,19 @@ Status GetModelMetadataImpl::buildResponse(
 }
 
 Status GetModelMetadataImpl::buildResponse(
-    const PipelineDefinition& pipelineDefinition,
+    PipelineDefinition& pipelineDefinition,
     tensorflow::serving::GetModelMetadataResponse* response,
     const ModelManager& manager) {
 
-    // TODO: Uncomment before release
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    // std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
-    // auto status = pipelineDefinition->waitForLoaded(0, unloadGuard);
-    // if (!status.ok()) {
-    //     return status;
-    // }
+    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    auto status = pipelineDefinition.waitForLoaded(unloadGuard, 0);
+    if (!status.ok()) {
+        return status;
+    }
 
     tensor_map_t inputs, outputs;
-    auto status = pipelineDefinition.getInputsInfo(inputs, manager);
+    status = pipelineDefinition.getInputsInfo(inputs, manager);
     if (!status.ok()) {
         return status;
     }

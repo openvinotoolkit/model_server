@@ -156,7 +156,6 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectMetadataSignatureName) {
 }
 
 TEST_F(GetModelMetadataResponseBuild, HasOneSignatureDef) {
-
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 

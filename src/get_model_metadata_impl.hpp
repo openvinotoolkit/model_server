@@ -44,7 +44,7 @@ public:
         std::shared_ptr<ModelInstance> instance,
         tensorflow::serving::GetModelMetadataResponse* response);
     static Status buildResponse(
-        const PipelineDefinition& pipelineDefinition,
+        PipelineDefinition& pipelineDefinition,
         tensorflow::serving::GetModelMetadataResponse* response,
         const ModelManager& manager);
 

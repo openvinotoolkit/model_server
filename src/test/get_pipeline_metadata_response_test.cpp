@@ -237,12 +237,12 @@ TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedYet) {
 }
 
 TEST_F(GetPipelineMetadataResponse, DISABLED_PipelineNotLoadedAnymore) {
-    // TODO: Implement once waitForLoaded is added to PipelineDefinition class
+    // TODO: Implement once waitForLoaded is fully added to PipelineDefinition class
     EXPECT_TRUE(false) << "Not implemented";
 }
 
 TEST_F(GetPipelineMetadataResponse, DISABLED_PipelineNotLoadedYet) {
-    // TODO: Implement once waitForLoaded is added to PipelineDefinition class
+    // TODO: Implement once waitForLoaded is fully added to PipelineDefinition class
     EXPECT_TRUE(false) << "Not implemented";
 }
 
