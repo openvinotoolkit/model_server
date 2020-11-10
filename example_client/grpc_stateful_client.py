@@ -66,54 +66,36 @@ for key, obj in ark_reader:
     print("Input ark file data range {0}: {1}".format(key, obj.shape))
     iterations += 1
 
-exit(0)
-
-# optional preprocessing depending on the model
-imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
-imgs = imgs - np.min(imgs)  # Normalization 0-255
-imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
-#imgs = imgs[:,:,:,::-1] # RGB to BGR
-print('Image data range:', np.amin(imgs), ':', np.amax(imgs))
-# optional preprocessing depending on the model
-
-if args.get('labels_numpy_path') is not None:
-    lbs = np.load(args['labels_numpy_path'], mmap_mode='r', allow_pickle=False)
-    matched_count = 0
-    total_executed = 0
-batch_size = int(args.get('batchsize'))
-
-
-while batch_size >= imgs.shape[0]:
-    imgs = np.append(imgs, imgs, axis=0)
-    if args.get('labels_numpy_path') is not None:
-        lbs = np.append(lbs, lbs, axis=0)
-
-iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
-
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 print('\tIterations: {}'.format(iterations))
 print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
-if args.get('transpose_input') == "True":
-    if args.get('transpose_method') == "nhwc2nchw":
-        imgs = imgs.transpose((0,3,1,2))
-    if args.get('transpose_method') == "nchw2nhwc":
-        imgs = imgs.transpose((0,2,3,1))
-print('\tImages in shape: {}\n'.format(imgs.shape))
+
 
 iteration = 0
 is_pipeline_request = bool(args.get('pipeline_name'))
 
-while iteration <= iterations:
-    for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
+SEQUENCE_START = 0
+SEQUENCE_END = 1
+
+for key, obj in ark_reader:
+    batch_size = obj.shape[0]
+    print('\tInput name: {}\n'.format(key))
+    print('\tInput in shape: {}\n'.format(obj.shape))
+    print('\tInput batch size: {}\n'.format(batch_size))
+    for x in range(0, batch_size):
         iteration += 1
-        if iteration > iterations: break
         request = predict_pb2.PredictRequest()
-        request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
+        #request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
+        request.model_spec.name = args.get('model_name')
         img = imgs[x:(x + batch_size)]
-        if args.get('labels_numpy_path') is not None:
-            lb = lbs[x:(x + batch_size)]
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
+
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj, shape=(obj.shape)))
+        if iteration == 1:
+            request.inputs['sequence_control_input'] = SEQUENCE_START
+        if iteration == batch_size + 1:
+            request.inputs['sequence_control_input'] = SEQUENCE_END
+
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
@@ -123,6 +105,14 @@ while iteration <= iterations:
             for Y in result.outputs:
                 print(Y)
             exit(1)
+
+        if 'sequence_id' not in result.outputs:
+            print("Missing sequence_id in model output")
+            print("Available outputs:")
+            for Y in result.outputs:
+                print(Y)
+            exit(1)
+
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
         output = make_ndarray(result.outputs[args['output_name']])
@@ -132,28 +122,5 @@ while iteration <= iterations:
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
                                                                                   round(1000 * batch_size / np.average(duration), 2)
                                                                                   ))
-        # Comment out this section for non imagenet datasets
-        print("imagenet top results in a single batch:")
-        for i in range(nu.shape[0]):
-            if is_pipeline_request:
-                # shape (1,)
-                ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
-            else:
-                # shape (1,1000)
-                single_result = nu[[i],...]
-                ma = np.argmax(single_result)
-            mark_message = ""
-            if args.get('labels_numpy_path') is not None:
-                total_executed += 1
-                if ma == lb[i]:
-                    matched_count += 1
-                    mark_message = "; Correct match."
-                else:
-                    mark_message = "; Incorrect match. Should be {} {}".format(lb[i], classes.imagenet_classes[lb[i]] )
-            print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
-        # Comment out this section for non imagenet datasets
 
 print_statistics(processing_times, batch_size)
-
-if args.get('labels_numpy_path') is not None:
-    print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
