@@ -138,8 +138,12 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
                     {sourceNodeName,
                         {{sourceOutputName, inputName}}}};
             } else {
-                connections[nodeName].insert({sourceNodeName,
-                    {{sourceOutputName, inputName}}});
+                if (connections[nodeName].find(sourceNodeName) == connections[nodeName].end()) {
+                    connections[nodeName].insert({sourceNodeName,
+                        {{sourceOutputName, inputName}}});
+                } else {
+                    connections[nodeName][sourceNodeName].push_back({sourceOutputName, inputName});
+                }
             }
         }
     }
