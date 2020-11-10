@@ -75,8 +75,8 @@ print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
 iteration = 0
 is_pipeline_request = bool(args.get('pipeline_name'))
 
-SEQUENCE_START = 0
-SEQUENCE_END = 1
+SEQUENCE_START = 1
+SEQUENCE_END = 2
 
 for key, obj in ark_reader:
     batch_size = obj.shape[0]
@@ -88,13 +88,13 @@ for key, obj in ark_reader:
         request = predict_pb2.PredictRequest()
         #request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
         request.model_spec.name = args.get('model_name')
-        img = imgs[x:(x + batch_size)]
 
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj, shape=(obj.shape)))
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(obj[x].shape)))
         if iteration == 1:
-            request.inputs['sequence_control_input'] = SEQUENCE_START
+            #request.inputs['sequence_id'].CopyFrom(make_tensor_proto(123, dtype="uint64"))
+            request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
         if iteration == batch_size + 1:
-            request.inputs['sequence_control_input'] = SEQUENCE_END
+            request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
 
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
