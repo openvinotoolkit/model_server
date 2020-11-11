@@ -267,11 +267,11 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             getVersion(),
             this->config.getCustomLoaderOptionsConfigStr(),
             &xmlBuffer, &xmlLen, &binBuffer, &binLen);
-        if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR)|| (res == CustomLoaderStatus::INTERNAL_ERROR)){
+        if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR) || (res == CustomLoaderStatus::INTERNAL_ERROR)) {
             return StatusCode::INTERNAL_ERROR;
         }
 
-	// Ravikb--> Todo check return make empty blob 
+        // Ravikb--> Todo check return make empty blob
         std::string strModel(xmlBuffer);
         std::vector<uint8_t> weights(&binBuffer[0], &binBuffer[binLen]);
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,

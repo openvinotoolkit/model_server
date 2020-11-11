@@ -622,7 +622,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
             // check existing version for blacklist
             for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                    spdlog::info("The model {} checking for blacklist", versionInstance->getName());
+                spdlog::info("The model {} checking for blacklist", versionInstance->getName());
                 CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
                 if (bres != CustomLoaderStatus::OK) {
                     spdlog::info("The model {} is blacklisted", versionInstance->getName());

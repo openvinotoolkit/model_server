@@ -29,11 +29,11 @@
  *
  */
 #include <chrono>
-#include <fstream>
-#include <mutex>
 #include <condition_variable>
+#include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -54,7 +54,7 @@ using namespace ovms;
 #define SAMPLE_LOADER_OK 0
 #define SAMPLE_LOADER_ERROR 0x10
 
-#define SAMPLE_LOADER_IR_MODEL   0
+#define SAMPLE_LOADER_IR_MODEL 0
 #define SAMPLE_LOADER_ONNX_MODEL 1
 #define SAMPLE_LOADER_BLOB_MODEL 2
 
@@ -80,16 +80,16 @@ typedef std::pair<std::string, int> model_id_t;
 class custSampleLoader : public CustomLoaderInterface {
 private:
     std::vector<model_id_t> models_loaded;
-    std::map<model_id_t,std::string> models_enable;
-    std::map<model_id_t,bool> models_blacklist;
+    std::map<model_id_t, std::string> models_enable;
+    std::map<model_id_t, bool> models_blacklist;
     std::mutex map_mutex;
 
 protected:
     int extract_input_params(const std::string& basePath, int version, const std::string& loaderOptions,
-    			std::string& binFile, std::string& modelFile, std::string& enableFile, int& modelType);
+        std::string& binFile, std::string& modelFile, std::string& enableFile, int& modelType);
 
-    int load_files(std::string& binFile, std::string& modelFile, int modelType, char** modelBuffer, 
-		    char** binBuffer, int* modelLen, int* binLen);
+    int load_files(std::string& binFile, std::string& modelFile, int modelType, char** modelBuffer,
+        char** binBuffer, int* modelLen, int* binLen);
 
     // Variables needed to manage the periodic thread.
     std::mutex cv_m;
@@ -141,31 +141,29 @@ CustomLoaderStatus custSampleLoader::loaderInit(const std::string& loader_path) 
 }
 
 // Helper function to load the binary files
-int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, int modelType, 
-		char** modelBuffer, char** binBuffer, int* modelLen, int* binLen) {
+int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, int modelType,
+    char** modelBuffer, char** binBuffer, int* modelLen, int* binLen) {
 
     std::streampos size;
 
     // incase the model is a onxx or blob type, the bin file will not be there.
     // skip parsing the bin file and return NULL in binBuffer
-    if (modelType == SAMPLE_LOADER_IR_MODEL){
-	    std::ifstream bfile(binFile, std::ios::in | std::ios::binary | std::ios::ate);
-	    if (bfile.is_open()) {
-		    size = bfile.tellg();
-		    *binLen = size;
-		    *binBuffer = new char[size];
-		    bfile.seekg(0, std::ios::beg);
-		    bfile.read(*binBuffer, size);
-		    bfile.close();
-	    } 
-	    else {
-		    std::cout << "Unable to open bin file" << std::endl;
-		    return SAMPLE_LOADER_ERROR;
-	    }
-    }
-    else {
-	    *binBuffer = NULL;
-	    binLen = 0;
+    if (modelType == SAMPLE_LOADER_IR_MODEL) {
+        std::ifstream bfile(binFile, std::ios::in | std::ios::binary | std::ios::ate);
+        if (bfile.is_open()) {
+            size = bfile.tellg();
+            *binLen = size;
+            *binBuffer = new char[size];
+            bfile.seekg(0, std::ios::beg);
+            bfile.read(*binBuffer, size);
+            bfile.close();
+        } else {
+            std::cout << "Unable to open bin file" << std::endl;
+            return SAMPLE_LOADER_ERROR;
+        }
+    } else {
+        *binBuffer = NULL;
+        binLen = 0;
     }
 
     std::ifstream xfile(modelFile, std::ios::in | std::ios::ate);
@@ -184,16 +182,16 @@ int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, i
 }
 
 int custSampleLoader::extract_input_params(const std::string& basePath, const int version, const std::string& loaderOptions,
-		std::string& binFile, std::string& modelFile, std::string& enableFile, int& modelType){
+    std::string& binFile, std::string& modelFile, std::string& enableFile, int& modelType) {
 
     int ret = SAMPLE_LOADER_OK;
     Document doc;
 
-    if (basePath.empty()| loaderOptions.empty()) {
+    if (basePath.empty() | loaderOptions.empty()) {
         std::cout << "custSampleLoader: Invalid input parameters to loadModel" << std::endl;
         return SAMPLE_LOADER_ERROR;
     }
-    
+
     std::string fullPath = basePath + "/" + std::to_string(version);
 
     // parse jason input string
@@ -206,41 +204,38 @@ int custSampleLoader::extract_input_params(const std::string& basePath, const in
 
     // Optional Enable file
     if (doc.HasMember("enable_file")) {
-	enableFile = fullPath + "/" + doc["enable_file"].GetString();
+        enableFile = fullPath + "/" + doc["enable_file"].GetString();
         std::cout << "Enable File = " << enableFile << std::endl;
     }
 
     // Xml file is sent . So need to have bin file. Get both
     if (doc.HasMember("model_file")) {
-	std::string modelName =  doc["model_file"].GetString();
-	modelFile = fullPath + "/" + modelName;
+        std::string modelName = doc["model_file"].GetString();
+        modelFile = fullPath + "/" + modelName;
         std::cout << "modelFile:" << modelFile << std::endl;
 
-	std::string extn;
-	extn = modelName.substr(modelName.find_last_of(".")+1);
-	if (extn == "xml"){
-		std::cout << "XML File" << std::endl;
-		modelType = SAMPLE_LOADER_IR_MODEL;
-	}
-	else if (extn == "onxx"){
-		std::cout << "XML File" << std::endl;
-		modelType = SAMPLE_LOADER_ONNX_MODEL;
-	}
-	else if (extn == "blob"){
-		std::cout << "XML File" << std::endl;
-		modelType = SAMPLE_LOADER_BLOB_MODEL;
-	}
-	else {
-		std::cout << "UNKNOWN file extension" << std::endl;
-		return SAMPLE_LOADER_ERROR;
-	}
+        std::string extn;
+        extn = modelName.substr(modelName.find_last_of(".") + 1);
+        if (extn == "xml") {
+            std::cout << "XML File" << std::endl;
+            modelType = SAMPLE_LOADER_IR_MODEL;
+        } else if (extn == "onxx") {
+            std::cout << "XML File" << std::endl;
+            modelType = SAMPLE_LOADER_ONNX_MODEL;
+        } else if (extn == "blob") {
+            std::cout << "XML File" << std::endl;
+            modelType = SAMPLE_LOADER_BLOB_MODEL;
+        } else {
+            std::cout << "UNKNOWN file extension" << std::endl;
+            return SAMPLE_LOADER_ERROR;
+        }
     }
 
     if (modelType == SAMPLE_LOADER_IR_MODEL) {
-	    if (doc.HasMember("bin_file")) {
-		    binFile = fullPath + "/" + doc["bin_file"].GetString();
-		    std::cout << "Bin File = " << binFile << std::endl;
-	    }
+        if (doc.HasMember("bin_file")) {
+            binFile = fullPath + "/" + doc["bin_file"].GetString();
+            std::cout << "Bin File = " << binFile << std::endl;
+        }
     }
 
     return ret;
@@ -257,55 +252,54 @@ void custSampleLoader::threadFunction() {
 
     while (waitContinue) {
         std::cout << "custSampleLoader: Doing Some Work " << std::endl;
-	std::cv_status ret = cv.wait_for(lk, std::chrono::seconds(watchIntervalSec));
-	if (ret == std::cv_status::timeout) {
-		// before starting next wait period, check if someone trying to disable the thread.
-		if (watcherStarted == false)
-			break;
-		// Now check status of all the models and create a new blacklist
-		std::cout << "Checking Model Status" << std::endl;
-		checkModelStatus();	
-	}
-	else {
-		std::cout << "Signalled to stop.. exiting..." <<std::endl;
-		waitContinue = false;
-	}
+        std::cv_status ret = cv.wait_for(lk, std::chrono::seconds(watchIntervalSec));
+        if (ret == std::cv_status::timeout) {
+            // before starting next wait period, check if someone trying to disable the thread.
+            if (watcherStarted == false)
+                break;
+            // Now check status of all the models and create a new blacklist
+            std::cout << "Checking Model Status" << std::endl;
+            checkModelStatus();
+        } else {
+            std::cout << "Signalled to stop.. exiting..." << std::endl;
+            waitContinue = false;
+        }
     }
     std::cout << "custSampleLoader: Thread END" << std::endl;
 }
 
 void custSampleLoader::checkModelStatus() {
-    std::map<model_id_t,bool> models_blacklist_local;
-    
-    for (auto it= std::begin(models_loaded); it != std::end(models_loaded); it++){
-	if (models_enable.find(*it) == models_enable.end())
-		continue;
+    std::map<model_id_t, bool> models_blacklist_local;
 
-         std::string fileName = models_enable[*it];
-	 std::cout << "Reading File:: " << fileName << std::endl;
-	 std::ifstream fileToRead(fileName);
-	 std::string stateStr;
-	 if (fileToRead.is_open()) {
-              getline(fileToRead, stateStr);
-         }
+    for (auto it = std::begin(models_loaded); it != std::end(models_loaded); it++) {
+        if (models_enable.find(*it) == models_enable.end())
+            continue;
 
-         if (stateStr == "DISABLED") {
-		std::cout << "Balcklisting Model:: " << it->first << std::endl;
-		models_blacklist_local.insert({*it,true});
-	 }
+        std::string fileName = models_enable[*it];
+        std::cout << "Reading File:: " << fileName << std::endl;
+        std::ifstream fileToRead(fileName);
+        std::string stateStr;
+        if (fileToRead.is_open()) {
+            getline(fileToRead, stateStr);
+        }
+
+        if (stateStr == "DISABLED") {
+            std::cout << "Balcklisting Model:: " << it->first << std::endl;
+            models_blacklist_local.insert({*it, true});
+        }
     }
 
     // Now take the mutex and copy to original map
     std::lock_guard<std::mutex> guard(map_mutex);
     models_blacklist.clear();
-    models_blacklist.insert(models_blacklist_local.begin(),models_blacklist_local.end());
+    models_blacklist.insert(models_blacklist_local.begin(), models_blacklist_local.end());
 }
 
 void custSampleLoader::startWatcher(int interval) {
     watchIntervalSec = interval;
 
     if ((!watcherStarted) && (watchIntervalSec > 0)) {
-	std::thread th(std::thread(&custSampleLoader::threadFunction, this));
+        std::thread th(std::thread(&custSampleLoader::threadFunction, this));
         watcher_thread = std::move(th);
         watcherStarted = true;
     }
@@ -315,11 +309,11 @@ void custSampleLoader::startWatcher(int interval) {
 void custSampleLoader::watcherJoin() {
     std::cout << "custSampleLoader: watcherJoin()" << std::endl;
     if (watcherStarted) {
-	    if (watcher_thread.joinable()) {
-		    watcherStarted = false;
-		    cv.notify_all();
-		    watcher_thread.join();
-	    }
+        if (watcher_thread.joinable()) {
+            watcherStarted = false;
+            cv.notify_all();
+            watcher_thread.join();
+        }
     }
 }
 
@@ -328,54 +322,54 @@ void custSampleLoader::watcherJoin() {
  * load the model and optional bin file into buffers and return
  */
 CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, const std::string& basePath, const int version,
-		const std::string& loaderOptions, char** xmlBuffer, int* xmlLen,
-		char** binBuffer, int* binLen) {
-	std::cout << "custSampleLoader: Custom loadModel" << std::endl;
+    const std::string& loaderOptions, char** xmlBuffer, int* xmlLen,
+    char** binBuffer, int* binLen) {
+    std::cout << "custSampleLoader: Custom loadModel" << std::endl;
 
-	std::string binFile;
-	std::string modelFile;
-	std::string enableFile;
-	int modelType = SAMPLE_LOADER_IR_MODEL;
-	CustomLoaderStatus st = CustomLoaderStatus::MODEL_LOAD_ERROR;
+    std::string binFile;
+    std::string modelFile;
+    std::string enableFile;
+    int modelType = SAMPLE_LOADER_IR_MODEL;
+    CustomLoaderStatus st = CustomLoaderStatus::MODEL_LOAD_ERROR;
 
-	int ret =
-		extract_input_params(basePath, version, loaderOptions, binFile, modelFile, enableFile, modelType);
-	if (ret != SAMPLE_LOADER_OK){
-		std::cout << "custSampleLoader: Invalid custom loader options" << std::endl;
-		return st;
-	}
+    int ret =
+        extract_input_params(basePath, version, loaderOptions, binFile, modelFile, enableFile, modelType);
+    if (ret != SAMPLE_LOADER_OK) {
+        std::cout << "custSampleLoader: Invalid custom loader options" << std::endl;
+        return st;
+    }
 
-	// load models
-	ret = load_files(binFile, modelFile, modelType, xmlBuffer, binBuffer, xmlLen, binLen);
-	if (ret != SAMPLE_LOADER_OK || *xmlBuffer == NULL){
-		std::cout << "custSampleLoader: Could not read model files" << std::endl;
-		return CustomLoaderStatus::INTERNAL_ERROR;
-	}
+    // load models
+    ret = load_files(binFile, modelFile, modelType, xmlBuffer, binBuffer, xmlLen, binLen);
+    if (ret != SAMPLE_LOADER_OK || *xmlBuffer == NULL) {
+        std::cout << "custSampleLoader: Could not read model files" << std::endl;
+        return CustomLoaderStatus::INTERNAL_ERROR;
+    }
 
-	/* Start the watcher thread after first moel load */
-	if (watcherStarted == false) {
-		startWatcher(MODEL_CHECK_PERIOD);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
+    /* Start the watcher thread after first moel load */
+    if (watcherStarted == false) {
+        startWatcher(MODEL_CHECK_PERIOD);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
-	models_loaded.emplace_back (std::make_pair(modelName, version));
+    models_loaded.emplace_back(std::make_pair(modelName, version));
 
-        if (!(enableFile.empty())){
-	     models_enable.insert({std::make_pair(modelName, version),enableFile});
-	}
-	if (modelType == SAMPLE_LOADER_IR_MODEL)
-		st = CustomLoaderStatus::MODEL_TYPE_IR;
-	else if (modelType == SAMPLE_LOADER_ONNX_MODEL)
-		st = CustomLoaderStatus::MODEL_TYPE_ONNX;
-	else if (modelType == SAMPLE_LOADER_BLOB_MODEL)
-		st = CustomLoaderStatus::MODEL_TYPE_BLOB;
+    if (!(enableFile.empty())) {
+        models_enable.insert({std::make_pair(modelName, version), enableFile});
+    }
+    if (modelType == SAMPLE_LOADER_IR_MODEL)
+        st = CustomLoaderStatus::MODEL_TYPE_IR;
+    else if (modelType == SAMPLE_LOADER_ONNX_MODEL)
+        st = CustomLoaderStatus::MODEL_TYPE_ONNX;
+    else if (modelType == SAMPLE_LOADER_BLOB_MODEL)
+        st = CustomLoaderStatus::MODEL_TYPE_BLOB;
 
-	return st;
+    return st;
 }
 
 // Unload model from loaded models list.
 CustomLoaderStatus custSampleLoader::unloadModel(const std::string& modelName, int version) {
-	std::cout << "custSampleLoader: Custom unloadModel" << std::endl;
+    std::cout << "custSampleLoader: Custom unloadModel" << std::endl;
 
     model_id_t toFind = std::make_pair(modelName, version);
 
@@ -418,4 +412,3 @@ CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& 
     /* model name and version in blacklist.. return true */
     return CustomLoaderStatus::MODEL_BLACKLISTED;
 }
-
