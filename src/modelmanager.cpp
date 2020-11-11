@@ -266,7 +266,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
             SPDLOG_INFO("Ravikb::(1) customerLoaderIfPtr refcount = {}", customerLoaderIfPtr.use_count());
             try {
-                customerLoaderIfPtr->loaderInit(const_cast<char*>(loaderConfig.getLoaderConfigFile().c_str()));
+                customerLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
             } catch (...) {
                 SPDLOG_ERROR("Cannot create or initialize the custom loader");
                 return StatusCode::CUSTOM_LOADER_INIT_FAILED;
@@ -624,8 +624,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
             // check existing version for blacklist
             for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                bool bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName().c_str(), version);
-                if (bres) {
+                    spdlog::info("The model {} checking for blacklist", versionInstance->getName());
+                CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
+                if (bres != CustomLoaderStatus::OK) {
                     spdlog::info("The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
                 }
@@ -636,7 +637,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
-
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToStart->size() > 0) {

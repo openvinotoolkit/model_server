@@ -21,6 +21,16 @@
 
 namespace ovms {
 
+enum class CustomLoaderStatus {
+	OK, /*!< Success */
+	MODEL_TYPE_IR, /*!< When model buffers are returned, they belong to IR model */
+	MODEL_TYPE_ONNX, /*!< When model buffers are returned, they belong to ONXX model */
+	MODEL_TYPE_BLOB, /*!< When model buffers are returned, they belong to Blob */
+	MODEL_LOAD_ERROR, /*!< Error while loading the model */
+	MODEL_BLACKLISTED, /*!< Model is blacklisted. Do not load */
+	INTERNAL_ERROR /*!< generic error */
+};
+
 /**
      * @brief This class is the custom loader interface base class.
      * Custom Loaders need to implement this interface and define the virtual functions to enable
@@ -46,7 +56,7 @@ public:
          *
          * @return status
          */
-    virtual int loaderInit(char* loaderConfigFile) = 0;
+    virtual CustomLoaderStatus loaderInit(const std::string& loaderConfigFile) = 0;
 
     /**
          * @brief Load the model by the custom loader
@@ -61,10 +71,10 @@ public:
          * @param length of the weights buffer
          * @return status
          */
-    virtual int loadModel(const char* modelName,
-        const char* basePath,
+    virtual CustomLoaderStatus loadModel(const std::string& modelName,
+        const std::string& basePath,
         const int version,
-        const char* loaderOptions,
+        const std::string& loaderOptions,
         char** xmlBuffer, int* xmlLen,
         char** binBuffer, int* binLen) = 0;
 
@@ -75,8 +85,8 @@ public:
          * @param version for which the black list status is required
          * @return blacklist status
          */
-    virtual bool getModelBlacklistStatus(const char* modelName, int version) {
-        return false;
+    virtual CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, int version) {
+        return CustomLoaderStatus::OK;
     }
 
     /**
@@ -86,17 +96,16 @@ public:
          * @param version which is been unloaded
          * @return status
          */
-    virtual int unloadModel(const char* modelName, int version) = 0;
+    virtual CustomLoaderStatus unloadModel(const std::string& modelName, int version) = 0;
 
     /**
          * @brief Deinitialize the custom loader
          *
          */
-    virtual void loaderDeInit() = 0;
+    virtual CustomLoaderStatus loaderDeInit() = 0;
 };
 
 // the types of the class factories
 typedef CustomLoaderInterface* createCustomLoader_t();
-// typedef void destroyCustomLoader_t(CustomLoaderInterface*);
 
 }  // namespace ovms

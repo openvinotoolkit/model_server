@@ -262,14 +262,16 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             throw std::invalid_argument("customloader not exisiting");
         }
 
-        int res = customLoaderInterfacePtr->loadModel(this->config.getName().c_str(),
-            this->config.getBasePath().c_str(),
+        CustomLoaderStatus res = customLoaderInterfacePtr->loadModel(this->config.getName(),
+            this->config.getBasePath(),
             getVersion(),
-            this->config.getCustomLoaderOptionsConfigStr().c_str(),
+            this->config.getCustomLoaderOptionsConfigStr(),
             &xmlBuffer, &xmlLen, &binBuffer, &binLen);
-        if (res != 1) {
+        if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR)|| (res == CustomLoaderStatus::INTERNAL_ERROR)){
             return StatusCode::INTERNAL_ERROR;
         }
+
+	// Ravikb--> Todo check return make empty blob 
         std::string strModel(xmlBuffer);
         std::vector<uint8_t> weights(&binBuffer[0], &binBuffer[binLen]);
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
@@ -611,7 +613,7 @@ void ModelInstance::unloadModel() {
             SPDLOG_INFO("The loader {} is nolonger available", customLoaderName);
         } else {
             // once model is unloaded, notify custom loader object about the unload
-            customLoaderInterfacePtr->unloadModel(getName().c_str(), getVersion());
+            customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
 }
