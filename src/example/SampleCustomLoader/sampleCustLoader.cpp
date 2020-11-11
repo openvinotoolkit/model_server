@@ -44,7 +44,6 @@
 
 #include "../../customloaderinterface.hpp"
 
-//using namespace std;
 using namespace rapidjson;
 using namespace ovms;
 
@@ -116,7 +115,7 @@ public:
     void threadFunction();
     void checkModelStatus();
 
-    //Functions to start and stop the periodic thread.
+    // Functions to start and stop the periodic thread.
     void startWatcher(int intervalSec);
     void watcherJoin();
 };
@@ -395,7 +394,6 @@ CustomLoaderStatus custSampleLoader::loaderDeInit() {
 }
 
 CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& modelName, int version) {
-
     std::cout << "custSampleLoader: Custom getModelBlacklistStatus" << std::endl;
 
     model_id_t toFind = std::make_pair(modelName, version);
