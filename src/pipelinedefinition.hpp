@@ -105,8 +105,8 @@ public:
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
-    Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
-    Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+    virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
+    virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
 
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;
