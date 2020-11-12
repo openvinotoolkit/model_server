@@ -262,7 +262,7 @@ TEST(ModelService, CustomLoaderGetStatus) {
       ]
     })";
 
-    //std::string fileToReload = "/tmp/ovms_config_cl.json";
+    // std::string fileToReload = "/tmp/ovms_config_cl.json";
     std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
 
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
@@ -319,3 +319,4 @@ TEST(ModelService, CustomLoaderGetStatusDeleteModelGetStatus) {
     ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
     EXPECT_EQ(ret.ok(), true);
 }
+

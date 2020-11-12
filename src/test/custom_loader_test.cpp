@@ -37,7 +37,7 @@ using testing::Eq;
 
 namespace {
 
-//config_model_with_customloader
+// config_model_with_customloader
 const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
          {
@@ -59,7 +59,7 @@ const char* custom_loader_config_model = R"({
       ]
     })";
 
-//config_no_model_with_customloader
+// config_no_model_with_customloader
 const char* custom_loader_config_model_deleted = R"({
        "custom_loader_config_list":[
          {
@@ -72,7 +72,7 @@ const char* custom_loader_config_model_deleted = R"({
       "model_config_list":[]
     })";
 
-//config_2_models_with_customloader
+// config_2_models_with_customloader
 const char* custom_loader_config_model_new = R"({
        "custom_loader_config_list":[
          {
@@ -102,7 +102,7 @@ const char* custom_loader_config_model_new = R"({
       ]
     })";
 
-//config_model_without_customloader_options
+// config_model_without_customloader_options
 const char* custom_loader_config_model_customloader_options_removed = R"({
        "custom_loader_config_list":[
          {
