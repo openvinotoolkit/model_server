@@ -35,11 +35,10 @@ using testing::Eq;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
-
 namespace {
 
-    //config_model_with_customloader
-    const char* custom_loader_config_model = R"({
+//config_model_with_customloader
+const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
          {
           "config":{
@@ -60,8 +59,8 @@ namespace {
       ]
     })";
 
-    //config_no_model_with_customloader
-    const char* custom_loader_config_model_deleted = R"({
+//config_no_model_with_customloader
+const char* custom_loader_config_model_deleted = R"({
        "custom_loader_config_list":[
          {
           "config":{
@@ -73,8 +72,8 @@ namespace {
       "model_config_list":[]
     })";
 
-    //config_2_models_with_customloader
-    const char* custom_loader_config_model_new = R"({
+//config_2_models_with_customloader
+const char* custom_loader_config_model_new = R"({
        "custom_loader_config_list":[
          {
           "config":{
@@ -103,8 +102,8 @@ namespace {
       ]
     })";
 
-    //config_model_without_customloader_options
-    const char* custom_loader_config_model_customloader_options_removed = R"({
+//config_model_without_customloader_options
+const char* custom_loader_config_model_customloader_options_removed = R"({
        "custom_loader_config_list":[
          {
           "config":{
@@ -124,7 +123,7 @@ namespace {
       ]
     })";
 
-    const char* config_model_with_customloader_options_unknown_loadername = R"({
+const char* config_model_with_customloader_options_unknown_loadername = R"({
        "custom_loader_config_list":[
          {
           "config":{
@@ -152,7 +151,7 @@ const std::string cl_models_path = "/tmp/test_cl_models/";
 const std::string cl_model_1_path = cl_models_path + "model1/";
 const std::string cl_model_2_path = cl_models_path + "model2/";
 
-}
+}  // namespace
 
 class TestCustomLoader : public ::testing::Test {
 public:
@@ -315,8 +314,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
-    std::unique_ptr<std::future<void>> waitBeforePerformInference)
-    {
+    std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
@@ -517,4 +515,3 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
 }
 
 #pragma GCC diagnostic pop
-

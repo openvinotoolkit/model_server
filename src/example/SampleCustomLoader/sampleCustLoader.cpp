@@ -358,7 +358,7 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     models_loaded.emplace_back(modelId);
 
     if (std::find(models_watched.begin(), models_watched.end(), modelId) == models_watched.end()) {
-	    models_watched.emplace_back(modelId);
+        models_watched.emplace_back(modelId);
     }
 
     if (!(enableFile.empty())) {
@@ -379,9 +379,9 @@ CustomLoaderStatus custSampleLoader::retireModel(const std::string& modelName) {
     std::vector<model_id_t> newVec;
 
     for (auto it = std::begin(models_watched); it != std::end(models_watched); it++) {
-	    if (it->first != modelName) {
-		    newVec.emplace_back(*it);
-	    }
+        if (it->first != modelName) {
+            newVec.emplace_back(*it);
+        }
     }
     std::lock_guard<std::mutex> guard(models_watched_mutex);
     models_watched.clear();

@@ -200,9 +200,7 @@ TEST(RestModelStatus, serialize2Json) {
     EXPECT_EQ(json_output, expected_json);
 }
 
-
-TEST(ModelService, CustomLoaderSingleVersion)
-{
+TEST(ModelService, CustomLoaderSingleVersion) {
     const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
          {
@@ -242,9 +240,7 @@ TEST(ModelService, CustomLoaderSingleVersion)
     EXPECT_EQ(ret.ok(), true);
 }
 
-
-TEST(ModelService, CustomLoaderGetStatus)
-{
+TEST(ModelService, CustomLoaderGetStatus) {
     const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
          {
@@ -284,8 +280,7 @@ TEST(ModelService, CustomLoaderGetStatus)
     EXPECT_EQ(ret.ok(), true);
 }
 
-TEST(ModelService, CustomLoaderGetStatusDeleteModelGetStatus)
-{
+TEST(ModelService, CustomLoaderGetStatusDeleteModelGetStatus) {
     const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
          {

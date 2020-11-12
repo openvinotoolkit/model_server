@@ -96,8 +96,6 @@ const std::string model_2_path = "/tmp/models/dummy2/2";
 
 const std::string model_cl_path = "/tmp/models/dummycl/1";
 
-
-
 const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(3);
 
 class MockModel : public ovms::Model {
@@ -862,13 +860,6 @@ TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurati
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
 
-
-
-
-
-
-
-
 TEST(ModelManager, CustomLoaderStartFromFile) {
     std::filesystem::create_directories(model_cl_path);
     std::string fileToReload = "/tmp/ovms_config_cl.json";
@@ -885,8 +876,6 @@ TEST(ModelManager, CustomLoaderStartFromFile) {
     manager.join();
     modelMock.reset();
 }
-
-
 
 TEST(ModelManager, customloaderStartFromFile) {
     std::filesystem::create_directories(model_cl_path);

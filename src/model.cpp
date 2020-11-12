@@ -14,12 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 #include "model.hpp"
-#include "customloaders.hpp"
 
 #include <map>
 #include <memory>
 #include <sstream>
 #include <utility>
+
+#include "customloaders.hpp"
 
 namespace ovms {
 
@@ -82,10 +83,7 @@ Status Model::addVersion(const ModelConfig& config) {
     const auto& version = config.getVersion();
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory();
-    if (config.isCustomLoaderRequiredToLoadModel()) {
-        // if model requires custom loader, set the custom loader interface pointer object to modelInstance
-        modelInstance->setCustomLoaderName(customLoaderName);
-    }
+
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
         return status;
@@ -138,10 +136,10 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
 }
 
 void Model::retireAllVersions() {
-    if (!(customLoaderName.empty())){
-	    auto& customloaders = ovms::CustomLoaders::instance();
-	    auto loaderPtr = customloaders.find(customLoaderName);
-	    loaderPtr->retireModel(name);
+    if (!(customLoaderName.empty())) {
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(customLoaderName);
+        loaderPtr->retireModel(name);
     }
 
     for (const auto versionModelInstancePair : modelVersions) {

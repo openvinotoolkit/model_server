@@ -611,7 +611,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
 
     // first set custom loader name to empty string so that any changes to name can be captured
-    std:: string emptyString = std::string();
+    std::string emptyString = std::string();
     model->setCustomLoaderName(emptyString);
 
     if (config.isCustomLoaderRequiredToLoadModel()) {
