@@ -276,7 +276,6 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
             make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
-
     } catch (std::exception& e) {
         spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
