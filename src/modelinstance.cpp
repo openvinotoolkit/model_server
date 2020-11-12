@@ -248,10 +248,8 @@ Status ModelInstance::loadOVCNNNetwork() {
 Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
     spdlog::debug("Try reading model using a custom loader");
     try {
-        char* xmlBuffer = NULL;
-        int xmlLen = 0;
-        char* binBuffer = NULL;
-        int binLen = 0;
+        std::vector<uint8_t> model;
+        std::vector<uint8_t> weights;
 
         SPDLOG_INFO("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
 
@@ -268,24 +266,17 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         CustomLoaderStatus res = customLoaderInterfacePtr->loadModel(this->config.getName(),
             this->config.getBasePath(),
             getVersion(),
-            this->config.getCustomLoaderOptionsConfigStr(),
-            &xmlBuffer, &xmlLen, &binBuffer, &binLen);
+            this->config.getCustomLoaderOptionsConfigStr(), model, weights);
+
         if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR) || (res == CustomLoaderStatus::INTERNAL_ERROR)) {
             return StatusCode::INTERNAL_ERROR;
         }
 
-        std::string strModel(xmlBuffer);
-        std::vector<uint8_t> weights;
-        if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
-            weights = std::vector<uint8_t>(&binBuffer[0], &binBuffer[binLen]);
-            delete[] binBuffer;
-        }
+        std::string strModel(model.begin(), model.end());
+
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
             make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
 
-        // deleting the buffers got from custom loader
-        delete[] xmlBuffer;
-        weights.clear();
     } catch (std::exception& e) {
         spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;

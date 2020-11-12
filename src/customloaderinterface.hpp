@@ -65,18 +65,16 @@ public:
          * @param base path where the required IR files are present
          * @param version of the model
          * @param loader config parameters json as string
-         * @param char pointer to the model xml buffer
-         * @param length of the model xml buffer
-         * @param char pointer to the weights buffer
-         * @param length of the weights buffer
+         * @param vector of uint8_t of model
+         * @param vector of uint8_t of weights
          * @return status
          */
     virtual CustomLoaderStatus loadModel(const std::string& modelName,
         const std::string& basePath,
         const int version,
         const std::string& loaderOptions,
-        char** xmlBuffer, int* xmlLen,
-        char** binBuffer, int* binLen) = 0;
+        std::vector<uint8_t>& modelBuffer,
+        std::vector<uint8_t>& weights) = 0;
 
     /**
          * @brief Get the model black list status
