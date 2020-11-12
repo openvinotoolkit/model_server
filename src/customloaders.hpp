@@ -90,6 +90,5 @@ public:
          * @return status
          */
     Status finalize();
-
 };
 }  // namespace ovms
