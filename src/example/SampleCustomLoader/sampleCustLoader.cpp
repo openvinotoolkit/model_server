@@ -28,6 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <fstream>
@@ -37,7 +38,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <algorithm>
 
 #include <assert.h>
 #include <rapidjson/document.h>
@@ -89,7 +89,7 @@ protected:
         std::string& binFile, std::string& modelFile, std::string& enableFile, int& modelType);
 
     int load_files(std::string& binFile, std::string& modelFile, int modelType,
-		    std::vector<uint8_t>& model, std::vector<uint8_t>& weghts);
+        std::vector<uint8_t>& model, std::vector<uint8_t>& weghts);
 
     // Variables needed to manage the periodic thread.
     std::mutex cv_m;
@@ -142,29 +142,29 @@ CustomLoaderStatus custSampleLoader::loaderInit(const std::string& loader_path) 
 
 // Helper function to load the binary files
 int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, int modelType,
-		std::vector<uint8_t>& model, std::vector<uint8_t>& weights) {
+    std::vector<uint8_t>& model, std::vector<uint8_t>& weights) {
 
     std::streampos size;
 
     // incase the model is a onnx or blob type, the bin file will not be there.
     // skip parsing the bin file and return NULL in binBuffer
     if (modelType == SAMPLE_LOADER_IR_MODEL) {
-	std::ifstream bfile(binFile, std::ios::in | std::ios::binary);
+        std::ifstream bfile(binFile, std::ios::in | std::ios::binary);
         if (bfile.is_open()) {
-	    weights.clear();
-	    std::for_each(std::istreambuf_iterator<char>(bfile), std::istreambuf_iterator<char>(),
-			    [&weights](const char c){ weights.push_back(c);});
+            weights.clear();
+            std::for_each(std::istreambuf_iterator<char>(bfile), std::istreambuf_iterator<char>(),
+                [&weights](const char c) { weights.push_back(c); });
         } else {
             std::cout << "Unable to open bin file" << std::endl;
             return SAMPLE_LOADER_ERROR;
         }
-    } 
+    }
 
     std::ifstream xfile(modelFile, std::ios::in | std::ios::binary);
     if (xfile.is_open()) {
-	model.clear();
-	std::for_each(std::istreambuf_iterator<char>(xfile), std::istreambuf_iterator<char>(),
-			    [&model](const char c){ model.push_back(c);});
+        model.clear();
+        std::for_each(std::istreambuf_iterator<char>(xfile), std::istreambuf_iterator<char>(),
+            [&model](const char c) { model.push_back(c); });
     } else {
         std::cout << "Unable to open model file" << std::endl;
         return SAMPLE_LOADER_ERROR;
@@ -264,7 +264,7 @@ void custSampleLoader::checkModelStatus() {
 
     std::cout << "models_watched size = " << models_watched.size() << std::endl;
     std::lock_guard<std::mutex> guard(models_watched_mutex);
-    for (auto it : models_watched ){
+    for (auto it : models_watched) {
         std::string fileName = it.second;
         std::cout << "Reading File:: " << fileName << std::endl;
         std::ifstream fileToRead(fileName);
@@ -312,7 +312,7 @@ void custSampleLoader::watcherJoin() {
  * load the model and optional bin file into buffers and return
  */
 CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, const std::string& basePath, const int version,
-		const std::string& loaderOptions, std::vector<uint8_t>& model, std::vector<uint8_t>& weights){
+    const std::string& loaderOptions, std::vector<uint8_t>& model, std::vector<uint8_t>& weights) {
     std::cout << "custSampleLoader: Custom loadModel" << std::endl;
 
     std::string binFile;
@@ -329,7 +329,7 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     }
 
     // load models
-    ret = load_files(binFile, modelFile, modelType, model,weights);
+    ret = load_files(binFile, modelFile, modelType, model, weights);
     if (ret != SAMPLE_LOADER_OK) {
         std::cout << "custSampleLoader: Could not read model files" << std::endl;
         return CustomLoaderStatus::INTERNAL_ERROR;
@@ -343,12 +343,12 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
 
     auto modelId = std::make_pair(modelName, version);
     models_loaded.emplace_back(modelId);
-   
+
     if (!(enableFile.empty())) {
-           auto it = models_watched.find(modelId);
-           if (it == models_watched.end()) {
-	          models_watched[modelId] = enableFile;
-           }
+        auto it = models_watched.find(modelId);
+        if (it == models_watched.end()) {
+            models_watched[modelId] = enableFile;
+        }
     }
 
     if (modelType == SAMPLE_LOADER_IR_MODEL)
@@ -366,14 +366,14 @@ CustomLoaderStatus custSampleLoader::retireModel(const std::string& modelName) {
     std::vector<model_id_t> toDelete;
     std::lock_guard<std::mutex> guard(models_watched_mutex);
 
-    for (auto it : models_watched ){
-	if ((it.first).first == modelName){
-             toDelete.push_back(it.first);
+    for (auto it : models_watched) {
+        if ((it.first).first == modelName) {
+            toDelete.push_back(it.first);
         }
     }
 
-    for(auto it : toDelete){
-         models_watched.erase(it);
+    for (auto it : toDelete) {
+        models_watched.erase(it);
     }
     return CustomLoaderStatus::OK;
 }
@@ -384,7 +384,7 @@ CustomLoaderStatus custSampleLoader::unloadModel(const std::string& modelName, i
 
     model_id_t toFind = std::make_pair(modelName, version);
 
-    auto it = std::find(models_loaded.begin(), models_loaded.end(),toFind);
+    auto it = std::find(models_loaded.begin(), models_loaded.end(), toFind);
     if (it == models_loaded.end()) {
         std::cout << modelName << " is not loaded" << std::endl;
     } else {
