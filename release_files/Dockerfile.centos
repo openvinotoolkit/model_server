@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-FROM centos:7 as base
+ARG BASE_IMAGE=centos:7
+FROM $BASE_IMAGE as base_build
+
 WORKDIR /
 COPY ovms.tar.xz /
 RUN env
@@ -25,7 +27,7 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM centos:7 as release
+FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
@@ -68,7 +70,7 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms
 
-COPY --from=base /ovms /ovms
+COPY --from=base_build /ovms /ovms
 
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
