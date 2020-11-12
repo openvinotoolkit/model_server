@@ -502,7 +502,7 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
     // Copy dummy model to temporary destination
     std::filesystem::remove_all(cl_models_path);
     std::filesystem::create_directories(cl_model_1_path);
-    //std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    // std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
     std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
