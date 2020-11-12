@@ -319,4 +319,3 @@ TEST(ModelService, CustomLoaderGetStatusDeleteModelGetStatus) {
     ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
     EXPECT_EQ(ret.ok(), true);
 }
-

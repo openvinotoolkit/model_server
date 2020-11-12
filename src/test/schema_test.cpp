@@ -871,4 +871,3 @@ TEST(SchemaTest, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptions) {
     auto result = ovms::validateJsonAgainstSchema(customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
-

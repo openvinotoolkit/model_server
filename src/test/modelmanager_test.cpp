@@ -986,4 +986,3 @@ TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     modelMock.reset();
 }
 */
-
