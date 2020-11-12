@@ -1947,3 +1947,54 @@ TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAva
     status = pd.validate(managerWithDummyModel);
     EXPECT_TRUE(status.ok()) << status.string();
 }
+
+TEST_F(EnsembleFlowTest, DISABLED_RetirePipelineDefinitionExecuteShouldFail) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["response"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    pd.retire(managerWithDummyModel);
+    std::unique_ptr<Pipeline> pipeline;
+    status = pd.create(pipeline, &request, &response, managerWithDummyModel);
+    EXPECT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE);
+}
+
+TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["response"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    std::unique_ptr<Pipeline> pipelineBeforeRetire;
+    status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    pd.retire(managerWithDummyModel);
+    pipelineBeforeRetire->execute();
+    uint dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
+}
