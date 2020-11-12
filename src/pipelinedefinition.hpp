@@ -16,6 +16,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <set>
 #include <shared_mutex>
@@ -32,6 +33,7 @@
 #include "model_version_policy.hpp"
 #include "node.hpp"
 #include "pipeline.hpp"
+#include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
 
@@ -71,12 +73,36 @@ struct NodeInfo {
 };
 
 class PipelineDefinition {
+    struct ValidationResultNotifier {
+        ValidationResultNotifier(PipelineDefinitionStatus& status) :
+            status(status) {}
+        ~ValidationResultNotifier() {
+            if (passed) {
+                status.handle(ValidationPassedEvent());
+            } else {
+                status.handle(ValidationFailedEvent());
+            }
+        }
+        bool passed = false;
+
+    private:
+        PipelineDefinitionStatus& status;
+    };
+
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
-    std::set<std::pair<const std::string, model_version_t>> subscriptions;
+
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::shared_mutex loadMtx;
+
+    std::condition_variable loadedNotify;
+
+protected:
+    PipelineDefinitionStatus status;
+
+private:
+    std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
     Status validateNode(ModelManager& manager, NodeInfo& node);
 
@@ -100,7 +126,7 @@ public:
     const std::string& getName() const { return pipelineName; }
 
     void notifyUsedModelChanged() {
-        // this->status.notifyUsedModelChanged();
+        this->status.handle(UsedModelChangedEvent());
     }
 
     void makeSubscriptions(ModelManager& manager);

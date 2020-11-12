@@ -632,8 +632,6 @@ TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionNodesValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -660,8 +658,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidat
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setBatchingMode(AUTO);
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -690,8 +686,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation
     config.parseShapeParameter("auto");
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -717,8 +711,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -746,8 +738,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) 
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingConnectionNodeValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -779,8 +769,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation)
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -806,8 +794,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation)
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -836,8 +822,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) 
 TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -888,8 +872,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
 TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -953,8 +935,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -990,8 +970,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValida
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -1019,8 +997,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValida
 TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -1063,8 +1039,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
 TEST_F(EnsembleFlowTest, PipelineDefinitionContainingUnconnectedNodeValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
