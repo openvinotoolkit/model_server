@@ -153,5 +153,24 @@ public:
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        join();
     }
+};
+class TestWithTempDir : public ::testing::Test {
+protected:
+    void SetUp() override {
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+
+        const std::string directoryName = std::string(test_info->test_suite_name());
+        directoryPath = "/tmp/" + directoryName;
+        std::filesystem::remove_all(directoryPath);
+        std::filesystem::create_directories(directoryPath);
+    }
+
+    void TearDown() override {
+        std::filesystem::remove_all(directoryPath);
+    }
+
+    std::string directoryPath;
 };

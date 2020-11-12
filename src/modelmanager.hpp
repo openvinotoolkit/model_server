@@ -117,6 +117,11 @@ private:
      */
     mutable std::shared_mutex modelsMtx;
 
+    /**
+     * Time interval between each config file check
+     */
+    uint watcherIntervalSec = 1;
+
 public:
     /**
      * @brief Gets the instance of ModelManager
@@ -124,6 +129,13 @@ public:
     static ModelManager& getInstance() {
         static ModelManager instance;
         return instance;
+    }
+
+    /**
+     *  @brief Gets the watcher interval timestep in seconds
+     */
+    uint getWatcherIntervalSec() {
+        return watcherIntervalSec;
     }
 
     /**

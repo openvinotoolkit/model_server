@@ -33,30 +33,18 @@ using ::testing::ElementsAre;
  * This set of tests ensures model input/output mapping is respected by pipeline execution.
  */
 
-class PipelineWithInputOutputNameMappedModel : public ::testing::Test {
+class PipelineWithInputOutputNameMappedModel : public TestWithTempDir {
 protected:
     void SetUp() override {
-        const ::testing::TestInfo* const test_info =
-            ::testing::UnitTest::GetInstance()->current_test_info();
+        TestWithTempDir::SetUp();
 
-        const std::string directoryName = std::string(test_info->test_suite_name());
-        directoryPath = "/tmp/" + directoryName;
         configPath = directoryPath + "/config.json";
         modelPath = directoryPath + "/dummy";
         mappingConfigPath = modelPath + "/1/mapping_config.json";
 
-        // Copy dummy model to temporary destination
-        std::filesystem::remove_all(directoryPath);
-        std::filesystem::create_directories(directoryPath);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
 
-    void TearDown() override {
-        // Clean up temporary destination
-        std::filesystem::remove_all(directoryPath);
-    }
-
-    std::string directoryPath;
     std::string configPath;
     std::string modelPath;
     std::string mappingConfigPath;
