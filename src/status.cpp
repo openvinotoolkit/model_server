@@ -130,6 +130,8 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     // Custom Loader
     {StatusCode::CUSTOM_LOADER_LIBRARY_INVALID, "Custom Loader library not found or cannot open"},
     {StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED, "Cannot load the custom library"},
+    {StatusCode::CUSTOM_LOADER_EXISTS, "The custom loader is already present in loaders list"},
+    {StatusCode::CUSTOM_LOADER_NOT_PRESENT, "The custom loader is not present in loaders list"},
     {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 };

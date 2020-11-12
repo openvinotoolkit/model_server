@@ -99,6 +99,14 @@ public:
     virtual CustomLoaderStatus unloadModel(const std::string& modelName, int version) = 0;
 
     /**
+         * @brief Retire the model from customloader when OVMS retires the model
+         *
+         * @param model name which is being retired
+         * @return status
+         */
+    virtual CustomLoaderStatus retireModel(const std::string& modelName) = 0;
+
+    /**
          * @brief Deinitialize the custom loader
          *
          */

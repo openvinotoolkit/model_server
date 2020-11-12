@@ -144,6 +144,7 @@ cc_binary(
     linkshared = 1,
     deps = [
         "@rapidjson//:rapidjson",
+        "@spdlog//:spdlog",
     ],
 )
 

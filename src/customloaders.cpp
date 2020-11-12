@@ -36,17 +36,15 @@ Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterfac
         return StatusCode::OK;
     }
 
-    // The loader already exists. return Error   --> Ravikb: Change to appropriate error
-    return StatusCode::INTERNAL_ERROR;
+    return StatusCode::CUSTOM_LOADER_EXISTS;
 }
 
 Status CustomLoaders::remove(std::string& name) {
     SPDLOG_INFO("Removing loder {} from loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
-    // The loader is not there. Return error. --> Ravikb: Change to appropriate error
     if (loaderIt == customLoaderInterfacePtrs.end()) {
-        return StatusCode::INTERNAL_ERROR;
+        return StatusCode::CUSTOM_LOADER_NOT_PRESENT;
     }
 
     customLoaderInterfacePtrs.erase(loaderIt);

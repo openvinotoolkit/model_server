@@ -79,9 +79,11 @@ typedef std::pair<std::string, int> model_id_t;
 class custSampleLoader : public CustomLoaderInterface {
 private:
     std::vector<model_id_t> models_loaded;
+    std::vector<model_id_t> models_watched;
     std::map<model_id_t, std::string> models_enable;
     std::map<model_id_t, bool> models_blacklist;
     std::mutex map_mutex;
+    std::mutex models_watched_mutex;
 
 protected:
     int extract_input_params(const std::string& basePath, int version, const std::string& loaderOptions,
@@ -109,6 +111,7 @@ public:
         const std::string& loaderOptions, char** xmlBuffer, int* xmlLen, char** binBuffer,
         int* binLen);
     CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, int version);
+    CustomLoaderStatus retireModel(const std::string& modelName);
 
     // Sample loader specific variables
     // Thread function and helper to periodically check model status
@@ -270,7 +273,8 @@ void custSampleLoader::threadFunction() {
 void custSampleLoader::checkModelStatus() {
     std::map<model_id_t, bool> models_blacklist_local;
 
-    for (auto it = std::begin(models_loaded); it != std::end(models_loaded); it++) {
+    std::lock_guard<std::mutex> model_guard(models_watched_mutex);
+    for (auto it = std::begin(models_watched); it != std::end(models_watched); it++) {
         if (models_enable.find(*it) == models_enable.end())
             continue;
 
@@ -351,7 +355,12 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    models_loaded.emplace_back(std::make_pair(modelName, version));
+    auto modelId = std::make_pair(modelName, version);
+    models_loaded.emplace_back(modelId);
+
+    if (std::find(models_watched.begin(), models_watched.end(), modelId) == models_watched.end()) {
+	    models_watched.emplace_back(modelId);
+    }
 
     if (!(enableFile.empty())) {
         models_enable.insert({std::make_pair(modelName, version), enableFile});
@@ -364,6 +373,21 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
         st = CustomLoaderStatus::MODEL_TYPE_BLOB;
 
     return st;
+}
+
+// Retire the model
+CustomLoaderStatus custSampleLoader::retireModel(const std::string& modelName) {
+    std::vector<model_id_t> newVec;
+
+    for (auto it = std::begin(models_watched); it != std::end(models_watched); it++) {
+	    if (it->first != modelName) {
+		    newVec.emplace_back(*it);
+	    }
+    }
+    std::lock_guard<std::mutex> guard(models_watched_mutex);
+    models_watched.clear();
+    models_watched = newVec;
+    return CustomLoaderStatus::OK;
 }
 
 // Unload model from loaded models list.

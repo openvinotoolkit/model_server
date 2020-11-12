@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "model.hpp"
+#include "customloaders.hpp"
 
 #include <map>
 #include <memory>
@@ -137,6 +138,12 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
 }
 
 void Model::retireAllVersions() {
+    if (!(customLoaderName.empty())){
+	    auto& customloaders = ovms::CustomLoaders::instance();
+	    auto loaderPtr = customloaders.find(customLoaderName);
+	    loaderPtr->retireModel(name);
+    }
+
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         versionModelInstancePair.second->unloadModel();
