@@ -357,8 +357,10 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     auto modelId = std::make_pair(modelName, version);
     models_loaded.emplace_back(modelId);
 
-    if (std::find(models_watched.begin(), models_watched.end(), modelId) == models_watched.end()) {
-        models_watched.emplace_back(modelId);
+    for (auto it = models_watched.begin(); it!= models_watched.end(); it++){
+	if (*it != modelId) {
+          models_watched.emplace_back(modelId);
+	}
     }
 
     if (!(enableFile.empty())) {
