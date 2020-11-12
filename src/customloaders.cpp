@@ -39,7 +39,7 @@ Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterfac
     return StatusCode::CUSTOM_LOADER_EXISTS;
 }
 
-Status CustomLoaders::remove(std::string& name) {
+Status CustomLoaders::remove(const std::string& name) {
     SPDLOG_INFO("Removing loder {} from loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
@@ -59,7 +59,7 @@ std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& na
         return nullptr;
     }
 
-    return customLoaderInterfacePtrs[name].second;
+    return (loaderIt->second).second;
 }
 
 Status CustomLoaders::move(const std::string& name) {
@@ -91,16 +91,6 @@ Status CustomLoaders::finalize() {
     customLoaderInterfacePtrs.insert(newCustomLoaderInterfacePtrs.begin(), newCustomLoaderInterfacePtrs.end());
     newCustomLoaderInterfacePtrs.clear();
     return StatusCode::OK;
-}
-
-std::vector<std::string>& CustomLoaders::getNames() {
-    currentCustomLoaderNames.clear();
-
-    for (auto it = customLoaderInterfacePtrs.begin(); it != customLoaderInterfacePtrs.end(); it++) {
-        currentCustomLoaderNames.emplace_back(it->first);
-    }
-
-    return currentCustomLoaderNames;
 }
 
 }  // namespace ovms

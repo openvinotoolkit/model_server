@@ -68,7 +68,7 @@ public:
          * 
          * @return status 
          */
-    Status remove(std::string& name);
+    Status remove(const std::string& name);
 
     /**
          * @brief find an existing customLoader referenced by it's name
@@ -91,11 +91,5 @@ public:
          */
     Status finalize();
 
-    /**
-         * @brief build a list of all customloader names
-         * 
-         * @return vector of string
-         */
-    std::vector<std::string>& getNames();
 };
 }  // namespace ovms
