@@ -20,5 +20,6 @@
 namespace ovms {
 
 InferenceEngine::Blob::Ptr blobClone(const InferenceEngine::Blob::Ptr sourceBlob);
+InferenceEngine::Blob::Ptr constBlobClone(InferenceEngine::Blob::CPtr sourceBlob);
 
 }  // namespace ovms

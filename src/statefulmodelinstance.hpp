@@ -16,19 +16,17 @@
 #pragma once
 
 #include "modelinstance.hpp"
+#include "sequence_manager.hpp"
 
 namespace ovms {
 
-
-/**
-     * @brief This class contains all the information about inference engine model
-     */
 class StatefulModelInstance : public ModelInstance {
 private:
-     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+	SequenceManager sequenceManager;
 protected:
      // Override validateNumberOfInputs method to allow special inputs
-	const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) override;
+    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) override;
 
 	// Validate special keys and fill preprocessing spec with data needed for further sequence handling
 	const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
@@ -36,9 +34,12 @@ protected:
 	// Overriding validate method to extract information necessary for sequence handling 
 	const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
 
+	// Overriding preprocessing to include restoring last sequence state
 	const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
           InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override;
 
+	// Overriding postprocessing to include saving state after inference, adding sequence_id to response
+	// and reset state on SEQUENCE_END control input
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
           InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override;
 };
