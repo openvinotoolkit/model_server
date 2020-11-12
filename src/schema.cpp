@@ -84,10 +84,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						},
 						"custom_loader_options": {
 							"type": "object",
-							"items": {
-								"$ref": "#/definitions/custom_loader_options_config"
-							}
-
+                            "required": ["loader_name"],
+                            "properties": {
+                                "loader_name": {
+                                    "type": "string"
+                                }
+                            },
+                            "minProperties": 1
 						}
 					},
 					"additionalProperties": false
@@ -189,16 +192,6 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				}
 			},
 			"additionalProperties": false
-		},
-		"custom_loader_options_config": {
-			"type": "object",
-			"required": ["loader_name"],
-			"properties": {
-				"loader_name": {
-					"type": "string"
-				}
-			},
-			"additionalProperties": true
 		}
 	},
 	"type": "object",

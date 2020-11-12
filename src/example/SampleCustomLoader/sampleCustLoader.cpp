@@ -40,7 +40,6 @@
 
 #include <assert.h>
 #include <rapidjson/document.h>
-#include <spdlog/spdlog.h>
 
 #include "../../customloaderinterface.hpp"
 

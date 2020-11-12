@@ -1,8 +1,4 @@
-         1         2         3         4         5         6         7         8         9
-123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
-
-Introduction:
-============
+##Introduction:
 
 Using custom loader user can intercept normal loading of the model in the model server 
 and handle the model loading. The interface allows to return xml and weights as buffers 

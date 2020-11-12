@@ -254,9 +254,12 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         int binLen = 0;
 
         SPDLOG_INFO("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
-        auto& customloaders = ovms::CustomLoaders::instance();
-        auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
 
+        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
             SPDLOG_INFO("Loader {} is not in loaded customloaders list", customLoaderName);
             throw std::invalid_argument("customloader not exisiting");
@@ -271,14 +274,17 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             return StatusCode::INTERNAL_ERROR;
         }
 
-        // Ravikb--> Todo check return make empty blob
         std::string strModel(xmlBuffer);
-        std::vector<uint8_t> weights(&binBuffer[0], &binBuffer[binLen]);
+        std::vector<uint8_t> weights;
+        if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
+            weights = std::vector<uint8_t>(&binBuffer[0], &binBuffer[binLen]);
+            delete[] binBuffer;
+        }
         network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
             make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+
         // deleting the buffers got from custom loader
         delete[] xmlBuffer;
-        delete[] binBuffer;
         weights.clear();
     } catch (std::exception& e) {
         spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
@@ -406,7 +412,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->engine)
             loadOVEngine();
-
         status = StatusCode::OK;
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {

@@ -715,3 +715,159 @@ TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
     result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+TEST(SchemaTest, CustomLoaderConfigMatchingSchema) {
+    const char* customloaderConfigMatchingSchema = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "library_path": "/tmp/loader/dummyloader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"loader_name":  "dummy-loader"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMatchingSchemaParsed;
+    customloaderConfigMatchingSchemaParsed.Parse(customloaderConfigMatchingSchema);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, CustomLoaderConfigMissingLoaderName) {
+    const char* customloaderConfigMissingLoaderName = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "library_path": "dummyloader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderNameParsed;
+    customloaderConfigMissingLoaderNameParsed.Parse(customloaderConfigMissingLoaderName);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomLoaderConfigMissingLibraryPath) {
+    const char* customloaderConfigMissingLibraryPath = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLibraryPathParsed;
+    customloaderConfigMissingLibraryPathParsed.Parse(customloaderConfigMissingLibraryPath);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLibraryPathParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomLoaderConfigMissingLoaderConfig) {
+    const char* customloaderConfigMissingLoaderConfig = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "library_path": "dummyloader"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderConfigParsed;
+    customloaderConfigMissingLoaderConfigParsed.Parse(customloaderConfigMissingLoaderConfig);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, CustomLoaderConfigInvalidCustomLoaderConfig) {
+    const char* customloaderConfigInvalidCustomLoaderConfig = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options_invalid": {"loader_name":  "dummy-loader"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigInvalidCustomLoaderConfigParsed;
+    customloaderConfigInvalidCustomLoaderConfigParsed.Parse(customloaderConfigInvalidCustomLoaderConfig);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigInvalidCustomLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomLoaderConfigMissingLoaderNameInCustomLoaderOptions) {
+    const char* customloaderConfigMissingLoaderNameInCustomLoaderOptions = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"a": "SS"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed;
+    customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed.Parse(customloaderConfigMissingLoaderNameInCustomLoaderOptions);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptions) {
+    const char* customloaderConfigMultiplePropertiesInCustomLoaderOptions = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"loader_name": "dummy-loader", "1": "a", "2": "b", "3": "c", "4":"d", "5":"e", "6":"f"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed;
+    customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed.Parse(customloaderConfigMultiplePropertiesInCustomLoaderOptions);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}

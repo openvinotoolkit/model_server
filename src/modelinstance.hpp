@@ -484,25 +484,5 @@ public:
     void unsubscribe(PipelineDefinition& pd);
 
     const Status validate(const tensorflow::serving::PredictRequest* request);
-
-    /**
-         * @brief Set the custom loader interface name
-         *
-         * @param custom loader interface name
-         *
-         * @return status
-         */
-    void setCustomLoaderName(std::string name) {
-        customLoaderName = name;
-    }
-
-    /**
-         * @brief Gets customloader name associated with this instance
-         *
-         * @return model name
-         */
-    virtual const std::string& getCustomLoaderName() const {
-        return customLoaderName;
-    }
 };
 }  // namespace ovms
