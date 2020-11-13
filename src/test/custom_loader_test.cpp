@@ -241,9 +241,6 @@ public:
 };
 
 ::grpc::Status test_PerformModelStatusRequestX(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
-    //auto config = DUMMY_MODEL_CONFIG;
-    //ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    //manager.reloadModelWithVersions(config);
     spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
     ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
     spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
