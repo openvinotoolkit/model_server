@@ -3,7 +3,7 @@
 ## Introduction
 OpenVINO&trade; Model Server provides possibility to create pipeline of models for execution in a single client request. Pipeline is a directed acyclic graph with different kinds of nodes which define how to process predict request. By using ensemble scheduler there is no need to return intermediate results of every inference to the client. This allows avoiding the network overhead by minimizing the number of requests sent to model server. Each model output can be mapped to another model input. Since intermediate results are kept in server's RAM these can be reused by subsequent inferences which reduces overall latency.
 
-This guide gives information about following :
+This guide gives information about following:
 
 * <a href="#node-type">Node Types</a>
     * Pre-defined Node Types
@@ -14,6 +14,7 @@ This guide gives information about following :
     * Start model server
     * Requesting the service
     * Analyze pipeline execution in server logs
+    * Requesting pipeline metadata
 
 
 ## Node Types <a name="node-type"></a>
@@ -182,7 +183,7 @@ Use the config.json as given below
 ```
 In `model_config_list` section, three models are defined as usual. We can refer to them by name in pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO&trade; Model Server will first try to search for model with requested name. If not found, it will try to find pipeline.
 
-- Pipeline configuration options explained
+### Pipeline configuration options explained
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -191,7 +192,7 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 |`"outputs"`|array|Defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client|&check;|
 |`"nodes"`|array|Declares nodes used in pipeline and its connections|&check;|
 
-- Node options explained
+### Node options explained
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -200,9 +201,19 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 |`"version"`|integer|You can specify model version for inference, available only for `DL model` nodes||
 |`"type"`|string|Node kind, currently there is only `DL model` kind available|&check;|
 |`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|&check;|
+|`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
+
+### Node input options explained
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
 |`"node_name"`|string|Defines which node we refer to|&check;|
 |`"data_item"`|string|Defines which resource of node we point to|&check;|
-|`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
+
+### Node output options explained
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
 |`"data_item"`|string|Is the name of resource exposed by node - for `DL model` nodes it means model output|&check;|
 |`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
@@ -286,6 +297,19 @@ By analyzing logs and timestamps it is seen that googlenet and resnet model infe
 [2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:resnet; version:0.
 [2020-09-04 12:46:18.849] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:argmax; version:0.
 ```
+
+### Step 6: Requesting pipeline metadata
+
+We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of model name.
+```
+(.venv) ~/model_server/example_client$ python3 get_serving_meta.py --grpc_port 9100 --model_name image_classification_pipeline
+Getting model metadata for model: image_classification_pipeline
+Inputs metadata:
+        Input name: image; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
+Outputs metadata:
+        Output name: label; shape: [1]; dtype: DT_INT32
+```
+
 
 ## Disclaimers
 <details>
