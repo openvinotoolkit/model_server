@@ -33,8 +33,7 @@ using testing::ReturnRef;
 using testing::UnorderedElementsAre;
 
 namespace {
-const char* config_1_model = R"(
-{
+const char* config_1_model = R"({
    "model_config_list": [
     {
       "config": {
@@ -46,8 +45,7 @@ const char* config_1_model = R"(
    }]
 })";
 
-const char* config_2_models = R"(
-{
+const char* config_2_models = R"({
    "model_config_list": [
     {
       "config": {
@@ -67,34 +65,11 @@ const char* config_2_models = R"(
     }]
 })";
 
-const char* custom_loader_config_model = R"(
-{
-   "custom_loader_config_list":[
-     {
-      "config":{
-        "loader_name":"sample-loader",
-        "library_path": "/tmp/libsampleloader.so"
-      }
-     }
-   ],
-  "model_config_list":[
-    {
-      "config":{
-        "name":"resnet",
-        "base_path": "/tmp/models/dummy1",
-        "custom_loader_options": {"loader_name":  "sample-loader", "xml_file":  "face-detection-retail-0004.xml", "bin_file": "face-detection-retail-0004.bin"}
-      }
-    }
-  ]
-})";
-
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
 const std::string model_1_path = "/tmp/models/dummy1/1";
 const std::string model_2_path = "/tmp/models/dummy2/2";
-
-const std::string model_cl_path = "/tmp/models/dummycl/1";
 
 const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(3);
 
@@ -859,130 +834,3 @@ TEST_F(ReloadAvailabileModelDueToConfigChange, ExpectReloadDueToShapeConfigurati
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
-
-TEST(ModelManager, CustomLoaderStartFromFile) {
-    std::filesystem::create_directories(model_cl_path);
-    std::string fileToReload = "/tmp/ovms_config_cl.json";
-    createConfigFileWithContent(custom_loader_config_model, fileToReload);
-
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    EXPECT_CALL(*modelMock, addVersion(_))
-        .Times(1)
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.startFromFile(fileToReload);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
-TEST(ModelManager, customloaderStartFromFile) {
-    std::filesystem::create_directories(model_cl_path);
-    std::string fileToReload = "/tmp/ovms_config_cl.json";
-    createConfigFileWithContent(custom_loader_config_model, fileToReload);
-
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    EXPECT_CALL(*modelMock, addVersion(_))
-        .Times(1)
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.startFromFile(fileToReload);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
-/*
-customloaderConfigParseWithInvalidCustomLoaderConfig
-customloaderConfigParsewithInvalidCustomLoaderOptions
-
-
-
-
-TEST(ModelManager, customloaderConfigParseWhenDefinitionMatchSchema) {
-    const char* configWithPipelineDefinitionMatchSchema = R"({
-        "model_config_list": [
-            {
-                "config": {
-                    "name": "alpha",
-                    "base_path": "/tmp/models/dummy1"
-                }
-            },
-            {
-                "config": {
-                    "name": "beta",
-                    "base_path": "/tmp/models/dummy2"
-                }
-            }
-        ],
-        "pipeline_config_list":
-        [
-            {
-                "name": "ensemble_name1",
-                "inputs": ["in"],
-                "outputs": [{"a":{"node_name": "beta","data_item": "text"}}],
-                "nodes": [
-                    {
-                        "name": "alpha",
-                        "model_name": "dummy",
-                        "type": "DL model",
-                        "inputs": [{"a":{"node_name": "input","data_item": "in"}}],
-                        "outputs": [{"data_item": "prob","alias": "prob"}]
-                    },
-                    {
-                        "name": "beta",
-                        "model_name": "dummy",
-                        "type": "DL model",
-                        "inputs": [{"a":{"node_name": "alpha","data_item": "prob"}}],
-                        "outputs": [{"data_item": "text","alias": "text"}]
-                    }
-                ]
-            }
-        ]
-    })";
-
-    std::string configFile = "/tmp/ovms_config_file.json";
-    createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
-TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
-    const char* configWithOnlyPipelineDefinitionProvided = R"({
-    "pipeline_config_list":
-    {
-    "name": "ensemble_name1",
-    "inputs": ["in"],
-    "outputs": [{"out1": {"node_name": "beta","data_item": "text"}}],
-    "nodes": [
-    {
-    "name": "alpha",
-    "type": "DL Model",
-    "inputs": [{"data": {"node_name": "input","data_item": "in"}}],
-    "outputs": [{"data_item": "prob","alias": "prob"}]
-    },
-    {
-    "name": "beta",
-    "type": "DL Model",
-    "inputs": [{"data": {"node_name": "alpha","data_item": "prob"}}],
-    "outputs": [{"data_item": "text","alias": "text"}]
-    }]}})";
-
-    std::string configFile = "/tmp/ovms_config_file.json";
-    createConfigFileWithContent(configWithOnlyPipelineDefinitionProvided, configFile);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    manager.join();
-    modelMock.reset();
-}
-*/

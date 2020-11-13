@@ -26,14 +26,29 @@
 #include <stdlib.h>
 
 #include "../executinstreamidguard.hpp"
+#include "../localfilesystem.hpp"
+#include "../model.hpp"
+#include "../model_service.hpp"
 #include "../modelinstance.hpp"
+#include "../modelmanager.hpp"
+#include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../schema.hpp"
+#include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
+using testing::_;
+using testing::ContainerEq;
 using testing::Each;
 using testing::Eq;
+using testing::Return;
+using testing::ReturnRef;
+using testing::UnorderedElementsAre;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
+
+using namespace ovms;
 
 namespace {
 
@@ -151,7 +166,23 @@ const std::string cl_models_path = "/tmp/test_cl_models/";
 const std::string cl_model_1_path = cl_models_path + "model1/";
 const std::string cl_model_2_path = cl_models_path + "model2/";
 
+class MockModel : public ovms::Model {
+public:
+    MockModel() :
+        Model("MOCK_NAME") {}
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
+};
+
+std::shared_ptr<MockModel> modelMock;
+
 }  // namespace
+
+class MockModelManager : public ovms::ModelManager {
+public:
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+        return modelMock;
+    }
+};
 
 class TestCustomLoader : public ::testing::Test {
 public:
@@ -189,94 +220,6 @@ public:
         EXPECT_THAT(output, Each(Eq(2.)));
     }
 
-    void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
-        ASSERT_GE(20, waitingBeforePerformInferenceCount);
-        config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
-
-        std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
-        std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
-
-        std::vector<std::thread> predictsWaitingBeforeGettingModelInstance;
-        std::vector<std::thread> predictsWaitingBeforeInference;
-        for (auto i = 0u; i < waitingBeforeGettingModelCount; ++i) {
-            predictsWaitingBeforeGettingModelInstance.emplace_back(
-                std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
-                        tensorflow::serving::PredictRequest request = preparePredictRequest(
-                            {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, tensorflow::DataType>{{(initialBatchSize + (i % 3)), 10}, tensorflow::DataType::DT_FLOAT}}});
-
-                        performPredict(config.getName(), config.getVersion(), request,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
-                    }));
-        }
-        for (auto i = 0u; i < waitingBeforePerformInferenceCount; ++i) {
-            predictsWaitingBeforeInference.emplace_back(
-                std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforePerformInference, i]() {
-                        tensorflow::serving::PredictRequest request = preparePredictRequest(
-                            {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, tensorflow::DataType>{{initialBatchSize, 10}, tensorflow::DataType::DT_FLOAT}}});
-
-                        performPredict(config.getName(), config.getVersion(), request, nullptr,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future())));
-                    }));
-        }
-        // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        for (auto& promise : releaseWaitBeforeGettingModelInstance) {
-            promise.set_value();
-        }
-        for (auto& promise : releaseWaitBeforePerformInference) {
-            promise.set_value();
-        }
-        for (auto& thread : predictsWaitingBeforeGettingModelInstance) {
-            thread.join();
-        }
-        for (auto& thread : predictsWaitingBeforeInference) {
-            thread.join();
-        }
-    }
-
-    void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
-        ASSERT_GE(20, numberOfThreads);
-        config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
-
-        std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
-        std::vector<std::thread> predictThreads;
-        for (auto i = 0u; i < numberOfThreads; ++i) {
-            predictThreads.emplace_back(
-                std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
-                        tensorflow::serving::PredictRequest request = preparePredictRequest(
-                            {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, tensorflow::DataType>{{(initialBatchSize + i), 10}, tensorflow::DataType::DT_FLOAT}}});
-                        performPredict(config.getName(), config.getVersion(), request,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
-                    }));
-        }
-        // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        for (auto& promise : releaseWaitBeforeGettingModelInstance) {
-            promise.set_value();
-        }
-
-        for (auto& thread : predictThreads) {
-            thread.join();
-        }
-    }
-
-    static void checkOutputShape(const tensorflow::serving::PredictResponse& response, const ovms::shape_t& shape) {
-        ASSERT_EQ(response.outputs().count("a"), 1);
-        const auto& output_tensor = response.outputs().at("a");
-        ASSERT_EQ(output_tensor.tensor_shape().dim_size(), shape.size());
-        for (unsigned int i = 0; i < shape.size(); i++) {
-            EXPECT_EQ(output_tensor.tensor_shape().dim(i).size(), shape[i]);
-        }
-    }
-
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
         std::shared_ptr<ovms::ModelInstance> model;
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
@@ -289,19 +232,6 @@ public:
         return ovms::inference(*model, &request, &response, unload_guard);
     }
 
-    ovms::Status performInferenceWithShape(tensorflow::serving::PredictResponse& response, const ovms::shape_t& shape = {1, 10}, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
-        auto request = preparePredictRequest(
-            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, tensorflow::DataType>{shape, precision}}});
-        return performInferenceWithRequest(request, response);
-    }
-
-    ovms::Status performInferenceWithBatchSize(tensorflow::serving::PredictResponse& response, int batchSize = 1, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
-        ovms::shape_t shape = {batchSize, 10};
-        auto request = preparePredictRequest(
-            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, tensorflow::DataType>{shape, precision}}});
-        return performInferenceWithRequest(request, response);
-    }
-
 public:
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -309,6 +239,16 @@ public:
         std::cout << "Destructor of TestCustomLoader()" << std::endl;
     }
 };
+
+::grpc::Status test_PerformModelStatusRequestX(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
+    //auto config = DUMMY_MODEL_CONFIG;
+    //ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    //manager.reloadModelWithVersions(config);
+    spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
+    ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
+    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
+    return ret;
+}
 
 void TestCustomLoader::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
@@ -355,6 +295,164 @@ void TestCustomLoader::performPredict(const std::string modelName,
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest);
+}
+
+// Schema Validation
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMatchingSchema) {
+    const char* customloaderConfigMatchingSchema = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "library_path": "/tmp/loader/dummyloader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"loader_name":  "dummy-loader"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMatchingSchemaParsed;
+    customloaderConfigMatchingSchemaParsed.Parse(customloaderConfigMatchingSchema);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderName) {
+    const char* customloaderConfigMissingLoaderName = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "library_path": "dummyloader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderNameParsed;
+    customloaderConfigMissingLoaderNameParsed.Parse(customloaderConfigMissingLoaderName);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMissingLibraryPath) {
+    const char* customloaderConfigMissingLibraryPath = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "loader_config_file": "dummyloader-config"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLibraryPathParsed;
+    customloaderConfigMissingLibraryPathParsed.Parse(customloaderConfigMissingLibraryPath);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLibraryPathParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderConfig) {
+    const char* customloaderConfigMissingLoaderConfig = R"(
+        {
+           "custom_loader_config_list":[
+             {
+              "config":{
+                "loader_name":"dummy-loader",
+                "library_path": "dummyloader"
+              }
+             }
+           ],
+           "model_config_list": []
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderConfigParsed;
+    customloaderConfigMissingLoaderConfigParsed.Parse(customloaderConfigMissingLoaderConfig);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigInvalidCustomLoaderConfig) {
+    const char* customloaderConfigInvalidCustomLoaderConfig = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options_invalid": {"loader_name":  "dummy-loader"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigInvalidCustomLoaderConfigParsed;
+    customloaderConfigInvalidCustomLoaderConfigParsed.Parse(customloaderConfigInvalidCustomLoaderConfig);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigInvalidCustomLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderNameInCustomLoaderOptions) {
+    const char* customloaderConfigMissingLoaderNameInCustomLoaderOptions = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"a": "SS"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed;
+    customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed.Parse(customloaderConfigMissingLoaderNameInCustomLoaderOptions);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptions) {
+    const char* customloaderConfigMultiplePropertiesInCustomLoaderOptions = R"(
+        {
+          "model_config_list":[
+            {
+              "config":{
+                "name":"dummy-loader-model",
+                "base_path": "/tmp/models/dummy1",
+                "custom_loader_options": {"loader_name": "dummy-loader", "1": "a", "2": "b", "3": "c", "4":"d", "5":"e", "6":"f"}
+              }
+            }
+          ]
+        }
+    )";
+
+    rapidjson::Document customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed;
+    customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed.Parse(customloaderConfigMultiplePropertiesInCustomLoaderOptions);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
@@ -513,5 +611,146 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
     tensorflow::serving::PredictResponse response;
     ASSERT_TRUE(performInferenceWithRequest(request, response) != ovms::StatusCode::OK);
 }
+
+TEST_F(TestCustomLoader, CustomLoaderSingleVersion) {
+    const char* custom_loader_config_model = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/tmp/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/ovms/src/test/dummy",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        }
+      ]
+    })";
+
+    std::string fileToReload = "/tmp/ovms_config_cl.json";
+    createConfigFileWithContent(custom_loader_config_model, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+
+    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+    EXPECT_EQ(ret.ok(), true);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
+    const char* custom_loader_config_model = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/tmp/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/ovms/src/test/dummy",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        }
+      ]
+    })";
+
+    // std::string fileToReload = "/tmp/ovms_config_cl.json";
+    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+
+    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+    EXPECT_EQ(ret.ok(), true);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
+    const char* custom_loader_config_model = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/tmp/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/ovms/src/test/dummy",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        }
+      ]
+    })";
+
+    std::string fileToReload = "/tmp/ovms_config_cl.json";
+    createConfigFileWithContent(custom_loader_config_model, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+
+    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+    EXPECT_EQ(ret.ok(), true);
+}
+
+/*
+TEST_F(TestCustomLoader, CustomLoaderStartFromFile) {
+    // Copy dummy model to temporary destination
+    std::filesystem::remove_all(cl_models_path);
+    std::filesystem::create_directories(cl_model_1_path);
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    EXPECT_CALL(*modelMock, addVersion(_))
+        .Times(1)
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    /modelMock.reset();
+}*/
 
 #pragma GCC diagnostic pop

@@ -218,7 +218,6 @@ void TestPredict::performPredict(const std::string modelName,
         waitBeforePerformInference->get();
     }
     ovms::Status validationStatus = modelInstance->validate(&request);
-    std::cout << validationStatus.string() << std::endl;
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -480,5 +479,4 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
     checkOutputShape(response, {3, 10});
 }
-
 #pragma GCC diagnostic pop
