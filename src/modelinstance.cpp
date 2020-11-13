@@ -259,7 +259,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
-            SPDLOG_INFO("Loader {} is not in loaded customloaders list", customLoaderName);
+            SPDLOG_INFO("Loader {} is not in loaded customloaders list", loaderName);
             throw std::invalid_argument("customloader not exisiting");
         }
 
@@ -274,9 +274,16 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
         std::string strModel(model.begin(), model.end());
 
-        network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
-            make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+        if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
+            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
+                make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
+            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
+            return StatusCode::INTERNAL_ERROR;
+        }
     } catch (std::exception& e) {
+
         spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
@@ -602,10 +609,12 @@ void ModelInstance::unloadModel() {
     status.setEnd();
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
         auto& customloaders = ovms::CustomLoaders::instance();
-        auto customLoaderInterfacePtr = customloaders.find(customLoaderName);
+        auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
-            SPDLOG_INFO("The loader {} is nolonger available", customLoaderName);
+            SPDLOG_INFO("The loader {} is nolonger available", loaderName);
         } else {
             // once model is unloaded, notify custom loader object about the unload
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());

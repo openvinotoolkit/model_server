@@ -214,7 +214,7 @@ int custSampleLoader::extract_input_params(const std::string& basePath, const in
             std::cout << "ONNX File" << std::endl;
             modelType = SAMPLE_LOADER_ONNX_MODEL;
         } else if (extn == "blob") {
-            std::cout << "XML File" << std::endl;
+            std::cout << "Blob File" << std::endl;
             modelType = SAMPLE_LOADER_BLOB_MODEL;
         } else {
             std::cout << "UNKNOWN file extension" << std::endl;

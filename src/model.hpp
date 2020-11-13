@@ -189,7 +189,6 @@ public:
          *
          * @param custom loader name
          *
-         * @return status
          */
     void setCustomLoaderName(std::string name) {
         customLoaderName = name;
