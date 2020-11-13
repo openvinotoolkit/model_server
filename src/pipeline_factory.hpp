@@ -56,6 +56,16 @@ public:
         const tensorflow::serving::PredictRequest* request,
         tensorflow::serving::PredictResponse* response,
         ModelManager& manager) const;
+
+    PipelineDefinition* findDefinitionByName(const std::string& name) const {
+        std::shared_lock lock(definitionsMtx);
+        auto it = definitions.find(name);
+        if (it == std::end(definitions)) {
+            return nullptr;
+        } else {
+            return it->second.get();
+        }
+    }
 };
 
 }  // namespace ovms
