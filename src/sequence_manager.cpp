@@ -37,6 +37,11 @@ Status Sequence::updateLastMemoryState(model_memory_state_t& newState) {
 
 // SEQUENCE MANAGER METHODS IMPLEMENTATION
 
+
+bool SequenceManager::hasSequence(uint64_t sequenceId){
+    return sequences.count(sequenceId);
+}
+
 Status SequenceManager::addSequence(uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
         spdlog::info("Sequence with provided ID already exists");
