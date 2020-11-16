@@ -54,28 +54,26 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     if (it != request->inputs().end())
         sequenceControlInput = extractSequenceControlInput(it->second);
 
-    spdlog::info("Received sequence id: {}", sequenceId);
-
-    if (sequenceControlInput == 1) { // First request in the sequence 
+    if (sequenceControlInput == SEQUENCE_START) { // First request in the sequence 
         // if sequenceId == 0, sequenceManager will need to generate unique id 
-        if (sequenceId != 0) {
-            // TO DO: Validate if sequenceId is already in use
+        if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
+            return StatusCode::SEQUENCE_ALREADY_EXISTS;
         }
         processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         return StatusCode::OK;
-    } else if (sequenceControlInput == 2 || sequenceControlInput == 0) { // Intermediate and last request in the sequence 
-        if(sequenceId != 0) {
-            // TO DO: check if sequence with provided ID exists
+    } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) { // Intermediate and last request in the sequence 
+        if (sequenceId == 0) {
+            return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
+        } else if (sequenceManager.hasSequence(sequenceId)) {
             processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
             return StatusCode::OK;
         } else {
-            // return 404 Missing sequence status
-            return StatusCode::NOT_IMPLEMENTED;
+            return StatusCode::SEQUENCE_MISSING;
         }
     }  else { 
-        // 400 Bad Request - invalid control input
-        return StatusCode::NOT_IMPLEMENTED;
+        return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
+    return StatusCode::OK;
 }
 
 const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
@@ -89,17 +87,44 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
 const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::serving::PredictRequest* request, 
     InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
     // Set infer request memory state to the last state saved by the sequence
+    SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
+
+    if (sequenceSpec.sequenceControlInput == SEQUENCE_START) {
+        // On SEQUENCE_START just add new sequence to sequence manager
+        sequenceManager.addSequence(sequenceSpec.sequenceId);
+    } else {
+        // For next requests in the sequence restore model state
+        const sequence_memory_state_t& sequenceMemoryState = sequenceManager.getSequenceMemoryState(sequenceSpec.sequenceId);
+        for (auto &&state : inferRequest.QueryState()) {
+            auto stateName = state.GetName();
+            state.SetState(sequenceMemoryState.at(stateName));
+            // TO DO: Error handling
+        }
+    }
     return StatusCode::OK;
 }
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response, 
     InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
     
-    SequenceProcessingSpec& spec = processingSpecPtr->getSequenceProcessingSpec();
+    SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
+    // Reset inferRequest states on SEQUENCE_END
+    if (sequenceSpec.sequenceControlInput == SEQUENCE_END) {
+        spdlog::info("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        for (auto &&state : inferRequest.QueryState()) {
+            state.Reset();
+        }
+        sequenceManager.removeSequence(sequenceSpec.sequenceId);
+    } else {
+        auto modelState = inferRequest.QueryState();
+        sequenceManager.updateSequenceMemoryState(sequenceSpec.sequenceId, modelState);
+    }
 
+    // Include sequence_id in server response
     auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
-    tensorProto.add_uint64_val(spec.sequenceId);
+    tensorProto.add_uint64_val(sequenceSpec.sequenceId);
 
+    spdlog::info("Added sequence_id to the response");
     return StatusCode::OK;
 }
 

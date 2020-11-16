@@ -45,6 +45,12 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
 
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, "Sequence with provided ID already exists"},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, "Sequence ID has not been provided in request inputs"},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
+
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},

@@ -83,6 +83,8 @@ cc_library(
         "serialization.cpp",
         "schema.hpp",
         "schema.cpp",
+        "sequence_manager.hpp",
+        "sequence_manager.cpp",
         "serialization.hpp",
         "server.cpp",
         "statefulmodelinstance.cpp",
