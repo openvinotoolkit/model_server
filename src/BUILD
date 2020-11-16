@@ -224,6 +224,7 @@ cc_test(
     ],
     deps = [
         "//src:ovms_lib",
+	"//src:libsampleloader.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
