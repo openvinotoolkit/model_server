@@ -48,6 +48,12 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is subscribed to pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
 
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, "Sequence with provided ID already exists"},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, "Sequence ID has not been provided in request inputs"},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
+
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},

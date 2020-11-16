@@ -63,6 +63,12 @@ enum class StatusCode {
     MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
     INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
 
+    // Sequence management
+    SEQUENCE_MISSING,                 /*!< Sequence with provided ID does not exist */
+    SEQUENCE_ALREADY_EXISTS,          /*!< Sequence with provided ID already exists */
+    SEQUENCE_ID_NOT_PROVIDED,         /*!< Sequence ID has not been provided in request inputs */
+    INVALID_SEQUENCE_CONTROL_INPUT,   /*!< Unexpected value of sequence control input */
+
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
     INVALID_MISSING_INPUT,          /*!< Missing one or more of inputs */

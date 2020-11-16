@@ -41,7 +41,7 @@ private:
 	// timeout
 	// maxSequenceNumber
 public:
-    // Sequence& getSequence(uint64_t sequenceId);
+    bool hasSequence(uint64_t sequenceId);
 	Status addSequence(uint64_t sequenceId);
 	Status removeSequence(uint64_t sequenceId);
 	// removeTimedOutSequences(time_t currentTime);
