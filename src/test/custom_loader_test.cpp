@@ -690,7 +690,6 @@ TEST_F(TestCustomLoader, CustomLoaderPredictRemoveCustomLoaderOptionsPredict) {
 
     // Re-create config file
     createConfigFileWithContent(configStr, fileToReload);
-    //createConfigFileWithContent(custom_loader_config_model_customloader_options_removed, fileToReload);
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     performPredict("dummy", 1, request);
 }
