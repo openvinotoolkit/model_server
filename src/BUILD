@@ -67,6 +67,8 @@ cc_library(
         "pipeline.hpp",
         "pipelinedefinition.cpp",
         "pipelinedefinition.hpp",
+        "pipelinedefinitionunloadguard.cpp",
+        "pipelinedefinitionunloadguard.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
         "prediction_service.cpp",
@@ -95,6 +97,8 @@ cc_library(
         "threadsafequeue.hpp",
         "timer.hpp",
         "version.hpp",
+        "logging.hpp",
+        "logging.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -118,7 +122,7 @@ cc_library(
         "@openvino//:openvino",
     ],
     local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO"
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
     ],
     copts = [
         "-Wall",
@@ -156,6 +160,7 @@ cc_test(
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
         "test/get_model_metadata_response_test.cpp",
+        "test/get_pipeline_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
@@ -186,6 +191,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
+        "test/environment.hpp",
     ],
     data = [
         "test/dummy/1/dummy.xml",

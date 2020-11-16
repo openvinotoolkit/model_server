@@ -13,11 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "pipelinedefinitionunloadguard.hpp"
 
-#include "environment.hpp"
+#include "pipelinedefinition.hpp"
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    return RUN_ALL_TESTS();
+namespace ovms {
+PipelineDefinitionUnloadGuard::PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition) :
+    pipelineDefinition(pipelineDefinition) {
+    pipelineDefinition.increaseRequestsHandlesCount();
 }
+
+PipelineDefinitionUnloadGuard::~PipelineDefinitionUnloadGuard() {
+    pipelineDefinition.decreaseRequestsHandlesCount();
+}
+}  // namespace ovms

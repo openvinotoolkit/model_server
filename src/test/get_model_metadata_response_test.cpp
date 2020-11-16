@@ -68,7 +68,7 @@ protected:
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
 
-    void SetUp() override {
+    virtual void prepare() {
         instance = std::make_shared<NiceMock<MockModelInstance>>();
 
         inputTensors = tensor_desc_map_t({
@@ -115,47 +115,54 @@ protected:
         ON_CALL(*instance, getVersion())
             .WillByDefault(Return(modelVersion));
     }
+
+    void SetUp() override {
+        this->prepare();
+    }
 };
 
-TEST_F(GetModelMetadataResponse, HasModelSpec) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+class GetModelMetadataResponseBuild : public GetModelMetadataResponse {
+protected:
+    void prepare() override {
+        GetModelMetadataResponse::prepare();
+        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    }
+};
+
+TEST_F(GetModelMetadataResponseBuild, HasModelSpec) {
     EXPECT_TRUE(response.has_model_spec());
 }
 
-TEST_F(GetModelMetadataResponse, HasVersion) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+TEST_F(GetModelMetadataResponseBuild, HasCorrectName) {
+    EXPECT_EQ(response.model_spec().name(), "resnet");
+}
+
+TEST_F(GetModelMetadataResponseBuild, HasVersion) {
     EXPECT_TRUE(response.model_spec().has_version());
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectVersion) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+TEST_F(GetModelMetadataResponseBuild, HasCorrectVersion) {
     EXPECT_EQ(response.model_spec().version().value(), 23);
 }
 
-TEST_F(GetModelMetadataResponse, HasOneMetadataInfo) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+TEST_F(GetModelMetadataResponseBuild, HasOneMetadataInfo) {
     EXPECT_EQ(response.metadata_size(), 1);
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectMetadataSignatureName) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+TEST_F(GetModelMetadataResponseBuild, HasCorrectMetadataSignatureName) {
     EXPECT_NE(
         response.metadata().find("signature_def"),
         response.metadata().end());
 }
 
-TEST_F(GetModelMetadataResponse, HasOneSignatureDef) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
+TEST_F(GetModelMetadataResponseBuild, HasOneSignatureDef) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
     EXPECT_EQ(def.signature_def_size(), 1);
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectSignatureDefName) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
+TEST_F(GetModelMetadataResponseBuild, HasCorrectSignatureDefName) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -164,9 +171,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectSignatureDefName) {
         def.signature_def().end());
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectTensorNames) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
+TEST_F(GetModelMetadataResponseBuild, HasCorrectTensorNames) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -190,9 +195,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectTensorNames) {
         "Output_FP32_2_20_3");
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectPrecision) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
+TEST_F(GetModelMetadataResponseBuild, HasCorrectPrecision) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -213,9 +216,7 @@ TEST_F(GetModelMetadataResponse, HasCorrectPrecision) {
         tensorflow::DT_FLOAT);
 }
 
-TEST_F(GetModelMetadataResponse, HasCorrectShape) {
-    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
+TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -260,8 +261,7 @@ TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedYet) {
     EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
-TEST_F(GetModelMetadataResponse, serialize2Json) {
-    ovms::GetModelMetadataImpl::buildResponse(instance, &response);
+TEST_F(GetModelMetadataResponseBuild, serialize2Json) {
     std::string json_output;
     const tensorflow::serving::GetModelMetadataResponse* response_p = &response;
     ovms::Status error_status = ovms::GetModelMetadataImpl::serializeResponse2Json(response_p, &json_output);

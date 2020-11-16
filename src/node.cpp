@@ -45,7 +45,7 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
         // possibly incorrectly constructed pipeline - required input missing from previous node
         auto it = inputs.find(dependency_output_name);
         if (it == inputs.end()) {
-            SPDLOG_INFO("Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
+            SPDLOG_WARN("Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
                 getName(),
                 dependency.getName(),
                 dependency_output_name);

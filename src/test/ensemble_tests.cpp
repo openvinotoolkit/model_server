@@ -1834,3 +1834,167 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
 
     EXPECT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
 }
+
+TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewModelNameShouldPass) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{"pipeline_input_name", "b"}}}};
+    connections["response"] = {
+        {"dummy_node", {{"a", "pipeline_output_name"}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+
+    config.setName("newDummy");
+    status = managerWithDummyModel.reloadModelWithVersions(config);
+    ASSERT_TRUE(status.ok()) << status.string();
+    std::vector<NodeInfo> infoNew{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "newDummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    status = pd.reload(managerWithDummyModel, std::move(infoNew), std::move(connections));
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewNonExistingModelNameShouldFail) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{"pipeline_input_name", "b"}}}};
+    connections["response"] = {
+        {"dummy_node", {{"a", "pipeline_output_name"}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+
+    ASSERT_TRUE(status.ok()) << status.string();
+    std::vector<NodeInfo> infoNew{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "newDummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    status = pd.reload(managerWithDummyModel, std::move(infoNew), std::move(connections));
+    EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithAllModelVersionsRetiredShouldFail) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{"pipeline_input_name", "b"}}}};
+    connections["response"] = {
+        {"dummy_node", {{"a", "pipeline_output_name"}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok()) << status.string();
+    managerWithDummyModel.findModelByName("dummy")->retireAllVersions();
+
+    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAvailableShouldPass) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{"pipeline_input_name", "b"}}}};
+    connections["response"] = {
+        {"dummy_node", {{"a", "pipeline_output_name"}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok()) << status.string();
+    managerWithDummyModel.findModelByName("dummy")->retireAllVersions();
+
+    status = pd.validate(managerWithDummyModel);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << status.string();
+
+    status = managerWithDummyModel.reloadModelWithVersions(config);
+    ASSERT_TRUE(status.ok()) << status.string();
+    status = pd.validate(managerWithDummyModel);
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, DISABLED_RetirePipelineDefinitionExecuteShouldFail) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["response"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    pd.retire(managerWithDummyModel);
+    std::unique_ptr<Pipeline> pipeline;
+    status = pd.create(pipeline, &request, &response, managerWithDummyModel);
+    EXPECT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE);
+}
+
+TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["response"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+    PipelineDefinition pd(pipelineName, info, connections);
+    auto status = pd.validate(managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    std::unique_ptr<Pipeline> pipelineBeforeRetire;
+    status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    pd.retire(managerWithDummyModel);
+    pipelineBeforeRetire->execute();
+    uint dummySeriallyConnectedCount = 1;
+    checkResponse(dummySeriallyConnectedCount);
+}

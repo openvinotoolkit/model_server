@@ -13,11 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "environment.hpp"
+namespace ovms {
+class PipelineDefinition;
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    return RUN_ALL_TESTS();
-}
+class PipelineDefinitionUnloadGuard {
+public:
+    PipelineDefinitionUnloadGuard() = delete;
+    PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition);
+    ~PipelineDefinitionUnloadGuard();
+
+private:
+    PipelineDefinition& pipelineDefinition;
+};
+}  // namespace ovms

@@ -31,29 +31,32 @@ Status GetModelMetadataImpl::getModelStatus(
     }
 
     const auto& name = request->model_spec().name();
-
+    model_version_t version = request->model_spec().has_version() ? request->model_spec().version().value() : 0;
     auto& manager = ovms::ModelManager::getInstance();
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
-        SPDLOG_INFO("model {} is  missing", name);
-        return StatusCode::MODEL_NAME_MISSING;
+        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
+        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
+        if (!pipelineDefinition) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        return buildResponse(*pipelineDefinition, response, manager);
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
-    if (request->model_spec().has_version() && request->model_spec().version().value() != 0) {
-        ovms::model_version_t version = request->model_spec().version().value();
-        SPDLOG_DEBUG("requested: name {}; version {}", name, version);
+    if (version != 0) {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_INFO("model {}; version {} is missing", name, version);
+            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
-        SPDLOG_DEBUG("requested: name {}; default version", name);
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_INFO("model {}; default version is missing", name);
+            SPDLOG_WARN("GetModelMetadata requested model {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
@@ -124,6 +127,40 @@ Status GetModelMetadataImpl::buildResponse(
     return StatusCode::OK;
 }
 
+Status GetModelMetadataImpl::buildResponse(
+    PipelineDefinition& pipelineDefinition,
+    tensorflow::serving::GetModelMetadataResponse* response,
+    const ModelManager& manager) {
+
+    // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
+    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    auto status = pipelineDefinition.waitForLoaded(unloadGuard, 0);
+    if (!status.ok()) {
+        return status;
+    }
+
+    tensor_map_t inputs, outputs;
+    status = pipelineDefinition.getInputsInfo(inputs, manager);
+    if (!status.ok()) {
+        return status;
+    }
+    status = pipelineDefinition.getOutputsInfo(outputs, manager);
+    if (!status.ok()) {
+        return status;
+    }
+
+    response->Clear();
+    response->mutable_model_spec()->set_name(pipelineDefinition.getName());
+    response->mutable_model_spec()->mutable_version()->set_value(1);
+
+    tensorflow::serving::SignatureDefMap def;
+    convert(inputs, ((*def.mutable_signature_def())["serving_default"]).mutable_inputs());
+    convert(outputs, ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
+
+    (*response->mutable_metadata())["signature_def"].PackFrom(def);
+    return StatusCode::OK;
+}
+
 Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
@@ -139,7 +176,7 @@ Status GetModelMetadataImpl::serializeResponse2Json(const tensorflow::serving::G
     opts.always_print_primitive_fields = true;
     const auto& status = MessageToJsonString(*response, output, opts);
     if (!status.ok()) {
-        spdlog::error("Failed to convert proto to json. Error: ", status.ToString());
+        SPDLOG_ERROR("Failed to convert proto to json. Error: ", status.ToString());
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
     return StatusCode::OK;

@@ -117,11 +117,11 @@ Status makeJsonFromPredictResponse(
         response_json);
 
     timer.stop("MakeJsonFromTensors");
-    spdlog::debug("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
-    spdlog::debug("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>("MakeJsonFromTensors") / 1000);
+    SPDLOG_DEBUG("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
+    SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>("MakeJsonFromTensors") / 1000);
 
     if (!tf_status.ok()) {
-        SPDLOG_ERROR("MakeJsonFromTensors error: {}", tf_status.error_message());
+        SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.error_message());
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 

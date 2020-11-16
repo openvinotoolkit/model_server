@@ -28,10 +28,10 @@ namespace {
 std::string getEnvOrThrow(const std::string& name) {
     const char* p = std::getenv(name.c_str());
     if (!p) {
-        SPDLOG_ERROR("Missing required environment variable: {}", name);
+        spdlog::error("Missing required environment variable: {}", name);
         throw std::runtime_error("Missing required environment variable");
     }
-    SPDLOG_TRACE("Value of env {} is {}", name, std::string(p));
+    spdlog::trace("Value of env {} is {}", name, std::string(p));
     return std::string(p);
 }
 
@@ -54,7 +54,7 @@ std::string getPrivateFilePath() { return getEnvOrThrow("GCS_PRIV_FILE_PATH"); }
 std::string getPrivateDirPath() { return getEnvOrThrow("GCS_PRIV_DIR_PATH"); }
 
 void check_file_access(const std::string& path, ovms::FileSystem* fs) {
-    SPDLOG_TRACE("Checking file GCS access for {}", path);
+    spdlog::trace("Checking file GCS access for {}", path);
     ovms::StatusCode status;
     bool exists;
     status = fs->fileExists(path, &exists);
@@ -76,17 +76,17 @@ void check_file_access(const std::string& path, ovms::FileSystem* fs) {
 
 void check_dir_recursive_download(const std::string& path,
     ovms::FileSystem* fs) {
-    SPDLOG_TRACE("Checking GCS directory in a recursive way for {}", path);
+    spdlog::trace("Checking GCS directory in a recursive way for {}", path);
     ovms::StatusCode status;
     std::string local_path_out;
     FileSystem::createTempPath(&local_path_out);
     status = fs->downloadFileFolder(path, local_path_out);
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    SPDLOG_TRACE("Directory saved to {}", local_path_out);
+    spdlog::trace("Directory saved to {}", local_path_out);
 }
 
 void check_dir_access(const std::string& path, ovms::FileSystem* fs) {
-    SPDLOG_TRACE("Checking directory GCS access for {}", path);
+    spdlog::trace("Checking directory GCS access for {}", path);
     ovms::StatusCode status;
     bool exists;
     status = fs->fileExists(path, &exists);
@@ -102,20 +102,20 @@ void check_dir_access(const std::string& path, ovms::FileSystem* fs) {
     status = fs->getDirectoryContents(path, &dir_contents);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_GT(dir_contents.size(), 0);
-    SPDLOG_TRACE("DIR CONTENTS:");
+    spdlog::trace("DIR CONTENTS:");
     for (auto& d : dir_contents) {
         (void)d;
-        SPDLOG_TRACE(" -> {}", d);
+        spdlog::trace(" -> {}", d);
     }
 
     std::set<std::string> subdirs;
     status = fs->getDirectorySubdirs(path, &subdirs);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_GT(subdirs.size(), 0);
-    SPDLOG_TRACE("SUBDIRS:");
+    spdlog::trace("SUBDIRS:");
     for (auto& sd : subdirs) {
         (void)sd;
-        SPDLOG_TRACE(" -> {}", sd);
+        spdlog::trace(" -> {}", sd);
     }
 }
 

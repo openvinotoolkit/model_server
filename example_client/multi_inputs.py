@@ -97,7 +97,7 @@ def parse_output(thr_id, res, frame):
 
       # preventing any wrong array indexing (for RMNet)
       if label > 4:
-        log.error('Unsupported class detected in camera {}'.format(thr_id))
+        # Unsupported class label detected. Change to `other`.
         label = 4
 
       # Do you want confidence level to be passed from command line?

@@ -144,6 +144,10 @@ public:
         return models;
     }
 
+    const PipelineFactory& getPipelineFactory() const {
+        return pipelineFactory;
+    }
+
     /**
      * @brief Finds model with specific name
      *

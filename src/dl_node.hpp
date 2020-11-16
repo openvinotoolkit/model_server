@@ -67,7 +67,7 @@ public:
     Status prepareInputsAndModelForInference();
 
     bool tryDisarmStreamIdGuard(const uint microseconds = 1) override {
-        SPDLOG_INFO("Trying to disarm stream id guard of node: {}", getName());
+        SPDLOG_DEBUG("Trying to disarm stream id guard of node: {}", getName());
         if (this->nodeStreamIdGuard == nullptr) {
             return true;
         }

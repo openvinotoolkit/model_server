@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../localfilesystem.hpp"
+#include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 #include "mockmodelinstancechangingstates.hpp"

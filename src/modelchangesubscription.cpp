@@ -46,6 +46,9 @@ void ModelChangeSubscription::unsubscribe(PipelineDefinition& pd) {
 }
 
 void ModelChangeSubscription::notifySubscribers() {
+    if (subscriptions.size() == 0) {
+        return;
+    }
     SPDLOG_INFO("Notified subscribers of:{}", ownerName);
     for (auto& [pipelineName, pipelineDefinition] : subscriptions) {
         pipelineDefinition.notifyUsedModelChanged();

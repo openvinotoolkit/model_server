@@ -27,7 +27,7 @@ RUN rm /etc/yum.repos.d/epel.repo
 ADD CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
 ADD epel.repo /etc/yum.repos.d/epel.repo
 
-RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.i686 numactl redhat-lsb-core.i686
+RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686 numactl redhat-lsb-core.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 WORKDIR /ovms/src
 ENV InferenceEngine_DIR=/opt/intel/openvino/inference_engine/share/

@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-FROM centos:7 as base_build
+ARG BASE_IMAGE=centos:7
+FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 

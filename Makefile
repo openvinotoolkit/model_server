@@ -31,6 +31,8 @@ NO_PROXY := "$(no_proxy)"
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
 BASE_OS ?= centos
 
+BASE_IMAGE ?= centos:7
+
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
@@ -161,6 +163,7 @@ endif
 		--build-arg YUM_OV_PACKAGE=$(YUM_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
@@ -179,6 +182,7 @@ endif
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \

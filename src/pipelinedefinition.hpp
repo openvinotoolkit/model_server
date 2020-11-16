@@ -15,8 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -30,6 +32,7 @@
 #include "model_version_policy.hpp"
 #include "node.hpp"
 #include "pipeline.hpp"
+#include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -68,12 +71,13 @@ struct NodeInfo {
 };
 
 class PipelineDefinition {
-    std::string pipelineName;
+    const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
     std::set<std::pair<const std::string, model_version_t>> subscriptions;
+    std::atomic<uint64_t> requestsHandlesCounter = 0;
+    std::shared_mutex loadMtx;
 
-private:
     Status validateNode(ModelManager& manager, NodeInfo& node);
 
 public:
@@ -87,18 +91,32 @@ public:
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const tensorflow::serving::PredictRequest* request,
         tensorflow::serving::PredictResponse* response,
-        ModelManager& manager) const;
-
+        ModelManager& manager);
+    Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
+    void retire(ModelManager& manager);
+    Status validate(ModelManager& manager);
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     const std::string& getName() const { return pipelineName; }
 
-    void notifyUsedModelChanged() {}
+    void notifyUsedModelChanged() {
+        // this->status.notifyUsedModelChanged();
+    }
 
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
-    Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
-    Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+    virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
+    virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+
+    void increaseRequestsHandlesCount() {
+        ++requestsHandlesCounter;
+    }
+
+    void decreaseRequestsHandlesCount() {
+        --requestsHandlesCounter;
+    }
+
+    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = 1000);
 };
 }  // namespace ovms
