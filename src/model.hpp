@@ -64,7 +64,7 @@ protected:
          * @return default version
          */
     const model_version_t getDefaultVersion() const {
-        spdlog::debug("Getting default version for model:{}, {}", getName(), defaultVersion);
+        SPDLOG_DEBUG("Getting default version for model:{}, {}", getName(), defaultVersion);
         return defaultVersion;
     }
 

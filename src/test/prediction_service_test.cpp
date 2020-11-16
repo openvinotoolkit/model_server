@@ -43,7 +43,7 @@ public:
         config.setNireq(2);
     }
     void TearDown() {
-        SPDLOG_ERROR("TEAR_DOWN");
+        spdlog::error("TEAR_DOWN");
     }
     /**
      * @brief This function should mimic most closely predict request to check for thread safety

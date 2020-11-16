@@ -71,7 +71,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     Timer timer;
     timer.start("total");
     using std::chrono::microseconds;
-    spdlog::debug("Processing gRPC request for model: {}; version: {}",
+    SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         request->model_spec().name(),
         request->model_spec().version().value());
 
@@ -101,7 +101,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     }
 
     timer.stop("total");
-    spdlog::debug("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
 }
 

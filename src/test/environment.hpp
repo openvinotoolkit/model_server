@@ -13,11 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "environment.hpp"
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    return RUN_ALL_TESTS();
-}
+#include <gtest/gtest.h>
+
+#include "../logging.hpp"
+
+class Environment : public testing::Environment {
+public:
+    ~Environment() override {}
+
+    void SetUp() override {
+        ovms::configure_logger("INFO", "");
+    }
+
+    void TearDown() override {}
+};

@@ -25,16 +25,13 @@
 #include <grpcpp/server_context.h>
 #include <netinet/in.h>
 #include <signal.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include "config.hpp"
 #include "http_server.hpp"
+#include "logging.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
@@ -103,47 +100,27 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
     return StatusCode::OK;
 }
 
-void configure_logger(const std::string log_level, const std::string log_path) {
-    std::vector<spdlog::sink_ptr> sinks;
-    sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
-    if (!log_path.empty()) {
-        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path));
-    }
-    auto serving_logger = std::make_shared<spdlog::logger>("serving", begin(sinks), end(sinks));
-    serving_logger->set_level(spdlog::level::info);
-    if (!log_level.empty()) {
-        if (log_level == "DEBUG") {
-            serving_logger->set_level(spdlog::level::debug);
-            serving_logger->flush_on(spdlog::level::trace);
-        } else if (log_level == "ERROR") {
-            serving_logger->set_level(spdlog::level::err);
-            serving_logger->flush_on(spdlog::level::err);
-        }
-    }
-    spdlog::set_default_logger(serving_logger);
-}
-
 void logConfig(Config& config) {
-    spdlog::debug("CLI parameters passed to ovms server");
+    SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {
-        spdlog::debug("model_path: {}", config.modelPath());
-        spdlog::debug("model_name: {}", config.modelName());
-        spdlog::debug("batch_size: {}", config.batchSize());
-        spdlog::debug("shape: {}", config.shape());
-        spdlog::debug("model_version_policy: {}", config.modelVersionPolicy());
-        spdlog::debug("nireq: {}", config.nireq());
-        spdlog::debug("target_device: {}", config.targetDevice());
-        spdlog::debug("plugin_config: {}", config.pluginConfig());
+        SPDLOG_DEBUG("model_path: {}", config.modelPath());
+        SPDLOG_DEBUG("model_name: {}", config.modelName());
+        SPDLOG_DEBUG("batch_size: {}", config.batchSize());
+        SPDLOG_DEBUG("shape: {}", config.shape());
+        SPDLOG_DEBUG("model_version_policy: {}", config.modelVersionPolicy());
+        SPDLOG_DEBUG("nireq: {}", config.nireq());
+        SPDLOG_DEBUG("target_device: {}", config.targetDevice());
+        SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
     } else {
-        spdlog::debug("config_path: {}", config.configPath());
+        SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
-    spdlog::debug("gRPC port: {}", config.port());
-    spdlog::debug("REST port: {}", config.restPort());
-    spdlog::debug("REST workers: {}", config.restWorkers());
-    spdlog::debug("gRPC workers: {}", config.grpcWorkers());
-    spdlog::debug("gRPC channel arguments: {}", config.grpcChannelArguments());
-    spdlog::debug("log level: {}", config.logLevel());
-    spdlog::debug("log path: {}", config.logPath());
+    SPDLOG_DEBUG("gRPC port: {}", config.port());
+    SPDLOG_DEBUG("REST port: {}", config.restPort());
+    SPDLOG_DEBUG("REST workers: {}", config.restWorkers());
+    SPDLOG_DEBUG("gRPC workers: {}", config.grpcWorkers());
+    SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
+    SPDLOG_DEBUG("log level: {}", config.logLevel());
+    SPDLOG_DEBUG("log path: {}", config.logPath());
 }
 
 void onInterrupt(int status) {
@@ -187,7 +164,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     auto& config = ovms::Config::instance();
     auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
     if (!status.ok()) {
-        spdlog::error("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
+        SPDLOG_ERROR("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
         exit(1);
     }
 
@@ -195,7 +172,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     auto& manager = ModelManager::getInstance();
     status = manager.start();
     if (!status.ok()) {
-        spdlog::error("ovms::ModelManager::Start() Error: {}", status.string());
+        SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
         exit(1);
     }
 
@@ -209,21 +186,21 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
         // gRPC accept arguments of two types, int and string. We will attempt to
         // parse each arg as int and pass it on as such if successful. Otherwise we
         // will pass it as a string. gRPC will log arguments that were not accepted.
-        spdlog::debug("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
+        SPDLOG_DEBUG("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
         try {
             int i = std::stoi(channel_argument.value);
             builder.AddChannelArgument(channel_argument.key, i);
         } catch (std::invalid_argument const& e) {
             builder.AddChannelArgument(channel_argument.key, channel_argument.value);
         } catch (std::out_of_range const& e) {
-            spdlog::error("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
+            SPDLOG_WARN("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
         }
     }
 
     std::vector<std::unique_ptr<Server>> servers;
     uint grpcServersCount = getGRPCServersCount();
     servers.reserve(grpcServersCount);
-    spdlog::debug("Starting grpc servers: {}", grpcServersCount);
+    SPDLOG_DEBUG("Starting grpc servers: {}", grpcServersCount);
 
     if (!isPortAvailable(config.port())) {
         throw std::runtime_error("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
@@ -235,7 +212,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
         }
         servers.push_back(std::move(server));
     }
-    spdlog::info("Server started on port {} (bind address: {})", config.port(), config.grpcBindAddress());
+    SPDLOG_INFO("Server started on port {}", config.port());
 
     return servers;
 }
@@ -250,11 +227,11 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
         const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
 
         int workers = config.restWorkers() ? config.restWorkers() : 10;
-        spdlog::info("Will start {} REST workers", workers);
+        SPDLOG_INFO("Will start {} REST workers", workers);
 
         std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, REST_TIMEOUT);
         if (restServer != nullptr) {
-            spdlog::info("Started REST server at {}", server_address);
+            SPDLOG_INFO("Started REST server at {}", server_address);
         } else {
             throw std::runtime_error("Failed to start REST server at " + server_address);
         }
@@ -281,9 +258,9 @@ int server_main(int argc, char** argv) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         if (shutdown_request == 2) {
-            spdlog::error("Illegal operation. OVMS started on unsupported device");
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
-        spdlog::info("Shutting down");
+        SPDLOG_INFO("Shutting down");
         for (const auto& g : grpc) {
             g->Shutdown();
         }

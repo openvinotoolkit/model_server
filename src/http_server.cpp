@@ -64,7 +64,7 @@ public:
 
 private:
     void processRequest(net_http::ServerRequestInterface* req) {
-        spdlog::info("REST request {}", req->uri_path());
+        SPDLOG_DEBUG("REST request {}", req->uri_path());
         std::string body;
         int64_t num_bytes = 0;
         auto request_chunk = req->ReadRequestBytes(&num_bytes);
@@ -75,7 +75,7 @@ private:
 
         std::vector<std::pair<std::string, std::string>> headers;
         std::string output;
-        spdlog::info("Processing HTTP request: {} {} body: {} bytes",
+        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
             req->http_method(),
             req->uri_path(),
             body.size());
@@ -89,7 +89,7 @@ private:
         }
         req->WriteResponseString(output);
         if (http_status != net_http::HTTPStatusCode::OK) {
-            spdlog::error("Error Processing HTTP/REST request: {} {} Error: {}",
+            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
                 req->http_method(),
                 req->uri_path(),
                 status.string());
@@ -109,7 +109,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
 
     auto server = net_http::CreateEvHTTPServer(std::move(options));
     if (server == nullptr) {
-        spdlog::error("Failed to create http server");
+        SPDLOG_ERROR("Failed to create http server");
         return nullptr;
     }
 
@@ -124,7 +124,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
         handler_options);
 
     if (server->StartAcceptingRequests()) {
-        spdlog::info("REST server listening on {}:{} with {} threads", address, port, num_threads);
+        SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
         return server;
     }
 

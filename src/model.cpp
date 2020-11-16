@@ -45,7 +45,7 @@ const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModel
 
 void Model::updateDefaultVersion() {
     model_version_t newDefaultVersion = 0;
-    spdlog::info("Updating default version for model:{}, from:{}", getName(), defaultVersion);
+    SPDLOG_INFO("Updating default version for model:{}, from:{}", getName(), defaultVersion);
     for (const auto& [version, versionInstance] : modelVersions) {
         if (version > newDefaultVersion &&
             ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
@@ -95,12 +95,12 @@ Status Model::addVersion(const ModelConfig& config) {
 Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToStart) {
-        spdlog::info("Will add model: {}; version: {} ...", getName(), version);
+        SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         config.parseModelMapping();
         auto status = addVersion(config);
         if (!status.ok()) {
-            spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
+            SPDLOG_ERROR("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());
@@ -113,11 +113,11 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
 Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {
-        spdlog::info("Will unload model: {}; version: {} ...", getName(), version);
+        SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), version);
         auto modelVersion = getModelInstanceByVersion(version);
         if (!modelVersion) {
             Status status = StatusCode::UNKNOWN_ERROR;
-            spdlog::error("Error occurred while unloading model: {}; version: {}; error: {}",
+            SPDLOG_ERROR("Error occurred while unloading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());
@@ -133,7 +133,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
 
 void Model::retireAllVersions() {
     for (const auto versionModelInstancePair : modelVersions) {
-        spdlog::info("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         versionModelInstancePair.second->unloadModel();
         updateDefaultVersion();
     }
@@ -143,16 +143,16 @@ void Model::retireAllVersions() {
 Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
-        spdlog::info("Will reload model: {}; version: {} ...", getName(), version);
+        SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         auto status = config.parseModelMapping();
         if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
-            spdlog::error("Error while parsing model mapping for model {}", status.string());
+            SPDLOG_ERROR("Error while parsing model mapping for model {}", status.string());
         }
 
         auto modelVersion = getModelInstanceByVersion(version);
         if (!modelVersion) {
-            spdlog::error("Error occurred while reloading model: {}; version: {}; error: {}",
+            SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());
@@ -161,7 +161,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {
-            spdlog::error("Error occurred while loading model: {}; version: {}; error: {}",
+            SPDLOG_ERROR("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),
                 version,
                 status.string());

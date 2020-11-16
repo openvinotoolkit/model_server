@@ -215,8 +215,8 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = ovms::getModelInstance(manager, config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
-    SPDLOG_ERROR("State:{}", (int)modelInstance->getStatus().getState());
+    spdlog::error("State:{}", (int)modelInstance->getStatus().getState());
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance->getStatus().getState()) << "State:" << (int)modelInstance->getStatus().getState();
-    SPDLOG_ERROR("State:{}", (int)modelInstance->getStatus().getState());
+    spdlog::error("State:{}", (int)modelInstance->getStatus().getState());
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
