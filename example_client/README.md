@@ -291,7 +291,7 @@ python multi_inputs.py --help
 
 ```bash
 TERMINAL 1: <openvino_installation_root>/openvino/inference_engine/external/hddl/bin/hddldaemon
-TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml
+TERMINAL 2: docker run --rm -it --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml
             -p 8001:8001 -p 9001:9001 openvino/model_server:latest 
             --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001 --target_device HDDL
 
