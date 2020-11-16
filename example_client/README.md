@@ -290,16 +290,31 @@ python multi_inputs.py --help
 - Sample Output
 
 ```bash
-==============
 TERMINAL 1: <openvino_installation_root>/openvino/inference_engine/external/hddl/bin/hddldaemon
 TERMINAL 2: docker run --rm -it --privileged --device /dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/ml:/opt/ml
             -p 8001:8001 -p 9001:9001 openvino/model_server:latest 
             --model_path /opt/ml/model5 --model_name SSDMobileNet --port 9001 --rest_port 8001 --target_device HDDL
+
+Using with video file
+---------------------
+Set `camera` count to `0` with `-c 0`.
+TERMINAL 3: python3.6 multi_inputs.py -n SSDMobileNet -l image_tensor -o DetectionOutput -d 300 -c 0
+            -f /var/repos/github/sample-videos/face-demographics-walking.mp4 -i 127.0.0.1 -p 9001
+
+Console logs:
+[$(levelname)s ] Video0 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Video0 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Video0 fps: 7, Inf fps: 7, dropped fps: 0
+[$(levelname)s ] Exiting thread 0
+[$(levelname)s ] Good Bye!
+
+Using with video file and camera
+--------------------------------
+Set `camera` count to `1` with `-c 1`.
 TERMINAL 3: python3.6 multi_inputs.py -n SSDMobileNet -l image_tensor -o DetectionOutput -d 300 -c 1
             -f /var/repos/github/sample-videos/face-demographics-walking.mp4 -i 127.0.0.1 -p 9001
 
 Console logs:
-============
 [$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
 [$(levelname)s ] Camera0 fps: 7, Inf fps: 7, dropped fps: 0
 [$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
