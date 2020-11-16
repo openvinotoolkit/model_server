@@ -54,28 +54,26 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     if (it != request->inputs().end())
         sequenceControlInput = extractSequenceControlInput(it->second);
 
-    spdlog::info("Received sequence id: {}", sequenceId);
-
-    if (sequenceControlInput == 1) { // First request in the sequence 
+    if (sequenceControlInput == SEQUENCE_START) { // First request in the sequence 
         // if sequenceId == 0, sequenceManager will need to generate unique id 
-        if (sequenceId != 0) {
-            // TO DO: Validate if sequenceId is already in use
+        if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
+            return StatusCode::SEQUENCE_ALREADY_EXISTS;
         }
         processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         return StatusCode::OK;
-    } else if (sequenceControlInput == 2 || sequenceControlInput == 0) { // Intermediate and last request in the sequence 
-        if(sequenceId != 0) {
-            // TO DO: check if sequence with provided ID exists
+    } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) { // Intermediate and last request in the sequence 
+        if (sequenceId == 0) {
+            return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
+        } else if (sequenceManager.hasSequence(sequenceId)) {
             processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
             return StatusCode::OK;
         } else {
-            // return 404 Missing sequence status
-            return StatusCode::NOT_IMPLEMENTED;
+            return StatusCode::SEQUENCE_MISSING;
         }
     }  else { 
-        // 400 Bad Request - invalid control input
-        return StatusCode::NOT_IMPLEMENTED;
+        return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
+    return StatusCode::OK;
 }
 
 const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
@@ -91,7 +89,7 @@ const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::ser
     // Set infer request memory state to the last state saved by the sequence
     SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
 
-    if (sequenceSpec.sequenceControlInput == 1) {
+    if (sequenceSpec.sequenceControlInput == SEQUENCE_START) {
         // On SEQUENCE_START just add new sequence to sequence manager
         sequenceManager.addSequence(sequenceSpec.sequenceId);
     } else {
@@ -111,8 +109,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     
     SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
     // Reset inferRequest states on SEQUENCE_END
-    // TO DO: Move 2 to const variable
-    if (sequenceSpec.sequenceControlInput == 2) {
+    if (sequenceSpec.sequenceControlInput == SEQUENCE_END) {
         spdlog::info("Received SEQUENCE_END signal. Reseting model state and removing sequence");
         for (auto &&state : inferRequest.QueryState()) {
             state.Reset();
