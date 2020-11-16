@@ -68,7 +68,7 @@ public:
          * @param loader config parameters json as string
          * @param vector of uint8_t of model
          * @param vector of uint8_t of weights
-         * @return status
+         * @return status (On success, the return value will specify the type of model (IR,ONNX,BLOB) read into vectors)
          */
     virtual CustomLoaderStatus loadModel(const std::string& modelName,
         const std::string& basePath,
@@ -82,9 +82,9 @@ public:
          *
          * @param model name for which black list status is required
          * @param version for which the black list status is required
-         * @return blacklist status
+         * @return blacklist status OK or MODEL_BLACKLISTED
          */
-    virtual CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, int version) {
+    virtual CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, const int version) {
         return CustomLoaderStatus::OK;
     }
 
@@ -95,7 +95,7 @@ public:
          * @param version which is been unloaded
          * @return status
          */
-    virtual CustomLoaderStatus unloadModel(const std::string& modelName, int version) = 0;
+    virtual CustomLoaderStatus unloadModel(const std::string& modelName, const int version) = 0;
 
     /**
          * @brief Retire the model from customloader when OVMS retires the model

@@ -21,8 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include <cxxopts.hpp>
-
 #include "customloaderinterface.hpp"
 #include "status.hpp"
 

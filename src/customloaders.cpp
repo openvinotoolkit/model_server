@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include <cxxopts.hpp>
 #include <spdlog/spdlog.h>
 
 #include "customloaderinterface.hpp"
@@ -86,7 +85,7 @@ Status CustomLoaders::finalize() {
     SPDLOG_INFO("Clearing the list");
     customLoaderInterfacePtrs.clear();
 
-    SPDLOG_INFO("Adding new list to  the old list");
+    SPDLOG_INFO("Adding new list to the old list");
     // now assign new map to servicing map.
     customLoaderInterfacePtrs.insert(newCustomLoaderInterfacePtrs.begin(), newCustomLoaderInterfacePtrs.end());
     newCustomLoaderInterfacePtrs.clear();

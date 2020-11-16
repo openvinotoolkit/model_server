@@ -190,8 +190,16 @@ public:
          * @param custom loader name
          *
          */
-    void setCustomLoaderName(std::string name) {
+    void setCustomLoaderName(const std::string name) {
         customLoaderName = name;
+    }
+
+    /**
+         * @brief Reset the custom loader name
+         *
+         */
+    void resetCustomLoaderName() {
+        customLoaderName.clear();
     }
 };
 }  // namespace ovms

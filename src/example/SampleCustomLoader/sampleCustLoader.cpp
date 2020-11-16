@@ -105,10 +105,10 @@ public:
     // Virtual functions of the base class defined here
     CustomLoaderStatus loaderInit(const std::string& loader_path);
     CustomLoaderStatus loaderDeInit();
-    CustomLoaderStatus unloadModel(const std::string& modelName, int version);
+    CustomLoaderStatus unloadModel(const std::string& modelName, const int version);
     CustomLoaderStatus loadModel(const std::string& modelName, const std::string& basePath, const int version,
         const std::string& loaderOptions, std::vector<uint8_t>& model, std::vector<uint8_t>& weights);
-    CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, int version);
+    CustomLoaderStatus getModelBlacklistStatus(const std::string& modelName, const int version);
     CustomLoaderStatus retireModel(const std::string& modelName);
 
     // Sample loader specific variables
@@ -217,7 +217,7 @@ int custSampleLoader::extract_input_params(const std::string& basePath, const in
             std::cout << "Blob File" << std::endl;
             modelType = SAMPLE_LOADER_BLOB_MODEL;
         } else {
-            std::cout << "UNKNOWN file extension" << std::endl;
+            std::cout << "Unknown file extension" << std::endl;
             return SAMPLE_LOADER_ERROR;
         }
     }
@@ -344,10 +344,15 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     auto modelId = std::make_pair(modelName, version);
     models_loaded.emplace_back(modelId);
 
+    // we need to watch the model only when enableFile is present
     if (!(enableFile.empty())) {
-        auto it = models_watched.find(modelId);
-        if (it == models_watched.end()) {
-            models_watched[modelId] = enableFile;
+        std::lock_guard<std::mutex> guard(models_watched_mutex);
+
+        // If the model name and version is not in list of models,
+        // add it to the list. Otherwise, replace the name of the file
+        auto chkRet = models_watched.emplace(modelId, enableFile);
+        if (!chkRet.second) {
+            (chkRet.first)->second = enableFile;
         }
     }
 
@@ -379,7 +384,7 @@ CustomLoaderStatus custSampleLoader::retireModel(const std::string& modelName) {
 }
 
 // Unload model from loaded models list.
-CustomLoaderStatus custSampleLoader::unloadModel(const std::string& modelName, int version) {
+CustomLoaderStatus custSampleLoader::unloadModel(const std::string& modelName, const int version) {
     std::cout << "custSampleLoader: Custom unloadModel" << std::endl;
 
     model_id_t toFind = std::make_pair(modelName, version);
@@ -400,7 +405,7 @@ CustomLoaderStatus custSampleLoader::loaderDeInit() {
     return CustomLoaderStatus::OK;
 }
 
-CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& modelName, int version) {
+CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& modelName, const int version) {
     std::cout << "custSampleLoader: Custom getModelBlacklistStatus" << std::endl;
 
     model_id_t toFind = std::make_pair(modelName, version);

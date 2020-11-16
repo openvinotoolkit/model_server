@@ -26,6 +26,7 @@
 #include <stdlib.h>
 
 #include "../executinstreamidguard.hpp"
+#include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../model.hpp"
 #include "../model_service.hpp"
@@ -41,6 +42,7 @@ using testing::_;
 using testing::ContainerEq;
 using testing::Each;
 using testing::Eq;
+using ::testing::NiceMock;
 using testing::Return;
 using testing::ReturnRef;
 using testing::UnorderedElementsAre;
@@ -159,12 +161,55 @@ const char* config_model_with_customloader_options_unknown_loadername = R"({
       ]
     })";
 
-const std::string FIRST_MODEL_NAME = "dummy";
-const std::string SECOND_MODEL_NAME = "dummy_new";
-
-const std::string cl_models_path = "/tmp/test_cl_models/";
-const std::string cl_model_1_path = cl_models_path + "model1/";
-const std::string cl_model_2_path = cl_models_path + "model2/";
+// config_model_with_customloader
+const char* custom_loader_config_model_multiple = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader-a",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         },
+         {
+          "config":{
+            "loader_name":"sample-loader-b",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         },
+         {
+          "config":{
+            "loader_name":"sample-loader-c",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy-a",
+            "base_path": "/tmp/test_cl_models/model1",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name":  "sample-loader-a", "model_file":  "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        },
+        {
+          "config":{
+            "name":"dummy-b",
+            "base_path": "/tmp/test_cl_models/model1",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name":  "sample-loader-b", "model_file":  "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        },
+        {
+          "config":{
+            "name":"dummy-c",
+            "base_path": "/tmp/test_cl_models/model1",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name":  "sample-loader-c", "model_file":  "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        }
+      ]
+    })";
 
 class MockModel : public ovms::Model {
 public:
@@ -174,7 +219,6 @@ public:
 };
 
 std::shared_ptr<MockModel> modelMock;
-
 }  // namespace
 
 class MockModelManager : public ovms::ModelManager {
@@ -187,13 +231,22 @@ public:
 class TestCustomLoader : public ::testing::Test {
 public:
     void SetUp() {
-        ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-        const int initialBatchSize = 1;
-        config.setBatchSize(initialBatchSize);
-        config.setNireq(2);
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+
+        cl_models_path = "/tmp/" + std::string(test_info->name());
+        cl_model_1_path = cl_models_path + "/model1/";
+        cl_model_2_path = cl_models_path + "/model2/";
+
+        const std::string FIRST_MODEL_NAME = "dummy";
+        const std::string SECOND_MODEL_NAME = "dummy_new";
+
+        std::filesystem::remove_all(cl_models_path);
+        std::filesystem::create_directories(cl_model_1_path);
     }
     void TearDown() {
-        SPDLOG_ERROR("TEAR_DOWN");
+        // Clean up temporary destination
+        std::filesystem::remove_all(cl_models_path);
     }
     /**
      * @brief This function should mimic most closely predict request to check for thread safety
@@ -238,10 +291,14 @@ public:
     ~TestCustomLoader() {
         std::cout << "Destructor of TestCustomLoader()" << std::endl;
     }
+
+    std::string cl_models_path;
+    std::string cl_model_1_path;
+    std::string cl_model_2_path;
 };
 
 ::grpc::Status test_PerformModelStatusRequestX(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
-    spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
+    spdlog::info("reqx={} resx={}", req.DebugString(), res.DebugString());
     ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
     spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
     return ret;
@@ -452,13 +509,20 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
+// Functional Validation
+
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
@@ -466,13 +530,63 @@ TEST_F(TestCustomLoader, CustomLoaderPrediction) {
     performPredict("dummy", 1, request);
 }
 
-TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
+TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
+    const char* expected_json_available = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+)";
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+
+    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+
+    const tensorflow::serving::GetModelStatusResponse response_const = res;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
@@ -480,23 +594,24 @@ TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
     tensorflow::serving::PredictResponse response;
     ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::OK);
 
+    // Re-create config file
     createConfigFileWithContent(custom_loader_config_model_deleted, fileToReload);
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
-    ASSERT_TRUE(performInferenceWithRequest(request, response) != ovms::StatusCode::OK);
-
-    /*try {
-        std::filesystem::remove(path);
-    } catch (const std::filesystem::filesystem_error&) {
-    }*/
+    ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
@@ -516,11 +631,16 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
 
 TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
@@ -530,189 +650,159 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
     // Copy model1 to model2
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_2_path, std::filesystem::copy_options::recursive);
 
-    createConfigFileWithContent(custom_loader_config_model_new, fileToReload);
+    // Replace model path in the config string
+    configStr = custom_loader_config_model_new;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Re-create config file
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     performPredict("dummy", 1, request);
     performPredict("dummy-new", 1, request);
-
-    auto models = manager.getModels();
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictRemoveCustomLoaderOptionsPredict) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     performPredict("dummy", 1, request);
 
-    createConfigFileWithContent(custom_loader_config_model_customloader_options_removed, fileToReload);
+    // Replace model path in the config string
+    configStr = custom_loader_config_model_customloader_options_removed;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Re-create config file
+    createConfigFileWithContent(configStr, fileToReload);
+    //createConfigFileWithContent(custom_loader_config_model_customloader_options_removed, fileToReload);
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     performPredict("dummy", 1, request);
 }
 
 TEST_F(TestCustomLoader, PredictNormalModelAddCustomLoaderOptionsPredict) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model_customloader_options_removed);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_customloader_options_removed;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     performPredict("dummy", 1, request);
 
-    createConfigFileWithContent(custom_loader_config_model, fileToReload);
+    // Replace model path in the config string
+    configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
     performPredict("dummy", 1, request);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderOptionWithUnknownLibrary) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(config_model_with_customloader_options_unknown_loadername);
+    // Replace model path in the config string
+    std::string configStr = config_model_with_customloader_options_unknown_loadername;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
 
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     tensorflow::serving::PredictResponse response;
-    ASSERT_TRUE(performInferenceWithRequest(request, response) != ovms::StatusCode::OK);
+    ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
-    // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
-    // std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
     ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
 
     tensorflow::serving::PredictRequest request = preparePredictRequest(
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     tensorflow::serving::PredictResponse response;
-    ASSERT_TRUE(performInferenceWithRequest(request, response) != ovms::StatusCode::OK);
-}
-
-TEST_F(TestCustomLoader, CustomLoaderSingleVersion) {
-    const char* custom_loader_config_model = R"({
-       "custom_loader_config_list":[
-         {
-          "config":{
-            "loader_name":"sample-loader",
-            "library_path": "/tmp/libsampleloader.so"
-          }
-         }
-       ],
-      "model_config_list":[
-        {
-          "config":{
-            "name":"dummy",
-            "base_path": "/ovms/src/test/dummy",
-            "nireq": 1,
-            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
-          }
-        }
-      ]
-    })";
-
-    std::string fileToReload = "/tmp/ovms_config_cl.json";
-    createConfigFileWithContent(custom_loader_config_model, fileToReload);
-
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    manager.startFromFile(fileToReload);
-
-    ModelServiceImpl s;
-    tensorflow::serving::GetModelStatusRequest req;
-    tensorflow::serving::GetModelStatusResponse res;
-
-    auto model_spec = req.mutable_model_spec();
-    model_spec->Clear();
-    model_spec->set_name("dummy");
-
-    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
-    EXPECT_EQ(ret.ok(), true);
-}
-
-TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
-    const char* custom_loader_config_model = R"({
-       "custom_loader_config_list":[
-         {
-          "config":{
-            "loader_name":"sample-loader",
-            "library_path": "/tmp/libsampleloader.so"
-          }
-         }
-       ],
-      "model_config_list":[
-        {
-          "config":{
-            "name":"dummy",
-            "base_path": "/ovms/src/test/dummy",
-            "nireq": 1,
-            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
-          }
-        }
-      ]
-    })";
-
-    // std::string fileToReload = "/tmp/ovms_config_cl.json";
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
-
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    manager.startFromFile(fileToReload);
-
-    ModelServiceImpl s;
-    tensorflow::serving::GetModelStatusRequest req;
-    tensorflow::serving::GetModelStatusResponse res;
-
-    auto model_spec = req.mutable_model_spec();
-    model_spec->Clear();
-    model_spec->set_name("dummy");
-
-    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
-    EXPECT_EQ(ret.ok(), true);
+    ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_NAME_MISSING);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
-    const char* custom_loader_config_model = R"({
-       "custom_loader_config_list":[
-         {
-          "config":{
-            "loader_name":"sample-loader",
-            "library_path": "/tmp/libsampleloader.so"
-          }
-         }
-       ],
-      "model_config_list":[
-        {
-          "config":{
-            "name":"dummy",
-            "base_path": "/ovms/src/test/dummy",
-            "nireq": 1,
-            "custom_loader_options": {"loader_name": "sample-loader", "xml_file": "dummy.xml", "bin_file": "dummy.bin"}
-          }
-        }
-      ]
-    })";
+    const char* expected_json_available = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+)";
 
-    std::string fileToReload = "/tmp/ovms_config_cl.json";
-    createConfigFileWithContent(custom_loader_config_model, fileToReload);
+    const char* expected_json_end = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+)";
+
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
 
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     manager.startFromFile(fileToReload);
@@ -724,30 +814,155 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     auto model_spec = req.mutable_model_spec();
     model_spec->Clear();
     model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(1);
 
     ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
-    EXPECT_EQ(ret.ok(), true);
+
+    const tensorflow::serving::GetModelStatusResponse response_const = res;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+
+    // Re-create config file
+    createConfigFileWithContent(custom_loader_config_model_deleted, fileToReload);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl sx;
+    tensorflow::serving::GetModelStatusRequest reqx;
+    tensorflow::serving::GetModelStatusResponse resx;
+
+    auto model_specx = reqx.mutable_model_spec();
+    model_specx->Clear();
+    model_specx->set_name("dummy");
+    model_specx->mutable_version()->set_value(1);
+
+    ::grpc::Status retx = test_PerformModelStatusRequestX(sx, reqx, resx);
+
+    const tensorflow::serving::GetModelStatusResponse response_constx = resx;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_constx, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
 }
 
-/*
-TEST_F(TestCustomLoader, CustomLoaderStartFromFile) {
+TEST_F(TestCustomLoader, CustomLoaderPredictionUsingManyCustomLoaders) {
     // Copy dummy model to temporary destination
-    std::filesystem::remove_all(cl_models_path);
-    std::filesystem::create_directories(cl_model_1_path);
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
 
-    std::string fileToReload = createConfigFileWithContent(custom_loader_config_model);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_multiple;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
 
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
 
-    EXPECT_CALL(*modelMock, addVersion(_))
-        .Times(1)
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.startFromFile(fileToReload);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    /modelMock.reset();
-}*/
+    ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
+    tensorflow::serving::PredictRequest request = preparePredictRequest(
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
+
+    performPredict("dummy-a", 1, request);
+    performPredict("dummy-b", 1, request);
+    performPredict("dummy-c", 1, request);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
+    const char* expected_json = R"({
+ "modelSpec": {
+  "name": "dummy",
+  "signatureName": "",
+  "version": "1"
+ },
+ "metadata": {
+  "signature_def": {
+   "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+   "signatureDef": {
+    "serving_default": {
+     "inputs": {
+      "b": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "10",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "b"
+      }
+     },
+     "outputs": {
+      "a": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "10",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "a"
+      }
+     },
+     "methodName": ""
+    }
+   }
+  }
+ }
+}
+)";
+
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
+
+    std::shared_ptr<ovms::ModelInstance> model;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    ASSERT_EQ(ovms::getModelInstance(manager, "dummy", 1, model, unload_guard), ovms::StatusCode::OK);
+
+    tensorflow::serving::GetModelMetadataResponse response;
+    ovms::GetModelMetadataImpl::buildResponse(model, &response);
+
+    std::string json_output = "";
+    ovms::GetModelMetadataImpl::serializeResponse2Json(&response, &json_output);
+
+    EXPECT_TRUE(response.has_model_spec());
+    EXPECT_EQ(response.model_spec().name(), "dummy");
+
+    tensorflow::serving::SignatureDefMap def;
+    response.metadata().at("signature_def").UnpackTo(&def);
+
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+
+    EXPECT_EQ(inputs.size(), 1);
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(json_output, expected_json);
+}
 
 #pragma GCC diagnostic pop
