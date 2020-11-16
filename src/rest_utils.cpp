@@ -121,7 +121,7 @@ Status makeJsonFromPredictResponse(
     SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>("MakeJsonFromTensors") / 1000);
 
     if (!tf_status.ok()) {
-        SPDLOG_ERROR("Creating json form tensors failed: {}", tf_status.error_message());
+        SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.error_message());
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 

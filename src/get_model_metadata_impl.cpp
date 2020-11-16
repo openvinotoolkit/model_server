@@ -36,8 +36,12 @@ Status GetModelMetadataImpl::getModelStatus(
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
-        SPDLOG_WARN("model {} is  missing", name);
-        return StatusCode::MODEL_NAME_MISSING;
+        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
+        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
+        if (!pipelineDefinition) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        return buildResponse(*pipelineDefinition, response, manager);
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
@@ -45,14 +49,14 @@ Status GetModelMetadataImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_WARN("model {}; version {} is missing", name, version);
+            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_WARN("model {}; default version is missing", name);
+            SPDLOG_WARN("GetModelMetadata requested model {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }

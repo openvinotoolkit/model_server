@@ -174,7 +174,7 @@ Status DLNode::fetchResults(BlobMap& outputs) {
             try {
                 std::string realModelOutputName;
                 if (!getRealOutputName(output_name, &realModelOutputName).ok()) {
-                    SPDLOG_WARN("[Node: {}] Cannot find real model output name for ali{}", getName(), output_name);
+                    SPDLOG_WARN("[Node: {}] Cannot find real model output name for alias{}", getName(), output_name);
                     return StatusCode::INTERNAL_ERROR;
                 }
                 SPDLOG_DEBUG("[Node: {}] Getting blob from model:{}, inferRequestStreamId:{}, blobName:{}",
