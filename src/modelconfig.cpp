@@ -71,12 +71,12 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         return true;
     }
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
-        spdlog::debug("ModelConfig {} reload required due to custom loader config mismatch", this->name);
+        SPDLOG_DEBUG("ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;
     }
     if (this->customLoaderOptionsConfigMap.size() > 0 && rhs.customLoaderOptionsConfigMap.size() > 0) {
         if (!(this->customLoaderOptionsConfigMap == rhs.customLoaderOptionsConfigMap)) {
-            spdlog::debug("ModelConfig {} reload required due to custom loader config mismatch", this->name);
+            SPDLOG_DEBUG("ModelConfig {} reload required due to custom loader config mismatch", this->name);
             return true;
         }
     }

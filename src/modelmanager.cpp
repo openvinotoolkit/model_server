@@ -620,20 +620,20 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(loaderName);
         if (loaderPtr != nullptr) {
-            spdlog::info("Custom Loader to be used : {}", loaderName);
+            SPDLOG_INFO("Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
 
             // check existing version for blacklist
             for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                spdlog::info("The model {} checking for blacklist", versionInstance->getName());
+                SPDLOG_DEBUG("The model {} checking for blacklist", versionInstance->getName());
                 CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
                 if (bres != CustomLoaderStatus::OK) {
-                    spdlog::info("The model {} is blacklisted", versionInstance->getName());
+                    SPDLOG_INFO("The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
                 }
             }
         } else {
-            spdlog::error("Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
+            SPDLOG_ERROR("Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
             model->retireAllVersions();
             return StatusCode::OK;
         }

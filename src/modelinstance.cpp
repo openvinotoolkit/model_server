@@ -246,7 +246,7 @@ Status ModelInstance::loadOVCNNNetwork() {
 }
 
 Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
-    spdlog::debug("Try reading model using a custom loader");
+    SPDLOG_DEBUG("Try reading model using a custom loader");
     try {
         std::vector<uint8_t> model;
         std::vector<uint8_t> weights;
@@ -283,7 +283,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             return StatusCode::INTERNAL_ERROR;
         }
     } catch (std::exception& e) {
-        spdlog::error("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        SPDLOG_ERROR("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
