@@ -27,7 +27,7 @@ from kaldi_python_io import ArchiveReader
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
-parser.add_argument('--model_input_path', required=False, default='rm_lstm4f/test_feat_1_10.ark' help='path to input ark file')
+parser.add_argument('--model_input_path', required=False, default='rm_lstm4f/test_feat_1_10.ark', help='Path to input ark file')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 parser.add_argument('--input_name',required=False, default='Parameter', help='Specify input tensor name. default: Parameter')
@@ -44,8 +44,8 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 processing_times = np.zeros((0),int)
 
 model_input_path = args.get('model_input_path')
-print('Reading ark file {}'.format(model_input_path)
-ark_reader = ArchiveReader("model_input_path")
+print('Reading ark file {}'.format(model_input_path))
+ark_reader = ArchiveReader(model_input_path)
 
 for key, obj in ark_reader:
     print("Input ark file data range {0}: {1}".format(key, obj.shape))
@@ -56,7 +56,7 @@ print('\tModel name: {}'.format(args.get('model_name')))
 SEQUENCE_START = 1
 SEQUENCE_END = 2
 
-sequence_id = 4
+sequence_id = 1001
 for key, obj in ark_reader:
     batch_size = obj.shape[0]
     print('\tInput name: {}\n'.format(key))
@@ -78,7 +78,7 @@ for key, obj in ark_reader:
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size:
+        if x == batch_size - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
