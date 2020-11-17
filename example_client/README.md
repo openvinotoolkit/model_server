@@ -8,14 +8,15 @@ It covers following topics:
 
 ## Requirement
 
-Install client dependencies using the command :
+Install client dependencies using the command below in the example_client directory:
 ```
 pip3 install -r client_requirements.txt
 ```
 
+Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
-docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
 ```
 
 ## gRPC API Client Examples <a name="grpc-api"></a>

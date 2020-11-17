@@ -35,16 +35,21 @@ def crop_resize(img,cropx,cropy):
     starty = y//2-(cropy//2)
     return img[starty:starty+cropy,startx:startx+cropx,:]
 
-def getJpeg(path, size):
+def getJpeg(path, size, rgb_image=0):
     with open(path, mode='rb') as file:
         content = file.read()
 
     img = np.frombuffer(content, dtype=np.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_COLOR)  # BGR format
     # retrived array has BGR format and 0-255 normalization
+    # format of data is HWC
     # add image preprocessing if needed by the model
     img = crop_resize(img, size, size)
     img = img.astype('float32')
+    #convert to RGB instead of BGR if required by model
+    if rgb_image:
+        img = img[:, :, [2, 1, 0]]
+    # switch from HWC to CHW and reshape to 1,3,size,size for model blob input requirements
     img = img.transpose(2,0,1).reshape(1,3,size,size)
     print(path, img.shape, "; data range:",np.amin(img),":",np.amax(img))
     return img
@@ -58,6 +63,7 @@ parser.add_argument('--output_name',required=False, default='resnet_v1_50/predic
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
 parser.add_argument('--size',required=False, default=224, type=int, help='The size of the image in the model')
+parser.add_argument('--rgb_image',required=False, default=0, type=int, help='Convert BGR channels to RGB channels in the input image')
 args = vars(parser.parse_args())
 
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
@@ -76,9 +82,10 @@ processing_times = np.zeros((0),int)
 imgs = np.zeros((0,3,size, size), np.dtype('<f'))
 lbs = np.zeros((0), int)
 
+rgb_image = args.get('rgb_image')
 for line in lines:
     path, label = line.strip().split(" ")
-    img = getJpeg(path, size)
+    img = getJpeg(path, size, rgb_image)
 
     # lbs = np.append(lbs,[int(label)],0)
     # imgs = np.append(imgs, img,0)
