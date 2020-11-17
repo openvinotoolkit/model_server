@@ -61,30 +61,29 @@ processing_times = np.zeros((0),int)
 
 ark_reader = ArchiveReader("rm_lstm4f/test_feat_1_10.ark")
 
-iterations = 0
 for key, obj in ark_reader:
     print("Input ark file data range {0}: {1}".format(key, obj.shape))
-    iterations += 1
 
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
-print('\tIterations: {}'.format(iterations))
 print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
 
 
-iteration = 0
 is_pipeline_request = bool(args.get('pipeline_name'))
 
 SEQUENCE_START = 1
 SEQUENCE_END = 2
 
+sequence_id = 4
 for key, obj in ark_reader:
     batch_size = obj.shape[0]
     print('\tInput name: {}\n'.format(key))
     print('\tInput in shape: {}\n'.format(obj.shape))
     print('\tInput batch size: {}\n'.format(batch_size))
+    print('\tSequence id: {}\n'.format(sequence_id))
     for x in range(0, batch_size):
-        iteration += 1
+
+        print('\tExecution: {}\n'.format(x))
         request = predict_pb2.PredictRequest()
         #request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
         request.model_spec.name = args.get('model_name')
@@ -94,14 +93,13 @@ for key, obj in ark_reader:
         print('\tTensor input in shape: {}\n'.format(expand_dims(obj[x], axis=0).shape))
 
         request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(expand_dims(obj[x], axis=0).shape)))
-        if iteration == 1:
-            #request.inputs['sequence_id'].CopyFrom(make_tensor_proto(123, dtype="uint64"))
+        if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
-        else:
-            request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
+        
+        request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if iteration == batch_size + 1:
-            request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
+        if x == batch_size:
+            request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
@@ -119,10 +117,10 @@ for key, obj in ark_reader:
             for Y in result.outputs:
                 print(Y)
             exit(1)
-
-        sequence_id = result.outputs['sequence_id']
-        if sequence_id <= 0:
-            print("ERROR: Wrong sequence_id in model output {}".format(sequence_id))
+        #sequence_id = make_ndarray(result.outputs['sequence_id'])
+        #print("Sequence id check: {}".format(sequence_id))
+        #if int(sequence_id) <= 0:
+        #    print("ERROR: Wrong sequence_id in model output {}".format(sequence_id))
 
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
@@ -130,8 +128,9 @@ for key, obj in ark_reader:
 
         nu = np.array(output)
         # for object classification models show imagenet class
-        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
+        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(x,round(np.average(duration), 2),
                                                                                   round(1000 * batch_size / np.average(duration), 2)
                                                                                   ))
+    sequence_id += 1
 
 print_statistics(processing_times, batch_size)
