@@ -110,7 +110,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceSpec.sequenceControlInput == SEQUENCE_END) {
-        spdlog::info("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
         for (auto &&state : inferRequest.QueryState()) {
             state.Reset();
         }
@@ -124,7 +124,6 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
     tensorProto.add_uint64_val(sequenceSpec.sequenceId);
 
-    spdlog::info("Added sequence_id to the response");
     return StatusCode::OK;
 }
 
