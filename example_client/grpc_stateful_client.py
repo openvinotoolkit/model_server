@@ -97,6 +97,9 @@ for key, obj in ark_reader:
         if iteration == 1:
             #request.inputs['sequence_id'].CopyFrom(make_tensor_proto(123, dtype="uint64"))
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
+        else:
+            request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
+
         if iteration == batch_size + 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
 
@@ -104,18 +107,22 @@ for key, obj in ark_reader:
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
         if args['output_name'] not in result.outputs:
-            print("Invalid output name", args['output_name'])
+            print("ERROR: Invalid output name", args['output_name'])
             print("Available outputs:")
             for Y in result.outputs:
                 print(Y)
             exit(1)
 
         if 'sequence_id' not in result.outputs:
-            print("Missing sequence_id in model output")
+            print("ERROR: Missing sequence_id in model output")
             print("Available outputs:")
             for Y in result.outputs:
                 print(Y)
             exit(1)
+
+        sequence_id = result.outputs['sequence_id']
+        if sequence_id <= 0:
+            print("ERROR: Wrong sequence_id in model output {}".format(sequence_id))
 
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))

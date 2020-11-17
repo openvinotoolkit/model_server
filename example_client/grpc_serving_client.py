@@ -59,8 +59,6 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
 
-ark_reader = ArchiveReader("rm_lstm4f/test_feat_1_10.ark")
-
 # optional preprocessing depending on the model
 imgs = np.load(args['images_numpy_path'], mmap_mode='r', allow_pickle=False)
 imgs = imgs - np.min(imgs)  # Normalization 0-255
