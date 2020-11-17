@@ -246,18 +246,17 @@ TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedYet) {
 }
 
 TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedAnymore) {
-    this->pipelineDefinition.getPipelineDefinitionStatus().handle(ValidationFailedEvent());
-    auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
-    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(RetireEvent());
-    status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+    auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
 }
 
 TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedYet) {
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ValidationFailedEvent());
-    this->pipelineDefinition.getPipelineDefinitionStatus().handle(UsedModelChangedEvent());
     auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(UsedModelChangedEvent());
+    status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
     ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
 }
 

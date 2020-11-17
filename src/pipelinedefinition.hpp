@@ -74,11 +74,13 @@ struct NodeInfo {
 
 class PipelineDefinition {
     struct ValidationResultNotifier {
-        ValidationResultNotifier(PipelineDefinitionStatus& status) :
-            status(status) {}
+        ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
+            status(status),
+            loadedNotify(loadedNotify) {}
         ~ValidationResultNotifier() {
             if (passed) {
                 status.handle(ValidationPassedEvent());
+                loadedNotify.notify_all();
             } else {
                 status.handle(ValidationFailedEvent());
             }
@@ -87,6 +89,7 @@ class PipelineDefinition {
 
     private:
         PipelineDefinitionStatus& status;
+        std::condition_variable& loadedNotify;
     };
 
     const std::string pipelineName;
@@ -107,6 +110,7 @@ private:
     Status validateNode(ModelManager& manager, NodeInfo& node);
 
 public:
+    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 1000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections) :
@@ -143,6 +147,6 @@ public:
         --requestsHandlesCounter;
     }
 
-    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = 1000);
+    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 };
 }  // namespace ovms

@@ -58,23 +58,23 @@ class MachineState {
 public:
     template <typename Event>
     void handle(const Event& event) {
-        std::visit([this, &event](auto& state) { state.handle(event).execute(*this); }, currentState);
+        std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
     }
 
     template <typename State>
     void changeStateTo() {
-        currentState = std::get<State>(states);
+        currentState = &std::get<State>(allPossibleStates);
     }
-    void printState() {
-        std::visit([](const auto& state) { state.print(); }, currentState);
+    void printState() const {
+        std::visit([](const auto state) { state->print(); }, currentState);
     }
-    PipelineDefinitionStateCode getState() {
-        return std::visit([](const auto& state) { return state.getState(); }, currentState);
+    PipelineDefinitionStateCode getStateCode() const {
+        return std::visit([](const auto state) { return state->getStateCode(); }, currentState);
     }
 
 private:
-    std::tuple<States...> states;
-    std::variant<States...> currentState;
+    std::tuple<States...> allPossibleStates;
+    std::variant<States*...> currentState{ &std::get<0>(allPossibleStates) };
 };
 
 struct BeginState;
@@ -105,7 +105,7 @@ struct StateChanger {
 struct StateKeeper {
     template <typename MachineState>
     void execute(MachineState& machine) {
-        SPDLOG_INFO("Keeping state");
+        SPDLOG_DEBUG("Keeping state");
     }
 };
 
@@ -113,27 +113,27 @@ constexpr const char* INVALID_TRANSITION_MESSAGE = "Tried to conduct invalid tra
 
 struct BeginState {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::BEGIN;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getState()), e.name, INVALID_TRANSITION_MESSAGE);
+        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
     StateKeeper handle(const RetireEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getState()), e.name, INVALID_TRANSITION_MESSAGE);
+        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
@@ -141,131 +141,131 @@ struct BeginState {
 
 struct AvailableState {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::AVAILABLE;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateKeeper handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<AvailableRequiredRevalidation> handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<RetiredState> handle(const RetireEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
 };
 
 struct AvailableRequiredRevalidation {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<RetiredState> handle(const RetireEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
 };
 
 struct LoadingPreconditionFailedState {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateKeeper handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingFailedLastValidationRequiredRevalidation> handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<RetiredState> handle(const RetireEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
 };
 
 struct LoadingFailedLastValidationRequiredRevalidation {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<RetiredState> handle(const RetireEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
 };
 
 struct RetiredState {
     static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::RETIRED;
-    PipelineDefinitionStateCode getState() const {
+    PipelineDefinitionStateCode getStateCode() const {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getState()));
+        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const {
-        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getState()), e.name);
+        SPDLOG_INFO("State:{} handling: {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name);
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getState()), e.name, INVALID_TRANSITION_MESSAGE);
+        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
     StateKeeper handle(const RetireEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getState()), e.name, INVALID_TRANSITION_MESSAGE);
+        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
@@ -274,14 +274,15 @@ struct RetiredState {
 class PipelineDefinitionStatus : public MachineState<BeginState, AvailableState, AvailableRequiredRevalidation, LoadingPreconditionFailedState, LoadingFailedLastValidationRequiredRevalidation, RetiredState> {
 public:
     bool isAvailable() {
-        auto state = getState();
+        auto state = getStateCode();
         return (state == PipelineDefinitionStateCode::AVAILABLE) ||
                (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     }
     bool canEndLoaded() {
-        auto state = getState();
+        auto state = getStateCode();
         return isAvailable() ||
-               (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+               (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
+               (state == PipelineDefinitionStateCode::BEGIN);
     }
 };
 

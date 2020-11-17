@@ -32,165 +32,165 @@ using testing::Return;
 
 TEST(PipelineDefinitionStatus, ValidationPassThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenUsedModelChangeThenPassThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenUsedModelChangeThriceThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenUsedModelChangeThriceThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(UsedModelChangedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetire) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenUsedModelChangeShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     ASSERT_THROW(pds.handle(UsedModelChangedEvent()), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenRetireShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     ASSERT_THROW(pds.handle(RetireEvent()), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenValidationPass) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenValidationFail) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenValidationFail) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 TEST(PipelineDefinitionStatus, RetireShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     ASSERT_THROW(pds.handle(RetireEvent()), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenValidationPassShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenValidationFailShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenValidationFailShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenValidationPassShouldThrow) {
     PipelineDefinitionStatus pds;
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getState(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
