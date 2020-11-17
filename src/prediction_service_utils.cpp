@@ -132,7 +132,12 @@ Status inference(
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
+    timer.start("preprocessing");
     modelVersion.preInferenceProcessing(requestProto, inferRequest, &processingSpec);
+    timer.stop("preprocessing");
+    spdlog::debug("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("preprocessing") / 1000);
+
     timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, modelVersion.getInputsInfo(), inferRequest);
     timer.stop("deserialize");
@@ -140,6 +145,7 @@ Status inference(
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+    
     timer.start("prediction");
     status = performInference(inferRequestsQueue, executingInferId, inferRequest);
     timer.stop("prediction");
@@ -156,7 +162,12 @@ Status inference(
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
+    timer.start("postprocessing");
     modelVersion.postInferenceProcessing(responseProto, inferRequest, &processingSpec);
+    timer.stop("postprocessing");
+    spdlog::debug("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), modelVersion.getVersion(), executingInferId, timer.elapsed<microseconds>("postprocessing") / 1000);
+
     return StatusCode::OK;
 }
 
