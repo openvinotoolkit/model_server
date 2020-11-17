@@ -16,26 +16,21 @@
 
 #include "customloaders.hpp"
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <spdlog/spdlog.h>
 
 #include "customloaderinterface.hpp"
 
 namespace ovms {
 
-Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInsterface, void* library) {
-    SPDLOG_INFO("Adding loder {} to loaders list", name);
-    auto loaderIt = newCustomLoaderInterfacePtrs.find(name);
-    if (loaderIt == newCustomLoaderInterfacePtrs.end()) {
-        newCustomLoaderInterfacePtrs.insert({name, std::make_pair(library, loaderInsterface)});
-        return StatusCode::OK;
+Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInterface, void* library) {
+    auto loaderIt = newCustomLoaderInterfacePtrs.emplace(name, std::make_pair(library, loaderInterface));
+    // if the loader already exists, print an error message
+    if (!loaderIt.second) {
+        SPDLOG_ERROR("The loader {} already exists in the config file", name);
+        return StatusCode::CUSTOM_LOADER_EXISTS;
     }
 
-    return StatusCode::CUSTOM_LOADER_EXISTS;
+    return StatusCode::OK;
 }
 
 Status CustomLoaders::remove(const std::string& name) {

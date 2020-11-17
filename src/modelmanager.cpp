@@ -226,6 +226,45 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
+Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
+    auto& customloaders = ovms::CustomLoaders::instance();
+    std::string loaderName = loaderConfig.getLoaderName();
+    SPDLOG_DEBUG("Check if loader is already loaded");
+    if (customloaders.find(loaderName) == nullptr) {
+        // this is where library or custom loader is loaded
+        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+        if (!handleCL) {
+            SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+        }
+
+        // load the symbols
+        createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
+        const char* dlsym_error = dlerror();
+        if (dlsym_error) {
+            SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
+            return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
+        }
+
+        std::shared_ptr<CustomLoaderInterface> customLoaderIfPtr{customObj()};
+        try {
+            customLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Cannot create or initialize the custom loader. Failed with error {}", e.what());
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Cannot create or initialize the custom loader");
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        }
+        customloaders.add(loaderName, customLoaderIfPtr, handleCL);
+    } else {
+        // Loader is already in the existing loaders. Move it to new loaders.
+        // Reload of customloader is not supported yet
+        customloaders.move(loaderName);
+    }
+    return StatusCode::OK;
+}
+
 Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("custom_loader_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
@@ -233,8 +272,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     }
 
     // Load Customer Loaders as per the configuration
-    SPDLOG_INFO("Using Customloaders");
-    auto& customloaders = ovms::CustomLoaders::instance();
+    SPDLOG_DEBUG("Using Customloader");
     for (const auto& configs : itrp->value.GetArray()) {
         const std::string loaderName = configs["config"]["loader_name"].GetString();
         SPDLOG_INFO("Reading Custom Loader:{} configuration", loaderName);
@@ -246,38 +284,13 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
             return status;
         }
 
-        SPDLOG_INFO("CHECK IF LOADER IS ALREADY LOADED");
-        if (customloaders.find(loaderName) == nullptr) {
-            // this is where library or custom loader is loaded
-            void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
-            if (!handleCL) {
-                SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
-                return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
-            }
-
-            // load the symbols
-            createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
-            const char* dlsym_error = dlerror();
-            if (dlsym_error) {
-                SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
-                return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
-            }
-
-            std::shared_ptr<CustomLoaderInterface> customerLoaderIfPtr{customObj()};
-            try {
-                customerLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
-            } catch (...) {
-                SPDLOG_ERROR("Cannot create or initialize the custom loader");
-                return StatusCode::CUSTOM_LOADER_INIT_FAILED;
-            }
-            customloaders.add(loaderName, customerLoaderIfPtr, handleCL);
-        } else {
-            // Loader is already in the existing loaders. Move it to new loaders.
-            // Reload of customloader is not supported yet
-            customloaders.move(loaderName);
+        auto retVal = createCustomLoader(loaderConfig);
+        if (retVal != StatusCode::OK) {
+            SPDLOG_ERROR("Creation of loader:{} failed", loaderName);
         }
     }
     // All loaders are the done. Finalize the list by deleting removed loaders in config
+    auto& customloaders = ovms::CustomLoaders::instance();
     customloaders.finalize();
     return ovms::StatusCode::OK;
 }

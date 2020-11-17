@@ -76,6 +76,10 @@ private:
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
     /**
+     * @brief creates customloader from the loader configuration
+     */
+    Status createCustomLoader(CustomLoaderConfig& loaderConfig);
+    /**
      * @brief Watcher thread for monitor changes in config
      */
     void watcher(std::future<void> exit);

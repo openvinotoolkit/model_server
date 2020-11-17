@@ -613,7 +613,7 @@ void ModelInstance::unloadModel() {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
-            SPDLOG_INFO("The loader {} is nolonger available", loaderName);
+            SPDLOG_INFO("The loader {} is no longer available", loaderName);
         } else {
             // once model is unloaded, notify custom loader object about the unload
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());

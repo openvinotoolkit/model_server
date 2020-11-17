@@ -297,7 +297,7 @@ public:
     std::string cl_model_2_path;
 };
 
-::grpc::Status test_PerformModelStatusRequestX(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
+::grpc::Status test_PerformModelStatusRequestForCustomLoader(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
     spdlog::info("reqx={} resx={}", req.DebugString(), res.DebugString());
     ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
     spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
@@ -566,7 +566,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
     model_spec->Clear();
     model_spec->set_name("dummy");
 
-    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+    ::grpc::Status ret = test_PerformModelStatusRequestForCustomLoader(s, req, res);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -815,7 +815,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
 
-    ::grpc::Status ret = test_PerformModelStatusRequestX(s, req, res);
+    ::grpc::Status ret = test_PerformModelStatusRequestForCustomLoader(s, req, res);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -836,7 +836,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     model_specx->set_name("dummy");
     model_specx->mutable_version()->set_value(1);
 
-    ::grpc::Status retx = test_PerformModelStatusRequestX(sx, reqx, resx);
+    ::grpc::Status retx = test_PerformModelStatusRequestForCustomLoader(sx, reqx, resx);
 
     const tensorflow::serving::GetModelStatusResponse response_constx = resx;
     json_output = "";
@@ -962,6 +962,52 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
     EXPECT_EQ(inputs.size(), 1);
     EXPECT_EQ(outputs.size(), 1);
     EXPECT_EQ(json_output, expected_json);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
+    const char* custom_loader_config_model_xx = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         },
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/tmp/test_cl_models/model1",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name":  "sample-loader", "model_file":  "dummy.xml", "bin_file": "dummy.bin"}
+          }
+        }
+      ]
+    })";
+
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_xx;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ASSERT_EQ(manager.startFromFile(fileToReload), ovms::StatusCode::OK);
+    tensorflow::serving::PredictRequest request = preparePredictRequest(
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
+    performPredict("dummy", 1, request);
 }
 
 #pragma GCC diagnostic pop

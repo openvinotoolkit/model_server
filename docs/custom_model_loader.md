@@ -1,11 +1,11 @@
-##Introduction:
+## Introduction:
 
 At times, before loading the models directly from files, some extra processing or checking may be required. Typical examples are loading encrypted files or checking for license for the model etc. In those cases,  this customloader interface allows users to write their own custom model loader based on the predefine interface and load the same as a dynamic library. 
 
 This document gives details on adding custom loader configuration, custom loader interface and other details. 
 
-##Custom Loader Interface:
-###Model Server Config File
+## Custom Loader Interface:
+### Model Server Config File
 A new section is added to config file syntax to define customloader. The section will be:
 
        "custom_loader_config_list":[
@@ -16,6 +16,7 @@ A new section is added to config file syntax to define customloader. The section
                 "loader_config_file": "#Seperate config file with custom loader speicific details in json format"
                 }
         }
+        ]
 
 Using the above syntax multiple customloaders can be define in the model server config file.
 
@@ -31,12 +32,12 @@ To specifically enable a particular model to be loaded using customer loader, ad
         }
         ]
 
-###C++ API Interface for custom loader:
+### C++ API Interface for custom loader:
 A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](../src/customloaderinterface.hpp)
 
 Refer to the this file  for API details. 
 
-##Writing a Custom Loader:
+## Writing a Custom Loader:
 Derive the new custom loader class from base class **"CustomLoaderInterface"** and define all the virtual functions specified. The library shall contain a function with name 
 **CustomLoaderInterface* createCustomLoader**
 which allocates the new custom loader and return a pointer to the base class.
@@ -45,7 +46,7 @@ An example customloader which reads files and returns required buffers to be loa
 
 This customloader is build with model server build and available in the docker openvino/model_server-build:latest. Either the shared library can be copied from this docker or built using makefile. An example Makefile is provided as reference in this directory.
 
-##Running Example Customloader:
+## Running Example Customloader:
 
 An example custom loader is implemented under "src/example/SampleCustomLoader".
 
@@ -78,7 +79,7 @@ curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/op
 Step-4: Download the required Client Components
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_requirements.txt -o client_requirements.txt
 
 pip3 install -r client_requirements.txt
 ```
@@ -87,7 +88,7 @@ pip3 install -r client_requirements.txt
 Step-5: Download Data for Inference
 
 ```
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 Step-6: Prepare the config json.
@@ -124,10 +125,10 @@ docker run -d -v ${PWD}:/sampleloader -p 9000:9000 openvino/model_server:latest 
 Step-8: Run inference & Review the results
 
 ```
-< python3 face_detection.py --batch_size 1 --width 300 --height 300 --input_images_dir images --output_dir results --model_name sampleloader-model >
+python3 face_detection.py --batch_size 1 --width 300 --height 300 --input_images_dir images --output_dir results --model_name sampleloader-model
 ```
 
-####A note on blacklisting the model:
-Even though a model is specified the config file, based on certain conditions, for example license expiry, the model may needs to be disabled. To demonstrate this capability, this sample loader allows the users to specify an optional parameter "enable_file" in "custom_loader_options" in configuration file. The file needs to be present at the same base path as models
+#### A note on blacklisting the model:
+Even though a model is specified the config file, based on certain conditions, for example license expiry, the model may needs to be disabled. To demonstrate this capability, this sample loader allows the users to specify an optional parameter "enable_file" in "custom_loader_options" in configuration file. The file needs to be present at the same base path as models.
 
-Incase user want to black list the model, create the file specified with a single line **DISABLED**. The customloader checks for this file periodically and if present with required string marks the model for unloading. To load the model back either removed this string or remove the file.
+If user wants to black list the model, create the file with specified name and add a single line **DISABLED** to the file. The customloader checks for this file periodically and if present with required string, marks the model for unloading. To reload the model either remove the string from file or delete the file.

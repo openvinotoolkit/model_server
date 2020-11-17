@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <iostream>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -34,8 +32,9 @@ enum class CustomLoaderStatus {
 
 /**
      * @brief This class is the custom loader interface base class.
-     * Custom Loaders need to implement this interface and define the virtual functions to enable
-     * OVMS load a model using a custom loader
+     * Custom Loader implementation shall derive from this base calss
+     * and implement interface functions and define the virtual functions. 
+     * Based on the config file, OVMS loads a model using specified  custom loader
      */
 class CustomLoaderInterface {
 public:
@@ -63,7 +62,7 @@ public:
          * @brief Load the model by the custom loader
          *
          * @param model name required to be loaded - defined under model config in the config file
-         * @param base path where the required IR files are present
+         * @param base path where the required model files are present
          * @param version of the model
          * @param loader config parameters json as string
          * @param vector of uint8_t of model

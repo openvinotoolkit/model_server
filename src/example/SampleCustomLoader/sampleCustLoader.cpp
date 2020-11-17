@@ -64,8 +64,8 @@ typedef std::pair<std::string, int> model_id_t;
 /* 
  * This class implements am example custom model loader for OVMS.
  * It derives the implementation from base class CustomLoaderInterface
- * defined in ovms. The purpose this example is to demonistrate the 
- * usage of various APIs defined in base class, parse loader specic
+ * defined in ovms. The purpose this example is to demonstrate the 
+ * usage of various APIs defined in base class, parse loader specific
  * parameters from the config file. 
  *
  * It reads the model files and returns the buffers to be loaded by the 
@@ -146,8 +146,8 @@ int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, i
 
     std::streampos size;
 
-    // incase the model is a onnx or blob type, the bin file will not be there.
-    // skip parsing the bin file and return NULL in binBuffer
+    // if the model is a onnx or blob type, the bin file will not be present.
+    // skip parsing the bin file and return empty weights
     if (modelType == SAMPLE_LOADER_IR_MODEL) {
         std::ifstream bfile(binFile, std::ios::in | std::ios::binary);
         if (bfile.is_open()) {
@@ -155,7 +155,7 @@ int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, i
             std::for_each(std::istreambuf_iterator<char>(bfile), std::istreambuf_iterator<char>(),
                 [&weights](const char c) { weights.push_back(c); });
         } else {
-            std::cout << "Unable to open bin file" << std::endl;
+            std::cout << "Unable to open bin file: " << binFile << std::endl;
             return SAMPLE_LOADER_ERROR;
         }
     }
@@ -166,7 +166,7 @@ int custSampleLoader::load_files(std::string& binFile, std::string& modelFile, i
         std::for_each(std::istreambuf_iterator<char>(xfile), std::istreambuf_iterator<char>(),
             [&model](const char c) { model.push_back(c); });
     } else {
-        std::cout << "Unable to open model file" << std::endl;
+        std::cout << "Unable to open model file: " << modelFile << std::endl;
         return SAMPLE_LOADER_ERROR;
     }
     return SAMPLE_LOADER_OK;
@@ -185,7 +185,7 @@ int custSampleLoader::extract_input_params(const std::string& basePath, const in
 
     std::string fullPath = basePath + "/" + std::to_string(version);
 
-    // parse jason input string
+    // parse json input string
     if (doc.Parse(loaderOptions.c_str()).HasParseError()) {
         return SAMPLE_LOADER_ERROR;
     }
@@ -199,7 +199,7 @@ int custSampleLoader::extract_input_params(const std::string& basePath, const in
         std::cout << "Enable File = " << enableFile << std::endl;
     }
 
-    // Xml file is sent . So need to have bin file. Get both
+    // Get the model file path
     if (doc.HasMember("model_file")) {
         std::string modelName = doc["model_file"].GetString();
         modelFile = fullPath + "/" + modelName;
@@ -239,6 +239,7 @@ void custSampleLoader::threadFunction() {
 
     while (watcherStarted != true) {
         // wait for the watcher to be started fully
+        std::this_thread::yield();
     }
 
     while (waitContinue) {
@@ -308,12 +309,12 @@ void custSampleLoader::watcherJoin() {
 }
 
 /* 
- * From the custom loader options extract the mdeol file name and other neede information and
+ * From the custom loader options extract the model file name and other needed information and
  * load the model and optional bin file into buffers and return
  */
 CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, const std::string& basePath, const int version,
     const std::string& loaderOptions, std::vector<uint8_t>& model, std::vector<uint8_t>& weights) {
-    std::cout << "custSampleLoader: Custom loadModel" << std::endl;
+    std::cout << "custSampleLoader: Custom loadModel loading model: " << modelName << std::endl;
 
     std::string binFile;
     std::string modelFile;
@@ -419,6 +420,6 @@ CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& 
         return CustomLoaderStatus::OK;
     }
 
-    /* model name and version in blacklist.. return true */
+    /* model name and version in blacklist. Return true */
     return CustomLoaderStatus::MODEL_BLACKLISTED;
 }

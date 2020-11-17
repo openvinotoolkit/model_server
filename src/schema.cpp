@@ -84,13 +84,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						},
 						"custom_loader_options": {
 							"type": "object",
-                            "required": ["loader_name"],
-                            "properties": {
-                                "loader_name": {
-                                    "type": "string"
-                                }
-                            },
-                            "minProperties": 1
+                                                        "required": ["loader_name"],
+                                                        "properties": {
+                                                            "loader_name": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "minProperties": 1
 						}
 					},
 					"additionalProperties": false
