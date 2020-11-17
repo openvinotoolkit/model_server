@@ -16,7 +16,7 @@
 
 import grpc
 import numpy as np
-from tensorflow import make_tensor_proto, make_ndarray
+from tensorflow import make_tensor_proto, make_ndarray, expand_dims
 import classes
 import datetime
 import argparse
@@ -88,8 +88,12 @@ for key, obj in ark_reader:
         request = predict_pb2.PredictRequest()
         #request.model_spec.name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
         request.model_spec.name = args.get('model_name')
+        # Add 1 dimension
 
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(obj[x].shape)))
+        print('\tTensor before input in shape: {}\n'.format(obj[x].shape))
+        print('\tTensor input in shape: {}\n'.format(expand_dims(obj[x], axis=0).shape))
+
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(expand_dims(obj[x], axis=0).shape)))
         if iteration == 1:
             #request.inputs['sequence_id'].CopyFrom(make_tensor_proto(123, dtype="uint64"))
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
