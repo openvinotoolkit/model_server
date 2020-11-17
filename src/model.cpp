@@ -20,6 +20,8 @@
 #include <sstream>
 #include <utility>
 
+#include "customloaders.hpp"
+
 namespace ovms {
 
 void Model::subscribe(PipelineDefinition& pd) {
@@ -80,6 +82,7 @@ std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::stri
 Status Model::addVersion(const ModelConfig& config) {
     const auto& version = config.getVersion();
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
+
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
         return status;
@@ -132,6 +135,12 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
 }
 
 void Model::retireAllVersions() {
+    if (!(customLoaderName.empty())) {
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(customLoaderName);
+        loaderPtr->retireModel(name);
+    }
+
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         versionModelInstancePair.second->unloadModel();

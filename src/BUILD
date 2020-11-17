@@ -20,6 +20,10 @@ cc_library(
     srcs = [
         "config.cpp",
         "config.hpp",
+        "customloaderconfig.hpp",
+	"customloaders.hpp",
+	"customloaders.cpp",
+        "customloaderinterface.hpp",
         "deserialization.hpp",
         "dl_node.cpp",
         "dl_node.hpp",
@@ -132,6 +136,18 @@ cc_library(
 )
 
 cc_binary(
+    name = "libsampleloader.so",
+    srcs = [
+	"example/SampleCustomLoader/sampleCustLoader.cpp",
+	"customloaderinterface.hpp",
+    ],
+    linkshared = 1,
+    deps = [
+        "@rapidjson//:rapidjson",
+    ],
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -181,6 +197,7 @@ cc_test(
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/prediction_service_utils_test.cpp",
+        "test/custom_loader_test.cpp",
         "test/rest_parser_row_test.cpp",
         "test/rest_parser_column_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
@@ -207,6 +224,7 @@ cc_test(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libsampleloader.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [

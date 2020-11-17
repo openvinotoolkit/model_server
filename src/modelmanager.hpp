@@ -27,6 +27,7 @@
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
+#include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
@@ -72,7 +73,12 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
     Status loadModelsConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
+    Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
+    /**
+     * @brief creates customloader from the loader configuration
+     */
+    Status createCustomLoader(CustomLoaderConfig& loaderConfig);
     /**
      * @brief Watcher thread for monitor changes in config
      */

@@ -31,6 +31,8 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "customloaderconfig.hpp"
+#include "customloaderinterface.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -188,6 +190,13 @@ protected:
          * @brief Holds currently loaded model configuration
          */
     ModelConfig config;
+
+    /**
+         * @brief Loads OV CNNNetwork Using the Custom Loader
+         *
+         * @return Status
+         */
+    Status loadOVCNNNetworkUsingCustomLoader();
 
 private:
     /**

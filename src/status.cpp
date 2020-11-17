@@ -126,6 +126,14 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::AS_FILE_INVALID, "AS File path is invalid"},
     {StatusCode::AS_FAILED_GET_OBJECT, "AS Failed to get object from path"},
     {StatusCode::AS_INCORRECT_REQUESTED_OBJECT_TYPE, "AS invalid object type in path"},
+
+    // Custom Loader
+    {StatusCode::CUSTOM_LOADER_LIBRARY_INVALID, "Custom Loader library not found or cannot open"},
+    {StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED, "Cannot load the custom library"},
+    {StatusCode::CUSTOM_LOADER_EXISTS, "The custom loader is already present in loaders list"},
+    {StatusCode::CUSTOM_LOADER_NOT_PRESENT, "The custom loader is not present in loaders list"},
+    {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
+    {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 };
 
 const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {

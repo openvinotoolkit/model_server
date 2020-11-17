@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include "config.hpp"
+#include "customloaders.hpp"
 #include "stringutils.hpp"
 
 using namespace InferenceEngine;
@@ -244,6 +245,50 @@ Status ModelInstance::loadOVCNNNetwork() {
     return StatusCode::OK;
 }
 
+Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
+    SPDLOG_DEBUG("Try reading model using a custom loader");
+    try {
+        std::vector<uint8_t> model;
+        std::vector<uint8_t> weights;
+
+        SPDLOG_INFO("loading CNNNetwork for model:{} basepath:{} <> {} version:{}", getName(), getPath(), this->config.getBasePath().c_str(), getVersion());
+
+        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(loaderName);
+        if (customLoaderInterfacePtr == nullptr) {
+            SPDLOG_INFO("Loader {} is not in loaded customloaders list", loaderName);
+            throw std::invalid_argument("customloader not exisiting");
+        }
+
+        CustomLoaderStatus res = customLoaderInterfacePtr->loadModel(this->config.getName(),
+            this->config.getBasePath(),
+            getVersion(),
+            this->config.getCustomLoaderOptionsConfigStr(), model, weights);
+
+        if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR) || (res == CustomLoaderStatus::INTERNAL_ERROR)) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+
+        std::string strModel(model.begin(), model.end());
+
+        if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
+            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
+                make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
+            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Error:{}; occurred during loading CNNNetwork for model:{} version:{}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, targetDevice, pluginConfig));
 }
@@ -288,6 +333,11 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
 }
 
 Status ModelInstance::fetchModelFilepaths() {
+    if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        // not required if the model is loaded using a custom loader and can be returned from here
+        return StatusCode::OK;
+    }
+
     SPDLOG_DEBUG("Getting model files from path:{}", path);
     if (!dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
@@ -358,10 +408,16 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->engine)
             loadOVEngine();
-
         status = StatusCode::OK;
-        if (!this->network)
-            status = loadOVCNNNetwork();
+        if (!this->network) {
+            if (this->config.isCustomLoaderRequiredToLoadModel()) {
+                // loading the model using the custom loader
+                status = loadOVCNNNetworkUsingCustomLoader();
+            } else {
+                status = loadOVCNNNetwork();
+            }
+        }
+
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
@@ -550,6 +606,19 @@ void ModelInstance::unloadModel() {
     inputsInfo.clear();
     modelFiles.clear();
     status.setEnd();
+
+    if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(loaderName);
+        if (customLoaderInterfacePtr == nullptr) {
+            SPDLOG_INFO("The loader {} is no longer available", loaderName);
+        } else {
+            // once model is unloaded, notify custom loader object about the unload
+            customLoaderInterfacePtr->unloadModel(getName(), getVersion());
+        }
+    }
 }
 
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,

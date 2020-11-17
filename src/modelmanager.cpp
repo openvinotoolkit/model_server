@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <dlfcn.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
@@ -32,6 +33,7 @@
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
+#include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
@@ -49,7 +51,6 @@ static bool watcherStarted = false;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -225,6 +226,75 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
+Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
+    auto& customloaders = ovms::CustomLoaders::instance();
+    std::string loaderName = loaderConfig.getLoaderName();
+    SPDLOG_DEBUG("Check if loader is already loaded");
+    if (customloaders.find(loaderName) == nullptr) {
+        // this is where library or custom loader is loaded
+        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+        if (!handleCL) {
+            SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+        }
+
+        // load the symbols
+        createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
+        const char* dlsym_error = dlerror();
+        if (dlsym_error) {
+            SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
+            return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
+        }
+
+        std::shared_ptr<CustomLoaderInterface> customLoaderIfPtr{customObj()};
+        try {
+            customLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Cannot create or initialize the custom loader. Failed with error {}", e.what());
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Cannot create or initialize the custom loader");
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        }
+        customloaders.add(loaderName, customLoaderIfPtr, handleCL);
+    } else {
+        // Loader is already in the existing loaders. Move it to new loaders.
+        // Reload of customloader is not supported yet
+        customloaders.move(loaderName);
+    }
+    return StatusCode::OK;
+}
+
+Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
+    const auto itrp = configJson.FindMember("custom_loader_config_list");
+    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
+        return StatusCode::OK;
+    }
+
+    // Load Customer Loaders as per the configuration
+    SPDLOG_DEBUG("Using Customloader");
+    for (const auto& configs : itrp->value.GetArray()) {
+        const std::string loaderName = configs["config"]["loader_name"].GetString();
+        SPDLOG_INFO("Reading Custom Loader:{} configuration", loaderName);
+
+        CustomLoaderConfig loaderConfig;
+        auto status = loaderConfig.parseNode(configs["config"]);
+        if (status != StatusCode::OK) {
+            SPDLOG_ERROR("Parsing loader:{} config failed", loaderName);
+            return status;
+        }
+
+        auto retVal = createCustomLoader(loaderConfig);
+        if (retVal != StatusCode::OK) {
+            SPDLOG_ERROR("Creation of loader:{} failed", loaderName);
+        }
+    }
+    // All loaders are the done. Finalize the list by deleting removed loaders in config
+    auto& customloaders = ovms::CustomLoaders::instance();
+    customloaders.finalize();
+    return ovms::StatusCode::OK;
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
@@ -269,6 +339,11 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
     configFilename = jsonFilename;
     Status status;
+    // load the custom loader config, if available
+    status = loadCustomLoadersConfig(configJson);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     status = loadModelsConfig(configJson);
     if (status != StatusCode::OK) {
         return status;
@@ -547,6 +622,35 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToRetire;
 
     auto model = getModelIfExistCreateElse(config.getName());
+
+    // first reset custom loader name to empty string so that any changes to name can be captured
+    model->resetCustomLoaderName();
+
+    if (config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(loaderName);
+        if (loaderPtr != nullptr) {
+            SPDLOG_INFO("Custom Loader to be used : {}", loaderName);
+            model->setCustomLoaderName(loaderName);
+
+            // check existing version for blacklist
+            for (const auto& [version, versionInstance] : model->getModelVersions()) {
+                SPDLOG_DEBUG("The model {} checking for blacklist", versionInstance->getName());
+                CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
+                if (bres != CustomLoaderStatus::OK) {
+                    SPDLOG_INFO("The model {} is blacklisted", versionInstance->getName());
+                    requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+                }
+            }
+        } else {
+            SPDLOG_ERROR("Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
+            model->retireAllVersions();
+            return StatusCode::OK;
+        }
+    }
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToStart->size() > 0) {

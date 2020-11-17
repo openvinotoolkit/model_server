@@ -86,6 +86,12 @@ protected:
 
     ModelChangeSubscription subscriptionManager;
 
+    /**
+         * @brief Holds the custom loader interface Name
+         *
+         */
+    std::string customLoaderName;
+
 public:
     /**
          * @brief Constructor
@@ -178,5 +184,22 @@ public:
 
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);
+    /**
+         * @brief Set the custom loader name
+         *
+         * @param custom loader name
+         *
+         */
+    void setCustomLoaderName(const std::string name) {
+        customLoaderName = name;
+    }
+
+    /**
+         * @brief Reset the custom loader name
+         *
+         */
+    void resetCustomLoaderName() {
+        customLoaderName.clear();
+    }
 };
 }  // namespace ovms
