@@ -22,8 +22,8 @@ import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics
-
+from client_utils import print_statistics, prepare_certs
+from kaldi_python_io import ArchiveReader
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
                                              'It displays performance statistics and optionally the model accuracy')

@@ -40,3 +40,15 @@ def print_statistics(processing_times, batch_size):
     round(1000 * batch_size / np.percentile(processing_times, 50), 2)))
     print('time standard deviation: {:.2f}'.format(round(np.std(processing_times), 2)))
     print('time variance: {:.2f}'.format(round(np.var(processing_times), 2)))
+
+def prepare_certs(server_cert=None, client_key=None, client_ca=None):
+    if server_cert is not None:
+        with open(server_cert, 'rb') as f:
+       	    server_cert = f.read()
+    if client_key is not None:
+        with open(client_key, 'rb') as key:
+            client_key = key.read()
+    if client_ca is not None:
+        with open(client_ca, 'rb') as ca:
+            client_ca = ca.read()
+    return server_cert, client_key, client_ca 
