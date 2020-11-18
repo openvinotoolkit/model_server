@@ -116,7 +116,8 @@ public:
         const pipeline_connections_t& connections) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
-        connections(connections) {}
+        connections(connections),
+        status(this->pipelineName) {}
 
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const tensorflow::serving::PredictRequest* request,

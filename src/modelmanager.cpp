@@ -666,8 +666,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToRetire->size()) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
-            spdlog::error("Error occurred while unloading model: {}; versions; error: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
         }
