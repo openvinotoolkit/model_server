@@ -74,7 +74,7 @@ public:
 
 private:
     std::tuple<States...> allPossibleStates;
-    std::variant<States*...> currentState{ &std::get<0>(allPossibleStates) };
+    std::variant<States*...> currentState{&std::get<0>(allPossibleStates)};
 };
 
 struct BeginState;
