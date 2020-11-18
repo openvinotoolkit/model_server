@@ -273,12 +273,12 @@ struct RetiredState {
 
 class PipelineDefinitionStatus : public MachineState<BeginState, AvailableState, AvailableRequiredRevalidation, LoadingPreconditionFailedState, LoadingFailedLastValidationRequiredRevalidation, RetiredState> {
 public:
-    bool isAvailable() {
+    bool isAvailable() const {
         auto state = getStateCode();
         return (state == PipelineDefinitionStateCode::AVAILABLE) ||
                (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     }
-    bool canEndLoaded() {
+    bool canEndLoaded() const {
         auto state = getStateCode();
         return isAvailable() ||
                (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
