@@ -60,9 +60,11 @@ public:
         name(name) {}
     template <typename Event>
     void handle(const Event& event) {
-        SPDLOG_INFO("Pipeline:{} state:{} handling: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name);
+        SPDLOG_INFO("Pipeline:{} state:{} handling:{}:{}",
+            name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
         std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
-        SPDLOG_INFO("Pipeline:{} state changed to:{} after handling: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name);
+        SPDLOG_INFO("Pipeline:{} state changed to:{} after handling:{}:{}",
+            name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
     }
 
     template <typename State>
@@ -92,6 +94,14 @@ struct RetiredState;
 #define EVENT_STRUCT_WITH_NAME(x)               \
     struct x {                                  \
         static constexpr const char* name = #x; \
+        x(const std::string& details = "") :    \
+            details(details) {}                 \
+        const std::string& getDetails() const { \
+            return details;                     \
+        }                                       \
+                                                \
+    private:                                    \
+        const std::string details;              \
     };
 
 EVENT_STRUCT_WITH_NAME(ValidationFailedEvent);

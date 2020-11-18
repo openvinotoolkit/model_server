@@ -130,8 +130,8 @@ public:
     Status validateForCycles();
     const std::string& getName() const { return pipelineName; }
 
-    void notifyUsedModelChanged() {
-        this->status.handle(UsedModelChangedEvent());
+    void notifyUsedModelChanged(const std::string& ownerDetails) {
+        this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 
     void makeSubscriptions(ModelManager& manager);

@@ -51,7 +51,7 @@ void ModelChangeSubscription::notifySubscribers() {
     }
     SPDLOG_INFO("Notified subscribers of:{}", ownerName);
     for (auto& [pipelineName, pipelineDefinition] : subscriptions) {
-        pipelineDefinition.notifyUsedModelChanged();
+        pipelineDefinition.notifyUsedModelChanged(ownerName);
     }
 }
 }  // namespace ovms

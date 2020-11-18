@@ -31,6 +31,7 @@ using testing::_;
 using testing::Return;
 
 const std::string unusedPipelineName{"UNUSED_PIPELINE_NAME"};
+const std::string modelNotifyingDetails{"Model:NonExisting version:i^2"};
 
 TEST(PipelineDefinitionStatus, ValidationPassThenRetire) {
     PipelineDefinitionStatus pds(unusedPipelineName);
@@ -46,7 +47,7 @@ TEST(PipelineDefinitionStatus, ValidationPassThenUsedModelChangeThenPassThenReti
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
@@ -68,11 +69,11 @@ TEST(PipelineDefinitionStatus, ValidationFailThenUsedModelChangeThriceThenRetire
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
@@ -83,11 +84,11 @@ TEST(PipelineDefinitionStatus, ValidationPassThenUsedModelChangeThriceThenRetire
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
-    pds.handle(UsedModelChangedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
@@ -109,7 +110,7 @@ TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenUsedModelChangeSh
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
-    ASSERT_THROW(pds.handle(UsedModelChangedEvent()), std::logic_error);
+    ASSERT_THROW(pds.handle(UsedModelChangedEvent(modelNotifyingDetails)), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenRetireShouldThrow) {
