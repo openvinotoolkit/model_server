@@ -62,7 +62,12 @@ public:
     void handle(const Event& event) {
         SPDLOG_INFO("Pipeline:{} state:{} handling:{}:{}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
-        std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
+        try {
+            std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
+        } catch (std::logic_error& le) {
+            SPDLOG_ERROR("Pipeline:{} state:{} handling:{} error:{}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
+            throw;
+        }
         SPDLOG_INFO("Pipeline:{} state changed to:{} after handling:{}:{}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
     }
@@ -83,12 +88,33 @@ private:
     std::tuple<States...> allPossibleStates;
     std::variant<States*...> currentState{&std::get<0>(allPossibleStates)};
 };
-
+/**
+ * State in which pipeline is only defined
+ */
 struct BeginState;
+/**
+ * State in which pipeline is available
+ */
 struct AvailableState;
+/**
+ * State in which pipeline is available
+ * but there is revalidation pending since we know that one of used
+ * models changed
+ */
 struct AvailableRequiredRevalidation;
+/**
+ * State in which pipeline is defined in config and failed validation.
+ */
 struct LoadingPreconditionFailedState;
+/**
+ * State in which pipeline is defined in config, failed validation,
+ * but there is revalidation pending since we know that one of used
+ * models changed
+ */
 struct LoadingFailedLastValidationRequiredRevalidation;
+/**
+ * State in which pipeline is retired - removed from config
+ */
 struct RetiredState;
 
 #define EVENT_STRUCT_WITH_NAME(x)               \
@@ -141,12 +167,10 @@ struct BeginState {
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
     StateKeeper handle(const RetireEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
@@ -255,12 +279,10 @@ struct RetiredState {
         return {};
     }
     StateKeeper handle(const UsedModelChangedEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
     StateKeeper handle(const RetireEvent& e) const {
-        SPDLOG_ERROR("State:{} handling: {}. {}", pipelineDefinitionStateCodeToString(getStateCode()), e.name, INVALID_TRANSITION_MESSAGE);
         throw std::logic_error(INVALID_TRANSITION_MESSAGE);
         return {};
     }
@@ -275,7 +297,7 @@ public:
         return (state == PipelineDefinitionStateCode::AVAILABLE) ||
                (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     }
-    bool canEndLoaded() const {
+    bool isLoadedOrRequiringValidation() const {
         auto state = getStateCode();
         return isAvailable() ||
                (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||

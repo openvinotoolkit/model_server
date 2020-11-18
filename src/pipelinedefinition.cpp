@@ -84,7 +84,7 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
             break;
         }
         unloadGuard.reset();
-        if (!status.canEndLoaded()) {
+        if (!status.isLoadedOrRequiringValidation()) {
             break;
         }
         SPDLOG_INFO("Waiting for available state for pipeline:{}, with timestep:{}us timeout:{}us check count:{}",
@@ -93,12 +93,12 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
             std::chrono::microseconds(waitLoadedTimestepMicroseconds),
             [this]() {
                 return this->status.isAvailable() ||
-                       !this->status.canEndLoaded();
+                       !this->status.isLoadedOrRequiringValidation();
             });
         unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
     }
     if (!status.isAvailable()) {
-        if (status.canEndLoaded() || (status.getStateCode() == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED)) {
+        if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
             SPDLOG_INFO("Waiting for pipeline definition:{} ended due to timeout.", getName());  // TODO change to DEBUG after part 2
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
         } else {
