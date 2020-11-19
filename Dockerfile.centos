@@ -211,7 +211,7 @@ RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel build ${debug_bazel_flags} //src:libsampleloader.so
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 
-COPY ${ovms_metadata_file} metadata.json
+ADD ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
 
