@@ -83,11 +83,11 @@ ark_score = ArchiveReader(model_score_path)
 numberOfKeys = 0
 
 for key, obj in ark_reader:
-    print("Input ark file data range {0}: {1}".format(key, obj.shape))
+    printDebug("Input ark file data range {0}: {1}".format(key, obj.shape))
     numberOfKeys += 1
 
 for key, obj in ark_score:
-    print("Scores ark file data range {0}: {1}".format(key, obj.shape))
+    printDebug("Scores ark file data range {0}: {1}".format(key, obj.shape))
 
 scoreObjects = { k:m for k,m in ark_score }
 
@@ -96,28 +96,28 @@ print('\tModel name: {}'.format(args.get('model_name')))
 
 SEQUENCE_START = 1
 SEQUENCE_END = 2
-sequence_id = 1005
-utterances_limit = args.get('utterances')
+sequence_id = 1020
+utterances_limit = int(args.get('utterances'))
 utterance = 0
 
 meanErrGlobal = 0.0
 for key, obj in ark_reader:
+    utterance += 1
+    if utterance > utterances_limit:
+        break
+
     batch_size = obj.shape[0]
     print('\n\tInput name: {}'.format(key))
     printDebug('\tInput in shape: {}'.format(obj.shape))
     printDebug('\tInput batch size: {}'.format(batch_size))
     printDebug('\tSequence id: {}'.format(sequence_id))
 
-    if utterance == utterances_limit:
-        break
-
-    utterance += 1
     meanErrSum = 0.0
 
-    samples_limit = args.get('samples')
+    samples_limit = int(args.get('samples'))
     for x in range(0, batch_size):
 
-        if x == samples_limit:
+        if x > samples_limit:
             break
 
         printDebug('\tExecution: {}\n'.format(x))
@@ -133,7 +133,7 @@ for key, obj in ark_reader:
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size - 1:
+        if x == batch_size - 1 or x == samples_limit:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
