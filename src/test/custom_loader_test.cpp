@@ -180,7 +180,6 @@ const char* custom_loader_config_model_multiple = R"({
 
 }  // namespace
 
-//class TestCustomLoader : public ::testing::Test {
 class TestCustomLoader : public TestPredict {
 public:
     void SetUp() {
