@@ -63,6 +63,9 @@ parser.add_argument('--output_name',required=False, default='affinetransform/Fus
 parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
                     dest='model_name')
 
+parser.add_argument('--utterances', required=False, default=10, help='How many utterances to process from ark file. default 10')
+parser.add_argument('--samples', required=False, default=10, help='How many samples to process from each utterance file. default 10')
+
 args = vars(parser.parse_args())
 
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
@@ -86,9 +89,7 @@ for key, obj in ark_reader:
 for key, obj in ark_score:
     print("Scores ark file data range {0}: {1}".format(key, obj.shape))
 
-
 scoreObjects = { k:m for k,m in ark_score }
-
 
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
@@ -96,6 +97,8 @@ print('\tModel name: {}'.format(args.get('model_name')))
 SEQUENCE_START = 1
 SEQUENCE_END = 2
 sequence_id = 1005
+utterances_limit = args.get('utterances')
+utterance = 0
 
 meanErrGlobal = 0.0
 for key, obj in ark_reader:
@@ -105,8 +108,17 @@ for key, obj in ark_reader:
     printDebug('\tInput batch size: {}'.format(batch_size))
     printDebug('\tSequence id: {}'.format(sequence_id))
 
+    if utterance == utterances_limit:
+        break
+
+    utterance += 1
     meanErrSum = 0.0
+
+    samples_limit = args.get('samples')
     for x in range(0, batch_size):
+
+        if x == samples_limit:
+            break
 
         printDebug('\tExecution: {}\n'.format(x))
         request = predict_pb2.PredictRequest()
@@ -149,8 +161,6 @@ for key, obj in ark_reader:
         #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
         #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         
-
-
         resultsArray = np.array(output)
         referenceArray = scoreObjects[key][x]
         
@@ -162,12 +172,12 @@ for key, obj in ark_reader:
 
         #END utterance loop
 
-    meanErrAvg = meanErrSum/batch_size
+    meanErrAvg = meanErrSum/min(samples_limit,batch_size)
     print("\tSequence {} mean error: {:.10f}\n".format(sequence_id, meanErrAvg))
     sequence_id += 1
     meanErrGlobal += meanErrAvg
     #END input name loop
 
-meanGlobalErrAvg = meanErrGlobal/numberOfKeys
+meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
 print("Global mean error: {:.10f}\n".format(meanGlobalErrAvg))
 print_statistics(processing_times, batch_size)
