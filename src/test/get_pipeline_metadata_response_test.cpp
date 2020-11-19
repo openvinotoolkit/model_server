@@ -14,6 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <chrono>
+#include <future>
+#include <thread>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
@@ -32,7 +36,9 @@ protected:
 
     public:
         MockPipelineDefinitionGetInputsOutputsInfo() :
-            PipelineDefinition("pipeline_name", {}, {}) {}
+            PipelineDefinition("pipeline_name", {}, {}) {
+            PipelineDefinition::status.handle(ValidationPassedEvent());
+        }
 
         Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const override {
             inputsInfo = this->inputsInfo;
@@ -51,6 +57,9 @@ protected:
 
         void mockStatus(Status status) {
             this->status = status;
+        }
+        PipelineDefinitionStatus& getPipelineDefinitionStatus() {
+            return PipelineDefinition::status;
         }
     };
 
@@ -236,14 +245,24 @@ TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedYet) {
     EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
-TEST_F(GetPipelineMetadataResponse, DISABLED_PipelineNotLoadedAnymore) {
-    // TODO: Implement once waitForLoaded is fully added to PipelineDefinition class
-    EXPECT_TRUE(false) << "Not implemented";
+TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedAnymore) {
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(RetireEvent());
+    auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
 }
 
-TEST_F(GetPipelineMetadataResponse, DISABLED_PipelineNotLoadedYet) {
-    // TODO: Implement once waitForLoaded is fully added to PipelineDefinition class
-    EXPECT_TRUE(false) << "Not implemented";
+TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedYet) {
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(ValidationFailedEvent());
+    auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(UsedModelChangedEvent());
+    status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
+    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+}
+
+TEST_F(GetPipelineMetadataResponse, PipelineAvailableOrAvailableRequiringRevalidation) {
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(UsedModelChangedEvent());
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
 }
 
 TEST_F(GetPipelineMetadataResponseBuild, serialize2Json) {

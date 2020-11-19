@@ -16,6 +16,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <set>
 #include <shared_mutex>
@@ -32,6 +33,7 @@
 #include "model_version_policy.hpp"
 #include "node.hpp"
 #include "pipeline.hpp"
+#include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
 
@@ -71,22 +73,51 @@ struct NodeInfo {
 };
 
 class PipelineDefinition {
+    struct ValidationResultNotifier {
+        ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
+            status(status),
+            loadedNotify(loadedNotify) {}
+        ~ValidationResultNotifier() {
+            if (passed) {
+                status.handle(ValidationPassedEvent());
+                loadedNotify.notify_all();
+            } else {
+                status.handle(ValidationFailedEvent());
+            }
+        }
+        bool passed = false;
+
+    private:
+        PipelineDefinitionStatus& status;
+        std::condition_variable& loadedNotify;
+    };
+
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
-    std::set<std::pair<const std::string, model_version_t>> subscriptions;
+
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::shared_mutex loadMtx;
+
+    std::condition_variable loadedNotify;
+
+protected:
+    PipelineDefinitionStatus status;
+
+private:
+    std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
     Status validateNode(ModelManager& manager, NodeInfo& node);
 
 public:
+    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 1000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
-        connections(connections) {}
+        connections(connections),
+        status(this->pipelineName) {}
 
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const tensorflow::serving::PredictRequest* request,
@@ -99,8 +130,8 @@ public:
     Status validateForCycles();
     const std::string& getName() const { return pipelineName; }
 
-    void notifyUsedModelChanged() {
-        // this->status.notifyUsedModelChanged();
+    void notifyUsedModelChanged(const std::string& ownerDetails) {
+        this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 
     void makeSubscriptions(ModelManager& manager);
@@ -117,6 +148,6 @@ public:
         --requestsHandlesCounter;
     }
 
-    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = 1000);
+    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 };
 }  // namespace ovms
