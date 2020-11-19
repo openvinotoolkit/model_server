@@ -111,7 +111,7 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone -
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$(nproc --all)
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; export ADD_TO_LIBRARY_PATH=/openvino/bin/intel64/Release/lib/
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; export COPY_TO_LIBRARY_PATH=/openvino/bin/intel64/Release/lib/
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -132,15 +132,15 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true 
     yum install -y $YUM_OV_PACKAGE
 
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; \
-export ADD_TO_LIBRARY_PATH=/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/ && \
+export COPY_TO_LIBRARY_PATH=/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/ && \
     ln -s /opt/intel/openvino_2021 /opt/intel/openvino
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
-ADD .bazelrc WORKSPACE /ovms/
-ADD external /ovms/external/
-ADD third_party /ovms/third_party/
+COPY .bazelrc WORKSPACE /ovms/
+COPY external /ovms/external/
+COPY third_party /ovms/third_party/
 
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
@@ -195,23 +195,23 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 WORKDIR /ovms
 
-ADD src/ /ovms/src/
-ADD release_files/ /ovms/release_files/
+COPY src/ /ovms/src/
+COPY release_files/ /ovms/release_files/
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's:REPLACE_OPENVINO_NAME:`echo "$YUM_OV_PACKAGE" | sed -e 's/intel-openvino-runtime-centos7-//g' | sed 's/.x86_64//g'`:g' /ovms/src/version.hpp" 
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's#REPLACE_OPENVINO_NAME#`echo "$OPENVINO_NAME" | sed -e 's;http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_;;g'|sed 's:.tgz::g'`#g' /ovms/src/version.hpp"
 
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ADD_TO_LIBRARY_PATH}
-RUN echo $ADD_TO_LIBRARY_PATH
-RUN echo $LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${COPY_TO_LIBRARY_PATH}
+RUN echo ${COPY_TO_LIBRARY_PATH}
+RUN echo ${LD_LIBRARY_PATH}
 
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel build ${debug_bazel_flags} //src:libsampleloader.so
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 
-ADD ${ovms_metadata_file} metadata.json
+COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
 
