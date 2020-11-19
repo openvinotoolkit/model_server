@@ -26,12 +26,14 @@
 
 namespace ovms {
 
+const std::string ENTRY_NODE_NAME = "request";
+
 class EntryNode : public Node {
     const tensorflow::serving::PredictRequest* request;
 
 public:
     EntryNode(const tensorflow::serving::PredictRequest* request) :
-        Node("request"),
+        Node(ENTRY_NODE_NAME),
         request(request) {}
 
     Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {
