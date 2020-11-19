@@ -60,11 +60,11 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
         }                                                                               \
     }
 
-#define CHECK_AND_LOG_ERROR(NODE)                                                           \
-    if (!status.ok()) {                                                                     \
-        setFailIfNotFailEarlier(firstErrorStatus, status);                                  \
+#define CHECK_AND_LOG_ERROR(NODE)                                                              \
+    if (!status.ok()) {                                                                        \
+        setFailIfNotFailEarlier(firstErrorStatus, status);                                     \
         SPDLOG_LOGGER_WARN(ensemble_logger, "Executing pipeline: {} node: {} failed with: {}", \
-            getName(), NODE.getName(), status.string());                                    \
+            getName(), NODE.getName(), status.string());                                       \
     }
 
 Status Pipeline::execute() {
