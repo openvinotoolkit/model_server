@@ -20,7 +20,12 @@
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <memory>
+#include <string>
 #include <thread>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
