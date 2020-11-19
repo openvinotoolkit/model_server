@@ -138,9 +138,9 @@ export ADD_TO_LIBRARY_PATH=/opt/intel/openvino/deployment_tools/inference_engine
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
-COPY .bazelrc WORKSPACE /ovms/
-COPY external /ovms/external/
-COPY third_party /ovms/third_party/
+ADD .bazelrc WORKSPACE /ovms/
+ADD external /ovms/external/
+ADD third_party /ovms/third_party/
 
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
@@ -195,8 +195,8 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 WORKDIR /ovms
 
-COPY src/ /ovms/src/
-COPY release_files/ /ovms/release_files/
+ADD src/ /ovms/src/
+ADD release_files/ /ovms/release_files/
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
