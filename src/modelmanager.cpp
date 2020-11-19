@@ -663,12 +663,13 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToReload->size() > 0) {
         reloadModelVersions(model, fs, config, versionsToReload);
     }
-
-    auto status = model->retireVersions(versionsToRetire);
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
-            config.getName(),
-            status.string());
+    if (versionsToRetire->size()) {
+        auto status = model->retireVersions(versionsToRetire);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+        }
     }
 
     return blocking_status;

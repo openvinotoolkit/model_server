@@ -50,7 +50,7 @@ if args.get('client_cert') is not None or args.get('client_key') is not None:
 version = ""
 if args.get('model_version') is not None:
     version = "/versions/{}".format(args.get('model_version'))
-result = requests.get("{}:{}/v1/models/{}{}/metadata".format(args['rest_url'], args['rest_port'], args['model_name'], version), , cert=certs, verify=verify_server)
+result = requests.get("{}:{}/v1/models/{}{}/metadata".format(args['rest_url'], args['rest_port'], args['model_name'], version), cert=certs, verify=verify_server)
 
 try:
     result_dic = json.loads(result.text)

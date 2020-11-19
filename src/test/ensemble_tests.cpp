@@ -632,8 +632,6 @@ TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionNodesValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -660,8 +658,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidat
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setBatchingMode(AUTO);
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -690,8 +686,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation
     config.parseShapeParameter("auto");
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -717,8 +711,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelShapeModeAutoValidation
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -746,8 +738,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingNodeModelValidation) 
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithMissingConnectionNodeValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -779,8 +769,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation)
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -806,8 +794,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeOutputMissingValidation)
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -836,8 +822,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithNodeInputMissingValidation) 
 TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -888,8 +872,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithNoCycleValidation) {
 TEST_F(EnsembleFlowTest, PipelineDefinitionComplexGrapgWithCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -953,8 +935,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingCycleValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -990,8 +970,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValida
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, "request"},
@@ -1019,8 +997,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingNodeConnectedToItselfValida
 TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -1063,8 +1039,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionContainingTwoCyclesValidation) {
 TEST_F(EnsembleFlowTest, PipelineDefinitionContainingUnconnectedNodeValidation) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
-
-    PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
@@ -1997,4 +1971,61 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     pipelineBeforeRetire->execute();
     uint dummySeriallyConnectedCount = 1;
     checkResponse(dummySeriallyConnectedCount);
+}
+
+class MockedPipelineDefinitionWithHandlingStatus : public PipelineDefinition {
+public:
+    MockedPipelineDefinitionWithHandlingStatus(const std::string& pipelineName,
+        const std::vector<NodeInfo>& nodeInfos,
+        const pipeline_connections_t& connections) :
+        PipelineDefinition(pipelineName, nodeInfos, connections) {}
+    PipelineDefinitionStatus& getControlableStatus() {
+        return status;
+    }
+};
+
+TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    const std::string pipelineName = "originalName";
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, "request"},
+        {NodeKind::DL, "dummy_node", "dummy"},
+        {NodeKind::EXIT, "response"},
+    };
+    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    connections["dummy_node"] = {
+        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["response"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+    MockedPipelineDefinitionWithHandlingStatus pd(pipelineName, info, connections);
+    std::unique_ptr<Pipeline> pipelineBeforeRetire;
+    std::thread t([&managerWithDummyModel, &pd]() {
+        std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
+        auto status = pd.validate(managerWithDummyModel);
+        ASSERT_TRUE(status.ok());
+        SPDLOG_ERROR("Made pd validated");
+    });
+    auto status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    pd.getControlableStatus().handle(ValidationFailedEvent());
+    status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    pd.getControlableStatus().handle(UsedModelChangedEvent());
+    status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    std::thread t2([&managerWithDummyModel, &pd]() {
+        std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
+        auto status = pd.validate(managerWithDummyModel);
+        ASSERT_TRUE(status.ok());
+        SPDLOG_ERROR("Made pd validated");
+    });
+    status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
+    ASSERT_TRUE(status.ok());
+    uint dummySeriallyConnectedCount = 1;
+    pipelineBeforeRetire->execute();
+    checkResponse(dummySeriallyConnectedCount);
+    t.join();
+    t2.join();
 }

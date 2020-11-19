@@ -34,18 +34,7 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
 }
 
 Status PipelineDefinition::validate(ModelManager& manager) {
-    struct ValidationResultNotifier {
-        ValidationResultNotifier() {}
-        ~ValidationResultNotifier() {
-            if (passed) {
-                // status.notifyValidationPassed();
-            } else {
-                // status.notifyValidationFailed();
-            }
-        }
-        bool passed = false;
-    };
-    ValidationResultNotifier notifier;
+    ValidationResultNotifier notifier(status, loadedNotify);
     Status validationResult = validateNodes(manager);
     if (!validationResult.ok()) {
         return validationResult;
@@ -61,7 +50,6 @@ Status PipelineDefinition::validate(ModelManager& manager) {
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
     resetSubscriptions(manager);
-    // this->status.notifyLoadInProgress();
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
@@ -75,7 +63,7 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
 
 void PipelineDefinition::retire(ModelManager& manager) {
     resetSubscriptions(manager);
-    // this->status.notifyRetire();
+    this->status.handle(RetireEvent());
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
@@ -85,35 +73,40 @@ void PipelineDefinition::retire(ModelManager& manager) {
 
 Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
-    /*
-    const uint waitLoadedTimestepMicroseconds = 10;
+
+    const uint waitLoadedTimestepMicroseconds = 100;
     const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
     uint waitCheckpointsCounter = waitCheckpoints;
+    std::mutex cvMtx;
+    std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
-        if (status.getState() == ModelVersionState::AVAILABLE) {
-            SPDLOG_INFO("Succesfully waited for pipeline:{}", getName()); // TODO change to DEBUG after part 2
+        if (status.isAvailable()) {
             break;
         }
         unloadGuard.reset();
-        if (status.getState() > ModelVersionState::AVAILABLE) {
-            SPDLOG_INFO("Waiting for pipeline:{} ended since it started unloading.", getName()); // TODO change to DEBUG after part 2
-            return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+        if (!status.isLoadedOrRequiringValidation()) {
+            break;
         }
-        SPDLOG_INFO("Waiting for available state for pipeline:{}, with timestep:{} timeout:{} check count:{}",
-                getName(), waitLoadedTimestepMicroseconds, waitForModelLoadedTimeoutMicroseconds, waitCheckpointsCounter); // TODO change to DEBUG after part 2 finished
-        status.waitForLoadedNotify(waitLoadedTimestepMicroseconds);
-        unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard(*this);
+        SPDLOG_INFO("Waiting for available state for pipeline:{}, with timestep:{}us timeout:{}us check count:{}",
+            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);  // TODO change to DEBUG after part 2 finished
+        loadedNotify.wait_for(cvLock,
+            std::chrono::microseconds(waitLoadedTimestepMicroseconds),
+            [this]() {
+                return this->status.isAvailable() ||
+                       !this->status.isLoadedOrRequiringValidation();
+            });
+        unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
     }
-    if (status.getState() != ModelVersionState::AVAILABLE) {
-        if (status.getState() > ModelVersionState::AVAILABLE) {
-            SPDLOG_INFO("Waiting for pipeline:{} ended since it started unloading.", getName()); // TODO change to DEBUG after part 2
-            return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
-        } else if (status.getState() > ModelVersionState::AVAILABLE) {
-            SPDLOG_INFO("Waiting for pipeline:{} ended due to timeout.", getName()); // TODO change to DEBUG after part 2
-            return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+    if (!status.isAvailable()) {
+        if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
+            SPDLOG_INFO("Waiting for pipeline definition:{} ended due to timeout.", getName());  // TODO change to DEBUG after part 2
+            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+        } else {
+            SPDLOG_INFO("Waiting for pipeline definition:{} ended since it failed to load.", getName());  // TODO change to DEBUG after part 2
+            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    */
+    SPDLOG_INFO("Succesfully waited for pipeline definition:{}", getName());  // TODO change to DEBUG after part 2
     return StatusCode::OK;
 }
 
