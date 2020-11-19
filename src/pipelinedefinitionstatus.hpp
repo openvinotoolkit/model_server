@@ -60,15 +60,15 @@ public:
         name(name) {}
     template <typename Event>
     void handle(const Event& event) {
-        SPDLOG_INFO("Pipeline:{} state:{} handling:{}:{}",
+        SPDLOG_INFO("Pipeline: {} state: {} handling: {}:{}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
         try {
             std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
         } catch (std::logic_error& le) {
-            SPDLOG_ERROR("Pipeline:{} state:{} handling:{} error:{}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
+            SPDLOG_ERROR("Pipeline: {} state: {} handling: {} error: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
             throw;
         }
-        SPDLOG_INFO("Pipeline:{} state changed to:{} after handling:{}:{}",
+        SPDLOG_INFO("Pipeline: {} state changed to: {} after handling: {}:{}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
     }
 

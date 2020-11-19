@@ -29,7 +29,7 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
         nodeKind = NodeKind::DL;
         return StatusCode::OK;
     }
-    SPDLOG_ERROR("Unsupported node type:{}", str);
+    SPDLOG_ERROR("Unsupported node type: {}", str);
     return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
 }
 
@@ -87,7 +87,7 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
         if (!status.isLoadedOrRequiringValidation()) {
             break;
         }
-        SPDLOG_INFO("Waiting for available state for pipeline:{}, with timestep:{}us timeout:{}us check count:{}",
+        SPDLOG_INFO("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
             getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);  // TODO change to DEBUG after part 2 finished
         loadedNotify.wait_for(cvLock,
             std::chrono::microseconds(waitLoadedTimestepMicroseconds),
@@ -99,14 +99,14 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     }
     if (!status.isAvailable()) {
         if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_INFO("Waiting for pipeline definition:{} ended due to timeout.", getName());  // TODO change to DEBUG after part 2
+            SPDLOG_INFO("Waiting for pipeline definition: {} ended due to timeout.", getName());  // TODO change to DEBUG after part 2
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
         } else {
-            SPDLOG_INFO("Waiting for pipeline definition:{} ended since it failed to load.", getName());  // TODO change to DEBUG after part 2
+            SPDLOG_INFO("Waiting for pipeline definition: {} ended since it failed to load.", getName());  // TODO change to DEBUG after part 2
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_INFO("Succesfully waited for pipeline definition:{}", getName());  // TODO change to DEBUG after part 2
+    SPDLOG_INFO("Succesfully waited for pipeline definition: {}", getName());  // TODO change to DEBUG after part 2
     return StatusCode::OK;
 }
 
@@ -124,7 +124,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     EntryNode* entry = nullptr;
     ExitNode* exit = nullptr;
     for (const auto& info : nodeInfos) {
-        SPDLOG_DEBUG("Creating pipeline:{}. Adding nodeName:{}, modelName:{}",
+        SPDLOG_DEBUG("Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
@@ -154,7 +154,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
         const auto& dependantNode = nodes.at(kv.first);
         for (const auto& pair : kv.second) {
             const auto& dependencyNode = nodes.at(pair.first);
-            SPDLOG_DEBUG("Connecting pipeline:{}, from:{}, to:{}", getName(), dependencyNode->getName(), dependantNode->getName());
+            SPDLOG_DEBUG("Connecting pipeline: {}, from: {}, to: {}", getName(), dependencyNode->getName(), dependantNode->getName());
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
@@ -168,11 +168,11 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {
         if (modelVersion) {
-            SPDLOG_INFO("Unsubscribing pipeline:{} from model: {}, version:{}",
+            SPDLOG_INFO("Unsubscribing pipeline: {} from model: {}, version: {}",
                 getName(), modelName, modelVersion);
             manager.findModelByName(modelName)->getModelInstanceByVersion(modelVersion)->unsubscribe(*this);
         } else {  // using default version
-            SPDLOG_INFO("Unsubscribing pipeline:{} from model: {}",
+            SPDLOG_INFO("Unsubscribing pipeline: {} from model: {}",
                 getName(), modelName);
             manager.findModelByName(modelName)->unsubscribe(*this);
         }
@@ -372,7 +372,7 @@ Status PipelineDefinition::validateForCycles() {
 }
 
 Status PipelineDefinition::validateNodes(ModelManager& manager) {
-    SPDLOG_DEBUG("Validation of pipeline definition:{} nodes started.", getName());
+    SPDLOG_DEBUG("Validation of pipeline definition: {} nodes started.", getName());
     bool entryFound = false;
     bool exitFound = false;
     for (auto& node : nodeInfos) {
@@ -439,14 +439,14 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
                 auto instance = manager.findModelInstance(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", dependantNodeInfo->modelName, this->getName());
+                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} inputs info fetching", dependantNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
                 auto status = instance->waitForLoaded(0, unloadGuard);
                 if (!status.ok()) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} inputs info fetching", instance->getName(), this->getName());
+                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} inputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
 
@@ -457,7 +457,7 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
             }
             default: {
                 // Pipeline validation does not allow connections into entry node.
-                SPDLOG_ERROR("Unexpected dependant node kind (name:{})", this->getName());
+                SPDLOG_ERROR("Unexpected dependant node kind (name: {})", this->getName());
                 return StatusCode::UNKNOWN_ERROR;
             }
             }
@@ -497,14 +497,14 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
                 auto instance = manager.findModelInstance(dependencyNodeInfo->modelName, dependencyNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
+                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
                 auto status = instance->waitForLoaded(0, unloadGuard);
                 if (!status.ok()) {
                     // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model:{} was unavailable during pipeline:{} outputs info fetching", instance->getName(), this->getName());
+                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
 
@@ -516,7 +516,7 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
             }
             default: {
                 // Pipeline validation does not allow connections from exit node.
-                SPDLOG_ERROR("Unexpected dependency node kind (name:{})", this->getName());
+                SPDLOG_ERROR("Unexpected dependency node kind (name: {})", this->getName());
                 return StatusCode::UNKNOWN_ERROR;
             }
             }

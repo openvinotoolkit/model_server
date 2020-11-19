@@ -63,7 +63,7 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
 #define CHECK_AND_LOG_ERROR(NODE)                                                           \
     if (!status.ok()) {                                                                     \
         setFailIfNotFailEarlier(firstErrorStatus, status);                                  \
-        SPDLOG_LOGGER_WARN(ensemble_logger, "Executing pipeline:{} node:{} failed with:{}", \
+        SPDLOG_LOGGER_WARN(ensemble_logger, "Executing pipeline: {} node: {} failed with: {}", \
             getName(), NODE.getName(), status.string());                                    \
     }
 
@@ -76,7 +76,7 @@ Status Pipeline::execute() {
     startedExecute.at(entry.getName()) = true;
     ovms::Status status = entry.execute(finishedNodeQueue);  // first node will triger first message
     if (!status.ok()) {
-        SPDLOG_LOGGER_WARN(ensemble_logger, "Executing pipeline:{} node:{} failed with:{}",
+        SPDLOG_LOGGER_WARN(ensemble_logger, "Executing pipeline: {} node: {} failed with: {}",
             getName(), entry.getName(), status.string());
         return status;
     }
@@ -87,18 +87,18 @@ Status Pipeline::execute() {
     // process finished nodes and if no one is finished check if any node with deffered execution
     // has necessary resources already
     while (true) {
-        SPDLOG_LOGGER_DEBUG(ensemble_logger, "Pipeline:{} waiting for message that node finished.", getName());
+        SPDLOG_LOGGER_DEBUG(ensemble_logger, "Pipeline: {} waiting for message that node finished.", getName());
         auto optionallyFinishedNode = finishedNodeQueue.tryPull(WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS);
         if (optionallyFinishedNode) {
             Node& finishedNode = optionallyFinishedNode.value().get();
-            SPDLOG_LOGGER_DEBUG(ensemble_logger, "Pipeline:{} got message that node:{} finished.", getName(), finishedNode.getName());
+            SPDLOG_LOGGER_DEBUG(ensemble_logger, "Pipeline: {} got message that node: {} finished.", getName(), finishedNode.getName());
             finishedExecute.at(finishedNode.getName()) = true;
             if (!firstErrorStatus.ok()) {
                 finishedNode.release();
             }
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             BlobMap finishedNodeOutputBlobMap;
-            SPDLOG_LOGGER_DEBUG(ensemble_logger, "Fetching results of pipeline:{} node:{}", getName(), finishedNode.getName());
+            SPDLOG_LOGGER_DEBUG(ensemble_logger, "Fetching results of pipeline: {} node: {}", getName(), finishedNode.getName());
             status = finishedNode.fetchResults(finishedNodeOutputBlobMap);
             CHECK_AND_LOG_ERROR(finishedNode)
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
@@ -107,7 +107,7 @@ Status Pipeline::execute() {
             }
             auto& nextNodesFromFinished = finishedNode.getNextNodes();
             for (auto& nextNode : nextNodesFromFinished) {
-                SPDLOG_LOGGER_DEBUG(ensemble_logger, "setting pipeline:{} node:{} outputs as inputs for node:{}",
+                SPDLOG_LOGGER_DEBUG(ensemble_logger, "setting pipeline: {} node: {} outputs as inputs for node: {}",
                     getName(), finishedNode.getName(), nextNode.get().getName());
                 status = nextNode.get().setInputs(finishedNode, finishedNodeOutputBlobMap);
                 CHECK_AND_LOG_ERROR(nextNode.get())
@@ -118,11 +118,11 @@ Status Pipeline::execute() {
             finishedNodeOutputBlobMap.clear();
             for (auto& nextNode : nextNodesFromFinished) {
                 if (nextNode.get().isReady()) {
-                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Started execution of pipeline:{} node:{}", getName(), nextNode.get().getName());
+                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Started execution of pipeline: {} node: {}", getName(), nextNode.get().getName());
                     startedExecute.at(nextNode.get().getName()) = true;
                     status = nextNode.get().execute(finishedNodeQueue);
                     if (status == StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET) {
-                        SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node:{} not ready for execution yet", nextNode.get().getName());
+                        SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node: {} not ready for execution yet", nextNode.get().getName());
                         nodesWaitingForIdleInferenceStreamId.push_back(nextNode.get());
                         status = StatusCode::OK;
                     }
@@ -165,16 +165,16 @@ Status Pipeline::execute() {
             // free blocked inferRequests from exeuction first rather than free models for reloading
             for (auto it = nodesWaitingForIdleInferenceStreamId.begin(); it != nodesWaitingForIdleInferenceStreamId.end();) {
                 auto& node = (*it).get();
-                SPDLOG_LOGGER_DEBUG(ensemble_logger, "Trying to trigger node:{} execution", node.getName());
+                SPDLOG_LOGGER_DEBUG(ensemble_logger, "Trying to trigger node: {} execution", node.getName());
                 status = node.execute(finishedNodeQueue);
                 if (status.ok()) {
-                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node:{} ready yet:", node.getName());
+                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node: {} ready yet:", node.getName());
                     it = nodesWaitingForIdleInferenceStreamId.erase(it);
                     continue;
                 }
                 it++;
                 if (status == StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET) {
-                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node:{} not ready for execution yet", node.getName());
+                    SPDLOG_LOGGER_DEBUG(ensemble_logger, "Node: {} not ready for execution yet", node.getName());
                     status = StatusCode::OK;
                 } else {
                     CHECK_AND_LOG_ERROR(node)

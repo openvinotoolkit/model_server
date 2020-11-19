@@ -24,7 +24,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const pipeline_connections_t& connections,
     ModelManager& manager) {
     if (definitionExists(pipelineName)) {
-        SPDLOG_WARN("Two pipelines with the same name:{} defined in config file. Ignoring the second definition", pipelineName);
+        SPDLOG_WARN("Two pipelines with the same name: {} defined in config file. Ignoring the second definition", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
@@ -32,14 +32,14 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     pipelineDefinition->makeSubscriptions(manager);
     Status validationResult = pipelineDefinition->validate(manager);
     if (!validationResult.ok()) {
-        SPDLOG_ERROR("Loading pipeline definition:{} failed:{}", pipelineName, validationResult.string());
+        SPDLOG_ERROR("Loading pipeline definition: {} failed: {}", pipelineName, validationResult.string());
         return validationResult;
     }
 
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
-    SPDLOG_INFO("Loading pipeline definition:{} succeeded", pipelineName);
+    SPDLOG_INFO("Loading pipeline definition: {} succeeded", pipelineName);
     return StatusCode::OK;
 }
 
@@ -49,7 +49,7 @@ Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
     tensorflow::serving::PredictResponse* response,
     ModelManager& manager) const {
     if (!definitionExists(name)) {
-        SPDLOG_INFO("Pipeline with requested name:{} does not exist", name);
+        SPDLOG_INFO("Pipeline with requested name: {} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
     std::shared_lock lock(definitionsMtx);
