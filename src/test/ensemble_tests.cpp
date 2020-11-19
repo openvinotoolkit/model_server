@@ -2132,14 +2132,14 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
 
     const std::string pipelineName = "originalName";
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{customPipelineInputName, customPipelineInputName}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
     std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
     connections["dummy_node"] = {
-        {"request", {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
-    connections["response"] = {
+        {ENTRY_NODE_NAME, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+    connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     MockedPipelineDefinitionWithHandlingStatus pd(pipelineName, info, connections);
     std::unique_ptr<Pipeline> pipelineBeforeRetire;
