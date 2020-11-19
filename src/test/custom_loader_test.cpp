@@ -13,47 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <cstdio>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <future>
-#include <thread>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-#include <inference_engine.hpp>
-#include <stdlib.h>
-
-#include "../executinstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
-#include "../localfilesystem.hpp"
-#include "../model.hpp"
 #include "../model_service.hpp"
-#include "../modelinstance.hpp"
-#include "../modelmanager.hpp"
-#include "../modelversionstatus.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../schema.hpp"
-#include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
-
-using testing::_;
-using testing::ContainerEq;
-using testing::Each;
-using testing::Eq;
-using ::testing::NiceMock;
-using testing::Return;
-using testing::ReturnRef;
-using testing::UnorderedElementsAre;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnarrowing"
+#include "prediction_service_test.hpp"
 
 using namespace ovms;
-
 namespace {
-
 // config_model_with_customloader
 const char* custom_loader_config_model = R"({
        "custom_loader_config_list":[
@@ -211,24 +178,10 @@ const char* custom_loader_config_model_multiple = R"({
       ]
     })";
 
-class MockModel : public ovms::Model {
-public:
-    MockModel() :
-        Model("MOCK_NAME") {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
-};
-
-std::shared_ptr<MockModel> modelMock;
 }  // namespace
 
-class MockModelManager : public ovms::ModelManager {
-public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
-        return modelMock;
-    }
-};
-
-class TestCustomLoader : public ::testing::Test {
+//class TestCustomLoader : public ::testing::Test {
+class TestCustomLoader : public TestPredict {
 public:
     void SetUp() {
         const ::testing::TestInfo* const test_info =
@@ -248,46 +201,8 @@ public:
         // Clean up temporary destination
         std::filesystem::remove_all(cl_models_path);
     }
-    /**
-     * @brief This function should mimic most closely predict request to check for thread safety
-     */
-    void performPredict(const std::string modelName,
-        const ovms::model_version_t modelVersion,
-        const tensorflow::serving::PredictRequest& request,
-        std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
-        std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
-
-    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
-        auto blob = InferenceEngine::make_shared_blob<float>(
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
-            const_cast<float*>(reinterpret_cast<const float*>(input.data())));
-        inferRequest.SetBlob(DUMMY_MODEL_INPUT_NAME, blob);
-    }
-
-    void serializeAndCheck(int outputSize, InferenceEngine::InferRequest& inferRequest) {
-        std::vector<float> output(outputSize);
-        ASSERT_THAT(output, Each(Eq(0.)));
-        auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
-        ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
-        std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
-        EXPECT_THAT(output, Each(Eq(2.)));
-    }
-
-    ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
-        std::shared_ptr<ovms::ModelInstance> model;
-        std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-        auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
-        if (!status.ok()) {
-            return status;
-        }
-
-        response.Clear();
-        return ovms::inference(*model, &request, &response, unload_guard);
-    }
 
 public:
-    ConstructorEnabledModelManager manager;
-    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ~TestCustomLoader() {
         std::cout << "Destructor of TestCustomLoader()" << std::endl;
     }
@@ -304,55 +219,7 @@ public:
     return ret;
 }
 
-void TestCustomLoader::performPredict(const std::string modelName,
-    const ovms::model_version_t modelVersion,
-    const tensorflow::serving::PredictRequest& request,
-    std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
-    std::unique_ptr<std::future<void>> waitBeforePerformInference) {
-    // only validation is skipped
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-
-    auto& tensorProto = request.inputs().find("b")->second;
-    size_t batchSize = tensorProto.tensor_shape().dim(0).size();
-    size_t inputSize = 1;
-    for (int i = 0; i < tensorProto.tensor_shape().dim_size(); i++) {
-        inputSize *= tensorProto.tensor_shape().dim(i).size();
-    }
-
-    if (waitBeforeGettingModelInstance) {
-        std::cout << "Waiting before getModelInstance. Batch size: " << batchSize << std::endl;
-        waitBeforeGettingModelInstance->get();
-    }
-    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-
-    if (waitBeforePerformInference) {
-        std::cout << "Waiting before performInfernce." << std::endl;
-        waitBeforePerformInference->get();
-    }
-    ovms::Status validationStatus = modelInstance->validate(&request);
-    std::cout << validationStatus.string() << std::endl;
-    ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
-                validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
-                validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(reloadModelIfRequired(validationStatus, *modelInstance, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-
-    ovms::OVInferRequestsQueue& inferRequestsQueue = modelInstance->getInferRequestsQueue();
-    ovms::ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
-    int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
-    std::vector<float> input(inputSize);
-    std::generate(input.begin(), input.end(), []() { return 1.; });
-    ASSERT_THAT(input, Each(Eq(1.)));
-    deserialize(input, inferRequest, modelInstance);
-    auto status = performInference(inferRequestsQueue, executingInferId, inferRequest);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
-    serializeAndCheck(outputSize, inferRequest);
-}
-
 // Schema Validation
-
 TEST_F(TestCustomLoader, CustomLoaderConfigMatchingSchema) {
     const char* customloaderConfigMatchingSchema = R"(
         {
