@@ -48,6 +48,11 @@ def CalculateUtteranceError(referenceArray, resultArray):
 
     #meanErr = errorSum / float(resultArray.shape[0])
     meanErr = (np.square(resultArray - referenceArray)).mean(axis=None)
+    maxRef = np.amax(referenceArray)
+    maxOut = np.amax(resultArray)
+    printDebug("OUTPUT MAX: {} \n".format(maxOut)) 
+    printDebug("REF MAX: {} \n".format(maxRef)) 
+
     return meanErr
 
 
@@ -155,16 +160,16 @@ for key, obj in ark_reader:
 
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = make_ndarray(result.outputs[args['output_name']])
+        resultsArray = make_ndarray(result.outputs[args['output_name']])
 
         # Reset sequence end for testing purpose
         #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
         #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         
-        resultsArray = np.array(output)
+        #resultsArray = np.array(output)
         referenceArray = scoreObjects[key][x]
         
-        meanErr = CalculateUtteranceError(referenceArray, resultsArray[0,:])
+        meanErr = CalculateUtteranceError(referenceArray, resultsArray[0])
 
         meanErrSum += meanErr
         # Statistics

@@ -1,0 +1,32 @@
+Reading ark file rm_lstm4f/test_feat_1_10.ark
+Reading scores ark file rm_lstm4f/test_score_1_10.ark
+Start processing:
+	Model name: rm_lstm4f
+
+	Input name: aem02_st0049_oct89
+	Sequence 1020 mean error: 30.1078429747
+
+
+	Input name: aem02_st0122_oct89
+	Sequence 1021 mean error: 24.6441939259
+
+
+	Input name: aem02_st0182_oct89
+	Sequence 1022 mean error: 26.4780659723
+
+
+	Input name: aem02_st0276_oct89
+	Sequence 1023 mean error: 27.1181837416
+
+Global mean error: 27.0870716536
+
+
+processing time for all iterations
+average time: 2.00 ms; average speed: 202997.53 fps
+median time: 2.00 ms; median speed: 203500.00 fps
+max time: 4.00 ms; min speed: 101750.00 fps
+min time: 2.00 ms; max speed: 203500.00 fps
+time percentile 90: 2.00 ms; speed percentile 90: 203500.00 fps
+time percentile 50: 2.00 ms; speed percentile 50: 203500.00 fps
+time standard deviation: 0.10
+time variance: 0.01
