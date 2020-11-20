@@ -25,7 +25,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
 
-debug_mode = False
+debug_mode = 0
 def printDebug(msg):
     if debug_mode:
         print(msg)
@@ -70,7 +70,10 @@ parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name
 
 parser.add_argument('--utterances', required=False, default=10, help='How many utterances to process from ark file. default 10')
 parser.add_argument('--samples', required=False, default=10, help='How many samples to process from each utterance file. default 10')
+parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
 
+global debug_mode
+debug_mode = args.get('debug')
 args = vars(parser.parse_args())
 
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
