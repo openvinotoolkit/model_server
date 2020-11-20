@@ -32,17 +32,17 @@ TEST(EnsembleMetadata, OneNode) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummy_node"] = {
-        {"request", {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
 
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(
@@ -83,31 +83,34 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     ModelConfig sum_model_config = SUM_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config), StatusCode::OK);
 
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "N1", "increment"},
-        {NodeKind::DL, "N2", "sum"},
-        {NodeKind::EXIT, "response"},
-    };
-
-    pipeline_connections_t connections;
-
     const std::string& INCREMENT_MODEL_INPUT_NAME = DUMMY_MODEL_INPUT_NAME;
     const std::string& INCREMENT_MODEL_OUTPUT_NAME = DUMMY_MODEL_OUTPUT_NAME;
     const int INCREMENT_MODEL_INPUT_SIZE = DUMMY_MODEL_INPUT_SIZE;
     const int INCREMENT_MODEL_OUTPUT_SIZE = DUMMY_MODEL_OUTPUT_SIZE;
 
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {
+                                                                 {"request_input_for_N1", "request_input_for_N1"},
+                                                                 {"request_input_for_N2_and_exit", "request_input_for_N2_and_exit"},
+                                                             }},
+        {NodeKind::DL, "N1", "increment", std::nullopt, {{INCREMENT_MODEL_OUTPUT_NAME, INCREMENT_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "N2", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
     connections["N1"] = {
-        {"request", {{"request_input_for_N1", INCREMENT_MODEL_INPUT_NAME}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_N1", INCREMENT_MODEL_INPUT_NAME}}}};
 
     connections["N2"] = {
-        {"request", {{"request_input_for_N2_and_exit", SUM_MODEL_INPUT_NAME_1}}},
+        {ENTRY_NODE_NAME, {{"request_input_for_N2_and_exit", SUM_MODEL_INPUT_NAME_1}}},
         {"N1", {{INCREMENT_MODEL_OUTPUT_NAME, SUM_MODEL_INPUT_NAME_2}}}};
 
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"N1", {{INCREMENT_MODEL_OUTPUT_NAME, "intermediate_result_from_increment"}}},
         {"N2", {{SUM_MODEL_OUTPUT_NAME, "intermediate_result_from_sum"}}},
-        {"request", {{"request_input_for_N2_and_exit", "original_input_for_N2"}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_N2_and_exit", "original_input_for_N2"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
@@ -156,14 +159,14 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     ConstructorEnabledModelManager manager;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"name_from_entry", "name_from_entry"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
-    connections["response"] = {
-        {"request", {{"name_from_entry", "name_for_response"}}}};
+    connections[EXIT_NODE_NAME] = {
+        {ENTRY_NODE_NAME, {{"name_from_entry", "name_for_response"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
@@ -200,35 +203,44 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config), StatusCode::OK);
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "sum_node_quarter_1", "sum"},
-        {NodeKind::DL, "sum_node_quarter_2", "sum"},
-        {NodeKind::DL, "sum_node_quarter_3", "sum"},
-        {NodeKind::DL, "sum_node_quarter_4", "sum"},
-        {NodeKind::DL, "sum_node_semi_1", "sum"},
-        {NodeKind::DL, "sum_node_semi_2", "sum"},
-        {NodeKind::DL, "sum_node_final_1", "sum"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {
+                                                                 {"request_input_for_quarter_1_a", "request_input_for_quarter_1_a"},
+                                                                 {"request_input_for_quarter_1_b", "request_input_for_quarter_1_b"},
+                                                                 {"request_input_for_quarter_2_a", "request_input_for_quarter_2_a"},
+                                                                 {"request_input_for_quarter_2_b", "request_input_for_quarter_2_b"},
+                                                                 {"request_input_for_quarter_3_a", "request_input_for_quarter_3_a"},
+                                                                 {"request_input_for_quarter_3_b", "request_input_for_quarter_3_b"},
+                                                                 {"request_input_for_quarter_4_a", "request_input_for_quarter_4_a"},
+                                                                 {"request_input_for_quarter_4_b", "request_input_for_quarter_4_b"},
+                                                             }},
+        {NodeKind::DL, "sum_node_quarter_1", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_quarter_2", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_quarter_3", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_quarter_4", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_semi_1", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_semi_2", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "sum_node_final_1", "sum", std::nullopt, {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     // Quarter
     connections["sum_node_quarter_1"] = {
-        {"request", {{"request_input_for_quarter_1_a", SUM_MODEL_INPUT_NAME_1},
-                        {"request_input_for_quarter_1_b", SUM_MODEL_INPUT_NAME_2}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_quarter_1_a", SUM_MODEL_INPUT_NAME_1},
+                              {"request_input_for_quarter_1_b", SUM_MODEL_INPUT_NAME_2}}}};
 
     connections["sum_node_quarter_2"] = {
-        {"request", {{"request_input_for_quarter_2_a", SUM_MODEL_INPUT_NAME_1},
-                        {"request_input_for_quarter_2_b", SUM_MODEL_INPUT_NAME_2}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_quarter_2_a", SUM_MODEL_INPUT_NAME_1},
+                              {"request_input_for_quarter_2_b", SUM_MODEL_INPUT_NAME_2}}}};
 
     connections["sum_node_quarter_3"] = {
-        {"request", {{"request_input_for_quarter_3_a", SUM_MODEL_INPUT_NAME_1},
-                        {"request_input_for_quarter_3_b", SUM_MODEL_INPUT_NAME_2}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_quarter_3_a", SUM_MODEL_INPUT_NAME_1},
+                              {"request_input_for_quarter_3_b", SUM_MODEL_INPUT_NAME_2}}}};
 
     connections["sum_node_quarter_4"] = {
-        {"request", {{"request_input_for_quarter_4_a", SUM_MODEL_INPUT_NAME_1},
-                        {"request_input_for_quarter_4_b", SUM_MODEL_INPUT_NAME_2}}}};
+        {ENTRY_NODE_NAME, {{"request_input_for_quarter_4_a", SUM_MODEL_INPUT_NAME_1},
+                              {"request_input_for_quarter_4_b", SUM_MODEL_INPUT_NAME_2}}}};
 
     // Semi
     connections["sum_node_semi_1"] = {
@@ -244,7 +256,7 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
         {"sum_node_semi_1", {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_INPUT_NAME_1}}},
         {"sum_node_semi_2", {{SUM_MODEL_OUTPUT_NAME, SUM_MODEL_INPUT_NAME_2}}}};
 
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"sum_node_final_1", {{SUM_MODEL_OUTPUT_NAME, "final_sum"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(
@@ -292,17 +304,17 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummy_node", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummy_node"] = {
-        {"request", {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
 
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(

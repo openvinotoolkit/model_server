@@ -150,11 +150,23 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
     }
 }
 
+void processPipelineInputs(const rapidjson::Value::ConstMemberIterator& pipelineInputsPtr, const std::string& nodeName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias, const std::string& pipelineName) {
+    for (const auto& pipelineInput : pipelineInputsPtr->value.GetArray()) {
+        const std::string pipelineInputName = pipelineInput.GetString();
+        SPDLOG_DEBUG("Mapping node:{} output:{}, under alias:{}",
+            nodeName, pipelineInputName, pipelineInputName);
+        auto result = nodeOutputNameAlias.insert({pipelineInputName, pipelineInputName});
+        if (!result.second) {
+            SPDLOG_ERROR("Pipeline {} has duplicated input declaration", pipelineName);
+        }
+    }
+}
+
 void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
     for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
         const std::string modelOutputName = nodeOutput.GetObject()["data_item"].GetString();
         const std::string nodeOutputName = nodeOutput.GetObject()["alias"].GetString();
-        SPDLOG_DEBUG("Alliasing node:{} model_name:{} output:{}, under alias:{}",
+        SPDLOG_DEBUG("Mapping node:{} model_name:{} output:{}, under alias:{}",
             nodeName, modelName, modelOutputName, nodeOutputName);
         nodeOutputNameAlias[nodeOutputName] = modelOutputName;
     }
@@ -166,7 +178,8 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     auto itr2 = pipelineConfig.FindMember("nodes");
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"}};
+        {NodeKind::ENTRY, ENTRY_NODE_NAME}};
+    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
     pipeline_connections_t connections;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
@@ -202,10 +215,9 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         processNodeInputs(nodeName, nodeInputItr, connections);
     }
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
-    const std::string nodeName = "response";
     // pipeline outputs are node exit inputs
-    processNodeInputs(nodeName, iteratorOutputs, connections);
-    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, nodeName, "", std::nullopt, {})));
+    processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
+    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {})));
     auto status = factory.createDefinition(pipelineName, info, connections, manager);
     if (!status.ok()) {
         return;

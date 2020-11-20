@@ -490,8 +490,7 @@ public:
          * @return bool
          */
     bool anyShapeSetToAuto() const {
-        for (auto& it : getShapes()) {
-            auto shapeInfo = it.second;
+        for (const auto& [name, shapeInfo] : getShapes()) {
             if (shapeInfo.shapeMode == AUTO)
                 return true;
         }

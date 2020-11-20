@@ -40,7 +40,7 @@ protected:
             ::testing::UnitTest::GetInstance()->current_test_info();
 
         const std::string directoryName = std::string(test_info->test_suite_name());
-        directoryPath = "/tmp" + directoryName;
+        directoryPath = "/tmp/" + directoryName;
         configPath = directoryPath + "/config.json";
         modelPath = directoryPath + "/dummy";
         mappingConfigPath = modelPath + "/1/mapping_config.json";
@@ -79,21 +79,20 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Create pipeline definition
     PipelineFactory factory;
-
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "input_tensor"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "input_tensor"}}}};
     connections["dummyB"] = {
         {"dummyA", {{"output_tensor", "input_tensor"}}}};
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
     // Ensure definition created without errors
@@ -145,22 +144,22 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "b"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "b"}}}};
     connections["dummyB"] = {
         {"dummyA", {{"output_tensor", "b"}}}};
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::INVALID_MISSING_INPUT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT);
 }
 
 TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFailsCreation) {
@@ -180,22 +179,22 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
     PipelineFactory factory;
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "a"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "a"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "input_tensor"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "input_tensor"}}}};
     connections["dummyB"] = {
-        {"dummyA", {{"a", "input_tensor"}}}};
-    connections["response"] = {
-        {"dummyB", {{"a", "response_tensor_name"}}}};
+        {"dummyA", {{"output_tensor", "input_tensor"}}}};
+    connections[EXIT_NODE_NAME] = {
+        {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::INVALID_MISSING_OUTPUT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT);
 }
 
 TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAndGetMetadata) {
@@ -212,19 +211,19 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
 
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
     pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "input_tensor"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "input_tensor"}}}};
     connections["dummyB"] = {
         {"dummyA", {{"output_tensor", "input_tensor"}}}};
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
     auto def = std::make_unique<PipelineDefinition>(
@@ -250,7 +249,8 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
-TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {
+// Disabled until CVS-41658 is resolved.
+TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_SuccessfullyReloadPipelineAfterAddingModelMapping) {
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
@@ -258,18 +258,18 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Create pipeline definition
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "input_tensor"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "input_tensor"}}}};
     connections["dummyB"] = {
         {"dummyA", {{"output_tensor", "input_tensor"}}}};
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
     // Validation fails since mapping is expected
@@ -278,7 +278,6 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
     EXPECT_TRUE(status.getCode() == ovms::StatusCode::INVALID_MISSING_INPUT ||
                 status.getCode() == ovms::StatusCode::INVALID_MISSING_OUTPUT)
         << status.string();
-    EXPECT_EQ(status.getCode(), ovms::StatusCode::INVALID_MISSING_OUTPUT) << status.string();
 
     // Create mapping config for model
     createConfigFileWithContent(R"({
@@ -325,8 +324,8 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
     ASSERT_EQ(asVector<float>(output_proto.tensor_content()), output_data);
 }
 
+// Disabled until CVS-41658 is resolved.
 TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_ReloadPipelineAfterRemovalOfModelMappingWillFail) {
-    // disabled - check CVS-41658
     // Create mapping config for model
     createConfigFileWithContent(R"({
         "inputs": {"b": "input_tensor"},
@@ -340,18 +339,18 @@ TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_ReloadPipelineAfterRemov
 
     // Create pipeline definition
     std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, "request"},
-        {NodeKind::DL, "dummyA", "dummy"},
-        {NodeKind::DL, "dummyB", "dummy"},
-        {NodeKind::EXIT, "response"},
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
+        {NodeKind::DL, "dummyA", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::DL, "dummyB", "dummy", std::nullopt, {{"output_tensor", "output_tensor"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
     };
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    pipeline_connections_t connections;
 
     connections["dummyA"] = {
-        {"request", {{"vector", "input_tensor"}}}};
+        {ENTRY_NODE_NAME, {{"vector", "input_tensor"}}}};
     connections["dummyB"] = {
         {"dummyA", {{"output_tensor", "input_tensor"}}}};
-    connections["response"] = {
+    connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
     // Ensure definition created without errors
