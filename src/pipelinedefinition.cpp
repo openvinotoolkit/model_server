@@ -276,16 +276,16 @@ public:
             return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_NODE;
         }
 
-        // Exit cannot be dependency of any node.
         if (dependencyNodeInfo->kind == NodeKind::EXIT) {
-            return StatusCode::UNKNOWN_ERROR;
+            SPDLOG_ERROR("Validation of pipeline({}) definition failed. Exit node used as dependency node",
+                pipelineName);
+            return StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY;
         }
 
         return StatusCode::OK;
     }
 
     Status checkForForbiddenDynamicParameters() {
-        // Ban creating pipelines with Dynamic Model Parameters.
         const auto& config = dependantModelInstance->getModelConfig();
         if (config.getBatchingMode() == Mode::AUTO || config.anyShapeSetToAuto()) {
             SPDLOG_ERROR("Validation of pipeline({}) definition failed. Node name {} used model name {} with dynamic batch/shape parameter which is forbidden.",
@@ -359,7 +359,7 @@ public:
                 dependencyNodeInfo.modelVersion.value_or(0),
                 modelOutputName,
                 tensorOutput->getPrecisionAsString());
-            return StatusCode::INVALID_PRECISION;  // CANNOT REACH MANUALLY, WE HAVE NO OTHER PRECISION SUPPORT
+            return StatusCode::INVALID_PRECISION;
         }
         return StatusCode::OK;
     }
@@ -423,7 +423,6 @@ public:
     Status validateConnection(const NodeInfo& dependencyNodeInfo, const InputPairs& mapping) {
         // At this point dependency node can only be either DL model node or entry node.
         // Take care when adding new node types.
-        // If underlying model is of type DL model, retrieve underlying model instance for later use.
         std::unique_ptr<ModelInstanceUnloadGuard> dependencyModelUnloadGuard;
         std::shared_ptr<ModelInstance> dependencyModelInstance;
         if (dependencyNodeInfo.kind == NodeKind::DL) {
@@ -442,7 +441,6 @@ public:
             }
         }
 
-        // Validate each connection between dependency and dependant node.
         for (const auto& [alias, realName] : mapping) {
             if (dependantNodeInfo.kind == NodeKind::DL) {
                 auto result = markModelInputAsConnected(realName);
@@ -468,7 +466,6 @@ public:
     }
 
     Status validate() {
-        // If we validate DL model node, retrieve underlying model instance.
         if (dependantNodeInfo.kind == NodeKind::DL) {
             auto result = fetchUnderlyingModelInstance();
             if (!result.ok()) {
@@ -483,7 +480,6 @@ public:
             prepareRemainingUnconnectedDependantModelInputsSet();
         }
 
-        // Check all connections entering currently validated node.
         if (connections.count(dependantNodeInfo.nodeName) > 0) {
             for (const auto& [dependencyNodeName, mapping] : connections.at(dependantNodeInfo.nodeName)) {
                 if (mapping.size() == 0) {
