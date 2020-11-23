@@ -13,6 +13,13 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 
 ```
 
+Grant proper access rights to downloaded files
+
+```Bash
+chmod -R 777 model
+
+```
+
 #### Pull and tag the docker image with OVMS component 
 Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
 ```Bash
