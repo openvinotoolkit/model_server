@@ -167,7 +167,7 @@ protected:
         std::stringstream ss;
         ss << std::string(test_info->test_suite_name())
            << "/"
-           << std::string(test_info->test_case_name());
+           << std::string(test_info->name());
         const std::string directoryName = ss.str();
         directoryPath = "/tmp/" + directoryName;
         std::filesystem::remove_all(directoryPath);
