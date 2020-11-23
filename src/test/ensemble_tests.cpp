@@ -2211,11 +2211,6 @@ const char* configJsonWithNoPipeline = R"(
     ]
 })";
 
-uint getWaitTimePeriodInMs(ModelManager& manager) {
-    const float WAIT_MULTIPLIER_FACTOR = 1200;
-    return WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalSec();
-}
-
 TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
@@ -2225,9 +2220,9 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(configJsonWithNoPipeline, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
         PipelineDefinitionStateCode::RETIRED);
 }
@@ -2290,9 +2285,9 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineOneDummyConfigWithChangedInputName, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     tensor_map_t inputsInfoAfter;
@@ -2340,9 +2335,9 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineOneDummyConfigWithMissingModel, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
@@ -2504,9 +2499,9 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineTwoDummyConfigAfterChanges, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getWaitTimePeriodInMs(manager)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStatusCode(),
         PipelineDefinitionStateCode::RETIRED);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStatusCode(),

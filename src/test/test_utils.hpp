@@ -23,6 +23,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
@@ -174,3 +176,5 @@ protected:
 
     std::string directoryPath;
 };
+
+uint getConfigCheckTimePeriodDelayInMs(ovms::ModelManager& manager);
