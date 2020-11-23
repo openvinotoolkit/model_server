@@ -44,10 +44,10 @@ bool SequenceManager::hasSequence(uint64_t sequenceId){
 
 Status SequenceManager::addSequence(uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
-        spdlog::info("Sequence with provided ID already exists");
+        spdlog::debug("Sequence with provided ID already exists");
         // return StatusCode::SEQUENCE_ALREADY_EXISTS
     } else {
-        spdlog::info("Adding new sequence with ID: {}", sequenceId);
+        spdlog::debug("Adding new sequence with ID: {}", sequenceId);
         sequences[sequenceId] = Sequence();
     }
     return StatusCode::OK;
@@ -56,22 +56,22 @@ Status SequenceManager::addSequence(uint64_t sequenceId) {
 Status SequenceManager::removeSequence(uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
         // TO DO: care for thread safety
-        spdlog::info("Removing sequence with ID: {}", sequenceId);
+        spdlog::debug("Removing sequence with ID: {}", sequenceId);
         sequences.erase(sequenceId);
     } else {
-        spdlog::info("Sequence with provided ID does not exists");
+        spdlog::debug("Sequence with provided ID does not exists");
         // return StatusCode::SEQUENCE_NOT_FOUND
     }
     return StatusCode::OK;
 }
 
 const sequence_memory_state_t& SequenceManager::getSequenceMemoryState(uint64_t sequenceId) {
-    spdlog::info("Obtaining sequence state for the sequence with ID: {}", sequenceId);
+    //spdlog::debug("Obtaining sequence state for the sequence with ID: {}", sequenceId);
     return sequences[sequenceId].getLastMemoryState();
 }
 
 Status SequenceManager::updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState) {
-    spdlog::info("Updating sequence state for the sequence with ID: {}", sequenceId);
+    //spdlog::debug("Updating sequence state for the sequence with ID: {}", sequenceId);
     return sequences[sequenceId].updateLastMemoryState(newState);
 }
 

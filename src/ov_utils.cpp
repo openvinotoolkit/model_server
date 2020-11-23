@@ -32,14 +32,12 @@ InferenceEngine::Blob::Ptr blobClone(const InferenceEngine::Blob::Ptr sourceBlob
 
 // TO DO: almost 1:1 duplicate of above, could be unified
 InferenceEngine::Blob::Ptr constBlobClone(InferenceEngine::Blob::CPtr sourceBlob) {
-    spdlog::info("Starting const blob copying");
     auto copyBlob = InferenceEngine::Blob::CreateFromData(std::make_shared<InferenceEngine::Data>("", sourceBlob->getTensorDesc()));
     copyBlob->allocate();
     if (copyBlob->byteSize() != sourceBlob->byteSize()) {
         return nullptr;
     }
     std::memcpy((void*)copyBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
-    spdlog::info("Finishing const blob copying");
     return copyBlob;
 }
 
