@@ -71,8 +71,6 @@ const std::string SECOND_MODEL_NAME = "alpha";
 const std::string model_1_path = "/tmp/models/dummy1/1";
 const std::string model_2_path = "/tmp/models/dummy2/2";
 
-const std::chrono::duration SLEEP_TIME_S = std::chrono::seconds(3);
-
 class MockModel : public ovms::Model {
 public:
     MockModel() :
@@ -306,16 +304,15 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    std::thread t([]() {
-        std::this_thread::sleep_for(SLEEP_TIME_S);
+    std::thread t([&manager]() {
+        waitForOVMSConfigReload(manager);
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
-    std::thread s([]() {
-        std::this_thread::sleep_for(SLEEP_TIME_S);
+    std::thread s([&manager]() {
+        waitForOVMSConfigReload(manager);
     });
     s.join();
-    std::this_thread::sleep_for(SLEEP_TIME_S);
     models = manager.getModels().size();
     EXPECT_EQ(models, 2);
     manager.join();
@@ -366,7 +363,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     auto models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    std::this_thread::sleep_for(SLEEP_TIME_S);
+    waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     for (auto& nameModel : models) {
@@ -376,7 +373,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     }
     // we remove SECOND_MODEL from config file and expect to have all versions of it retired
     createConfigFileWithContent(config_1_model, fileToReload);
-    std::this_thread::sleep_for(SLEEP_TIME_S);
+    waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {

@@ -45,7 +45,6 @@
 
 namespace ovms {
 
-static uint watcherIntervalSec = 1;
 static bool watcherStarted = false;
 
 Status ModelManager::start() {
@@ -218,10 +217,17 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     // pipeline outputs are node exit inputs
     processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {})));
-    auto status = factory.createDefinition(pipelineName, info, connections, manager);
-    if (!status.ok()) {
+    if (!factory.definitionExists(pipelineName)) {
+        SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
+        auto status = factory.createDefinition(pipelineName, info, connections, manager);
+        pipelinesInConfigFile.insert(pipelineName);
         return;
     }
+    SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
+    auto status = factory.reloadDefinition(pipelineName,
+        std::move(info),
+        std::move(connections),
+        manager);
     pipelinesInConfigFile.insert(pipelineName);
 }
 
@@ -229,12 +235,14 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have pipelines property.");
+        pipelineFactory.retireOtherThan({}, *this);
         return StatusCode::OK;
     }
     std::set<std::string> pipelinesInConfigFile;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
         processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
     }
+    pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
     return ovms::StatusCode::OK;
 }
 

@@ -41,9 +41,10 @@ using testing::Return;
 
 const uint NIREQ = 2;
 
-class EnsembleFlowTest : public ::testing::Test {
+class EnsembleFlowTest : public TestWithTempDir {
 protected:
     void SetUp() override {
+        TestWithTempDir::SetUp();
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
@@ -88,11 +89,11 @@ protected:
     }
 
     void performWrongPipelineConfigTest(const char* configFileContent) {
-        std::string fileToReload = "/tmp/ovms_config_file1.json";
+        std::string fileToReload = directoryPath + "/ovms_config_file1.json";
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
         managerWithDummyModel.startFromFile(fileToReload);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+        waitForOVMSConfigReload(managerWithDummyModel);
         std::unique_ptr<Pipeline> pipeline;
         auto status = managerWithDummyModel.createPipeline(pipeline,
             "pipeline1Dummy",
@@ -933,8 +934,6 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionMultipleConnectionsToModelInputValida
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    PipelineFactory factory;
-
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{customPipelineInputName, customPipelineInputName}}},
@@ -1461,7 +1460,9 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
     ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
 }
 
-const char* pipelineOneDummyConfig = R"(
+const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
+
+static const char* pipelineOneDummyConfig = R"(
 {
     "model_config_list": [
         {
@@ -1486,11 +1487,11 @@ const char* pipelineOneDummyConfig = R"(
                     "inputs": [
                         {"b": {"node_name": "request",
                                "data_item": "custom_dummy_input"}}
-                    ], 
+                    ],
                     "outputs": [
                         {"data_item": "a",
                          "alias": "new_dummy_output"}
-                    ] 
+                    ]
                 }
             ],
             "outputs": [
@@ -1503,11 +1504,11 @@ const char* pipelineOneDummyConfig = R"(
 })";
 
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    waitForOVMSConfigReload(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1520,7 +1521,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     managerWithDummyModel.join();
 }
 
-const char* pipelineOneDummyConfig2ParallelDummy = R"(
+static const char* pipelineOneDummyConfig2ParallelDummy = R"(
 {
     "model_config_list": [
         {
@@ -1578,11 +1579,11 @@ const char* pipelineOneDummyConfig2ParallelDummy = R"(
 })";
 
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2ParallelDummy) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    waitForOVMSConfigReload(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1624,7 +1625,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     managerWithDummyModel.join();
 }
 
-const char* pipelineOneDummyConfigWrongNodeKind = R"(
+static const char* pipelineOneDummyConfigWrongNodeKind = R"(
 {
     "model_config_list": [
         {
@@ -1669,7 +1670,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithWrongNodeKind) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWrongNodeKind);
 }
 
-const char* pipelineOneDummyConfigMissingNodeModelName = R"(
+static const char* pipelineOneDummyConfigMissingNodeModelName = R"(
 {
     "model_config_list": [
         {
@@ -1712,7 +1713,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeModelName) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeModelName);
 }
 
-const char* pipelineOneDummyConfigMissingNodeName = R"(
+static const char* pipelineOneDummyConfigMissingNodeName = R"(
 {
     "model_config_list": [
         {
@@ -1755,7 +1756,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeName) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeName);
 }
 
-const char* pipelineOneDummyConfigMissingNodeInputs = R"(
+static const char* pipelineOneDummyConfigMissingNodeInputs = R"(
 {
     "model_config_list": [
         {
@@ -1795,7 +1796,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeInputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeInputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
+static const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
 {
     "model_config_list": [
         {
@@ -1835,7 +1836,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeOutputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingNodeOutputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
+static const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
 {
     "model_config_list": [
         {
@@ -1874,7 +1875,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingPipelineOutputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingPipelineOutputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
+static const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
 {
     "model_config_list": [
         {
@@ -2194,4 +2195,323 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     checkResponse(dummySeriallyConnectedCount);
     t.join();
     t2.join();
+}
+
+static const char* configJsonWithNoPipeline = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(configJsonWithNoPipeline, fileToReload);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+}
+static const char* pipelineOneDummyConfigWithChangedInputName = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["NEW_INPUT_NAME"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "NEW_INPUT_NAME"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+const std::string NEW_INPUT_NAME = "NEW_INPUT_NAME";
+
+TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) {
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    tensor_map_t inputsInfoBefore;
+    auto pdPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME);
+    status = pdPtr->getInputsInfo(inputsInfoBefore, manager);
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
+
+    // now reload
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineOneDummyConfigWithChangedInputName, fileToReload);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    tensor_map_t inputsInfoAfter;
+    status = pdPtr->getInputsInfo(inputsInfoAfter, manager);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
+}
+static const char* pipelineOneDummyConfigWithMissingModel = R"(
+{
+    "model_config_list": [
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineOneDummyConfigWithMissingModel, fileToReload);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+}
+static const char* pipelineTwoDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipelineToRetire",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        },
+        {
+            "name": "pipelineToReload",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+static const char* pipelineTwoDummyConfigAfterChanges = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipelineToAdd",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        },
+        {
+            "name": "pipelineToReload",
+            "inputs": ["NEW_INPUT_NAME"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "NEW_INPUT_NAME"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+const std::string PIPELINE_TO_RETIRE{"pipelineToRetire"};
+const std::string PIPELINE_TO_RELOAD{"pipelineToReload"};
+const std::string PIPELINE_TO_ADD{"pipelineToAdd"};
+
+TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
+    // First add 2 pipelines with different names
+    // Then change config in a way:
+    //  * remove 1 pipeline
+    //  * change connection name between 2 nodes
+    //  * add new pipeline (just with different name)
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
+    createConfigFileWithContent(pipelineTwoDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD), nullptr);
+
+    tensor_map_t inputsInfoBefore;
+    auto pipelineToReloadPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD);
+    status = pipelineToReloadPtr->getInputsInfo(inputsInfoBefore, manager);
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
+
+    // now reload
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineTwoDummyConfigAfterChanges, fileToReload);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    tensor_map_t inputsInfoAfter;
+    status = pipelineToReloadPtr->getInputsInfo(inputsInfoAfter, manager);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
