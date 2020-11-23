@@ -2219,12 +2219,12 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     auto status = manager.startFromFile(fileToReload);
     manager.startWatcher();
     ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(configJsonWithNoPipeline, fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
 }
 const char* pipelineOneDummyConfigWithChangedInputName = R"(
@@ -2276,7 +2276,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     auto status = manager.startFromFile(fileToReload);
     manager.startWatcher();
     ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
     tensor_map_t inputsInfoBefore;
@@ -2289,7 +2289,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineOneDummyConfigWithChangedInputName, fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     tensor_map_t inputsInfoAfter;
     status = pdPtr->getInputsInfo(inputsInfoAfter, manager);
@@ -2334,12 +2334,12 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
     auto status = manager.startFromFile(fileToReload);
     manager.startWatcher();
     ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineOneDummyConfigWithMissingModel, fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 const char* pipelineTwoDummyConfig = R"(
@@ -2487,9 +2487,9 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     auto status = manager.startFromFile(fileToReload);
     manager.startWatcher();
     ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD), nullptr);
 
@@ -2503,11 +2503,11 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
     createConfigFileWithContent(pipelineTwoDummyConfigAfterChanges, fileToReload);
     std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD)->getStatusCode(),
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
     tensor_map_t inputsInfoAfter;

@@ -129,7 +129,7 @@ public:
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     const std::string& getName() const { return pipelineName; }
-    const PipelineDefinitionStateCode getStatusCode() const { return status.getStateCode(); }
+    const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
 
     void notifyUsedModelChanged(const std::string& ownerDetails) {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
