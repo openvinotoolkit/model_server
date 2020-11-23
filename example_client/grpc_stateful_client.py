@@ -69,7 +69,7 @@ parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name
                     dest='model_name')
 
 parser.add_argument('--utterances', required=False, default=10, help='How many utterances to process from ark file. default 10')
-parser.add_argument('--samples', required=False, default=10, help='How many samples to process from each utterance file. default 10')
+parser.add_argument('--samples', required=False, default=500, help='How many samples to process from each utterance file. default 500')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
 
 args = vars(parser.parse_args())
