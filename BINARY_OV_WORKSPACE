@@ -1,4 +1,4 @@
-# FOR USING BINARY RELEASE: ##########################
+# OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
     name = "openvino",
     build_file_content = """

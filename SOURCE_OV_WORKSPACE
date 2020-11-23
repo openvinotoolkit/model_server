@@ -1,4 +1,4 @@
-# FOR BUILDING FROM SOURCE:
+# OPENVINO DEFINITION FOR BUILDING FROM SOURCE:
 
 new_local_repository(
     name = "openvino",

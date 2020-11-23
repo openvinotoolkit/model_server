@@ -155,7 +155,7 @@ ifneq ($(OVMS_METADATA_FILE),)
 else
 	@touch .workspace/metadata.json
 endif
-	@sed '/# OPEN VINO #/,$d' WORKSPACE > WORKSPACE
+	@sed '/# OPENVINO DEFINITION FOR BUILDING FROM/,$d' WORKSPACE > WORKSPACE
 ifeq ($(OV_USE_BINARY), "1")
 	@cat BINARY_OV_WORKSPACE >> WORKSPACE
 else
