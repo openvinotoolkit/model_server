@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -163,8 +164,11 @@ protected:
     void SetUp() override {
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
-
-        const std::string directoryName = std::string(test_info->test_suite_name());
+        std::stringstream ss;
+        ss << std::string(test_info->test_suite_name())
+           << "/"
+           << std::string(test_info->test_case_name());
+        const std::string directoryName = ss.str();
         directoryPath = "/tmp/" + directoryName;
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);

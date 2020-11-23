@@ -1462,7 +1462,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
 
 const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
-const char* pipelineOneDummyConfig = R"(
+static const char* pipelineOneDummyConfig = R"(
 {
     "model_config_list": [
         {
@@ -1504,7 +1504,7 @@ const char* pipelineOneDummyConfig = R"(
 })";
 
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
@@ -1521,7 +1521,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     managerWithDummyModel.join();
 }
 
-const char* pipelineOneDummyConfig2ParallelDummy = R"(
+static const char* pipelineOneDummyConfig2ParallelDummy = R"(
 {
     "model_config_list": [
         {
@@ -1579,7 +1579,7 @@ const char* pipelineOneDummyConfig2ParallelDummy = R"(
 })";
 
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2ParallelDummy) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
@@ -1625,7 +1625,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     managerWithDummyModel.join();
 }
 
-const char* pipelineOneDummyConfigWrongNodeKind = R"(
+static const char* pipelineOneDummyConfigWrongNodeKind = R"(
 {
     "model_config_list": [
         {
@@ -1670,7 +1670,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithWrongNodeKind) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWrongNodeKind);
 }
 
-const char* pipelineOneDummyConfigMissingNodeModelName = R"(
+static const char* pipelineOneDummyConfigMissingNodeModelName = R"(
 {
     "model_config_list": [
         {
@@ -1713,7 +1713,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeModelName) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeModelName);
 }
 
-const char* pipelineOneDummyConfigMissingNodeName = R"(
+static const char* pipelineOneDummyConfigMissingNodeName = R"(
 {
     "model_config_list": [
         {
@@ -1756,7 +1756,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeName) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeName);
 }
 
-const char* pipelineOneDummyConfigMissingNodeInputs = R"(
+static const char* pipelineOneDummyConfigMissingNodeInputs = R"(
 {
     "model_config_list": [
         {
@@ -1796,7 +1796,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeInputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigMissingNodeInputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
+static const char* pipelineOneDummyConfigWithMissingNodeOutputs = R"(
 {
     "model_config_list": [
         {
@@ -1836,7 +1836,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingNodeOutputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingNodeOutputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
+static const char* pipelineOneDummyConfigWithMissingPipelineOutputs = R"(
 {
     "model_config_list": [
         {
@@ -1875,7 +1875,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithMissingPipelineOutputs) {
     performWrongPipelineConfigTest(pipelineOneDummyConfigWithMissingPipelineOutputs);
 }
 
-const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
+static const char* pipelineOneDummyConfigWithMissingPipelineInputs = R"(
 {
     "model_config_list": [
         {
@@ -2197,7 +2197,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     t2.join();
 }
 
-const char* configJsonWithNoPipeline = R"(
+static const char* configJsonWithNoPipeline = R"(
 {
     "model_config_list": [
         {
@@ -2213,7 +2213,7 @@ const char* configJsonWithNoPipeline = R"(
 })";
 
 TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(fileToReload);
@@ -2227,7 +2227,7 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
 }
-const char* pipelineOneDummyConfigWithChangedInputName = R"(
+static const char* pipelineOneDummyConfigWithChangedInputName = R"(
 {
     "model_config_list": [
         {
@@ -2270,7 +2270,7 @@ const char* pipelineOneDummyConfigWithChangedInputName = R"(
 const std::string NEW_INPUT_NAME = "NEW_INPUT_NAME";
 
 TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(fileToReload);
@@ -2296,7 +2296,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
-const char* pipelineOneDummyConfigWithMissingModel = R"(
+static const char* pipelineOneDummyConfigWithMissingModel = R"(
 {
     "model_config_list": [
     ],
@@ -2328,7 +2328,7 @@ const char* pipelineOneDummyConfigWithMissingModel = R"(
     ]
 })";
 TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(fileToReload);
@@ -2342,7 +2342,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
-const char* pipelineTwoDummyConfig = R"(
+static const char* pipelineTwoDummyConfig = R"(
 {
     "model_config_list": [
         {
@@ -2406,7 +2406,7 @@ const char* pipelineTwoDummyConfig = R"(
         }
     ]
 })";
-const char* pipelineTwoDummyConfigAfterChanges = R"(
+static const char* pipelineTwoDummyConfigAfterChanges = R"(
 {
     "model_config_list": [
         {
@@ -2481,7 +2481,7 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     //  * remove 1 pipeline
     //  * change connection name between 2 nodes
     //  * add new pipeline (just with different name)
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineTwoDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(fileToReload);
