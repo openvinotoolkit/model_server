@@ -305,12 +305,12 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::thread t([&manager]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+        waitForOVMSConfigReload(manager);
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
     std::thread s([&manager]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+        waitForOVMSConfigReload(manager);
     });
     s.join();
     models = manager.getModels().size();
@@ -363,7 +363,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     auto models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     for (auto& nameModel : models) {
@@ -373,7 +373,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     }
     // we remove SECOND_MODEL from config file and expect to have all versions of it retired
     createConfigFileWithContent(config_1_model, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {

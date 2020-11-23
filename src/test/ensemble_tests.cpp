@@ -93,7 +93,7 @@ protected:
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
         managerWithDummyModel.startFromFile(fileToReload);
-        std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
+        waitForOVMSConfigReload(managerWithDummyModel);
         std::unique_ptr<Pipeline> pipeline;
         auto status = managerWithDummyModel.createPipeline(pipeline,
             "pipeline1Dummy",
@@ -1508,7 +1508,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
+    waitForOVMSConfigReload(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1583,7 +1583,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
+    waitForOVMSConfigReload(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -2221,9 +2221,9 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(configJsonWithNoPipeline, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
 }
@@ -2286,9 +2286,9 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDummyConfigWithChangedInputName, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     tensor_map_t inputsInfoAfter;
@@ -2336,9 +2336,9 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDummyConfigWithMissingModel, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
@@ -2500,9 +2500,9 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineTwoDummyConfigAfterChanges, fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(manager)));
+    waitForOVMSConfigReload(manager);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),

@@ -177,4 +177,4 @@ protected:
     std::string directoryPath;
 };
 
-uint getConfigCheckTimePeriodDelayInMs(ovms::ModelManager& manager);
+void waitForOVMSConfigReload(ovms::ModelManager& manager);
