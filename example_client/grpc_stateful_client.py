@@ -25,9 +25,32 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
 
+def printDebug(msg):
+    global debug_mode
+    if debug_mode:
+        print(msg)
+
+def CalculateUtteranceError(referenceArray, resultArray):
+        
+    printDebug("OUTPUT: {} \n".format(resultArray))
+    printDebug("OUTPUT SHAPE: {} \n".format(resultArray.shape))
+    printDebug("REF SHAPE: {} \n".format(referenceArray.shape))
+    printDebug("REF: {} \n".format(referenceArray))
+    errorSum = 0.0
+
+    meanErr = (np.square(resultArray - referenceArray)).mean(axis=None)
+    maxRef = np.amax(referenceArray)
+    maxOut = np.amax(resultArray)
+    printDebug("OUTPUT MAX: {} \n".format(maxOut)) 
+    printDebug("REF MAX: {} \n".format(maxRef)) 
+
+    return meanErr
+
+
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
 parser.add_argument('--model_input_path', required=False, default='rm_lstm4f/test_feat_1_10.ark', help='Path to input ark file')
+parser.add_argument('--model_score_path', required=False, default='rm_lstm4f/test_score_1_10.ark', help='Path to input ark file')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
 parser.add_argument('--input_name',required=False, default='Parameter', help='Specify input tensor name. default: Parameter')
@@ -36,8 +59,14 @@ parser.add_argument('--output_name',required=False, default='affinetransform/Fus
 parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
                     dest='model_name')
 
+parser.add_argument('--utterances', required=False, default=10, help='How many utterances to process from ark file. default 10')
+parser.add_argument('--samples', required=False, default=500, help='How many samples to process from each utterance file. default 500')
+parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
+
 args = vars(parser.parse_args())
 
+global debug_mode
+debug_mode = args.get('debug')
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
@@ -47,38 +76,65 @@ model_input_path = args.get('model_input_path')
 print('Reading ark file {}'.format(model_input_path))
 ark_reader = ArchiveReader(model_input_path)
 
+model_score_path = args.get('model_score_path')
+print('Reading scores ark file {}'.format(model_score_path))
+ark_score = ArchiveReader(model_score_path)
+numberOfKeys = 0
+
 for key, obj in ark_reader:
-    print("Input ark file data range {0}: {1}".format(key, obj.shape))
+    printDebug("Input ark file data range {0}: {1}".format(key, obj.shape))
+    numberOfKeys += 1
+
+for key, obj in ark_score:
+    printDebug("Scores ark file data range {0}: {1}".format(key, obj.shape))
+
+scoreObjects = { k:m for k,m in ark_score }
 
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 
 SEQUENCE_START = 1
 SEQUENCE_END = 2
+sequence_id = 1020
+utterances_limit = int(args.get('utterances'))
+utterance = 0
 
-sequence_id = 1001
+meanErrGlobal = 0.0
 for key, obj in ark_reader:
+    utterance += 1
+    if utterance > utterances_limit:
+        break
+
     batch_size = obj.shape[0]
-    print('\tInput name: {}\n'.format(key))
-    print('\tInput in shape: {}\n'.format(obj.shape))
-    print('\tInput batch size: {}\n'.format(batch_size))
-    print('\tSequence id: {}\n'.format(sequence_id))
+    print('\n\tInput name: {}'.format(key))
+    printDebug('\tInput in shape: {}'.format(obj.shape))
+    printDebug('\tInput batch size: {}'.format(batch_size))
+    printDebug('\tSequence id: {}'.format(sequence_id))
+
+    meanErrSum = 0.0
+
+    samples_limit = int(args.get('samples'))
     for x in range(0, batch_size):
 
-        print('\tExecution: {}\n'.format(x))
+        if x >= samples_limit:
+            break
+
+        printDebug('\tExecution: {}\n'.format(x))
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.get('model_name')
 
-        print('\tTensor before input in shape: {}\n'.format(obj[x].shape))
-        print('\tTensor input in shape: {}\n'.format(expand_dims(obj[x], axis=0).shape))
+        printDebug('\tTensor before input in shape: {}\n'.format(obj[x].shape))
+        inputArray = np.expand_dims(obj[x], axis=0)
+        printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
 
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(expand_dims(obj[x], axis=0).shape)))
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
+
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size - 1:
+        if x == batch_size - 1 or x == samples_limit - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
@@ -100,13 +156,29 @@ for key, obj in ark_reader:
 
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = make_ndarray(result.outputs[args['output_name']])
+        resultsArray = make_ndarray(result.outputs[args['output_name']])
 
-        nu = np.array(output)
-        # for object classification models show imagenet class
-        print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(x,round(np.average(duration), 2),
-                                                                                  round(1000 * batch_size / np.average(duration), 2)
-                                                                                  ))
+        # Reset sequence end for testing purpose
+        #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+        #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+        
+        #resultsArray = np.array(output)
+        referenceArray = scoreObjects[key][x]
+        
+        meanErr = CalculateUtteranceError(referenceArray, resultsArray[0])
+
+        meanErrSum += meanErr
+        # Statistics
+        printDebug('Iteration {}; Mean error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x,meanErr,round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)))
+
+        #END utterance loop
+
+    meanErrAvg = meanErrSum/min(samples_limit,batch_size)
+    print("\tSequence {} mean error: {:.10f}\n".format(sequence_id, meanErrAvg))
     sequence_id += 1
+    meanErrGlobal += meanErrAvg
+    #END input name loop
 
+meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
+print("Global mean error: {:.10f}\n".format(meanGlobalErrAvg))
 print_statistics(processing_times, batch_size)
