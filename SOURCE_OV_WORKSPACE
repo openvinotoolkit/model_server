@@ -5,3 +5,4 @@ new_local_repository(
     build_file = "@//third_party/openvino:BUILD",
     path = "/openvino",
 )
+################## END OF OPENVINO DEPENDENCY ##########
