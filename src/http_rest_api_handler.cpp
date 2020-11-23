@@ -299,7 +299,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     if (!status.ok()) {
         return status;
     }
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response);
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, ModelManager::getInstance());
     if (!status.ok()) {
         return status;
     }

@@ -29,6 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "modelversionstatus.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -302,6 +303,35 @@ public:
         return isAvailable() ||
                (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
                (state == PipelineDefinitionStateCode::BEGIN);
+    }
+
+    std::tuple<ModelVersionState, ModelVersionStatusErrorCode> convertToModelStatus() const {
+        switch (getStateCode()) {
+        case PipelineDefinitionStateCode::BEGIN:
+        case PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
+            return {
+                ModelVersionState::LOADING,
+                ModelVersionStatusErrorCode::OK};
+
+        case PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
+            return {
+                ModelVersionState::LOADING,
+                ModelVersionStatusErrorCode::FAILED_PRECONDITION};
+
+        case PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
+        case PipelineDefinitionStateCode::AVAILABLE:
+            return {
+                ModelVersionState::AVAILABLE,
+                ModelVersionStatusErrorCode::OK};
+
+        case PipelineDefinitionStateCode::RETIRED:
+            return {
+                ModelVersionState::END,
+                ModelVersionStatusErrorCode::OK};
+
+        default:
+            return {};
+        }
     }
 };
 
