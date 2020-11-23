@@ -41,9 +41,10 @@ using testing::Return;
 
 const uint NIREQ = 2;
 
-class EnsembleFlowTest : public ::testing::Test {
+class EnsembleFlowTest : public TestWithTempDir {
 protected:
     void SetUp() override {
+        TestWithTempDir::SetUp();
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
@@ -88,11 +89,11 @@ protected:
     }
 
     void performWrongPipelineConfigTest(const char* configFileContent) {
-        std::string fileToReload = "/tmp/ovms_config_file1.json";
+        std::string fileToReload = directoryPath + "/ovms_config_file1.json";
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
         managerWithDummyModel.startFromFile(fileToReload);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
         std::unique_ptr<Pipeline> pipeline;
         auto status = managerWithDummyModel.createPipeline(pipeline,
             "pipeline1Dummy",
@@ -1507,7 +1508,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1582,7 +1583,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.startFromFile(fileToReload);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(getConfigCheckTimePeriodDelayInMs(managerWithDummyModel)));
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
