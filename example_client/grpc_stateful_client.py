@@ -37,16 +37,7 @@ def CalculateUtteranceError(referenceArray, resultArray):
     printDebug("REF SHAPE: {} \n".format(referenceArray.shape))
     printDebug("REF: {} \n".format(referenceArray))
     errorSum = 0.0
-    # DEBUG PRINTS
-    #for i in range(resultArray.shape[0]):
-    #        single_result = resultArray[i]
-    #        print("SINGLE OUTPUT: {}\t".format(single_result))
-    #        single_ref = referenceArray[i]
-    #        print("SINGLE REFERENCE: {}\n".format(single_ref))
-    #        diffError = single_result - single_ref
-    #        errorSum += (diffError ** 2)
 
-    #meanErr = errorSum / float(resultArray.shape[0])
     meanErr = (np.square(resultArray - referenceArray)).mean(axis=None)
     maxRef = np.amax(referenceArray)
     maxOut = np.amax(resultArray)
@@ -125,7 +116,7 @@ for key, obj in ark_reader:
     samples_limit = int(args.get('samples'))
     for x in range(0, batch_size):
 
-        if x > samples_limit:
+        if x >= samples_limit:
             break
 
         printDebug('\tExecution: {}\n'.format(x))
@@ -133,15 +124,17 @@ for key, obj in ark_reader:
         request.model_spec.name = args.get('model_name')
 
         printDebug('\tTensor before input in shape: {}\n'.format(obj[x].shape))
-        printDebug('\tTensor input in shape: {}\n'.format(expand_dims(obj[x], axis=0).shape))
+        inputArray = np.expand_dims(obj[x], axis=0)
+        printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
 
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(obj[x], shape=(expand_dims(obj[x], axis=0).shape)))
+        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
+
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size - 1 or x == samples_limit:
+        if x == batch_size - 1 or x == samples_limit - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
