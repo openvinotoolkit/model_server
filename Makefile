@@ -155,6 +155,11 @@ ifneq ($(OVMS_METADATA_FILE),)
 else
 	@touch .workspace/metadata.json
 endif
+ifeq ($(OV_USE_BINARY), "1")
+	@cat BINARY_OV_WORKSPACE >> WORKSPACE
+else
+	@cat SOURCE_OV_WORKSPACE >> WORKSPACE
+endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
