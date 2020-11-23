@@ -13,7 +13,7 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 
 ```
 
-Grant proper access rights to downloaded files
+You may need to grant proper access rights to downloaded files
 
 ```Bash
 chmod -R 777 model
