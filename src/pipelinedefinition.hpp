@@ -101,6 +101,9 @@ class PipelineDefinition {
 
     std::condition_variable loadedNotify;
 
+    // Pipelines are not versioned and any available definition has constant version equal 1.
+    static constexpr model_version_t VERSION = 1;
+
 protected:
     PipelineDefinitionStatus status;
 
@@ -130,9 +133,14 @@ public:
     Status validateForCycles();
     const std::string& getName() const { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
+    const model_version_t getVersion() const { return VERSION; }
 
     void notifyUsedModelChanged(const std::string& ownerDetails) {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
+    }
+
+    const PipelineDefinitionStatus& getStatus() const {
+        return this->status;
     }
 
     void makeSubscriptions(ModelManager& manager);
