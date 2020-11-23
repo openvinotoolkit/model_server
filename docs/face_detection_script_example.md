@@ -50,7 +50,7 @@ docker run -d -v $(pwd)/model:/models -p 9000:9000 openvino/model_server:latest 
 You may need to grant proper access rights to downloaded files
 
 ```Bash
-chmod -R 777 model
+chmod -R 755 model
 
 ```
 
@@ -95,7 +95,7 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 You may need to grant proper access rights to downloaded files
 
 ```Bash
-chmod -R 777 model
+chmod -R 755 model
 
 ```
 

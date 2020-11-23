@@ -58,7 +58,7 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 You may need to grant proper access rights to downloaded files
 
 ```Bash
-chmod -R 777 model
+chmod -R 755 model
 
 ```
 
@@ -114,7 +114,7 @@ curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_serve
 You may need to grant proper access rights to downloaded files
 
 ```Bash
-chmod -R 777 model
+chmod -R 755 model
 
 ```
 
