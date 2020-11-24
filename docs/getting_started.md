@@ -25,7 +25,6 @@ OpenVINO&trade; Model Server documentation set includes the following documents 
 - [Quick Start Guide to Setup OpenVINO&trade; Model Server](./ovms_quickstart.md)
 - [Install the OpenVINO&trade; Model Server on Linux using Docker](./docker_container.md)
 - [Installation of OpenVINO&trade; Model Server with Kubernetes](./installations_kubernetes.md)
-- [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./host.md)
 - [OpenVINO&trade; Model Server gRPC Reference Guide](./model_server_grpc_api.md)
 - [OpenVINO&trade; Model Server REST API Reference Guide](./model_server_rest_api.md)
 
