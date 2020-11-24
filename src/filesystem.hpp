@@ -125,7 +125,6 @@ public:
      * @param local_path 
      * @return StatusCode 
      */
-
     static StatusCode createTempPath(std::string* local_path) {
         std::string file_template = "/tmp/fileXXXXXX";
         char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
@@ -140,6 +139,11 @@ public:
         *local_path = std::string(tmp_folder);
 
         return StatusCode::OK;
+    }
+
+    static bool isPathEscaped(const std::string& path)
+    {
+        return string::npos != path.find("..")
     }
 
     std::string appendSlash(const std::string& name) {

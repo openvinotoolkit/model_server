@@ -82,6 +82,12 @@ AzureStorageBlob::AzureStorageBlob(const std::string& path, as::cloud_storage_ac
 
 StatusCode AzureStorageBlob::checkPath(const std::string& path) {
     try {
+        if (isPathEscaped(path))
+        {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
+
         auto status = this->parseFilePath(path);
         if (status != StatusCode::OK) {
             SPDLOG_LOGGER_WARN(azurestorage_logger, "Unable to parse path: {} -> {}", fullPath_,
@@ -596,6 +602,12 @@ AzureStorageFile::AzureStorageFile(const std::string& path, as::cloud_storage_ac
 
 StatusCode AzureStorageFile::checkPath(const std::string& path) {
     try {
+        if (isPathEscaped(path))
+        {
+            SPDLOG_LOGGER_ERROR(azurestorage_logger, "Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
+
         auto status = this->parseFilePath(path);
         if (status != StatusCode::OK) {
             SPDLOG_LOGGER_WARN(azurestorage_logger, "Unable to parse path: {} -> {}", path,

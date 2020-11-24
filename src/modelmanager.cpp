@@ -516,6 +516,12 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     files_list_t dirs;
 
     bool is_directory = false;
+    if (isPathEscaped(base))
+    {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", base);
+        return StatusCode::PATH_INVALID;
+    }
+
     auto status = fs->isDirectory(base, &is_directory);
     if (status != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't check directory: {}", base);

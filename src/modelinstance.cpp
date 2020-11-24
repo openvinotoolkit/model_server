@@ -156,6 +156,11 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
 
 // Temporary methods. To be replaces with proper storage class.
 bool dirExists(const std::string& path) {
+    if (isPathEscaped(request_path))
+    {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
     DIR* dir = opendir(path.c_str());
     if (dir) {
         closedir(dir);
@@ -167,6 +172,11 @@ bool dirExists(const std::string& path) {
 
 std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent* entry;
+    if (isPathEscaped(request_path))
+    {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
     DIR* dir = opendir(path.c_str());
     if (!dir) {
         SPDLOG_WARN("Failed to opendir: {}", path);

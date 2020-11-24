@@ -49,6 +49,12 @@ Status HttpRestApiHandler::validateUrlAndMethod(
     const std::string& request_path,
     std::smatch* sm) {
 
+    if (isPathEscaped(request_path))
+    {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
@@ -91,6 +97,12 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components) {
 
+    if (isPathEscaped(request_path))
+    {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
     if (request_components.http_method == "POST") {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
@@ -120,6 +132,12 @@ Status HttpRestApiHandler::processRequest(
 
     std::smatch sm;
     std::string request_path_str(request_path);
+    if (isPathEscaped(request_path))
+    {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
     auto status = validateUrlAndMethod(http_method, request_path_str, &sm);
     if (!status.ok()) {
         return status;
