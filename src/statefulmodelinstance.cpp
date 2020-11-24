@@ -91,6 +91,9 @@ const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::ser
 
     if (sequenceSpec.sequenceControlInput == SEQUENCE_START) {
         // On SEQUENCE_START just add new sequence to sequence manager
+        for (auto &&state : inferRequest.QueryState()) {
+            state.Reset();
+        }
         sequenceManager.addSequence(sequenceSpec.sequenceId);
     } else {
         // For next requests in the sequence restore model state
