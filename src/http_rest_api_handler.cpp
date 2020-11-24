@@ -50,13 +50,13 @@ Status HttpRestApiHandler::validateUrlAndMethod(
     const std::string& request_path,
     std::smatch* sm) {
 
+    if (http_method != "POST" && http_method != "GET") {
+        return StatusCode::REST_UNSUPPORTED_METHOD;
+    }
+
     if (FileSystem::isPathEscaped(request_path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
-    }
-
-    if (http_method != "POST" && http_method != "GET") {
-        return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
     if (!std::regex_match(request_path, *sm, sanityRegex)) {
