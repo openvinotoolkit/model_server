@@ -35,7 +35,6 @@ using tensorflow::TensorProto;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
-using InferenceEngine::IVariableState;
 using InferenceEngine::IInferRequest;
 using InferenceEngine::Precision;
 using InferenceEngine::PreProcessInfo;
@@ -91,7 +90,7 @@ public:
     MOCK_METHOD(InferenceEngine::StatusCode, GetPreProcess, (const char*, const PreProcessInfo**, ResponseDesc*), (noexcept, const));
     MOCK_METHOD(InferenceEngine::StatusCode, SetBatch, (int batch, ResponseDesc*), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, GetPerformanceCounts, ((std::map<std::string, InferenceEngineProfileInfo> & perfMap), ResponseDesc*), (noexcept, const));
-    MOCK_METHOD(InferenceEngine::StatusCode, QueryState, (IVariableState::Ptr&, size_t, ResponseDesc*), (noexcept, override));
+    MOCK_METHOD(InferenceEngine::StatusCode, QueryState, (IVariableState::Ptr & pState, size_t idx, ResponseDesc* resp), (noexcept, override));
 };
 
 class MockIInferRequestFailingInSetBlob : public MockIInferRequest {
