@@ -141,8 +141,7 @@ public:
         return StatusCode::OK;
     }
 
-    static bool isPathEscaped(const std::string& path)
-    {
+    static bool isPathEscaped(const std::string& path) {
         return std::string::npos != path.find("..");
     }
 

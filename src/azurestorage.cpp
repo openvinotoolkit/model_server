@@ -82,8 +82,7 @@ AzureStorageBlob::AzureStorageBlob(const std::string& path, as::cloud_storage_ac
 
 StatusCode AzureStorageBlob::checkPath(const std::string& path) {
     try {
-        if (FileSystem::isPathEscaped(path))
-        {
+        if (FileSystem::isPathEscaped(path)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", path);
             return StatusCode::PATH_INVALID;
         }
@@ -602,8 +601,7 @@ AzureStorageFile::AzureStorageFile(const std::string& path, as::cloud_storage_ac
 
 StatusCode AzureStorageFile::checkPath(const std::string& path) {
     try {
-        if (FileSystem::isPathEscaped(path))
-        {
+        if (FileSystem::isPathEscaped(path)) {
             SPDLOG_LOGGER_ERROR(azurestorage_logger, "Path {} escape with .. is forbidden.", path);
             return StatusCode::PATH_INVALID;
         }

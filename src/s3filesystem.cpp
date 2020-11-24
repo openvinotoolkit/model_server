@@ -52,8 +52,7 @@ const std::string S3FileSystem::S3_URL_PREFIX = "s3://";
 StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket, std::string* object) {
     std::smatch sm;
 
-    if (isPathEscaped(path))
-    {
+    if (isPathEscaped(path)) {
         SPDLOG_LOGGER_ERROR(s3_logger, "Path {} escape with .. is forbidden.", path);
         return StatusCode::PATH_INVALID;
     }
