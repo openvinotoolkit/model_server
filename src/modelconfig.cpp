@@ -278,11 +278,6 @@ Status ModelConfig::parseModelMapping() {
     mappingInputs.clear();
     mappingOutputs.clear();
     std::filesystem::path path = this->getPath();
-    if (isPathEscaped(path))
-    {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
-        return StatusCode::PATH_INVALID;
-    }
     path.append(MAPPING_CONFIG_JSON);
 
     std::ifstream ifs(path.c_str());

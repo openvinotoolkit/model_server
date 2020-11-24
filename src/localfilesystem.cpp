@@ -160,7 +160,7 @@ StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     std::error_code errorCode;
     if (isPathEscaped(path))
     {
-        SPDLOG_LOGGER_ERROR("Path {} escape with .. is forbidden.", path);
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
         return StatusCode::PATH_INVALID;
     }
     if (!std::filesystem::remove_all(path, errorCode)) {

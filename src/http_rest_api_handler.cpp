@@ -23,6 +23,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -49,7 +50,7 @@ Status HttpRestApiHandler::validateUrlAndMethod(
     const std::string& request_path,
     std::smatch* sm) {
 
-    if (isPathEscaped(request_path))
+    if (FileSystem::isPathEscaped(request_path))
     {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
@@ -97,7 +98,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components) {
 
-    if (isPathEscaped(request_path))
+    if (FileSystem::isPathEscaped({request_path.begin(), request_path.end()}))
     {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
@@ -132,7 +133,7 @@ Status HttpRestApiHandler::processRequest(
 
     std::smatch sm;
     std::string request_path_str(request_path);
-    if (isPathEscaped(request_path))
+    if (FileSystem::isPathEscaped(request_path_str))
     {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;

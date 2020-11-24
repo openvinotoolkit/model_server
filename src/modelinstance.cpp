@@ -29,6 +29,7 @@
 
 #include "config.hpp"
 #include "customloaders.hpp"
+#include "filesystem.hpp"
 #include "stringutils.hpp"
 
 using namespace InferenceEngine;
@@ -156,10 +157,10 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
 
 // Temporary methods. To be replaces with proper storage class.
 bool dirExists(const std::string& path) {
-    if (isPathEscaped(request_path))
+    if (FileSystem::isPathEscaped(path))
     {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
-        return StatusCode::PATH_INVALID;
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return false;
     }
     DIR* dir = opendir(path.c_str());
     if (dir) {
@@ -172,10 +173,10 @@ bool dirExists(const std::string& path) {
 
 std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent* entry;
-    if (isPathEscaped(request_path))
+    if (FileSystem::isPathEscaped(path))
     {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
-        return StatusCode::PATH_INVALID;
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return std::string();
     }
     DIR* dir = opendir(path.c_str());
     if (!dir) {
