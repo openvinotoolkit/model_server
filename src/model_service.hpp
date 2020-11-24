@@ -47,7 +47,7 @@ public:
 
 class GetModelStatusImpl {
 public:
-    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response);
+    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager);
     static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output);
 };

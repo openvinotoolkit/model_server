@@ -27,12 +27,14 @@
 
 namespace ovms {
 
+const std::string EXIT_NODE_NAME = "response";
+
 class ExitNode : public Node {
     tensorflow::serving::PredictResponse* response;
 
 public:
     ExitNode(tensorflow::serving::PredictResponse* response) :
-        Node("response"),
+        Node(EXIT_NODE_NAME),
         response(response) {
     }
 
