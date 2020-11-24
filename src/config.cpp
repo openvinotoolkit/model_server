@@ -30,8 +30,8 @@ namespace ovms {
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
-const std::string DEFAULT_REST_WORKERS_STRING{"24"};
-const uint64_t DEFAULT_REST_WORKERS = std::stoul(DEFAULT_REST_WORKERS_STRING);
+const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
+const std::string DEFAULT_REST_WORKERS_STRING{std::to_string(DEFAULT_REST_WORKERS)};
 const uint64_t MAX_REST_WORKERS = 10'000;
 
 Config& Config::parse(int argc, char** argv) {
@@ -65,7 +65,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint>()->default_value("1"),
                 "GRPC_WORKERS")
             ("rest_workers",
-                "number of workers in REST server - has no effect if rest_port is not set",
+                "number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
@@ -192,8 +192,8 @@ void Config::validate() {
     }
 
     // check rest_workers value
-    if (result->count("rest_workers") && ((this->restWorkers() > MAX_REST_WORKERS) || (this->restWorkers() < 1))) {
-        std::cerr << "rest_workers count should be from 1 to " << MAX_REST_WORKERS << std::endl;
+    if (result->count("rest_workers") && ((this->restWorkers() > MAX_REST_WORKERS) || (this->restWorkers() < 2))) {
+        std::cerr << "rest_workers count should be from 2 to " << MAX_REST_WORKERS << std::endl;
         exit(EX_USAGE);
     }
 
