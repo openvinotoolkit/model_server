@@ -44,67 +44,182 @@ TEST(ModelService, config_reload) {
     EXPECT_EQ(ret.ok(), true);
 }
 
-static void test_LoadModels() {
-    spdlog::info("Loading model data for tests...");
-}
-
-::grpc::Status test_PerformModelStatusRequest(ModelServiceImpl& s, tensorflow::serving::GetModelStatusRequest& req, tensorflow::serving::GetModelStatusResponse& res) {
-    auto config = DUMMY_MODEL_CONFIG;
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    manager.reloadModelWithVersions(config);
-    spdlog::info("req={} res={}", req.DebugString(), res.DebugString());
-    ::grpc::Status ret = s.GetModelStatus(nullptr, &req, &res);
-    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
-    return ret;
-}
-
 TEST(ModelService, empty_request) {
-    test_LoadModels();
-    ModelServiceImpl s;
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
-    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-    EXPECT_EQ(ret.ok(), false);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::MODEL_NAME_MISSING);
 }
 
-/* Gated by ModelManager CRTP-based mock.
+TEST(ModelService, single_version_model) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
 
-TEST(ModelService, single_version)
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(1);  // existing version
+
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+
+    ASSERT_EQ(res.model_version_status_size(), 1);
+    ASSERT_EQ(res.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+    ASSERT_EQ(res.model_version_status().begin()->has_status(), true);
+    ASSERT_EQ(res.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+    ASSERT_EQ(res.model_version_status().begin()->status().error_message(), "OK");
+}
+
+static const char* pipelineOneDummyConfig = R"(
 {
-  test_LoadModels();
-  ModelServiceImpl s;
-  tensorflow::serving::GetModelStatusRequest req;
-  tensorflow::serving::GetModelStatusResponse res;
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "dummyPipeline",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
 
-  auto model_spec = req.mutable_model_spec();
-  model_spec->Clear();
-  model_spec->set_name("existing_model");
-  model_spec->mutable_version()->set_value(1); // existing version
+TEST(ModelService, pipeline) {
+    std::string fileToReload = "/tmp/ovms_single_version_pipeline.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    ASSERT_EQ(manager.startFromFile(fileToReload), StatusCode::OK);
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
 
-  ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-  EXPECT_EQ(ret.ok(), true);
+    auto checkModelStatusResponse = [](tensorflow::serving::GetModelStatusResponse& response) {
+        ASSERT_EQ(response.model_version_status_size(), 1);
+        ASSERT_EQ(response.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+        ASSERT_EQ(response.model_version_status().begin()->version(), 1);
+        ASSERT_EQ(response.model_version_status().begin()->has_status(), true);
+        ASSERT_EQ(response.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+        ASSERT_EQ(response.model_version_status().begin()->status().error_message(), "");
+    };
+
+    // No version specified
+    req.Clear();
+    res.Clear();
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummyPipeline");
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    checkModelStatusResponse(res);
+
+    // Version 1
+    req.Clear();
+    res.Clear();
+    model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummyPipeline");
+    model_spec->mutable_version()->set_value(1);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    checkModelStatusResponse(res);
+
+    // Any version
+    req.Clear();
+    res.Clear();
+    model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummyPipeline");
+    model_spec->mutable_version()->set_value(5);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    checkModelStatusResponse(res);
 }
 
-TEST(ModelService, all_versions)
-{
-  test_LoadModels();
-  ModelServiceImpl s;
-  tensorflow::serving::GetModelStatusRequest req;
-  tensorflow::serving::GetModelStatusResponse res;
+class ModelServiceDummyWith2Versions : public ::testing::Test {
+protected:
+    void SetUp() override {
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
 
-  auto model_spec = req.mutable_model_spec();
-  model_spec->Clear();
-  model_spec->set_name("existing_model");
-  // version field is not set, so we'll fetch all versions.
+        const std::string directoryName = std::string(test_info->test_suite_name());
+        directoryPath = "/tmp/" + directoryName;
+        modelPath = directoryPath + "/dummy";
 
-  ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-  EXPECT_EQ(ret.ok(), true);
+        // Copy dummy model to temporary destination
+        std::filesystem::remove_all(directoryPath);
+        std::filesystem::create_directories(modelPath + "/1/");
+        std::filesystem::create_directories(modelPath + "/2/");
+        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/1", std::filesystem::copy_options::recursive);
+        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+    }
+
+    void TearDown() override {
+        // Clean up temporary destination
+        std::filesystem::remove_all(directoryPath);
+    }
+
+    std::string directoryPath;
+    std::string modelPath;
+};
+
+TEST_F(ModelServiceDummyWith2Versions, all_versions) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    config.setBasePath(modelPath);
+    config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    // no version specified
+
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+
+    ASSERT_EQ(res.model_version_status_size(), 2);
+    for (int i = 0; i < 2; i++) {
+        auto& model_version_status = res.model_version_status()[i];
+        ASSERT_EQ(model_version_status.state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+        ASSERT_EQ(model_version_status.version(), i + 1);
+        ASSERT_EQ(model_version_status.has_status(), true);
+        ASSERT_EQ(model_version_status.status().error_code(), tensorflow::error::OK);
+        ASSERT_EQ(model_version_status.status().error_message(), "OK");
+    }
 }
-*/
 
 TEST(ModelService, non_existing_model) {
-    test_LoadModels();
-    ModelServiceImpl s;
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
@@ -112,38 +227,37 @@ TEST(ModelService, non_existing_model) {
     model_spec->Clear();
     model_spec->set_name("non_existing_model");
 
-    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-    EXPECT_EQ(ret.ok(), false);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::MODEL_NAME_MISSING);
 }
 
 TEST(ModelService, non_existing_version) {
-    test_LoadModels();
-    ModelServiceImpl s;
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
     auto model_spec = req.mutable_model_spec();
     model_spec->Clear();
     model_spec->set_name("dummy");
-    model_spec->mutable_version()->set_value(9894689454358);  // non-existing version
+    model_spec->mutable_version()->set_value(9894689454358);
 
-    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-    EXPECT_EQ(ret.error_code(), grpc::StatusCode::NOT_FOUND);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST(ModelService, negative_version) {
-    test_LoadModels();
-    ModelServiceImpl s;
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
     auto model_spec = req.mutable_model_spec();
     model_spec->Clear();
     model_spec->set_name("dummy");
-    model_spec->mutable_version()->set_value(-1);  // negative version
+    model_spec->mutable_version()->set_value(-1);
 
-    ::grpc::Status ret = test_PerformModelStatusRequest(s, req, res);
-    EXPECT_EQ(ret.error_code(), grpc::StatusCode::NOT_FOUND);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST(RestModelStatus, CreateGrpcRequestVersionSet) {

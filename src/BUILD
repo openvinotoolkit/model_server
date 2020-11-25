@@ -206,6 +206,7 @@ cc_test(
         "test/rest_utils_test.cpp",
         "test/serialization_tests.cpp",
         "test/stringutils_test.cpp",
+        "test/test_utils.cpp",
         "test/test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",

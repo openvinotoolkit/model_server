@@ -57,7 +57,7 @@ enum class ModelVersionStatusErrorCode : int {
     // PERMISSION_DENIED = 7,
     // UNAUTHENTICATED = 16,
     // RESOURCE_EXHAUSTED = 8,
-    // FAILED_PRECONDITION = 9
+    FAILED_PRECONDITION = 9,
     // ABORTED = 10,
     // OUT_OF_RANGE = 11,
     // UNIMPLEMENTED = 12,
@@ -71,7 +71,8 @@ enum class ModelVersionStatusErrorCode : int {
 inline const std::string& ModelVersionStatusErrorCodeToString(ModelVersionStatusErrorCode code) {
     static const std::unordered_map<ModelVersionStatusErrorCode, std::string> errors = {
         {ModelVersionStatusErrorCode::OK, "OK"},
-        {ModelVersionStatusErrorCode::UNKNOWN, "UNKNOWN"}};
+        {ModelVersionStatusErrorCode::UNKNOWN, "UNKNOWN"},
+        {ModelVersionStatusErrorCode::FAILED_PRECONDITION, "FAILED_PRECONDITION"}};
     return errors.at(code);
 }
 

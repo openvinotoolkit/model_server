@@ -23,6 +23,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -51,6 +52,11 @@ Status HttpRestApiHandler::validateUrlAndMethod(
 
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
+    }
+
+    if (FileSystem::isPathEscaped(request_path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
     }
 
     if (!std::regex_match(request_path, *sm, sanityRegex)) {
@@ -91,6 +97,11 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components) {
 
+    if (FileSystem::isPathEscaped({request_path.begin(), request_path.end()})) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
     if (request_components.http_method == "POST") {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
@@ -120,6 +131,11 @@ Status HttpRestApiHandler::processRequest(
 
     std::smatch sm;
     std::string request_path_str(request_path);
+    if (FileSystem::isPathEscaped(request_path_str)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
     auto status = validateUrlAndMethod(http_method, request_path_str, &sm);
     if (!status.ok()) {
         return status;
@@ -299,7 +315,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     if (!status.ok()) {
         return status;
     }
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response);
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, ModelManager::getInstance());
     if (!status.ok()) {
         return status;
     }

@@ -18,11 +18,14 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
@@ -153,5 +156,29 @@ public:
         spdlog::info("Destructor of modelmanager(Enabled one). Models #: {}", models.size());
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #: {}", models.size());
+        join();
     }
 };
+class TestWithTempDir : public ::testing::Test {
+protected:
+    void SetUp() override {
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+        std::stringstream ss;
+        ss << std::string(test_info->test_suite_name())
+           << "/"
+           << std::string(test_info->name());
+        const std::string directoryName = ss.str();
+        directoryPath = "/tmp/" + directoryName;
+        std::filesystem::remove_all(directoryPath);
+        std::filesystem::create_directories(directoryPath);
+    }
+
+    void TearDown() override {
+        std::filesystem::remove_all(directoryPath);
+    }
+
+    std::string directoryPath;
+};
+
+void waitForOVMSConfigReload(ovms::ModelManager& manager);

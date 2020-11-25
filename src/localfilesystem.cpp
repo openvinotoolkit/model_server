@@ -35,6 +35,10 @@ const std::vector<std::string> FileSystem::acceptedFiles = {".bin", ".onnx", ".x
 
 StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
     try {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
         *exists = fs::exists(path);
     } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
@@ -46,6 +50,10 @@ StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
 
 StatusCode LocalFileSystem::isDirectory(const std::string& path, bool* is_dir) {
     try {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
         *is_dir = fs::is_directory(path);
     } catch (fs::filesystem_error& e) {
         SPDLOG_DEBUG("Couldn't access path {}", e.what());
@@ -57,6 +65,10 @@ StatusCode LocalFileSystem::isDirectory(const std::string& path, bool* is_dir) {
 
 StatusCode LocalFileSystem::getDirectoryContents(const std::string& path, files_list_t* contents) {
     try {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
         for (const auto& entry : fs::directory_iterator(path)) {
             contents->insert(entry.path().string());
         }
@@ -70,6 +82,10 @@ StatusCode LocalFileSystem::getDirectoryContents(const std::string& path, files_
 
 StatusCode LocalFileSystem::getDirectorySubdirs(const std::string& path, files_list_t* subdirs) {
     try {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
         for (const auto& entry : fs::directory_iterator(path)) {
             if (entry.is_directory()) {
                 subdirs->insert(entry.path().filename().string());
@@ -85,6 +101,10 @@ StatusCode LocalFileSystem::getDirectorySubdirs(const std::string& path, files_l
 
 StatusCode LocalFileSystem::getDirectoryFiles(const std::string& path, files_list_t* files) {
     try {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return StatusCode::PATH_INVALID;
+        }
         for (const auto& entry : fs::directory_iterator(path)) {
             if (!entry.is_directory()) {
                 files->insert(entry.path().string());
@@ -99,6 +119,10 @@ StatusCode LocalFileSystem::getDirectoryFiles(const std::string& path, files_lis
 }
 
 StatusCode LocalFileSystem::readTextFile(const std::string& path, std::string* contents) {
+    if (isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return StatusCode::PATH_INVALID;
+    }
     std::ifstream input(path, std::ios::in | std::ios::binary);
     if (!input) {
         SPDLOG_DEBUG("Couldn't access path {}", path);
@@ -128,6 +152,10 @@ StatusCode LocalFileSystem::downloadModelVersions(const std::string& path,
 
 StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     std::error_code errorCode;
+    if (isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return StatusCode::PATH_INVALID;
+    }
     if (!std::filesystem::remove_all(path, errorCode)) {
         return StatusCode::PATH_INVALID;
     }

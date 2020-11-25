@@ -29,6 +29,7 @@
 
 #include "config.hpp"
 #include "customloaders.hpp"
+#include "filesystem.hpp"
 #include "stringutils.hpp"
 
 using namespace InferenceEngine;
@@ -113,7 +114,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_DEBUG("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout: {}",
+        SPDLOG_INFO("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
             name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
     }
 
@@ -149,13 +150,17 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_DEBUG("Output name: {} ; mapping name: {}; shape: {} ; precision: {}, layout: {}",
+        SPDLOG_INFO("Output name: {} ; mapping name: {}; shape: {} ; precision: {}, layout:{}",
             name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(output->getLayout()));
     }
 }
 
 // Temporary methods. To be replaces with proper storage class.
 bool dirExists(const std::string& path) {
+    if (FileSystem::isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return false;
+    }
     DIR* dir = opendir(path.c_str());
     if (dir) {
         closedir(dir);
@@ -167,6 +172,10 @@ bool dirExists(const std::string& path) {
 
 std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent* entry;
+    if (FileSystem::isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return std::string();
+    }
     DIR* dir = opendir(path.c_str());
     if (!dir) {
         SPDLOG_WARN("Failed to opendir: {}", path);
