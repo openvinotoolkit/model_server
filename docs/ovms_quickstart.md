@@ -55,13 +55,6 @@ Download the model components to the `model/1` directory. Example command using 
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
 ```
 
-You may need to grant proper access rights to downloaded files
-
-```Bash
-chmod -R 755 model
-
-```
-
 ### Step 4: Start the Model Server Container
 
 Start the Model Server container:
@@ -109,13 +102,6 @@ For more information:
 
 ```
 curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
-```
-
-You may need to grant proper access rights to downloaded files
-
-```Bash
-chmod -R 755 model
-
 ```
 
 ### Step 7: Run Inference

@@ -47,13 +47,6 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 docker run -d -v $(pwd)/model:/models -p 9000:9000 openvino/model_server:latest  --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
-You may need to grant proper access rights to downloaded files
-
-```Bash
-chmod -R 755 model
-
-```
-
 #### Run the client:
 ```bash
 cd example_client
@@ -90,13 +83,6 @@ Create a **model** folder and download Person-Vehicle-Detection Model:
 
 ```bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o model/1/person-vehicle-bike-detection-crossroad-0078.bin -o model/1/person-vehicle-bike-detection-crossroad-0078.xml
-```
-
-You may need to grant proper access rights to downloaded files
-
-```Bash
-chmod -R 755 model
-
 ```
 
 ### Prepare Model Repository
