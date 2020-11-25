@@ -83,6 +83,7 @@ enum class StatusCode {
     // Serialization
     OV_UNSUPPORTED_SERIALIZATION_PRECISION, /*!< Unsupported serializaton precision */
     OV_INTERNAL_SERIALIZATION_ERROR,        /*!< Error occurred during serialization */
+    OV_CLONE_BLOB_ERROR,                    /*!< Error during blob clone */
 
     // GetModelStatus
     INVALID_SIGNATURE_DEF, /*!< Requested signature is not supported */
