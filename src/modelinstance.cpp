@@ -505,11 +505,8 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
 
 Status ModelInstance::recoverFromReloadingError(const Status& status) {
     if (status == StatusCode::RESHAPE_ERROR) {
-        auto recoveryStatus = this->recoverFromReshapeError();
-        if (!recoveryStatus.ok()) {
-            return recoveryStatus;
-        }
-        return status;
+        SPDLOG_DEBUG("Recovering model {} version {}. Unloading", getName(), getVersion());
+        unloadModel();
     }
     SPDLOG_WARN("Failed to reload model:{} version:{} with error:{}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
