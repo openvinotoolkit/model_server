@@ -760,7 +760,7 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     tensorflow::serving::PredictResponse response;
-    ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_NAME_MISSING);
+    ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {

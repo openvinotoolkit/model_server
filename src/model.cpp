@@ -32,6 +32,18 @@ void Model::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
+bool Model::isAnyVersionSubscribed() const {
+    if (subscriptionManager.isSubscribed()) {
+        return true;
+    }
+    for (const auto& [name, instance] : modelVersions) {
+        if (instance->getSubscribtionManager().isSubscribed()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMapCopy() const {
     std::shared_lock lock(modelVersionsMtx);
     std::map<model_version_t, const ModelInstance&> modelInstancesMapCopy;

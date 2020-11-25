@@ -36,5 +36,7 @@ public:
     void unsubscribe(PipelineDefinition& pd);
 
     void notifySubscribers();
+
+    bool isSubscribed() const { return subscriptions.size() > 0; }
 };
 }  // namespace ovms

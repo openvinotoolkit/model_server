@@ -1503,6 +1503,48 @@ static const char* pipelineOneDummyConfig = R"(
     ]
 })";
 
+static const char* pipelineOneDynamicParamDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
@@ -2514,4 +2556,77 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     status = pipelineToReloadPtr->getInputsInfo(inputsInfoAfter, manager);
     ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
+}
+
+TEST_F(EnsembleFlowTest, EnablingDynamicParametersForModelUsedInPipeline) {
+    /*
+        This test modifies config.json to enable dynamic parameters for model used in pipeline.
+        Test ensures such change will not invalidate pipeline.
+        Test ensures model have no dynamic parameters applied.
+    */
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineOneDynamicParamDummyConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    auto instance = manager.findModelInstance("dummy");
+    ASSERT_NE(instance, nullptr);
+    ASSERT_FALSE(instance->getModelConfig().isDynamicParameterEnabled());
+}
+
+static const char* dummyWithDynamicParamConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
+    /*
+        This test modifies config.json to enable dynamic parameters for model used in pipeline.
+        In the same time, we remove pipeline from config file.
+        Test ensures such change is valid and model will be reloaded and dynamic parmeters will be applied.
+        Test ensures pipeline gets retired.
+    */
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(dummyWithDynamicParamConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+
+    auto instance = manager.findModelInstance("dummy");
+    ASSERT_NE(instance, nullptr);
+    ASSERT_TRUE(instance->getModelConfig().isDynamicParameterEnabled());
 }
