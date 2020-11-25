@@ -65,6 +65,11 @@ The possible issues could be :
 
 - OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, Docker or Kubernetes capabilities.
 
+*Note* When insufficient memory is allocated to the container, it might get terminated by the Docker engine [OOM Killer](https://docs.docker.com/config/containers/resource_constraints/). There will be no termination root cause
+mentioned in the OVMS logs but such situation can be confirmed by `docker inspect <terminated_container>` and reported State `"OOMKilled": true`.
+It will be also included in the host system logs like `Memory cgroup out of memory: Killed process`.
+
+
 ## Usage Monitoring<a name="usage-monitoring"></a>
 - It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
 - With this setting model server logs will store information about all the incoming requests.
