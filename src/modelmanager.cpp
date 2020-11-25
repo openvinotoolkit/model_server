@@ -78,11 +78,14 @@ void ModelManager::startWatcher() {
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
-    auto [it, success] = servedModelConfigs.insert({config.modelName(), {config.modelName(),
-                                                                            config.modelPath(),
-                                                                            config.targetDevice(),
-                                                                            config.batchSize(),
-                                                                            config.nireq()}});
+    auto [it, success] = servedModelConfigs.emplace(
+        config.modelName(),
+        ModelConfig{
+            config.modelName(),
+            config.modelPath(),
+            config.targetDevice(),
+            config.batchSize(),
+            config.nireq()});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
@@ -320,7 +323,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
@@ -342,14 +345,16 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
         if (status.ok()) {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
         } else if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
-            SPDLOG_DEBUG("Will retry to reload model({}) after pipelines are revalidated", modelName);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = this->servedModelConfigs.find(modelName);
             if (it == this->servedModelConfigs.end()) {
                 continue;
             }
-            this->gatedModelConfigs.emplace_back(std::move(modelConfig));
+            gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model with versions: {}", status.string());
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
@@ -357,9 +362,9 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
-Status ModelManager::tryReloadGatedModelConfigs() {
-    for (auto& modelConfig : this->gatedModelConfigs) {
-        SPDLOG_DEBUG("Trying to reload model({}) configuration", modelName);
+Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs) {
+    for (auto& modelConfig : gatedModelConfigs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
         auto status = reloadModelWithVersions(modelConfig);
         if (!status.ok()) {
             continue;
@@ -368,10 +373,9 @@ Status ModelManager::tryReloadGatedModelConfigs() {
         if (it == this->servedModelConfigs.end()) {
             continue;
         }
-        SPDLOG_DEBUG("Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
         this->servedModelConfigs.at(modelConfig.getName()) = std::move(modelConfig);
     }
-    this->gatedModelConfigs.clear();
     return StatusCode::OK;
 }
 
@@ -400,12 +404,13 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
-    status = loadModelsConfig(configJson);
+    std::vector<ModelConfig> gatedModelConfigs;
+    status = loadModelsConfig(configJson, gatedModelConfigs);
     if (status != StatusCode::OK) {
         return status;
     }
     status = loadPipelinesConfig(configJson);
-    tryReloadGatedModelConfigs();
+    tryReloadGatedModelConfigs(gatedModelConfigs);
     return StatusCode::OK;
 }
 
@@ -673,7 +678,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
     if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
-        SPDLOG_DEBUG("Requested setting dynamic parameters for model {} but it is used in pipeline", config.getName());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline", config.getName());
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
     }
 

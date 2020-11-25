@@ -1503,48 +1503,6 @@ static const char* pipelineOneDummyConfig = R"(
     ]
 })";
 
-static const char* pipelineOneDynamicParamDummyConfig = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 1,
-                "shape": "auto"
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
 TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
@@ -2558,6 +2516,48 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
 
+static const char* pipelineOneDynamicParamDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
 TEST_F(EnsembleFlowTest, EnablingDynamicParametersForModelUsedInPipeline) {
     /*
         This test modifies config.json to enable dynamic parameters for model used in pipeline.
@@ -2584,6 +2584,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersForModelUsedInPipeline) {
     auto instance = manager.findModelInstance("dummy");
     ASSERT_NE(instance, nullptr);
     ASSERT_FALSE(instance->getModelConfig().isDynamicParameterEnabled());
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
 
 static const char* dummyWithDynamicParamConfig = R"(
@@ -2629,4 +2630,5 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     auto instance = manager.findModelInstance("dummy");
     ASSERT_NE(instance, nullptr);
     ASSERT_TRUE(instance->getModelConfig().isDynamicParameterEnabled());
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
