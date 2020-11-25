@@ -204,5 +204,26 @@ http_archive(
 )
 
 ##################### OPEN VINO ######################
-#ADDITIVE WORKSPACE DEFINITION PLACEHOLDER FROM BINARY_OV_WORKSPACE OR SOURCE_OV_WORKSPACE FILES
-#THIS HAS TO BE THE LAST WORKSPACE DEFINITION FOR DELETION AND REPLACEMENT
+# OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
+new_local_repository(
+    name = "openvino",
+    build_file_content = """
+cc_library(
+    name = "openvino",
+    srcs = glob([
+        "inference_engine/lib/intel64/libinference_engine_legacy.so",
+        "inference_engine/lib/intel64/libinference_engine.so",
+        "inference_engine/lib/intel64/libinference_engine_c_api.so",
+        "ngraph/lib/libngraph.so"
+    ]),
+    hdrs = glob([
+        "inference_engine/include/**/*.*"
+    ]),
+    data = [ "inference_engine/lib/intel64/plugins.xml" ],
+    strip_include_prefix = "inference_engine/include",
+    visibility = ["//visibility:public"],
+)
+""",
+    path = "/opt/intel/openvino/deployment_tools",
+)
+################## END OF OPENVINO DEPENDENCY ##########

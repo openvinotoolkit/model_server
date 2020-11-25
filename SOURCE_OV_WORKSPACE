@@ -1,8 +1,0 @@
-# OPENVINO DEFINITION FOR BUILDING FROM SOURCE:
-
-new_local_repository(
-    name = "openvino",
-    build_file = "@//third_party/openvino:BUILD",
-    path = "/openvino",
-)
-################## END OF OPENVINO DEPENDENCY ##########

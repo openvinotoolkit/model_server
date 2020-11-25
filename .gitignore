@@ -16,4 +16,3 @@ __pycache__
 *user_config*
 *.swp
 dist/
-WORKSPACE
