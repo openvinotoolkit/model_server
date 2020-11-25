@@ -20,6 +20,7 @@ from tensorflow import make_tensor_proto, make_ndarray, expand_dims
 import classes
 import datetime
 import argparse
+import math
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics, prepare_certs
@@ -38,13 +39,13 @@ def CalculateUtteranceError(referenceArray, resultArray):
     printDebug("REF: {} \n".format(referenceArray))
     errorSum = 0.0
 
-    meanErr = (np.square(resultArray - referenceArray)).mean(axis=None)
+    rootMeanErr = math.sqrt((np.square(resultArray - referenceArray)).mean(axis=None))
     maxRef = np.amax(referenceArray)
     maxOut = np.amax(resultArray)
     printDebug("OUTPUT MAX: {} \n".format(maxOut)) 
     printDebug("REF MAX: {} \n".format(maxRef)) 
 
-    return meanErr
+    return rootMeanErr
 
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
