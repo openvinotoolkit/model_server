@@ -142,7 +142,7 @@ public:
     }
 
     static bool isPathEscaped(const std::string& path) {
-        return std::string::npos != path.find("..");
+        return std::string::npos != path.find("../") || std::string::npos != path.find("/..");
     }
 
     std::string appendSlash(const std::string& name) {
