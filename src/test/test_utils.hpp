@@ -125,7 +125,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 // returns path to a file.
 static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
     std::ofstream configFile{filename};
-    spdlog::info("Creating config file:{}\n with content:\n{}", filename, content);
+    spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
@@ -153,9 +153,9 @@ public:
     ConstructorEnabledModelManager() :
         ovms::ModelManager() {}
     ~ConstructorEnabledModelManager() {
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #: {}", models.size());
         models.clear();
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #: {}", models.size());
         join();
     }
 };

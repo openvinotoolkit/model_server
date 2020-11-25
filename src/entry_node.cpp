@@ -46,7 +46,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             }
             const auto& tensor_proto = request->inputs().at(output_name);
             InferenceEngine::Blob::Ptr blob;
-            SPDLOG_DEBUG("[Node: {}] Deserializing input:{}", getName(), output_name);
+            SPDLOG_DEBUG("[Node: {}] Deserializing input: {}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
                 return status;

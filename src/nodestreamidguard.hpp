@@ -34,7 +34,7 @@ struct NodeStreamIdGuard {
                 SPDLOG_DEBUG("Trying to disarm stream Id that is not needed anymore...");
                 streamId = futureStreamId.get();
             }
-            SPDLOG_DEBUG("Returning streamId:{}", streamId.value());
+            SPDLOG_DEBUG("Returning streamId: {}", streamId.value());
             inferRequestsQueue_.returnStream(streamId.value());
         }
     }

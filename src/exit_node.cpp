@@ -32,7 +32,7 @@ Status ExitNode::fetchResults(BlobMap&) {
     for (const auto& kv : this->inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
-        SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name:{}", getName(), output_name);
+        SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name: {}", getName(), output_name);
         auto& proto = (*this->response->mutable_outputs())[output_name];
         auto status = serialize(blob, proto);
         if (!status.ok()) {
