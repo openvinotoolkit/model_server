@@ -46,6 +46,8 @@ docker run --rm -ti \
         -v $(pwd)/server.pem:/certs/server.pem:ro \
         -v $(pwd)/server.key:/certs/server.key:ro \
         -v $(pwd)/client_cert_ca.pem:/certs/client_cert_ca.pem:ro \
+        -v $(pwd)/dhparam.pem:/certs/dhparam.pem:ro \
+        -v $(pwd)/client_cert_ca.crl:/certs/client_cert_ca.crl:ro \
         -p $REST_PORT:$REST_PORT \
         -p $GRPC_PORT:$GRPC_PORT \
         $MTLS_IMAGE \
