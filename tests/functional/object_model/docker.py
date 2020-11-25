@@ -23,6 +23,7 @@ import config
 from utils.parametrization import get_ports_for_fixture
 from utils.files_operation import save_container_logs_to_file
 from utils.logger import get_logger
+import utils.mtls as mtls
 
 logger = get_logger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
@@ -58,7 +59,12 @@ class Docker:
         self.request.addfinalizer(finalizer)
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
-                                                            'mode': 'ro'}}
+                                                            'mode': 'ro'} }
+        if mtls.is_enabled() and 'minio' not in self.image:
+            print("========= ENABLED ===========" * 20)
+            mtls_volumes_dict = mtls.get_mtls_keychain().docker_py_volumes_dict()
+            self.image += '-nginx-mtls'
+            volumes_dict = {**volumes_dict, **mtls_volumes_dict}
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
@@ -69,6 +75,10 @@ class Docker:
                                                     volumes=volumes_dict,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container)
+        print("!!!"*20)
+        from pprint import pprint
+        pprint(self.image)
+        pprint(self.start_container_command) #  environment=self.env_vars_container)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}

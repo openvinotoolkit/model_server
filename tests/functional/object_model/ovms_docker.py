@@ -34,6 +34,7 @@ class OvmsDocker(Docker):
         self.command_args["port"] = self.grpc_port
         self.command_args["rest_port"] = self.rest_port
         self.command_args["log_level"] = self.server_log_level
+        print(self.start_container_command)
         self.start_container_command = start_ovms_container_command(self.start_container_command, self.command_args)
 
     def start(self):

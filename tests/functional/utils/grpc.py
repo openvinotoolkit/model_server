@@ -21,6 +21,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_p
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from utils.logger import get_logger
+import utils.mtls as mtls
 
 logger = get_logger(__name__)
 
@@ -30,7 +31,19 @@ DEFAULT_ADDRESS = 'localhost'
 
 def create_channel(address: str = DEFAULT_ADDRESS, port: str = DEFAULT_GRPC_PORT, service: int = PREDICTION_SERVICE):
     url = '{}:{}'.format(address, port)
-    channel = grpc.insecure_channel(url)
+    
+    channel = None
+    if mtls.is_enabled():
+        print("========= TLS ========= ")
+        server_ca_cert = mtls.get_mtls_keychain().server_cert_as_bytes()
+        client_key = mtls.get_mtls_keychain().client_key_as_bytes()
+        client_cert = mtls.get_mtls_keychain().client_cert_as_bytes()
+        creds = grpc.ssl_channel_credentials(root_certificates=server_ca_cert,
+                                         private_key=client_key, certificate_chain=client_cert)
+        channel = grpc.secure_channel(url, creds)
+    else:
+        channel = grpc.insecure_channel(url)
+
     if service == PREDICTION_SERVICE:
         return prediction_service_pb2_grpc.PredictionServiceStub(channel)
     elif service == MODEL_SERVICE:
