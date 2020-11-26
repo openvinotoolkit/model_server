@@ -82,7 +82,7 @@ public:
         std::for_each(definitions.begin(),
             definitions.end(),
             [&pipelinesInConfigFile, &manager](auto& nameDefinitionPair) {
-                if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end()) {
+                if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
                     nameDefinitionPair.second->retire(manager);
                 }
             });

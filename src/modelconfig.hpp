@@ -320,6 +320,10 @@ public:
         return this->batchingMode;
     }
 
+    bool isDynamicParameterEnabled() const {
+        return this->getBatchingMode() == Mode::AUTO || this->anyShapeSetToAuto();
+    }
+
     /**
          * @brief Get the batch size 
          * 

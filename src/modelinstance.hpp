@@ -478,6 +478,8 @@ public:
 
     void unsubscribe(PipelineDefinition& pd);
 
+    const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
+
     const Status validate(const tensorflow::serving::PredictRequest* request);
 };
 }  // namespace ovms
