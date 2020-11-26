@@ -119,8 +119,6 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
 fi
 
-openssl dhparam -out /tmp/dhparam.pem 2048
-
 (
 	sleep 1
 	echo "Processing Nginx configuration..."
