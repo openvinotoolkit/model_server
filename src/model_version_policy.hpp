@@ -16,10 +16,10 @@
 #pragma once
 
 #include <algorithm>
-#include <memory>
-#include <vector>
-#include <sstream>
 #include <iterator>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 namespace ovms {
 
@@ -79,7 +79,7 @@ public:
         return versions;
     }
 
-    std::string conversion() const override{
+    std::string conversion() const override {
         return "all";
     }
 };

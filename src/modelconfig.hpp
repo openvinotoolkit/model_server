@@ -43,7 +43,7 @@ struct ShapeInfo {
             return std::string("auto");
         std::stringstream shapeStream;
         std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-        return(shapeStream.str());
+        return shapeStream.str();
     }
 
     bool operator==(const ShapeInfo& rhs) const {
