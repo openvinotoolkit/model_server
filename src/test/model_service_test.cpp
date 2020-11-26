@@ -129,7 +129,7 @@ TEST(ModelService, pipeline) {
         ASSERT_EQ(response.model_version_status().begin()->version(), 1);
         ASSERT_EQ(response.model_version_status().begin()->has_status(), true);
         ASSERT_EQ(response.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
-        ASSERT_EQ(response.model_version_status().begin()->status().error_message(), "");
+        ASSERT_EQ(response.model_version_status().begin()->status().error_message(), "OK");
     };
 
     // No version specified
