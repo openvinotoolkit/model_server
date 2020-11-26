@@ -43,7 +43,7 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEng
             destinationBlob = InferenceEngine::make_shared_blob<int32_t>(description);
             break;
         default: {
-            SPDLOG_DEBUG("Blob clone failed, unsupported precision");
+            SPDLOG_ERROR("Blob clone failed, unsupported precision");
             return StatusCode::INVALID_PRECISION;
         }
         }

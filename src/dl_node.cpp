@@ -182,7 +182,7 @@ Status DLNode::fetchResults(BlobMap& outputs) {
                 const auto blob = infer_request.GetBlob(realModelOutputName);
                 SPDLOG_DEBUG("[Node: {}] Creating copy of blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), modelName, streamId.value(), realModelOutputName);
-                InferenceEngine::Blob::Ptr copiedBlob = nullptr;
+                InferenceEngine::Blob::Ptr copiedBlob;
                 auto status = blobClone(copiedBlob, blob);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Could not clone result blob; node name: {}; model name: {}; output: {}",
