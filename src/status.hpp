@@ -53,6 +53,7 @@ enum class StatusCode {
     ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,      /*!< Anonymous fixed shape is invalid for models with multiple inputs */
     CONFIG_SHAPE_IS_NOT_IN_NETWORK,         /*!< Invalid shape dimension number or dimension value */
     CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, /*!< Cannot load network into target device */
+    REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
 
     // Model management
     MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */

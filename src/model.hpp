@@ -190,6 +190,9 @@ public:
          * @param custom loader name
          *
          */
+
+    bool isAnyVersionSubscribed() const;
+
     void setCustomLoaderName(const std::string name) {
         customLoaderName = name;
     }

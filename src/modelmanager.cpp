@@ -78,12 +78,20 @@ void ModelManager::startWatcher() {
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
-    auto& modelConfig = servedModelConfigs.emplace_back(
+    auto [it, success] = servedModelConfigs.emplace(
         config.modelName(),
-        config.modelPath(),
-        config.targetDevice(),
-        config.batchSize(),
-        config.nireq());
+        ModelConfig{
+            config.modelName(),
+            config.modelPath(),
+            config.targetDevice(),
+            config.batchSize(),
+            config.nireq()});
+
+    if (!success) {
+        return StatusCode::UNKNOWN_ERROR;
+    }
+
+    ModelConfig& modelConfig = it->second;
 
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
@@ -315,28 +323,60 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
     std::set<std::string> modelsInConfigFile;
-    servedModelConfigs.clear();
+    std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
-        ModelConfig& modelConfig = servedModelConfigs.emplace_back();
+        ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
+        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed",
-                modelConfig.getName());
-            servedModelConfigs.pop_back();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
             continue;
         }
-        reloadModelWithVersions(modelConfig);
-        modelsInConfigFile.emplace(modelConfig.getName());
+        status = reloadModelWithVersions(modelConfig);
+        modelsInConfigFile.emplace(modelName);
+
+        if (status.ok()) {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
+        } else if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
+            auto it = this->servedModelConfigs.find(modelName);
+            if (it == this->servedModelConfigs.end()) {
+                continue;
+            }
+            gatedModelConfigs.emplace_back(std::move(modelConfig));
+            newModelConfigs.emplace(modelName, std::move(it->second));
+            this->servedModelConfigs.erase(modelName);
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
+        }
     }
+    this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile);
     return ovms::StatusCode::OK;
+}
+
+Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs) {
+    for (auto& modelConfig : gatedModelConfigs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
+        auto status = reloadModelWithVersions(modelConfig);
+        if (!status.ok()) {
+            continue;
+        }
+        auto it = this->servedModelConfigs.find(modelConfig.getName());
+        if (it == this->servedModelConfigs.end()) {
+            continue;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
+        this->servedModelConfigs.at(modelConfig.getName()) = std::move(modelConfig);
+    }
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
@@ -364,11 +404,13 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
-    status = loadModelsConfig(configJson);
+    std::vector<ModelConfig> gatedModelConfigs;
+    status = loadModelsConfig(configJson, gatedModelConfigs);
     if (status != StatusCode::OK) {
         return status;
     }
     status = loadPipelinesConfig(configJson);
+    tryReloadGatedModelConfigs(gatedModelConfigs);
     return StatusCode::OK;
 }
 
@@ -405,7 +447,7 @@ void ModelManager::watcher(std::future<void> exit) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
         }
-        for (auto& config : servedModelConfigs) {
+        for (auto& [name, config] : servedModelConfigs) {
             reloadModelWithVersions(config);
         }
     }
@@ -634,6 +676,12 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    auto model = getModelIfExistCreateElse(config.getName());
+    if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+    }
+
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
     auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
@@ -645,8 +693,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
-
-    auto model = getModelIfExistCreateElse(config.getName());
 
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();
