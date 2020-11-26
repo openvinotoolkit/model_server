@@ -78,12 +78,20 @@ void ModelManager::startWatcher() {
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
-    auto& modelConfig = servedModelConfigs.emplace_back(
+    auto [it, success] = servedModelConfigs.emplace(
         config.modelName(),
-        config.modelPath(),
-        config.targetDevice(),
-        config.batchSize(),
-        config.nireq());
+        ModelConfig{
+            config.modelName(),
+            config.modelPath(),
+            config.targetDevice(),
+            config.batchSize(),
+            config.nireq()});
+
+    if (!success) {
+        return StatusCode::UNKNOWN_ERROR;
+    }
+
+    ModelConfig& modelConfig = it->second;
 
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
@@ -131,7 +139,7 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
             const std::string inputName = objectNameValue.name.GetString();
             const std::string sourceNodeName = objectNameValue.value.GetObject()["node_name"].GetString();
             const std::string sourceOutputName = objectNameValue.value.GetObject()["data_item"].GetString();
-            SPDLOG_DEBUG("Creating node dependencies mapping request. Node:{} input:{} <- SourceNode:{} output:{}",
+            SPDLOG_DEBUG("Creating node dependencies mapping request. Node: {} input: {} <- SourceNode: {} output: {}",
                 nodeName, inputName, sourceNodeName, sourceOutputName);
             if (connections.find(nodeName) == connections.end()) {
                 connections[nodeName] = {
@@ -165,7 +173,7 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
         const std::string modelOutputName = nodeOutput.GetObject()["data_item"].GetString();
         const std::string nodeOutputName = nodeOutput.GetObject()["alias"].GetString();
-        SPDLOG_DEBUG("Mapping node:{} model_name:{} output:{}, under alias:{}",
+        SPDLOG_DEBUG("Mapping node: {} model_name: {} output: {}, under alias: {}",
             nodeName, modelName, modelOutputName, nodeOutputName);
         nodeOutputNameAlias[nodeOutputName] = modelOutputName;
     }
@@ -173,7 +181,7 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
 
 void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline:{} configuration", pipelineName);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
 
     std::vector<NodeInfo> info{
@@ -190,7 +198,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         const std::string nodeKindStr = nodeConfig["type"].GetString();
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline:{} does not have valid outputs configuration", pipelineName);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
             return;
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
@@ -204,10 +212,10 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         NodeKind nodeKind;
         auto status = toNodeKind(nodeKindStr, nodeKind);
         if (!status.ok()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed:{}", nodeKindStr);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {}", nodeKindStr);
             return;
         }
-        SPDLOG_DEBUG("Creating node:{} type:{} model_name:{} modelVersion:{}",
+        SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
         info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias}));
         auto nodeInputItr = nodeConfig.FindMember("inputs");
@@ -295,18 +303,18 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     SPDLOG_DEBUG("Using Customloader");
     for (const auto& configs : itrp->value.GetArray()) {
         const std::string loaderName = configs["config"]["loader_name"].GetString();
-        SPDLOG_INFO("Reading Custom Loader:{} configuration", loaderName);
+        SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
 
         CustomLoaderConfig loaderConfig;
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
-            SPDLOG_ERROR("Parsing loader:{} config failed", loaderName);
+            SPDLOG_ERROR("Parsing loader: {} config failed", loaderName);
             return status;
         }
 
         auto retVal = createCustomLoader(loaderConfig);
         if (retVal != StatusCode::OK) {
-            SPDLOG_ERROR("Creation of loader:{} failed", loaderName);
+            SPDLOG_ERROR("Creation of loader: {} failed", loaderName);
         }
     }
     // All loaders are the done. Finalize the list by deleting removed loaders in config
@@ -315,21 +323,20 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return ovms::StatusCode::OK;
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
     std::set<std::string> modelsInConfigFile;
-    servedModelConfigs.clear();
+    std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
-        ModelConfig& modelConfig = servedModelConfigs.emplace_back();
+        ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
+        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model:{} config failed",
-                modelConfig.getName());
-            servedModelConfigs.pop_back();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
             continue;
         }
         if (modelsInConfigFile.find(modelConfig.getName()) != modelsInConfigFile.end()) {
@@ -338,11 +345,44 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
             servedModelConfigs.pop_back();
             continue;
         }
-        reloadModelWithVersions(modelConfig);
-        modelsInConfigFile.emplace(modelConfig.getName());
+        status = reloadModelWithVersions(modelConfig);
+        modelsInConfigFile.emplace(modelName);
+
+        if (status.ok()) {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
+        } else if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
+            auto it = this->servedModelConfigs.find(modelName);
+            if (it == this->servedModelConfigs.end()) {
+                continue;
+            }
+            gatedModelConfigs.emplace_back(std::move(modelConfig));
+            newModelConfigs.emplace(modelName, std::move(it->second));
+            this->servedModelConfigs.erase(modelName);
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
+        }
     }
+    this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile);
     return ovms::StatusCode::OK;
+}
+
+Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs) {
+    for (auto& modelConfig : gatedModelConfigs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
+        auto status = reloadModelWithVersions(modelConfig);
+        if (!status.ok()) {
+            continue;
+        }
+        auto it = this->servedModelConfigs.find(modelConfig.getName());
+        if (it == this->servedModelConfigs.end()) {
+            continue;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
+        this->servedModelConfigs.at(modelConfig.getName()) = std::move(modelConfig);
+    }
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
@@ -370,11 +410,13 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
-    status = loadModelsConfig(configJson);
+    std::vector<ModelConfig> gatedModelConfigs;
+    status = loadModelsConfig(configJson, gatedModelConfigs);
     if (status != StatusCode::OK) {
         return status;
     }
     status = loadPipelinesConfig(configJson);
+    tryReloadGatedModelConfigs(gatedModelConfigs);
     return StatusCode::OK;
 }
 
@@ -393,7 +435,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         try {
             models.at(modelName)->retireAllVersions();
         } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occured when tried to retire all versions of model:{}", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occured when tried to retire all versions of model: {}", modelName);
         }
     }
 }
@@ -411,7 +453,7 @@ void ModelManager::watcher(std::future<void> exit) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
         }
-        for (auto& config : servedModelConfigs) {
+        for (auto& [name, config] : servedModelConfigs) {
             reloadModelWithVersions(config);
         }
     }
@@ -437,9 +479,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    SPDLOG_DEBUG("Currently registered versions count:{}", modelVersionsInstances.size());
+    SPDLOG_DEBUG("Currently registered versions count: {}", modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        SPDLOG_DEBUG("version:{} state:{}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        SPDLOG_DEBUG("version: {} state: {}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -458,7 +500,7 @@ void ModelManager::getVersionsToChange(
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details:{}", e.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
         }
     }
 
@@ -475,7 +517,7 @@ void ModelManager::getVersionsToChange(
                 return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
             });
     } catch (std::out_of_range& e) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details:{}", e.what());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
     }
     versionsToRetire->resize(it - versionsToRetire->begin());
 
@@ -522,6 +564,11 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     files_list_t dirs;
 
     bool is_directory = false;
+    if (FileSystem::isPathEscaped(base)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", base);
+        return StatusCode::PATH_INVALID;
+    }
+
     auto status = fs->isDirectory(base, &is_directory);
     if (status != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't check directory: {}", base);
@@ -543,19 +590,19 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
         try {
             ovms::model_version_t version = std::stoll(entry);
             if (version <= 0) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be a number greater than 0. Got:{}", version);
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be a number greater than 0. Got: {}", version);
                 continue;
             }
             versions.push_back(version);
         } catch (const std::invalid_argument& e) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be in number format. Got:{}", entry);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be in number format. Got: {}", entry);
         } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory name is out of range for supported version format. Got:{}", entry);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory name is out of range for supported version format. Got: {}", entry);
         }
     }
 
     if (0 == versions.size()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "No version found for model in path:{}", base);
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "No version found for model in path: {}", base);
         return StatusCode::NO_MODEL_VERSION_AVAILABLE;
     }
 
@@ -635,6 +682,12 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    auto model = getModelIfExistCreateElse(config.getName());
+    if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+    }
+
     auto fs = getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
     auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
@@ -646,8 +699,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
-
-    auto model = getModelIfExistCreateElse(config.getName());
 
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();

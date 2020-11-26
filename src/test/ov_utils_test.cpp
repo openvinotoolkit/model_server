@@ -36,7 +36,8 @@ TEST(OVUtils, CopyBlob) {
     std::iota(data.begin(), data.end(), 0);
 
     InferenceEngine::Blob::Ptr originalBlob = InferenceEngine::make_shared_blob<float>(desc, data.data());
-    InferenceEngine::Blob::Ptr copyBlob = ovms::blobClone(originalBlob);
+    InferenceEngine::Blob::Ptr copyBlob = nullptr;
+    ASSERT_EQ(ovms::blobClone(copyBlob, originalBlob), ovms::StatusCode::OK);
 
     ASSERT_EQ(originalBlob->getTensorDesc().getDims(), shape);
     ASSERT_EQ(copyBlob->getTensorDesc().getDims(), shape);

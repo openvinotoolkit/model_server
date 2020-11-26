@@ -258,6 +258,28 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
+TEST(ModelManager, PathEscapeError1) {
+    const std::string path = "/tmp/../test_model/";
+
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST(ModelManager, PathEscapeError2) {
+    const std::string path = "../tmp/test_model/";
+
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
 TEST(ModelManager, ReadVersionsInvalidPath) {
     const std::string path = "/tmp/inexisting_path/8bt4kv";
 
