@@ -340,7 +340,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             continue;
         }
         status = reloadModelWithVersions(modelConfig);
-        modelsInConfigFile.emplace(modelConfig.getName());
+        modelsInConfigFile.emplace(modelName);
 
         if (status.ok()) {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
@@ -354,7 +354,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
         } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model with versions: {}", status.string());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
@@ -678,7 +678,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     auto model = getModelIfExistCreateElse(config.getName());
     if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline", config.getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
     }
 
