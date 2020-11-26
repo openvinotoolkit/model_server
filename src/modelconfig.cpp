@@ -410,25 +410,15 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_basepath: {}", getBasePath());
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize());
-    if (isShapeAnonymousFixed()) {
-        auto& shapeMap = *getShapes().begin();
-        std::stringstream shapeStream;
-        std::copy(shapeMap.second.shape.begin(), shapeMap.second.shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-        SPDLOG_DEBUG("shape: {}", shapeStream.str());
-    } else if (isShapeAnonymous()) {
-        SPDLOG_DEBUG("shape: auto");
-    } else {
+    if (isShapeAnonymous())
+        SPDLOG_DEBUG("shape: {}", getShapes().begin()->second.conversion());
+    else {
         SPDLOG_DEBUG("shape:");
         for (auto& shapeMap : getShapes()) {
-            if (shapeMap.second.shapeMode == Mode::FIXED) {
-                std::stringstream shapeStream;
-                std::copy(shapeMap.second.shape.begin(), shapeMap.second.shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-                SPDLOG_DEBUG("  {}: {}", shapeMap.first, shapeStream.str());
-            } else {
-                SPDLOG_DEBUG("  {}: {}", shapeMap.first, "auto");
-            }
+            SPDLOG_DEBUG("  {}: {}", shapeMap.first, shapeMap.second.conversion());
         }
     }
+    SPDLOG_DEBUG("model_version_policy: {}", getModelVersionPolicy()->conversion());
     SPDLOG_DEBUG("nireq: {}", getNireq());
     SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     SPDLOG_DEBUG("plugin_config:");

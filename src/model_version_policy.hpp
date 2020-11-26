@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
+#include <sstream>
+#include <iterator>
 
 namespace ovms {
 
@@ -48,6 +50,13 @@ public:
      * @return default version policy
      */
     static std::shared_ptr<ModelVersionPolicy> getDefaultVersionPolicy();
+
+    /**
+     * @brief Converts ModelVersionPolicy to readable string
+     * 
+     * @return Model version policy string 
+     */
+    virtual std::string conversion() const = 0;
 };
 
 /**
@@ -68,6 +77,10 @@ public:
      */
     std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override {
         return versions;
+    }
+
+    std::string conversion() const override{
+        return "all";
     }
 };
 
@@ -95,6 +108,12 @@ public:
      * @return Filtered version list
      */
     std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
+
+    std::string conversion() const override {
+        std::stringstream versionStream;
+        std::copy(specificVersions.begin(), specificVersions.end(), std::ostream_iterator<model_version_t>(versionStream, " "));
+        return std::string("specific: ") + versionStream.str();
+    }
 };
 
 /**
@@ -119,6 +138,10 @@ public:
      * @return Filtered version list
      */
     std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
+
+    std::string conversion() const override {
+        return std::string("latest: ") + std::to_string(numVersions);
+    }
 };
 
 }  //  namespace ovms
