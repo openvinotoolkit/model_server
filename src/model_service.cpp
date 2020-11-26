@@ -55,7 +55,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     status_to_fill->set_version(version);
     status_to_fill->clear_status();
     status_to_fill->mutable_status()->set_error_code(static_cast<tensorflow::error::Code>(static_cast<int>(error_code)));
-    status_to_fill->mutable_status()->set_error_message("");
+    status_to_fill->mutable_status()->set_error_message(ModelVersionStatusErrorCodeToString(error_code));
 }
 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
