@@ -17,8 +17,10 @@
 
 #include <inference_engine.hpp>
 
+#include "status.hpp"
+
 namespace ovms {
 
-InferenceEngine::Blob::Ptr blobClone(const InferenceEngine::Blob::Ptr sourceBlob);
+Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob);
 
 }  // namespace ovms

@@ -182,10 +182,14 @@ Status DLNode::fetchResults(BlobMap& outputs) {
                 const auto blob = infer_request.GetBlob(realModelOutputName);
                 SPDLOG_DEBUG("[Node: {}] Creating copy of blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), modelName, streamId.value(), realModelOutputName);
-                const auto copiedBlob = blobClone(blob);
-                if (copiedBlob == nullptr) {
-                    SPDLOG_ERROR("[Node: {}] Cannot copy blob - buffer sizes mismatch", getName());
-                    return StatusCode::INTERNAL_ERROR;
+                InferenceEngine::Blob::Ptr copiedBlob = nullptr;
+                auto status = blobClone(copiedBlob, blob);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Could not clone result blob; node name: {}; model name: {}; output: {}",
+                        getName(),
+                        this->modelName,
+                        realModelOutputName);
+                    return status;
                 }
                 outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
             } catch (const InferenceEngine::details::InferenceEngineException& e) {
