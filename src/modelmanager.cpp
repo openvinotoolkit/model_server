@@ -332,6 +332,11 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson) {
             servedModelConfigs.pop_back();
             continue;
         }
+        if (modelsInConfigFile.find(modelConfig.getName()) != modelsInConfigFile.end()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file has duplicated model names. Only first will be loaded.");
+            servedModelConfigs.pop_back();
+            continue;
+        }
         reloadModelWithVersions(modelConfig);
         modelsInConfigFile.emplace(modelConfig.getName());
     }
