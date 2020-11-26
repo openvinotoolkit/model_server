@@ -29,6 +29,14 @@
 
 namespace ovms {
 
+ShapeInfo::operator std::string() const {
+    if (shapeMode == Mode::AUTO)
+        return std::string("auto");
+    std::stringstream shapeStream;
+    std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
+    return shapeStream.str();
+}
+
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
         SPDLOG_DEBUG("ModelConfig {} reload required due to name mismatch", this->name);
@@ -411,14 +419,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize());
     if (isShapeAnonymous()) {
-        SPDLOG_DEBUG("shape: {}", getShapes().begin()->second.conversion());
+        SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
         for (auto& shapeMap : getShapes()) {
-            SPDLOG_DEBUG("  {}: {}", shapeMap.first, shapeMap.second.conversion());
+            SPDLOG_DEBUG("  {}: {}", shapeMap.first, std::string(shapeMap.second));
         }
     }
-    SPDLOG_DEBUG("model_version_policy: {}", getModelVersionPolicy()->conversion());
+    SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
     SPDLOG_DEBUG("nireq: {}", getNireq());
     SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     SPDLOG_DEBUG("plugin_config:");

@@ -16,9 +16,7 @@
 #pragma once
 
 #include <algorithm>
-#include <iterator>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -54,10 +52,8 @@ public:
 
     /**
      * @brief Converts ModelVersionPolicy to readable string
-     * 
-     * @return Model version policy string 
      */
-    virtual std::string conversion() const = 0;
+    virtual operator std::string() const = 0;
 };
 
 /**
@@ -80,9 +76,7 @@ public:
         return versions;
     }
 
-    std::string conversion() const override {
-        return "all";
-    }
+    operator std::string() const override;
 };
 
 /**
@@ -110,11 +104,7 @@ public:
      */
     std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
 
-    std::string conversion() const override {
-        std::stringstream versionStream;
-        std::copy(specificVersions.begin(), specificVersions.end(), std::ostream_iterator<model_version_t>(versionStream, " "));
-        return std::string("specific: ") + versionStream.str();
-    }
+    operator std::string() const override;
 };
 
 /**
@@ -140,9 +130,7 @@ public:
      */
     std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
 
-    std::string conversion() const override {
-        return std::string("latest: ") + std::to_string(numVersions);
-    }
+    operator std::string() const override;
 };
 
 }  //  namespace ovms

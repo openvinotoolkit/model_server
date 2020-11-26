@@ -15,7 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <algorithm>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -39,13 +38,7 @@ struct ShapeInfo {
     Mode shapeMode = FIXED;
     shape_t shape;
 
-    std::string conversion() const {
-        if (shapeMode == Mode::AUTO)
-            return std::string("auto");
-        std::stringstream shapeStream;
-        std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-        return shapeStream.str();
-    }
+    operator std::string() const;
 
     bool operator==(const ShapeInfo& rhs) const {
         return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
