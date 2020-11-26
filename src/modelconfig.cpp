@@ -410,9 +410,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_basepath: {}", getBasePath());
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize());
-    if (isShapeAnonymous())
+    if (isShapeAnonymous()) {
         SPDLOG_DEBUG("shape: {}", getShapes().begin()->second.conversion());
-    else {
+    } else {
         SPDLOG_DEBUG("shape:");
         for (auto& shapeMap : getShapes()) {
             SPDLOG_DEBUG("  {}: {}", shapeMap.first, shapeMap.second.conversion());

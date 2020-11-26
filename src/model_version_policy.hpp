@@ -19,6 +19,7 @@
 #include <iterator>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace ovms {
