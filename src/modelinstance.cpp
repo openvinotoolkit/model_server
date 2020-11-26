@@ -473,25 +473,6 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
     return loadModelImpl(config);
 }
 
-Status ModelInstance::recoverFromReshapeError() {
-    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    this->status.setLoading();
-    if (!canUnloadInstance()) {
-        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-        SPDLOG_ERROR("Cannot recover model (name: {}; version: {}) from reshape error, inferences are still in progress", getName(), getVersion());
-        return Status(StatusCode::INTERNAL_ERROR, "cannot recover model");
-    }
-    auto status = this->loadInputTensors(this->config);
-    if (!status.ok()) {
-        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-        return status;
-    }
-    this->loadOutputTensors(this->config);
-    this->status.setAvailable();
-    this->modelLoadedNotify.notify_all();
-    return StatusCode::OK;
-}
-
 Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading();
@@ -504,12 +485,10 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
 }
 
 Status ModelInstance::recoverFromReloadingError(const Status& status) {
-    if (status == StatusCode::RESHAPE_ERROR) {
-        SPDLOG_DEBUG("Recovering model {} version {}. Unloading", getName(), getVersion());
-        unloadModel();
-    }
     SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
+    unloadModel();
+
     auto recoveryStatus = reloadModel(config);
     if (!recoveryStatus.ok()) {
         SPDLOG_WARN("Failed to reload model: {} version: {} to previous configuration with error: {}",
