@@ -274,7 +274,7 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
 }
 
 Status ModelConfig::parseModelMapping() {
-    SPDLOG_DEBUG("Parsing model:{} mapping from path:{}", getName(), getPath());
+    SPDLOG_DEBUG("Parsing model: {} mapping from path: {}", getName(), getPath());
     mappingInputs.clear();
     mappingOutputs.clear();
     std::filesystem::path path = this->getPath();

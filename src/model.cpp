@@ -32,6 +32,18 @@ void Model::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
+bool Model::isAnyVersionSubscribed() const {
+    if (subscriptionManager.isSubscribed()) {
+        return true;
+    }
+    for (const auto& [name, instance] : modelVersions) {
+        if (instance->getSubscribtionManager().isSubscribed()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMapCopy() const {
     std::shared_lock lock(modelVersionsMtx);
     std::map<model_version_t, const ModelInstance&> modelInstancesMapCopy;
@@ -47,7 +59,7 @@ const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModel
 
 void Model::updateDefaultVersion() {
     model_version_t newDefaultVersion = 0;
-    SPDLOG_INFO("Updating default version for model:{}, from:{}", getName(), defaultVersion);
+    SPDLOG_INFO("Updating default version for model: {}, from: {}", getName(), defaultVersion);
     for (const auto& [version, versionInstance] : modelVersions) {
         if (version > newDefaultVersion &&
             ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
@@ -56,9 +68,9 @@ void Model::updateDefaultVersion() {
     }
     defaultVersion = newDefaultVersion;
     if (newDefaultVersion) {
-        SPDLOG_INFO("Updated default version for model:{}, to:{}", getName(), newDefaultVersion);
+        SPDLOG_INFO("Updated default version for model: {}, to: {}", getName(), newDefaultVersion);
     } else {
-        SPDLOG_INFO("Model:{} will not have default version since no version is available.", getName());
+        SPDLOG_INFO("Model: {} will not have default version since no version is available.", getName());
     }
 }
 
@@ -68,7 +80,7 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     const auto modelInstanceIt = modelVersions.find(defaultVersion);
 
     if (modelVersions.end() == modelInstanceIt) {
-        SPDLOG_WARN("Default version:{} for model:{} not found", defaultVersion, getName());
+        SPDLOG_WARN("Default version: {} for model: {} not found", defaultVersion, getName());
         return nullptr;
     }
     return modelInstanceIt->second;

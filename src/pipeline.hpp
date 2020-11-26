@@ -50,7 +50,7 @@ public:
     ExitNode& getExit() const { return this->exit; }
 
     static void connect(Node& from, Node& to, const InputPairs& blobNamesMapping) {
-        SPDLOG_DEBUG("Connecting from:{}, to:{}", from.getName(), to.getName());
+        SPDLOG_DEBUG("Connecting from: {}, to: {}", from.getName(), to.getName());
         printNodeConnections(to.getName(), from.getName(), blobNamesMapping);
         from.addDependant(to);
         to.addDependency(from, blobNamesMapping);

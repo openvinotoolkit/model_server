@@ -22,6 +22,7 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include <rapidjson/document.h>
@@ -71,7 +72,8 @@ private:
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
-    Status loadModelsConfig(rapidjson::Document& configJson);
+    Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
+    Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
@@ -103,7 +105,7 @@ private:
      * @brief A current configurations of models
      * 
      */
-    std::vector<ModelConfig> servedModelConfigs;
+    std::unordered_map<std::string, ModelConfig> servedModelConfigs;
 
     /**
      * @brief Retires models non existing in config file

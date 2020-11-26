@@ -69,7 +69,7 @@ Status DLNode::requestExecuteRequiredResources() {
         this->modelUnloadGuard);
 
     if (!status.ok()) {
-        SPDLOG_DEBUG("Getting modelInstance failed for node:{} with:{}", getName(), status.string());
+        SPDLOG_DEBUG("Getting modelInstance failed for node: {} with: {}", getName(), status.string());
         return status;
     }
 
@@ -153,9 +153,9 @@ Status DLNode::fetchResults(BlobMap& outputs) {
     }
     auto& infer_request = this->model->getInferRequestsQueue().getInferRequest(streamId.value());
     // Wait for blob results
-    SPDLOG_DEBUG("[Node: {}] Waiting for infer request with streamId:{} to finish", getName(), streamId.value());
+    SPDLOG_DEBUG("[Node: {}] Waiting for infer request with streamId: {} to finish", getName(), streamId.value());
     auto ov_status = infer_request.Wait(InferenceEngine::IInferRequest::RESULT_READY);
-    SPDLOG_DEBUG("[Node: {}] Infer request with streamId:{} finished", getName(), streamId.value());
+    SPDLOG_DEBUG("[Node: {}] Infer request with streamId: {} finished", getName(), streamId.value());
     this->inputBlobs.clear();
     if (ov_status != InferenceEngine::StatusCode::OK) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
@@ -177,14 +177,18 @@ Status DLNode::fetchResults(BlobMap& outputs) {
                     SPDLOG_WARN("[Node: {}] Cannot find real model output name for alias{}", getName(), output_name);
                     return StatusCode::INTERNAL_ERROR;
                 }
-                SPDLOG_DEBUG("[Node: {}] Getting blob from model:{}, inferRequestStreamId:{}, blobName:{}",
+                SPDLOG_DEBUG("[Node: {}] Getting blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), modelName, streamId.value(), realModelOutputName);
                 const auto blob = infer_request.GetBlob(realModelOutputName);
-                SPDLOG_DEBUG("[Node: {}] Creating copy of blob from model:{}, inferRequestStreamId:{}, blobName:{}",
+                SPDLOG_DEBUG("[Node: {}] Creating copy of blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), modelName, streamId.value(), realModelOutputName);
                 InferenceEngine::Blob::Ptr copiedBlob = nullptr;
                 auto status = blobClone(copiedBlob, blob);
                 if (!status.ok()) {
+                    SPDLOG_DEBUG("Could not clone result blob; node name: {}; model name: {}; output: {}",
+                        getName(),
+                        this->modelName,
+                        realModelOutputName);
                     return status;
                 }
                 outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
