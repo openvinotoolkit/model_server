@@ -575,7 +575,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool permanent=true) {
+void ModelInstance::unloadModel(bool permanent = true) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setUnloading();
     while (!canUnloadInstance()) {
