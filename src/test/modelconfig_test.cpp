@@ -149,7 +149,7 @@ TEST(ModelConfig, parseShapeFromString) {
     // Invalid
     std::string invalid_str1 = "(1, 2, 3, 4]";
     std::string invalid_str2 = "(1, 2, 3.14, 4)";
-    std::string invalid_str3 = "[1,2221413523534234632463462346234562]";
+    std::string invalid_str3 = "(1,2221413523534234632463462346234562)";
     ovms::Status status;
 
     status = config.parseShape(shapeInfo, invalid_str1);
