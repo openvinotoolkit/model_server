@@ -19,8 +19,9 @@
 #include <memory>
 #include <sstream>
 #include <utility>
-#include "localfilesystem.hpp"
+
 #include "customloaders.hpp"
+#include "localfilesystem.hpp"
 
 namespace ovms {
 
@@ -142,7 +143,6 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
         auto status = cleanupModelTmpFiles(modelVersion->getModelConfig());
         modelVersion->unloadModel(true);
         updateDefaultVersion();
-
     }
     subscriptionManager.notifySubscribers();
     return result;
@@ -206,8 +206,8 @@ Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
         lfstatus = lfs.deleteFileFolder(config.getLocalPath());
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason {}",
-                                    config.getLocalPath(),
-                                    lfstatus);
+                config.getLocalPath(),
+                lfstatus);
         } else {
             SPDLOG_DEBUG("Model removed from {}", config.getLocalPath());
         }
