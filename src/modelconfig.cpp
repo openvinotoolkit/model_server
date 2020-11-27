@@ -270,9 +270,11 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
         std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeInfo.shape),
             [](const std::string& str) { return std::stoi(str); });
     } catch (const std::out_of_range& e) {
-        SPDLOG_DEBUG("ERROR: Parsing model shape string out of range: {}, error: {}", str, e.what());
+        SPDLOG_ERROR("ERROR: Parsing model shape string out of range: {}, error: {}", str, e.what());
+        return StatusCode::INVALID_SHAPE;
     } catch (...) {
         SPDLOG_DEBUG("ERROR: Parsing model shape string: {}", str);
+        return StatusCode::INVALID_SHAPE;
     }
 
     shapeInfo.shapeMode = FIXED;
