@@ -20,14 +20,16 @@ package(
 
 cc_library(
     name = "openvino",
-    srcs = [
-        "bin/intel64/Release/lib/libinference_engine.so",
-        "bin/intel64/Release/lib/libinference_engine_legacy.so",
-        "bin/intel64/Release/lib/libinference_engine_c_api.so"
-    ],
-    hdrs = glob([
-        "inference-engine/include/**/*.h",
-        "inference-engine/include/**/*.hpp"
+    srcs = glob([
+        "inference_engine/lib/intel64/libinference_engine_legacy.so",
+        "inference_engine/lib/intel64/libinference_engine.so",
+        "inference_engine/lib/intel64/libinference_engine_c_api.so",
+        "ngraph/lib/libngraph.so"
     ]),
-    strip_include_prefix = "inference-engine/include",
+    hdrs = glob([
+        "inference_engine/include/**/*.*"
+    ]),
+    data = [ "inference_engine/lib/intel64/plugins.xml" ],
+    strip_include_prefix = "inference_engine/include",
+    visibility = ["//visibility:public"],
 )

@@ -207,23 +207,7 @@ http_archive(
 # OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
     name = "openvino",
-    build_file_content = """
-cc_library(
-    name = "openvino",
-    srcs = glob([
-        "inference_engine/lib/intel64/libinference_engine_legacy.so",
-        "inference_engine/lib/intel64/libinference_engine.so",
-        "inference_engine/lib/intel64/libinference_engine_c_api.so",
-        "ngraph/lib/libngraph.so"
-    ]),
-    hdrs = glob([
-        "inference_engine/include/**/*.*"
-    ]),
-    data = [ "inference_engine/lib/intel64/plugins.xml" ],
-    strip_include_prefix = "inference_engine/include",
-    visibility = ["//visibility:public"],
-)
-""",
+    build_file = "@//third_party/openvino:BUILD",
     path = "/opt/intel/openvino/deployment_tools",
 )
 ################## END OF OPENVINO DEPENDENCY ##########
