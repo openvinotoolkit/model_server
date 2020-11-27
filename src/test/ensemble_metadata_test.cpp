@@ -333,7 +333,7 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
     auto instance = manager.findModelInstance("dummy", 0);
     ASSERT_NE(instance, nullptr);
-    instance->unloadModel();
+    instance->unloadModel(true);
 
     EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
     EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);

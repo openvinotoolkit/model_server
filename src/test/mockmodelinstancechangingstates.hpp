@@ -42,7 +42,7 @@ public:
         status.setAvailable();
         return ovms::StatusCode::OK;
     }
-    void unloadModel() override {
+    void unloadModel(bool permanent) override {
         status.setUnloading();
         status.setEnd();
     }
