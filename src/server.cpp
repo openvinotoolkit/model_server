@@ -222,8 +222,6 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
 
     auto& config = ovms::Config::instance();
     if (config.restPort() != 0) {
-        // if (config.restAddress() !=  TODO FIXME
-
         const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
 
         int workers = config.restWorkers() ? config.restWorkers() : 10;

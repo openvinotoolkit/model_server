@@ -21,6 +21,7 @@
 
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
+#include "logging.hpp"
 
 namespace ovms {
 
@@ -87,8 +88,8 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
         if (!status.isLoadedOrRequiringValidation()) {
             break;
         }
-        SPDLOG_INFO("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
-            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);  // TODO change to DEBUG after part 2 finished
+        SPDLOG_DEBUG("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
+            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
         loadedNotify.wait_for(cvLock,
             std::chrono::microseconds(waitLoadedTimestepMicroseconds),
             [this]() {
@@ -99,14 +100,14 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     }
     if (!status.isAvailable()) {
         if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_INFO("Waiting for pipeline definition: {} ended due to timeout.", getName());  // TODO change to DEBUG after part 2
+            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
         } else {
-            SPDLOG_INFO("Waiting for pipeline definition: {} ended since it failed to load.", getName());  // TODO change to DEBUG after part 2
+            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_INFO("Succesfully waited for pipeline definition: {}", getName());  // TODO change to DEBUG after part 2
+    SPDLOG_DEBUG("Succesfully waited for pipeline definition: {}", getName());
     return StatusCode::OK;
 }
 
@@ -168,11 +169,11 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {
         if (modelVersion) {
-            SPDLOG_INFO("Unsubscribing pipeline: {} from model: {}, version: {}",
+            SPDLOG_DEBUG("Unsubscribing pipeline: {} from model: {}, version: {}",
                 getName(), modelName, modelVersion);
             manager.findModelByName(modelName)->getModelInstanceByVersion(modelVersion)->unsubscribe(*this);
         } else {  // using default version
-            SPDLOG_INFO("Unsubscribing pipeline: {} from model: {}",
+            SPDLOG_DEBUG("Unsubscribing pipeline: {} from model: {}",
                 getName(), modelName);
             manager.findModelByName(modelName)->unsubscribe(*this);
         }
@@ -655,15 +656,13 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
             case NodeKind::DL: {
                 auto instance = manager.findModelInstance(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
-                    // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} inputs info fetching", dependantNodeInfo->modelName, this->getName());
+                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} inputs info fetching", dependantNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
                 auto status = instance->waitForLoaded(0, unloadGuard);
                 if (!status.ok()) {
-                    // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} inputs info fetching", instance->getName(), this->getName());
+                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} inputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
 
@@ -713,15 +712,13 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
             case NodeKind::DL: {
                 auto instance = manager.findModelInstance(dependencyNodeInfo->modelName, dependencyNodeInfo->modelVersion.value_or(0));
                 if (!instance) {
-                    // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
+                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
                 std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
                 auto status = instance->waitForLoaded(0, unloadGuard);
                 if (!status.ok()) {
-                    // TODO: Change to SPDLOG_DEBUG before release
-                    SPDLOG_INFO("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
+                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
 
