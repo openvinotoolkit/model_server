@@ -149,12 +149,16 @@ TEST(ModelConfig, parseShapeFromString) {
     // Invalid
     std::string invalid_str1 = "(1, 2, 3, 4]";
     std::string invalid_str2 = "(1, 2, 3.14, 4)";
+    std::string invalid_str3 = "[1,2221413523534234632463462346234562]";
     ovms::Status status;
 
     status = config.parseShape(shapeInfo, invalid_str1);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
     status = config.parseShape(shapeInfo, invalid_str2);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    status = config.parseShape(invalid_str3);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST(ModelConfig, parseShapeParam) {
@@ -191,7 +195,6 @@ TEST(ModelConfig, parseShapeParam) {
     std::string invalid_str1 = "string";
     std::string invalid_str2 = "[1, 3, 43]";
     std::string invalid_str3 = "{\"input\": \"auto\", \"extra_input\": \"10\"}";
-    std::string invalid_str4 = "[1,2221413523534234632463462346234562]";
 
     auto status = config.parseShapeParameter(invalid_str1);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
@@ -201,9 +204,6 @@ TEST(ModelConfig, parseShapeParam) {
 
     status = config.parseShapeParameter(invalid_str3);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
-
-    status = config.parseShapeParameter(invalid_str4);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST(ModelConfig, plugin_config) {
