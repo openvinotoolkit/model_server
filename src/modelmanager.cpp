@@ -429,7 +429,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         try {
             models.at(modelName)->retireAllVersions();
         } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occured when tried to retire all versions of model: {}", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
         }
     }
 }
@@ -618,24 +618,6 @@ StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Model downloaded to {}", config.getLocalPath());
 
     return StatusCode::OK;
-}
-
-Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
-    auto lfstatus = StatusCode::OK;
-
-    if (config.getLocalPath().compare(config.getBasePath())) {
-        LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-        if (lfstatus != StatusCode::OK) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while deleting local copy of cloud model: {} reason {}",
-                config.getLocalPath(),
-                lfstatus);
-        } else {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model removed from {}", config.getLocalPath());
-        }
-    }
-
-    return lfstatus;
 }
 
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {

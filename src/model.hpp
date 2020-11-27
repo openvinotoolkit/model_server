@@ -204,5 +204,11 @@ public:
     void resetCustomLoaderName() {
         customLoaderName.clear();
     }
+
+    /**
+     * @brief Delete temporary model files
+     *
+     */
+    Status cleanupModelTmpFiles(const ModelConfig& config);
 };
 }  // namespace ovms
