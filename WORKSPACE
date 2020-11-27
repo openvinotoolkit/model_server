@@ -102,39 +102,6 @@ load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
 
 bazel_version_repository(name = "bazel_version")
 
-##################### OPEN VINO ######################
-# FOR BUILDING FROM SOURCE:
-
-#new_local_repository(
-#    name = "openvino",
-#    build_file = "@//third_party/openvino:BUILD",
-#    path = "/openvino",
-#)
-
-# FOR USING BINARY RELEASE: ##########################
-new_local_repository(
-    name = "openvino",
-    build_file_content = """
-cc_library(
-    name = "openvino",
-    srcs = glob([
-        "inference_engine/lib/intel64/libinference_engine_legacy.so",
-        "inference_engine/lib/intel64/libinference_engine.so",
-        "inference_engine/lib/intel64/libinference_engine_c_api.so",
-        "ngraph/lib/libngraph.so"
-    ]),
-    hdrs = glob([
-        "inference_engine/include/**/*.*"
-    ]),
-    data = [ "inference_engine/lib/intel64/plugins.xml" ],
-    strip_include_prefix = "inference_engine/include",
-    visibility = ["//visibility:public"],
-)
-""",
-    path = "/opt/intel/openvino/deployment_tools",
-)
-################## END OF OPENVINO DEPENDENCY ##########
-
 # AWS S3 SDK
 new_local_repository(
     name = "awssdk",
@@ -235,3 +202,12 @@ http_archive(
     strip_prefix = "libevent-release-2.1.8-stable",
     build_file = "@//third_party/libevent:BUILD",
 )
+
+##################### OPEN VINO ######################
+# OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
+new_local_repository(
+    name = "openvino",
+    build_file = "@//third_party/openvino:BUILD",
+    path = "/opt/intel/openvino/deployment_tools",
+)
+################## END OF OPENVINO DEPENDENCY ##########
