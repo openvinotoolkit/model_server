@@ -157,6 +157,7 @@ void Model::retireAllVersions() {
 
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        auto status = cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->unloadModel(true);
         updateDefaultVersion();
     }
