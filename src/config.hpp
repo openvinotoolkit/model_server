@@ -105,6 +105,19 @@ public:
         return result->operator[]("port").as<uint64_t>();
     }
 
+
+    /**
+         * @brief Get the gRPC network interface address to bind to
+         * 
+         * @return const std::string
+         */
+    const std::string cpuExtensionLibraryPath() {
+      if(result->count("cpu_extension")) {
+        return result->operator[]("grpc_bind_address").as<std::string>();
+      }
+      return "";
+    }
+
     /**
          * @brief Get the gRPC network interface address to bind to
          * 

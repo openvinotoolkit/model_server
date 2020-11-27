@@ -115,6 +115,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Target device to run the inference",
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
+            ("cpu_extension",
+                "a path to shared library containing custom CPU layer implementation. Default: empty.",
+                cxxopts::value<std::string>(),
+                "CPU_EXTENSION");
             ("plugin_config",
                 "a dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
@@ -232,6 +236,11 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
+    // check cpu_extension path:
+    if (result->count("cpu_extension") && !std::filesystem::exists(this->cpuExtensionLibraryPath()) ) {
+        std::cerr << "File path provided as an --cpu_extension parameter does not exists in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
+        exit(EX_USAGE);
+    }
     return;
 }
 
