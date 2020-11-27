@@ -269,11 +269,9 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     try {
         std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeInfo.shape),
             [](const std::string& str) { return std::stoi(str); });
-    }
-    catch (const std::out_of_range & e) {
+    } catch (const std::out_of_range& e) {
         SPDLOG_DEBUG("ERROR: Parsing model shape string out of range: {}, error: {}", str, e.what());
-    }
-    catch (...){
+    } catch (...) {
         SPDLOG_DEBUG("ERROR: Parsing model shape string: {}", str);
     }
 
