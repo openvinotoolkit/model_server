@@ -139,7 +139,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
             result = status;
             continue;
         }
-        modelVersion->unloadModel();
+        modelVersion->unloadModel(true);
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
@@ -155,7 +155,7 @@ void Model::retireAllVersions() {
 
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
-        versionModelInstancePair.second->unloadModel();
+        versionModelInstancePair.second->unloadModel(true);
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
