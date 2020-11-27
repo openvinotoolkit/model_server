@@ -157,7 +157,7 @@ TEST(ModelConfig, parseShapeFromString) {
     status = config.parseShape(shapeInfo, invalid_str2);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 
-    status = config.parseShape(invalid_str3);
+    status = config.parseShape(shapeInfo, invalid_str3);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
