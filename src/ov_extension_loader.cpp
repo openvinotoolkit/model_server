@@ -22,7 +22,7 @@ namespace ovms {
 
 void loadCpuExtension(const std::string& path) {
     InferenceEngine::Core core;
-    auto extension_ptr = make_so_pointer<InferenceEngine::IExtension>(path.c_str());
+    auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(path.c_str());
     core.AddExtension(extension_ptr, "CPU");
 }
 

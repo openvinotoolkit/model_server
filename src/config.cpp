@@ -19,6 +19,7 @@
 #include <limits>
 #include <regex>
 #include <thread>
+#include <filesystem>
 
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
@@ -117,8 +118,8 @@ Config& Config::parse(int argc, char** argv) {
                 "TARGET_DEVICE")
             ("cpu_extension",
                 "a path to shared library containing custom CPU layer implementation. Default: empty.",
-                cxxopts::value<std::string>(),
-                "CPU_EXTENSION");
+                cxxopts::value<std::string>()->default_value(""),
+                "CPU_EXTENSION")
             ("plugin_config",
                 "a dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
