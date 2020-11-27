@@ -273,7 +273,7 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
         SPDLOG_ERROR("Parsing model shape string out of range: {}, error: {}", str, e.what());
         return StatusCode::INVALID_SHAPE;
     } catch (...) {
-        SPDLOG_DEBUG("Parsing model shape string: {}", str);
+        SPDLOG_ERROR("Parsing model shape string: {}", str);
         return StatusCode::INVALID_SHAPE;
     }
 
