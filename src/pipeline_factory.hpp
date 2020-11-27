@@ -70,14 +70,8 @@ public:
     Status reloadDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
-        ModelManager& manager) {
-        auto pd = findDefinitionByName(pipelineName);
-        if (pd == nullptr) {
-            SPDLOG_ERROR("Requested to reload pipeline definition but it does not exist:{}", pipelineName);
-            return StatusCode::UNKNOWN_ERROR;
-        }
-        return pd->reload(manager, std::move(nodeInfos), std::move(connections));
-    }
+        ModelManager& manager);
+
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
         std::for_each(definitions.begin(),
             definitions.end(),

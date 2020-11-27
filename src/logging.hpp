@@ -29,7 +29,7 @@ extern std::shared_ptr<spdlog::logger> gcs_logger;
 extern std::shared_ptr<spdlog::logger> azurestorage_logger;
 extern std::shared_ptr<spdlog::logger> s3_logger;
 extern std::shared_ptr<spdlog::logger> modelmanager_logger;
-extern std::shared_ptr<spdlog::logger> ensemble_logger;
+extern std::shared_ptr<spdlog::logger> dag_executor_logger;
 
 void configure_logger(const std::string log_level, const std::string log_path);
 
