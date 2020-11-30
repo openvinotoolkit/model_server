@@ -634,7 +634,6 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
     }
 
-    // cleanupModelTmpFiles(config);
     return status;
 }
 
@@ -653,7 +652,6 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
     }
 
-    // cleanupModelTmpFiles(config);
     return status;
 }
 
