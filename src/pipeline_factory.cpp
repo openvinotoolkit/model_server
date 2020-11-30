@@ -71,4 +71,16 @@ Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     return pd->reload(manager, std::move(nodeInfos), std::move(connections));
 }
 
+void PipelineFactory::revalidatePipelines(ModelManager& manager) {
+    for (auto& [name, d] : definitions) {
+        if (d->getStatus().requireRevalidation()) {
+            auto validationResult = d->validate(manager);
+            if (!validationResult.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Revalidation pipeline definition: {} failed: {}", name, validationResult.string());
+            } else {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Revalidation of pipeline: {} suceeded", name);
+            }
+        }
+    }
+}
 }  // namespace ovms

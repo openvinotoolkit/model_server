@@ -533,14 +533,13 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
         SPDLOG_DEBUG("Model: {}, version: {} already loaded", getName(), getVersion());
         return StatusCode::OK;
     }
-    SPDLOG_INFO("Model: {} version: {} is still loading", getName(), getVersion());
     modelInstanceUnloadGuard.reset();
 
     // wait several time since no guarantee that cv wakeup will be triggered before calling wait_for
     const uint waitLoadedTimestepMilliseconds = 100;
     const uint waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
     uint waitCheckpointsCounter = waitCheckpoints;
-    SPDLOG_INFO("Waiting for loaded state for model: {} version: {} with timestep: {} timeout: {} check count: {}", getName(), getVersion(),
+    SPDLOG_DEBUG("Waiting for loaded state for model: {} version: {} with timestep: {} timeout: {} check count: {}", getName(), getVersion(),
         waitLoadedTimestepMilliseconds, waitForModelLoadedTimeoutMilliseconds, waitCheckpointsCounter);
     std::mutex cv_mtx;
     std::unique_lock<std::mutex> cv_lock(cv_mtx);
