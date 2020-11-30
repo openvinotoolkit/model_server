@@ -29,6 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "logging.hpp"
 #include "modelversionstatus.hpp"
 #include "status.hpp"
 
@@ -61,15 +62,15 @@ public:
         name(name) {}
     template <typename Event>
     void handle(const Event& event) {
-        SPDLOG_INFO("Pipeline: {} state: {} handling: {}:{}",
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} state: {} handling: {}: {}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
         try {
             std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
         } catch (std::logic_error& le) {
-            SPDLOG_ERROR("Pipeline: {} state: {} handling: {} error: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} state: {} handling: {} error: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
             throw;
         }
-        SPDLOG_INFO("Pipeline: {} state changed to: {} after handling: {}:{}",
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} state changed to: {} after handling: {}: {}",
             name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
     }
 
@@ -147,7 +148,7 @@ struct StateChanger {
 struct StateKeeper {
     template <typename MachineState>
     void execute(MachineState& machine) {
-        SPDLOG_DEBUG("Keeping state");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Keeping state");
     }
 };
 
@@ -159,7 +160,7 @@ struct BeginState {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
         return {};
@@ -183,7 +184,7 @@ struct AvailableState {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateKeeper handle(const ValidationPassedEvent& e) const {
         return {};
@@ -205,7 +206,7 @@ struct AvailableRequiredRevalidation {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
         return {};
@@ -227,7 +228,7 @@ struct LoadingPreconditionFailedState {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
         return {};
@@ -249,7 +250,7 @@ struct LoadingFailedLastValidationRequiredRevalidation {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
         return {};
@@ -271,7 +272,7 @@ struct RetiredState {
         return code;
     }
     void print() const {
-        SPDLOG_ERROR(pipelineDefinitionStateCodeToString(getStateCode()));
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, pipelineDefinitionStateCodeToString(getStateCode()));
     }
     StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const {
         return {};
