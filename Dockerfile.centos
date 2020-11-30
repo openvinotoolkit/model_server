@@ -47,6 +47,7 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             boost-system \
             boost-date-time \
             cmake3 \
+            gcc-g++ \
             devtoolset-8-gcc* \
             automake \
             autoconf \
@@ -202,6 +203,9 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true 
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's#REPLACE_OPENVINO_NAME#`echo "$OPENVINO_NAME" | sed -e 's;http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_;;g'|sed 's:.tgz::g'`#g' /ovms/src/version.hpp"
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel build ${debug_bazel_flags} //src:libsampleloader.so
+
+RUN cd /ovms/src/cpu_extension/ && make && make test
+
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json

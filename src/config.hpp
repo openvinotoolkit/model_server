@@ -113,7 +113,7 @@ public:
          */
     const std::string cpuExtensionLibraryPath() {
       if(result->count("cpu_extension")) {
-        return result->operator[]("grpc_bind_address").as<std::string>();
+        return result->operator[]("cpu_extension").as<std::string>();
       }
       return "";
     }
