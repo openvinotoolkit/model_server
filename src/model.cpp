@@ -141,7 +141,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
             continue;
         }
         cleanupModelTmpFiles(modelVersion->getModelConfig());
-        modelVersion->unloadModel(true);
+        modelVersion->unloadModel();
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
@@ -158,7 +158,7 @@ void Model::retireAllVersions() {
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
-        versionModelInstancePair.second->unloadModel(true);
+        versionModelInstancePair.second->unloadModel();
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
