@@ -36,7 +36,6 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "stringutils.hpp"
-#include "ov_extension_loader.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
