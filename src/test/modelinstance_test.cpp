@@ -61,7 +61,7 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    modelInstance.unloadModel(true);
+    modelInstance.unloadModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
 
