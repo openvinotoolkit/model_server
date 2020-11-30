@@ -140,7 +140,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
             result = status;
             continue;
         }
-        auto status = cleanupModelTmpFiles(modelVersion->getModelConfig());
+        cleanupModelTmpFiles(modelVersion->getModelConfig());
         modelVersion->unloadModel(true);
         updateDefaultVersion();
     }
@@ -157,7 +157,7 @@ void Model::retireAllVersions() {
 
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
-        auto status = cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
+        cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->unloadModel(true);
         updateDefaultVersion();
     }
@@ -201,15 +201,15 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
 Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
     auto lfstatus = StatusCode::OK;
 
-    if (config.getLocalPath().compare(config.getBasePath())) {
+    if (config.isCloudStored()) {
         LocalFileSystem lfs;
         lfstatus = lfs.deleteFileFolder(config.getLocalPath());
         if (lfstatus != StatusCode::OK) {
-            SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason {}",
+            SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason: {}",
                 config.getLocalPath(),
                 lfstatus);
         } else {
-            SPDLOG_DEBUG("Model removed from {}", config.getLocalPath());
+            SPDLOG_DEBUG("Model removed from: {}", config.getLocalPath());
         }
     }
 

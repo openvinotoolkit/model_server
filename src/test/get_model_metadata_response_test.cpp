@@ -252,7 +252,7 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
 }
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedAnymore) {
-    instance->unloadModel(true);
+    instance->unloadModel();
     EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 

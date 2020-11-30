@@ -455,7 +455,7 @@ public:
          * @param permanent defined if the unload operation should be permenent and should change instance stated after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
          */
-    virtual void unloadModel(bool permanent);
+    virtual void unloadModel(bool changeStatus = true);
 
     /**
          * @brief Wait for model to change to AVAILABLE state

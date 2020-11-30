@@ -209,6 +209,6 @@ public:
      * @brief Delete temporary model files
      *
      */
-    Status cleanupModelTmpFiles(const ModelConfig& config);
+    static Status cleanupModelTmpFiles(const ModelConfig& config);
 };
 }  // namespace ovms
