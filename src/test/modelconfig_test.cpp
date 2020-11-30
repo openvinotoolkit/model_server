@@ -149,12 +149,16 @@ TEST(ModelConfig, parseShapeFromString) {
     // Invalid
     std::string invalid_str1 = "(1, 2, 3, 4]";
     std::string invalid_str2 = "(1, 2, 3.14, 4)";
+    std::string invalid_str3 = "(1,2221413523534234632463462346234562)";
     ovms::Status status;
 
     status = config.parseShape(shapeInfo, invalid_str1);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
     status = config.parseShape(shapeInfo, invalid_str2);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    status = config.parseShape(shapeInfo, invalid_str3);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST(ModelConfig, parseShapeParam) {
