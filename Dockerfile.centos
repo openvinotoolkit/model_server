@@ -47,7 +47,7 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             boost-system \
             boost-date-time \
             cmake3 \
-            gcc-g++ \
+            gcc-c++ \
             devtoolset-8-gcc* \
             automake \
             autoconf \
