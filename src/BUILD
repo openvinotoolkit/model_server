@@ -104,8 +104,6 @@ cc_library(
         "version.hpp",
         "logging.hpp",
         "logging.cpp",
-        "ov_extension_loader.hpp",
-        "ov_extension_loader.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",

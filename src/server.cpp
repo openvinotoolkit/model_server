@@ -249,10 +249,6 @@ int server_main(int argc, char** argv) {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
 
-        if(config.cpuExtensionLibraryPath() != "") {
-            ovms::loadCpuExtension(config.cpuExtensionLibraryPath());
-        }
-
         PredictionServiceImpl predict_service;
         ModelServiceImpl model_service;
 
