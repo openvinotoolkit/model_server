@@ -36,7 +36,6 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, "Cannot load network into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
-    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
     {StatusCode::MODEL_VERSION_MISSING, "Model with requested version is not found"},
     {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, "Model with requested version is retired"},
     {StatusCode::MODEL_VERSION_NOT_LOADED_YET, "Model with requested version is not loaded yet"},
@@ -47,6 +46,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is subscribed to pipeline"},
+    {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
@@ -92,6 +92,25 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Tensor serialization error"},
+
+    // Pipeline validation errors
+    {StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST, "Pipeline definition with the same name already exists"},
+    {StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION, "Unsupported node type"},
+    {StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES, "Pipeline definition has multiple request nodes"},
+    {StatusCode::PIPELINE_MULTIPLE_EXIT_NODES, "Pipeline definition has multiple response nodes"},
+    {StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT, "Pipeline definition is missing request or response node"},
+    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
+    {StatusCode::PIPELINE_NODE_NAME_DUPLICATE, "Pipeline definition has multiple nodes with the same name"},
+    {StatusCode::PIPELINE_CYCLE_FOUND, "Pipeline definition contains a cycle"},
+    {StatusCode::PIPELINE_CONTAINS_UNCONNECTED_NODES, "Pipeline definition has unconnected nodes"},
+    {StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_NODE, "Pipeline definition has reference to missing node"},
+    {StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL, "Pipeline definition has reference to missing model"},
+    {StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_DATA_SOURCE, "Pipeline definition has reference to missing data source"},
+    {StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT, "Pipeline definition has reference to missing model output"},
+    {StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT, "Pipeline definition has connection to non existing model input"},
+    {StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED, "Pipeline definition does not have connections for all inputs of underlying models"},
+    {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
+    {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
 
     // Storage errors
     // S3
