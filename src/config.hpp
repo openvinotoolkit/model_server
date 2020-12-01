@@ -112,7 +112,7 @@ public:
          * @return const std::string
          */
     const std::string cpuExtensionLibraryPath() {
-      if(result->count("cpu_extension")) {
+      if(result != nullptr && result->count("cpu_extension")) {
         return result->operator[]("cpu_extension").as<std::string>();
       }
       return "";

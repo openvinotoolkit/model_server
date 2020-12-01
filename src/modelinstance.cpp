@@ -239,7 +239,6 @@ void ModelInstance::loadOVEngine() {
     if(ovms::Config::instance().cpuExtensionLibraryPath() != "") {
        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
        auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
-       //SPDLOG_INFO("Custom CPU extention loaded at {}. Adding it.", extension_ptr.get());
        SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
        engine->AddExtension(extension_ptr, "CPU");
        SPDLOG_INFO("Extention added.");
