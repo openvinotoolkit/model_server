@@ -236,6 +236,21 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
 
 void ModelInstance::loadOVEngine() {
     engine = std::make_unique<InferenceEngine::Core>();
+    if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
+        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
+        try {
+            auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
+            SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
+            engine->AddExtension(extension_ptr, "CPU");
+            SPDLOG_INFO("Extention added.");
+        } catch (std::exception& ex) {
+            SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
+            throw;
+        } catch (...) {
+            SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
+            throw;
+        }
+    }
 }
 
 std::unique_ptr<InferenceEngine::CNNNetwork> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {

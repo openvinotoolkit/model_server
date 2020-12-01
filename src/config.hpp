@@ -108,6 +108,18 @@ public:
     /**
          * @brief Get the gRPC network interface address to bind to
          * 
+         * @return const std::string
+         */
+    const std::string cpuExtensionLibraryPath() {
+        if (result != nullptr && result->count("cpu_extension")) {
+            return result->operator[]("cpu_extension").as<std::string>();
+        }
+        return "";
+    }
+
+    /**
+         * @brief Get the gRPC network interface address to bind to
+         * 
          * @return const std::string&
          */
     const std::string grpcBindAddress() {

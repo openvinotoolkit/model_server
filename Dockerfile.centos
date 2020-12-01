@@ -47,6 +47,7 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             boost-system \
             boost-date-time \
             cmake3 \
+            gcc-c++ \
             devtoolset-8-gcc* \
             automake \
             autoconf \
@@ -209,6 +210,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/infe
 
 RUN bazel build ${debug_bazel_flags} //src:ovms
 RUN bazel build ${debug_bazel_flags} //src:libsampleloader.so
+
+RUN cd /ovms/src/test/cpu_extension/ && make
+
 RUN bazel test ${debug_bazel_flags} --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
