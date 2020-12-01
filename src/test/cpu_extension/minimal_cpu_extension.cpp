@@ -14,10 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 
-
-#include <ie_iextension.h>
 #include <cstdio>
 
+#include <ie_iextension.h>
 #include <ngraph/opsets/opset.hpp>
 
 namespace InferenceEngine {

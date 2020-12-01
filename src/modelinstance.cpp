@@ -243,10 +243,10 @@ void ModelInstance::loadOVEngine() {
             SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
             engine->AddExtension(extension_ptr, "CPU");
             SPDLOG_INFO("Extention added.");
-        } catch(std::exception& ex) {
+        } catch (std::exception& ex) {
             SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
             throw;
-        } catch(...) {
+        } catch (...) {
             SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
             throw;
         }
