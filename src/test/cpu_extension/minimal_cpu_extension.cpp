@@ -26,9 +26,6 @@ namespace Cpu {
 
 class OvmsOperation : public ILayerExecImpl {
 public:
-    //static constexpr ngraph::NodeTypeInfo type_info{"Template", 0};
-    //const ngraph::NodeTypeInfo& get_type_info() const { return type_info;  }
-
     explicit OvmsOperation(const std::shared_ptr<ngraph::Node>& node) {
         ::printf("OvmsOperation(node)\n");
     }
@@ -85,9 +82,6 @@ public:
 
 std::map<std::string, ngraph::OpSet> OvmsMinimalCpuExtension::getOpSets() {
     ::printf("OvmsMinimalCpuExtension::getOpSets()\n");
-    //std::map<std::string, ngraph::OpSet> opsets;
-    //return opsets;
-    //	throw 1;
     std::map<std::string, ngraph::OpSet> opsets;
     ngraph::OpSet opset;
     //    opset.insert<OvmsOperation>();
@@ -97,9 +91,6 @@ std::map<std::string, ngraph::OpSet> OvmsMinimalCpuExtension::getOpSets() {
 
 std::vector<std::string> OvmsMinimalCpuExtension::getImplTypes(const std::shared_ptr<ngraph::Node>& node) {
     ::printf("OvmsMinimalCpuExtension::getImplTypes()\n");
-    //return {"CPU"};
-    //throw 1;
-
     if (std::dynamic_pointer_cast<OvmsOperation>(node)) {
         ::printf("OvmsMinimalCpuExtension::getImplTypes() -> dyncast ok, returning 'CPU'\n");
         return {"CPU"};
