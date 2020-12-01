@@ -81,6 +81,7 @@ public:
                 }
             });
     }
+    void revalidatePipelines(ModelManager&);
 };
 
 }  // namespace ovms

@@ -442,6 +442,7 @@ void ModelManager::watcher(std::future<void> exit) {
     lastTime = statTime.st_ctime;
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
         stat(configFilename.c_str(), &statTime);
         if (lastTime != statTime.st_ctime) {
             lastTime = statTime.st_ctime;
@@ -450,6 +451,8 @@ void ModelManager::watcher(std::future<void> exit) {
         for (auto& [name, config] : servedModelConfigs) {
             reloadModelWithVersions(config);
         }
+        pipelineFactory.revalidatePipelines(*this);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");
 }
