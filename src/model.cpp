@@ -121,6 +121,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
                 version,
                 status.string());
             result = status;
+            cleanupModelTmpFiles(config);
         }
     }
     return result;
@@ -203,13 +204,13 @@ Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
 
     if (config.isCloudStored()) {
         LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(config.getLocalPath());
+        lfstatus = lfs.deleteFileFolder(config.getPath());
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason: {}",
                 config.getLocalPath(),
                 lfstatus);
         } else {
-            SPDLOG_DEBUG("Model removed from: {}", config.getLocalPath());
+            SPDLOG_DEBUG("Model removed from: {}", config.getPath());
         }
     }
 

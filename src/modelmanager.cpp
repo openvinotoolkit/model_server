@@ -426,6 +426,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         modelsToUnloadAllVersions.begin());
     modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
     for (auto& modelName : modelsToUnloadAllVersions) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
         try {
             models.at(modelName)->retireAllVersions();
         } catch (const std::out_of_range& e) {
