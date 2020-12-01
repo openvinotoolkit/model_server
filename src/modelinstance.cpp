@@ -236,12 +236,12 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
 
 void ModelInstance::loadOVEngine() {
     engine = std::make_unique<InferenceEngine::Core>();
-    if(ovms::Config::instance().cpuExtensionLibraryPath() != "") {
-       SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
-       auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
-       SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
-       engine->AddExtension(extension_ptr, "CPU");
-       SPDLOG_INFO("Extention added.");
+    if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
+        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
+        auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
+        SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
+        engine->AddExtension(extension_ptr, "CPU");
+        SPDLOG_INFO("Extention added.");
     }
 }
 

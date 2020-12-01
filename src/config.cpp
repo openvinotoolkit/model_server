@@ -16,10 +16,10 @@
 #include "config.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <limits>
 #include <regex>
 #include <thread>
-#include <filesystem>
 
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
@@ -238,7 +238,7 @@ void Config::validate() {
     }
 
     // check cpu_extension path:
-    if (result->count("cpu_extension") && !std::filesystem::exists(this->cpuExtensionLibraryPath()) ) {
+    if (result->count("cpu_extension") && !std::filesystem::exists(this->cpuExtensionLibraryPath())) {
         std::cerr << "File path provided as an --cpu_extension parameter does not exists in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
         exit(EX_USAGE);
     }
