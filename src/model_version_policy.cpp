@@ -46,8 +46,9 @@ std::vector<model_version_t> SpecificModelVersionPolicy::filter(std::vector<mode
 
 SpecificModelVersionPolicy::operator std::string() const {
     std::stringstream versionStream;
+    versionStream << "specific: ";
     std::copy(specificVersions.begin(), specificVersions.end(), std::ostream_iterator<model_version_t>(versionStream, " "));
-    return std::string("specific: ") + versionStream.str();
+    return versionStream.str();
 }
 
 std::vector<model_version_t> LatestModelVersionPolicy::filter(std::vector<model_version_t> versions) const {

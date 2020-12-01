@@ -422,16 +422,16 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
-        for (auto& shapeMap : getShapes()) {
-            SPDLOG_DEBUG("  {}: {}", shapeMap.first, std::string(shapeMap.second));
+        for (auto& [shapeInput, shapeValue] : getShapes()) {
+            SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
     SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
     SPDLOG_DEBUG("nireq: {}", getNireq());
     SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     SPDLOG_DEBUG("plugin_config:");
-    for (auto& pluginMap : getPluginConfig()) {
-        SPDLOG_DEBUG("  {}: {}", pluginMap.first, pluginMap.second);
+    for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
+        SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue);
     }
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
