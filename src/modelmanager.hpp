@@ -295,5 +295,8 @@ public:
         std::shared_ptr<model_versions_t>& versionsToRetireIn,
         std::shared_ptr<model_versions_t>& versionsToReloadIn,
         std::shared_ptr<model_versions_t>& versionsToStartIn);
+
+    static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 };
+
 }  // namespace ovms

@@ -537,7 +537,7 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
     return models[modelName];
 }
 
-std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
+std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
     if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
         Aws::SDKOptions options;
         Aws::InitAPI(options);
@@ -582,6 +582,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     }
 
     for (const auto& entry : dirs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected version folder: {}", entry);
         try {
             ovms::model_version_t version = std::stoll(entry);
             if (version <= 0) {
@@ -604,40 +605,10 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
-
-    // filter versions which were downloaded earlier
-    std::unique_ptr<ovms::model_versions_t> filteredVersions = std::make_unique<ovms::model_versions_t>();
-    for (auto& ver : *versions) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Version to download {} with local path {}.", ver, config.getLocalPath());
-        if (config.getLocalPath() == "") {
-            filteredVersions->push_back(ver);
-        } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Skipping for download version {} with local path {}", ver, config.getLocalPath());
-        }
-    }
-    // quit if no version is needed to download
-    if (versions->size() == 0) {
-        return StatusCode::OK;
-    }
-
-    std::string localPath;
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Getting model from {}", config.getBasePath());
-    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *filteredVersions);
-    if (sc != StatusCode::OK) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't download model from {}", config.getBasePath());
-        return sc;
-    }
-    config.setLocalPath(localPath);
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Model downloaded to {}", config.getLocalPath());
-
-    return StatusCode::OK;
-}
-
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
     Status status = StatusCode::OK;
     try {
-        downloadModels(fs, config, versionsToStart);
+        // downloadModels(fs, config, versionsToStart);
         status = model->addVersions(versionsToStart, config);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
@@ -655,7 +626,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        downloadModels(fs, config, versionsToReload);
+        //  downloadModels(fs, config, versionsToReload);
         auto status = model->reloadVersions(versionsToReload, config);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
@@ -676,7 +647,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
     }
 
-    auto fs = getFilesystem(config.getBasePath());
+    auto fs = ModelManager::getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
     auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
     if (!blocking_status.ok()) {
@@ -717,6 +688,24 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         }
     }
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+
+    // debugging
+    std::ostringstream vts1;
+    if (!versionsToStart->empty()) {
+        std::copy(versionsToStart->begin(), versionsToStart->end(), std::ostream_iterator<int>(vts1, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to add: {}; ", vts1.str());
+    }
+    std::ostringstream vts2;
+    if (!versionsToReload->empty()) {
+        std::copy(versionsToReload->begin(), versionsToReload->end(), std::ostream_iterator<int>(vts2, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload: {}; ", vts2.str());
+    }
+    std::ostringstream vts3;
+    if (!versionsToRetire->empty()) {
+        std::copy(versionsToRetire->begin(), versionsToRetire->end(), std::ostream_iterator<int>(vts3, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire: {}; ", vts3.str());
+    }
+    // debugging
 
     if (versionsToStart->size() > 0) {
         auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
