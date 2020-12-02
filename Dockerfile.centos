@@ -189,6 +189,8 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
 
+RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+
 WORKDIR /ovms
 
 COPY src/ /ovms/src/
