@@ -14,15 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 #include "model.hpp"
+
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <utility>
-#include "azurefilesystem.hpp"
-#include "gcsfilesystem.hpp"
-#include "localfilesystem.hpp"
-#include "s3filesystem.hpp"
+
 #include "customloaders.hpp"
 #include "localfilesystem.hpp"
 #include "modelmanager.hpp"
@@ -211,10 +209,9 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
             continue;
         }
         auto fs = ModelManager::getFilesystem(config.getBasePath());
-        if ( modelVersion->getStatus().getState() == ModelVersionState::END) {
+        if (modelVersion->getStatus().getState() == ModelVersionState::END) {
             downloadModels(fs, config, versionsToReload);
-        }
-        else {
+        } else {
             config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
         }
         status = modelVersion->reloadModel(config);
@@ -249,7 +246,5 @@ Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
 
     return lfstatus;
 }
-
-
 
 }  // namespace ovms

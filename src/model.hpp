@@ -210,6 +210,5 @@ public:
      *
      */
     static Status cleanupModelTmpFiles(const ModelConfig& config);
-
 };
 }  // namespace ovms
