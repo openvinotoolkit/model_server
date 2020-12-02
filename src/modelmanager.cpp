@@ -354,6 +354,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
         } else {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
     }
