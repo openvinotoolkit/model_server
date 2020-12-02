@@ -605,12 +605,25 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 }
 
 StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
+
+    // filter versions which were downloaded earlier
+    std::unique_ptr<ovms::model_versions_t> filteredVersions = std::make_unique<ovms::model_versions_t>();
+    for (auto& ver : *versions) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Version to download {} with local path {}.", ver, config.getLocalPath());
+        if (config.getLocalPath() == "") {
+            filteredVersions->push_back(ver);
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Skipping for download version {} with local path {}", ver, config.getLocalPath());
+        }
+    }
+    // quit if no version is needed to download
     if (versions->size() == 0) {
         return StatusCode::OK;
     }
+
     std::string localPath;
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Getting model from {}", config.getBasePath());
-    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *versions);
+    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *filteredVersions);
     if (sc != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't download model from {}", config.getBasePath());
         return sc;
@@ -640,7 +653,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
 
 Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
     Status status = StatusCode::OK;
-
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
         downloadModels(fs, config, versionsToReload);
         auto status = model->reloadVersions(versionsToReload, config);

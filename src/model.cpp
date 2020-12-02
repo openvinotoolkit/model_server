@@ -122,6 +122,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
                 status.string());
             result = status;
             cleanupModelTmpFiles(config);
+            config.setLocalPath("");  // unset local path when loading failed
         }
     }
     return result;
