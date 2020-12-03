@@ -18,15 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../filesystem.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
-#include "../filesystem.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
 class ModelDefaultVersions : public ::testing::Test {};
-
-
 
 TEST_F(ModelDefaultVersions, DefaultVersionNullWhenNoVersionAdded) {
     MockModelWithInstancesJustChangingStates mockModel;
