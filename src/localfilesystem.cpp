@@ -152,12 +152,19 @@ StatusCode LocalFileSystem::downloadModelVersions(const std::string& path,
 
 StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     std::error_code errorCode;
+    std::filesystem::path p = path;
+    std::filesystem::path parentPath = p.parent_path();
     if (isPathEscaped(path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
         return StatusCode::PATH_INVALID;
     }
     if (!std::filesystem::remove_all(path, errorCode)) {
         return StatusCode::PATH_INVALID;
+    }
+    // delete empty folder with model version
+    if (std::filesystem::is_empty(parentPath)) {
+        SPDLOG_DEBUG("Deleting empty folder: ()", parentPath.string());
+        std::filesystem::remove(parentPath);
     }
 
     return StatusCode::OK;

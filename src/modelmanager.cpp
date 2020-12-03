@@ -56,12 +56,10 @@ Status ModelManager::start() {
     } else {
         status = startFromConfig();
     }
-
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-
     startWatcher();
     return status;
 }
@@ -426,10 +424,11 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         modelsToUnloadAllVersions.begin());
     modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
     for (auto& modelName : modelsToUnloadAllVersions) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
         try {
             models.at(modelName)->retireAllVersions();
         } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occured when tried to retire all versions of model: {}", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
         }
     }
 }
@@ -539,7 +538,7 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
     return models[modelName];
 }
 
-std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
+std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
     if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
         Aws::SDKOptions options;
         Aws::InitAPI(options);
@@ -584,6 +583,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     }
 
     for (const auto& entry : dirs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected version folder: {}", entry);
         try {
             ovms::model_version_t version = std::stoll(entry);
             if (version <= 0) {
@@ -606,46 +606,10 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
-    if (versions->size() == 0) {
-        return StatusCode::OK;
-    }
-    std::string localPath;
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Getting model from {}", config.getBasePath());
-    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *versions);
-    if (sc != StatusCode::OK) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't download model from {}", config.getBasePath());
-        return sc;
-    }
-    config.setLocalPath(localPath);
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Model downloaded to {}", config.getLocalPath());
-
-    return StatusCode::OK;
-}
-
-Status ModelManager::cleanupModelTmpFiles(ModelConfig& config) {
-    auto lfstatus = StatusCode::OK;
-
-    if (config.getLocalPath().compare(config.getBasePath())) {
-        LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(config.getLocalPath());
-        if (lfstatus != StatusCode::OK) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while deleting local copy of cloud model: {} reason {}",
-                config.getLocalPath(),
-                lfstatus);
-        } else {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model removed from {}", config.getLocalPath());
-        }
-    }
-
-    return lfstatus;
-}
-
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
     Status status = StatusCode::OK;
     try {
-        downloadModels(fs, config, versionsToStart);
-        status = model->addVersions(versionsToStart, config);
+        status = model->addVersions(versionsToStart, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -654,17 +618,14 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
     }
-
-    cleanupModelTmpFiles(config);
     return status;
 }
 
 Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
     Status status = StatusCode::OK;
-
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        downloadModels(fs, config, versionsToReload);
-        auto status = model->reloadVersions(versionsToReload, config);
+        auto status = model->reloadVersions(versionsToReload, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -674,7 +635,6 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
     }
 
-    cleanupModelTmpFiles(config);
     return status;
 }
 
@@ -685,7 +645,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
     }
 
-    auto fs = getFilesystem(config.getBasePath());
+    auto fs = ModelManager::getFilesystem(config.getBasePath());
     std::vector<model_version_t> requestedVersions;
     auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
     if (!blocking_status.ok()) {
@@ -737,7 +697,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToReload->size() > 0) {
         reloadModelVersions(model, fs, config, versionsToReload);
     }
-    if (versionsToRetire->size()) {
+    if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
@@ -745,7 +705,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
     }
-
     return blocking_status;
 }
 

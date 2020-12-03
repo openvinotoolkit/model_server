@@ -543,6 +543,10 @@ public:
         return isShapeAnonymous() && !isShapeAuto(ANONYMOUS_INPUT_NAME);
     }
 
+    bool isCloudStored() const {
+        return getLocalPath() != getBasePath();
+    }
+
     /**
          * @brief Sets the shape from the string representation
          *

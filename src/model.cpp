@@ -15,14 +15,35 @@
 //*****************************************************************************
 #include "model.hpp"
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <utility>
 
 #include "customloaders.hpp"
+#include "localfilesystem.hpp"
+#include "modelmanager.hpp"
 
 namespace ovms {
+
+StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
+    if (versions->size() == 0) {
+        return StatusCode::OK;
+    }
+
+    std::string localPath;
+    SPDLOG_INFO("Getting model from {}", config.getBasePath());
+    auto sc = fs->downloadModelVersions(config.getBasePath(), &localPath, *versions);
+    if (sc != StatusCode::OK) {
+        SPDLOG_ERROR("Couldn't download model from {}", config.getBasePath());
+        return sc;
+    }
+    config.setLocalPath(localPath);
+    SPDLOG_INFO("Model downloaded to {}", config.getLocalPath());
+
+    return StatusCode::OK;
+}
 
 void Model::subscribe(PipelineDefinition& pd) {
     subscriptionManager.subscribe(pd);
@@ -107,8 +128,9 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
     Status result = StatusCode::OK;
+    downloadModels(fs, config, versionsToStart);
     for (const auto version : *versionsToStart) {
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
@@ -120,6 +142,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
                 version,
                 status.string());
             result = status;
+            cleanupModelTmpFiles(config);
         }
     }
     return result;
@@ -139,6 +162,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
             result = status;
             continue;
         }
+        cleanupModelTmpFiles(modelVersion->getModelConfig());
         modelVersion->unloadModel();
         updateDefaultVersion();
     }
@@ -155,13 +179,14 @@ void Model::retireAllVersions() {
 
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->unloadModel();
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
@@ -172,6 +197,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         }
 
         auto modelVersion = getModelInstanceByVersion(version);
+
         if (!modelVersion) {
             SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; error: {}",
                 getName(),
@@ -179,6 +205,11 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 status.string());
             result = StatusCode::UNKNOWN_ERROR;
             continue;
+        }
+        if (modelVersion->getStatus().getState() == ModelVersionState::END) {
+            downloadModels(fs, config, versionsToReload);
+        } else {
+            config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {
@@ -193,6 +224,24 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
     }
     subscriptionManager.notifySubscribers();
     return result;
+}
+
+Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
+    auto lfstatus = StatusCode::OK;
+
+    if (config.isCloudStored()) {
+        LocalFileSystem lfs;
+        lfstatus = lfs.deleteFileFolder(config.getPath());
+        if (lfstatus != StatusCode::OK) {
+            SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason: {}",
+                config.getLocalPath(),
+                lfstatus);
+        } else {
+            SPDLOG_DEBUG("Model removed from: {}", config.getPath());
+        }
+    }
+
+    return lfstatus;
 }
 
 }  // namespace ovms

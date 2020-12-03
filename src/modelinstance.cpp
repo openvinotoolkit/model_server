@@ -502,7 +502,8 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
 Status ModelInstance::recoverFromReloadingError(const Status& status) {
     SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
-    unloadModel();
+    bool changeStatus{false};
+    unloadModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config);
     if (!recoveryStatus.ok()) {
@@ -589,7 +590,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel() {
+void ModelInstance::unloadModel(bool changeState) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setUnloading();
     while (!canUnloadInstance()) {
@@ -604,7 +605,9 @@ void ModelInstance::unloadModel() {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    status.setEnd();
+    if (changeState) {
+        status.setEnd();
+    }
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
