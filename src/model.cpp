@@ -128,9 +128,8 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
     Status result = StatusCode::OK;
-    auto fs = ModelManager::getFilesystem(config.getBasePath());
     downloadModels(fs, config, versionsToStart);
     for (const auto version : *versionsToStart) {
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
@@ -187,7 +186,7 @@ void Model::retireAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
@@ -207,7 +206,6 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
             result = StatusCode::UNKNOWN_ERROR;
             continue;
         }
-        auto fs = ModelManager::getFilesystem(config.getBasePath());
         if (modelVersion->getStatus().getState() == ModelVersionState::END) {
             downloadModels(fs, config, versionsToReload);
         } else {

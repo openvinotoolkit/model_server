@@ -56,12 +56,10 @@ Status ModelManager::start() {
     } else {
         status = startFromConfig();
     }
-
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-
     startWatcher();
     return status;
 }
@@ -609,7 +607,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     Status status = StatusCode::OK;
     try {
         // downloadModels(fs, config, versionsToStart);
-        status = model->addVersions(versionsToStart, config);
+        status = model->addVersions(versionsToStart, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -618,7 +616,6 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
     }
-
     return status;
 }
 
@@ -627,7 +624,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
         //  downloadModels(fs, config, versionsToReload);
-        auto status = model->reloadVersions(versionsToReload, config);
+        auto status = model->reloadVersions(versionsToReload, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -717,7 +714,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToReload->size() > 0) {
         reloadModelVersions(model, fs, config, versionsToReload);
     }
-    if (versionsToRetire->size()) {
+    if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
@@ -725,7 +722,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
     }
-
     return blocking_status;
 }
 

@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "filesystem.hpp"
 
 #include "modelchangesubscription.hpp"
 #include "modelinstance.hpp"
@@ -157,7 +158,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config);
+    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs);
 
     /**
          * @brief Retires versions of Model
@@ -180,7 +181,7 @@ public:
          *
          * @return status
          */
-    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config);
+    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs);
 
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);
