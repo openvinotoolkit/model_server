@@ -42,7 +42,7 @@ private:
       *
       * @param ignoredVersion Version that should not be taken into account
       */
-    void updateDefaultVersion(int ignoredVersion = 0)
+    void updateDefaultVersion(int ignoredVersion = 0);
 
         protected :
         /**
