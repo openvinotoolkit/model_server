@@ -606,7 +606,6 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
     Status status = StatusCode::OK;
     try {
-        // downloadModels(fs, config, versionsToStart);
         status = model->addVersions(versionsToStart, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
@@ -623,7 +622,6 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        //  downloadModels(fs, config, versionsToReload);
         auto status = model->reloadVersions(versionsToReload, config, fs);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
@@ -685,24 +683,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         }
     }
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-
-    // debugging
-    std::ostringstream vts1;
-    if (!versionsToStart->empty()) {
-        std::copy(versionsToStart->begin(), versionsToStart->end(), std::ostream_iterator<int>(vts1, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to add: {}; ", vts1.str());
-    }
-    std::ostringstream vts2;
-    if (!versionsToReload->empty()) {
-        std::copy(versionsToReload->begin(), versionsToReload->end(), std::ostream_iterator<int>(vts2, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload: {}; ", vts2.str());
-    }
-    std::ostringstream vts3;
-    if (!versionsToRetire->empty()) {
-        std::copy(versionsToRetire->begin(), versionsToRetire->end(), std::ostream_iterator<int>(vts3, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire: {}; ", vts3.str());
-    }
-    // debugging
 
     if (versionsToStart->size() > 0) {
         auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
