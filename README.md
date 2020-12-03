@@ -20,7 +20,7 @@ A few key features:
 - Online deployment of new [model versions](docs/model_version_policy.md).
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
-- The server can be enabled both on [Docker containers](docs/docker_container.md).
+- The server can be enabled on [Docker containers](docs/docker_container.md).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
