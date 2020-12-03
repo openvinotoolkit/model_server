@@ -78,7 +78,7 @@ const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModel
     return modelVersions;
 }
 
-void Model::updateDefaultVersion(int ignoredVersion = 0) {
+void Model::updateDefaultVersion(int ignoredVersion) {
     model_version_t newDefaultVersion = 0;
     SPDLOG_INFO("Updating default version for model: {}, from: {}", getName(), defaultVersion);
     for (const auto& [version, versionInstance] : modelVersions) {
