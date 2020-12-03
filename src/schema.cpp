@@ -65,7 +65,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"type": "string"
 						},
 						"batch_size": {
-							"type": ["integer", "string"]
+							"type": ["integer", "string"],
+							"minimum": 0
 						},
 						"model_version_policy": {
 							"type": "object"

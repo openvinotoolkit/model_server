@@ -106,10 +106,16 @@ std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBa
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
     } else {
+        if (configBatchSize.find_first_not_of("0123456789") != std::string::npos) {
+            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
+            return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+        }
         try {
             effectiveBatchSize = std::stoi(configBatchSize);
         } catch (const std::invalid_argument& e) {
             SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
+        } catch (const std::out_of_range& e) {
+            SPDLOG_WARN("Out of range batch size parameter provided. Model batch size will be set to default.");
         }
     }
     return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
