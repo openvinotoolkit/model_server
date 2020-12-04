@@ -44,11 +44,11 @@ private:
       */
     void updateDefaultVersion(int ignoredVersion = 0);
 
-        protected :
-        /**
+protected:
+    /**
          * @brief Model name
          */
-        std::string name;
+    std::string name;
 
     /**
          * @brief Holds different versions of model
