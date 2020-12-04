@@ -32,14 +32,14 @@ server {
     ssl_verify_client on;
     ssl_verify_depth 1;
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers AES256+EECDH:AES256+EDH:!RSA:!CAMELLIA:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!SHA1:!SHA256:!SHA384;
+    ssl_ciphers TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:AES256+EECDH:AES256+EDH:!RSA:!CAMELLIA:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!SHA1;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /certs/dhparam.pem;
     ssl_stapling on;
     ssl_stapling_verify on;
     ssl_session_cache shared:SSL:12m;
     ssl_session_timeout 12m;
-    ssl_ecdh_curve auto;
+    ssl_ecdh_curve secp384r1:prime256v1;
     add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
@@ -61,7 +61,7 @@ server {
     ssl_verify_client on;
     ssl_verify_depth 1;
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers AES256+EECDH:AES256+EDH:!RSA:!CAMELLIA:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!SHA1:!SHA256:!SHA384;
+    ssl_ciphers TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:AES256+EECDH:AES256+EDH:!RSA:!CAMELLIA:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!SHA1;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /certs/dhparam.pem;
     ssl_stapling on;
