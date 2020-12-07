@@ -598,7 +598,7 @@ void ModelInstance::unloadModel(bool changeState) {
         subscriptionManager.notifySubscribers();
         while (!canUnloadInstance()) {
             SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
-                         getName(), getVersion(), predictRequestsHandlesCount);
+                getName(), getVersion(), predictRequestsHandlesCount);
             std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
         }
     }
