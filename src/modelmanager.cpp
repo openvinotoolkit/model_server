@@ -339,9 +339,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
             continue;
         }
-        if (modelsInConfigFile.find(modelConfig.getName()) != modelsInConfigFile.end()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file has duplicated model names: {}. Only first model with this name will be loaded.",
-                modelConfig.getName());
+        if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file has duplicated model names: {}. Only first model with this name will be loaded.", modelName);
             continue;
         }
         status = reloadModelWithVersions(modelConfig);
