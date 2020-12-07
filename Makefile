@@ -143,7 +143,7 @@ docker_build:
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:="${PRODUCT_NAME} ${PRODUCT_VERSION}.${PROJECT_VER_PATCH}")'
+	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME}\ ${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
