@@ -78,11 +78,12 @@ const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModel
     return modelVersions;
 }
 
-void Model::updateDefaultVersion() {
+void Model::updateDefaultVersion(int ignoredVersion) {
     model_version_t newDefaultVersion = 0;
     SPDLOG_INFO("Updating default version for model: {}, from: {}", getName(), defaultVersion);
     for (const auto& [version, versionInstance] : modelVersions) {
-        if (version > newDefaultVersion &&
+        if (version != ignoredVersion &&
+            version > newDefaultVersion &&
             ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
             newDefaultVersion = version;
         }
@@ -163,8 +164,8 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
             continue;
         }
         cleanupModelTmpFiles(modelVersion->getModelConfig());
+        updateDefaultVersion(version);
         modelVersion->unloadModel();
-        updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
     return result;

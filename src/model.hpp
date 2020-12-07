@@ -38,9 +38,11 @@ private:
     mutable std::shared_mutex modelVersionsMtx;
 
     /**
-         * @brief Update default version
-         */
-    void updateDefaultVersion();
+      * @brief Update default version
+      *
+      * @param ignoredVersion Version to exclude from being selected as the default version
+      */
+    void updateDefaultVersion(int ignoredVersion = 0);
 
 protected:
     /**
