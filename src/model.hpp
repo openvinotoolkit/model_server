@@ -40,7 +40,7 @@ private:
     /**
       * @brief Update default version
       *
-      * @param ignoredVersion Version that should not be taken into account
+      * @param ignoredVersion Version to exclude from being selected as the default version
       */
     void updateDefaultVersion(int ignoredVersion = 0);
 
