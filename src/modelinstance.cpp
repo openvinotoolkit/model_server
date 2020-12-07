@@ -593,6 +593,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
 void ModelInstance::unloadModel(bool changeState) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setUnloading();
+    subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
             getName(), getVersion(), predictRequestsHandlesCount);
