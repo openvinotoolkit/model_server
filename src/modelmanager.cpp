@@ -340,7 +340,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             continue;
         }
         if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file has duplicated model names: {}. Only first model with this name will be loaded.", modelName);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
             continue;
         }
         status = reloadModelWithVersions(modelConfig);
