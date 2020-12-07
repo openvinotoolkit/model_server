@@ -23,6 +23,7 @@
 
 #include "customloaders.hpp"
 #include "localfilesystem.hpp"
+#include "logging.hpp"
 #include "modelmanager.hpp"
 
 namespace ovms {
@@ -174,11 +175,15 @@ void Model::retireAllVersions() {
     if (!(customLoaderName.empty())) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(customLoaderName);
-        loaderPtr->retireModel(name);
+        if (loaderPtr != nullptr) {
+            loaderPtr->retireModel(name);
+        } else {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Could not find custom loader for model: {} but it is using custom loader: {}", getName(), customLoaderName);
+        }
     }
 
     for (const auto versionModelInstancePair : modelVersions) {
-        SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->unloadModel();
         updateDefaultVersion();
