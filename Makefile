@@ -78,8 +78,8 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
-DEFAULT_PROJECT_NAME ?="OpenVINO Model Server 2021.1."
-PROJECT_NAME ?= ""
+PRODUCT_NAME = "OpenVINO Model Server"
+PRODUCT_VERSION ?= "2021.2"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
@@ -142,10 +142,8 @@ docker_build:
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
-ifeq ($(PROJECT_NAME), "")
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:=${DEFAULT_PROJECT_NAME}${PROJECT_VER_PATCH})'
-endif
+	@bash -c '$(eval PROJECT_NAME:="${PRODUCT_NAME} ${PRODUCT_VERSION}.${PROJECT_VER_PATCH}")'
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
