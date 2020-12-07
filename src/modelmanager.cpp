@@ -255,20 +255,20 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
 Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
     auto& customloaders = ovms::CustomLoaders::instance();
     std::string loaderName = loaderConfig.getLoaderName();
-    SPDLOG_DEBUG("Check if loader is already loaded");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Check if loader is already loaded");
     if (customloaders.find(loaderName) == nullptr) {
         // this is where library or custom loader is loaded
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
-            SPDLOG_ERROR("Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
         }
 
         // load the symbols
         createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
         const char* dlsym_error = dlerror();
-        if (dlsym_error) {
-            SPDLOG_ERROR("Cannot load symbol create:  {} ", dlsym_error);
+        if (dlsym_error || (customObj == nullptr)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot load symbol create:  {} ", dlsym_error);
             return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
         }
 
@@ -276,10 +276,10 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
         try {
             customLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
         } catch (std::exception& e) {
-            SPDLOG_ERROR("Cannot create or initialize the custom loader. Failed with error {}", e.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot create or initialize the custom loader. Failed with error {}", e.what());
             return StatusCode::CUSTOM_LOADER_INIT_FAILED;
         } catch (...) {
-            SPDLOG_ERROR("Cannot create or initialize the custom loader");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot create or initialize the custom loader");
             return StatusCode::CUSTOM_LOADER_INIT_FAILED;
         }
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
@@ -667,20 +667,20 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(loaderName);
         if (loaderPtr != nullptr) {
-            SPDLOG_INFO("Custom Loader to be used : {}", loaderName);
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
 
             // check existing version for blacklist
             for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                SPDLOG_DEBUG("The model {} checking for blacklist", versionInstance->getName());
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} checking for blacklist", versionInstance->getName());
                 CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
                 if (bres != CustomLoaderStatus::OK) {
-                    SPDLOG_INFO("The model {} is blacklisted", versionInstance->getName());
+                    SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
                 }
             }
         } else {
-            SPDLOG_ERROR("Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
             model->retireAllVersions();
             return StatusCode::OK;
         }

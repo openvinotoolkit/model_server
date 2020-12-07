@@ -30,6 +30,7 @@
 #include "config.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
+#include "logging.hpp"
 #include "stringutils.hpp"
 
 using namespace InferenceEngine;
@@ -616,7 +617,8 @@ void ModelInstance::unloadModel(bool changeState) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
-            SPDLOG_INFO("The loader {} is no longer available", loaderName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The loader {} is no longer available for model: {} version : {}",
+                loaderName, getName(), getVersion());
         } else {
             // once model is unloaded, notify custom loader object about the unload
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
