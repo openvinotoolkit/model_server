@@ -82,12 +82,12 @@ Status Pipeline::execute() {
     }
     std::vector<std::reference_wrapper<Node>> nodesWaitingForIdleInferenceStreamId;  // consider replacing with std::vector
     // even though we can remove with random sequence it is probable that we will remove those in sequence
-    const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 500;
-    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 500;
-    // process finished nodes and if no one is finished check if any node with deffered execution
+    const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 5000;
+    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 5000;
+    // process finished nodes and if no one is finished check if any node with deferred execution
     // has necessary resources already
     while (true) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline: {} waiting for message that node finished.", getName());
+        spdlog::trace("Pipeline: {} waiting for message that node finished.", getName());
         auto optionallyFinishedNode = finishedNodeQueue.tryPull(WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS);
         if (optionallyFinishedNode) {
             Node& finishedNode = optionallyFinishedNode.value().get();
