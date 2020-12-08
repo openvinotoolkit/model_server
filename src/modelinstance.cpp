@@ -595,14 +595,14 @@ void ModelInstance::unloadModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     if (isPermanent) {
         this->status.setUnloading();
-        subscriptionManager.notifySubscribers();
-        while (!canUnloadInstance()) {
-            SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
-                getName(), getVersion(), predictRequestsHandlesCount);
-            std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
-        }
     } else {
         this->status.setLoading();
+    }
+    subscriptionManager.notifySubscribers();
+    while (!canUnloadInstance()) {
+        SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
+            getName(), getVersion(), predictRequestsHandlesCount);
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     inferRequestsQueue.reset();
     execNetwork.reset();
