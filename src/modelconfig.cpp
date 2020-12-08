@@ -426,7 +426,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
-    SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
+    if (getModelVersionPolicy()) {
+        SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
+    }
     SPDLOG_DEBUG("nireq: {}", getNireq());
     SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     SPDLOG_DEBUG("plugin_config:");
