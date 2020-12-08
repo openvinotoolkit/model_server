@@ -591,9 +591,9 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool changeState) {
+void ModelInstance::unloadModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    if (changeState) {
+    if (isPermanent) {
         this->status.setUnloading();
         subscriptionManager.notifySubscribers();
         while (!canUnloadInstance()) {
@@ -601,6 +601,8 @@ void ModelInstance::unloadModel(bool changeState) {
                 getName(), getVersion(), predictRequestsHandlesCount);
             std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
         }
+    } else {
+        this->status.setLoading();
     }
     inferRequestsQueue.reset();
     execNetwork.reset();
@@ -609,7 +611,7 @@ void ModelInstance::unloadModel(bool changeState) {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    if (changeState) {
+    if (isPermanent) {
         status.setEnd();
     }
 
