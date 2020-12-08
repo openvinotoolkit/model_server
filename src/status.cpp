@@ -111,6 +111,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED, "Pipeline definition does not have connections for all inputs of underlying models"},
     {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
+    {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
 
     // Storage errors
     // S3

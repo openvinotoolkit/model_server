@@ -38,7 +38,6 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     ValidationResultNotifier notifier(status, loadedNotify);
     auto& models = manager.getModels();
     if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
-        SPDLOG_ERROR("Pipeline has the same name as model.");
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
 
