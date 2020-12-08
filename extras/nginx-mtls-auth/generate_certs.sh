@@ -33,7 +33,7 @@ openssl genrsa -out client.key 4096
 openssl req -new -key client.key -out client.csr -subj "/C=US/CN=client"
 openssl x509 -req -in client.csr -CA client_cert_ca.pem -CAkey client_cert_ca.key -CAcreateserial -out client.pem -days 1 -sha512
 openssl ca -config openssl_ca.conf -gencrl -keyfile client_cert_ca.key -cert client_cert_ca.pem -out client_cert_ca.crl
-openssl dhparam -out dhparam.pem 2048
+openssl dhparam -out dhparam.pem 3072
 
 chmod 666 client_cert_ca.pem server.pem server.key dhparam.pem client_cert_ca.crl
 

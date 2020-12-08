@@ -55,7 +55,7 @@ GRPC_OVMS_NEW_PORT=
 REST_ORIGINAL_PORT=
 REST_OVMS_NEW_PORT=
 
-	for a in $*
+	for a in "$@"
 	do
 	    echo "ARG: $a"
             if [ "$DELETE_NEXT_ARG" != "" ] ; then
