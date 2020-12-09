@@ -46,7 +46,7 @@ Status CustomLoaders::remove(const std::string& name) {
 }
 
 std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& name) {
-    SPDLOG_INFO("looking for loder {} in loaders list", name);
+    SPDLOG_DEBUG("looking for loder {} in loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
