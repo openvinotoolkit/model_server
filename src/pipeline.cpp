@@ -83,7 +83,7 @@ Status Pipeline::execute() {
     std::vector<std::reference_wrapper<Node>> nodesWaitingForIdleInferenceStreamId;  // consider replacing with std::vector
     // even though we can remove with random sequence it is probable that we will remove those in sequence
     const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 5000;
-    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 5000;
+    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 500;
     // process finished nodes and if no one is finished check if any node with deferred execution
     // has necessary resources already
     while (true) {
