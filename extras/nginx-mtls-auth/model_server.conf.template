@@ -60,7 +60,7 @@ server {
     ssl_crl /certs/client_cert_ca.crl;
     ssl_verify_client on;
     ssl_verify_depth 1;
-    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_protocols TLSv1.2;
     ssl_ciphers AES256+EECDH:!RSA:!CAMELLIA:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!SHA1:!SHA256:!AES128;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /certs/dhparam.pem;
