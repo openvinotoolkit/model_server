@@ -672,7 +672,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(loaderName);
         if (loaderPtr != nullptr) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
 
             // check existing version for blacklist
