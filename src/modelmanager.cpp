@@ -337,6 +337,10 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
             continue;
         }
+        if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
+            continue;
+        }
         status = reloadModelWithVersions(modelConfig);
         modelsInConfigFile.emplace(modelName);
 
@@ -668,7 +672,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(loaderName);
         if (loaderPtr != nullptr) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
 
             // check existing version for blacklist
