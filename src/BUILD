@@ -232,7 +232,6 @@ cc_test(
         "@com_google_googletest//:gtest",
     ],
     copts = [
-        "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
     ],
