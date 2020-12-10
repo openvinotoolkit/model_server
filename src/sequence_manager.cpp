@@ -25,6 +25,10 @@ const sequence_memory_state_t& Sequence::getLastMemoryState() {
     return lastMemoryState;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+// deprecated GetLastStete()
+
 Status Sequence::updateLastMemoryState(model_memory_state_t& newState) {
     for (auto && state : newState) {
         auto stateName = state.GetName();
@@ -75,4 +79,5 @@ Status SequenceManager::updateSequenceMemoryState(uint64_t sequenceId, model_mem
     return sequences[sequenceId].updateLastMemoryState(newState);
 }
 
+#pragma GCC diagnostic pop
 } //namespace ovms
