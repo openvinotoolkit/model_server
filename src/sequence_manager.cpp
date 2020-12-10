@@ -26,7 +26,7 @@ const sequence_memory_state_t& Sequence::getLastMemoryState() {
 }
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Werror=deprecated-declarations"
 // deprecated GetLastStete()
 
 Status Sequence::updateLastMemoryState(model_memory_state_t& newState) {
