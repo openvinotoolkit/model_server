@@ -122,10 +122,9 @@ fi
 args_str=""
 for a in "${new_args[@]}"
 do
-  args_str+="'$a' "
+  args_str="$args_str '$a' "
   echo "Current Args str: " $args_str
   echo "Current Args str2: " "$args_str"
-
 done
 echo "========================!!!===="
 echo $args_str
