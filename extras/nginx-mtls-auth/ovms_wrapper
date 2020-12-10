@@ -88,7 +88,7 @@ REST_OVMS_NEW_PORT=
                  DELETE_NEXT_ARG=1
                  continue
             fi
-            new_args+=" $a"
+            new_args+=" \"$a\" "
             echo "current args: ${new_args[@]}"
 	done
 	echo "${new_args[@]}"
