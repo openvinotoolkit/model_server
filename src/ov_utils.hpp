@@ -21,6 +21,7 @@
 
 namespace ovms {
 
+InferenceEngine::Blob::Ptr constBlobClone(InferenceEngine::Blob::CPtr sourceBlob);
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob);
 
 }  // namespace ovms
