@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
@@ -315,7 +316,7 @@ static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
 })";
 
 class StressPipelineConfigChanges : public TestWithTempDir {
-    const uint loadThreadCount = 10;
+    const uint loadThreadCount = 20;
     const uint beforeConfigChangeLoadTimeMs = 30;
     const uint afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 5000;
@@ -324,8 +325,11 @@ class StressPipelineConfigChanges : public TestWithTempDir {
     std::string ovmsConfig;
     std::string modelPath;
 
+    const std::string& pipelineName = PIPELINE_1_DUMMY_NAME;
     const std::string pipelineInputName = "custom_dummy_input";
     const std::string pipelineOutputName = "custom_dummy_output";
+
+    const std::vector<float> requestData{1., 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
 public:
     void SetUpConfig(const std::string& configContent) {
@@ -381,19 +385,24 @@ public:
         std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
-    void performStressTest(void (StressPipelineConfigChanges::*configChangeOperation)(),
+    void performStressTest(
+        void (StressPipelineConfigChanges::*triggerLoadInALoop)(
+            std::future<void>&,
+            std::future<void>&,
+            ModelManager&,
+            const std::set<StatusCode>&,
+            const std::set<StatusCode>&,
+            std::unordered_map<StatusCode, std::atomic<uint64_t>>&),
+        void (StressPipelineConfigChanges::*configChangeOperation)(),
         bool reloadWholeConfig,
-        std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK},
-        std::set<StatusCode> requiredExecuteResults = {StatusCode::OK},
-        std::set<StatusCode> allowedCreatePDResults = {StatusCode::OK},
-        std::set<StatusCode> allowedExecuteResults = {StatusCode::OK}) {
+        std::set<StatusCode> requiredLoadResults,
+        std::set<StatusCode> allowedLoadResults) {
         ConstructorEnabledModelManager manager;
         createConfigFileWithContent(ovmsConfig, configFilePath);
         auto status = manager.loadConfig(configFilePath);
         ASSERT_TRUE(status.ok());
 
         // setup helper variables for managing threads
-        const std::vector<float> requestData{1., 2., 3., 7., 5., 6., 4., 9., 10., 8.};
         std::vector<std::promise<void>> startSignals(loadThreadCount);
         std::vector<std::promise<void>> stopSignals(loadThreadCount);
         std::vector<std::future<void>> futureStartSignals;
@@ -420,28 +429,20 @@ public:
         for (uint i = 0; i < loadThreadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [this,
+                    &triggerLoadInALoop,
                     &futureStartSignals,
                     &futureStopSignals,
                     &manager,
-                    &requestData,
-                    &requiredCreatePDResults,
-                    &requiredExecuteResults,
-                    &allowedCreatePDResults,
-                    &allowedExecuteResults,
+                    &requiredLoadResults,
+                    &allowedLoadResults,
                     &createPipelineRetCodesCounters,
-                    &executePipelineRetCodesCounters,
                     i]() {
-                    this->triggerPredictInALoop(futureStartSignals[i],
+                    ((*this).*triggerLoadInALoop)(futureStartSignals[i],
                         futureStopSignals[i],
                         manager,
-                        PIPELINE_1_DUMMY_NAME,
-                        requestData,
-                        requiredCreatePDResults,
-                        requiredExecuteResults,
-                        allowedCreatePDResults,
-                        allowedExecuteResults,
-                        createPipelineRetCodesCounters,
-                        executePipelineRetCodesCounters);
+                        requiredLoadResults,
+                        allowedLoadResults,
+                        createPipelineRetCodesCounters);
                 }));
         }
         // start initial load
@@ -461,43 +462,128 @@ public:
 
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             SPDLOG_TRACE("Create:[{}]={} -- {}", static_cast<uint>(retCode), counter, ovms::Status(retCode).string());
-            if (requiredCreatePDResults.find(retCode) != requiredCreatePDResults.end()) {
+            if (requiredLoadResults.find(retCode) != requiredLoadResults.end()) {
                 EXPECT_GT(counter, 0) << static_cast<uint>(retCode) << ":" << ovms::Status(retCode).string() << " did not occur. This may indicate fail or fail in test setup";
                 continue;
             }
             if (counter == 0) {
                 continue;
             }
-            EXPECT_TRUE(allowedCreatePDResults.find(retCode) != allowedCreatePDResults.end()) << "Ret code:"
-                                                                                              << static_cast<uint>(retCode) << " message: " << ovms::Status(retCode).string()
-                                                                                              << " was not allowed in test but occured during load";
+            EXPECT_TRUE(allowedLoadResults.find(retCode) != allowedLoadResults.end()) << "Ret code:"
+                                                                                      << static_cast<uint>(retCode) << " message: " << ovms::Status(retCode).string()
+                                                                                      << " was not allowed in test but occured during load";
         }
-        for (auto& [retCode, counter] : executePipelineRetCodesCounters) {
-            SPDLOG_TRACE("Execute:[{}]={} -- {}", static_cast<uint>(retCode), counter, ovms::Status(retCode).string());
-            if (requiredExecuteResults.find(retCode) != requiredExecuteResults.end()) {
-                EXPECT_GT(counter, 0) << static_cast<uint>(retCode) << ":\"" << ovms::Status(retCode).string() << "\" did not occur. This may indicate fail or fail in test setup";
+    }
+    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response) {
+        tensorflow::serving::SignatureDefMap def;
+        EXPECT_EQ(response.model_spec().name(), pipelineName);
+        EXPECT_TRUE(response.model_spec().has_version());
+        EXPECT_EQ(response.model_spec().version().value(), 1);
+        EXPECT_EQ(response.metadata_size(), 1);
+        EXPECT_NE(
+            response.metadata().find("signature_def"),
+            response.metadata().end());
+        response.metadata().at("signature_def").UnpackTo(&def);
+        response.metadata().at("signature_def").UnpackTo(&def);
+        const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+        const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+
+        bool inputsSizeCorrect{inputs.size() == 1};
+        EXPECT_TRUE(inputsSizeCorrect) << "Expected: " << 1 << " actual: " << inputs.size();
+        bool outputsSizeCorrect{outputs.size() == 1};
+        EXPECT_TRUE(outputsSizeCorrect) << "Expected: " << 1 << " actual: " << outputs.size();
+        if (!inputsSizeCorrect || !outputsSizeCorrect) {
+            return false;
+        }
+        bool inputNameExist{inputs.find(pipelineInputName.c_str()) != inputs.end()};
+        EXPECT_TRUE(inputNameExist);
+        bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
+        EXPECT_TRUE(outputNameExist);
+        if (!inputNameExist || !outputNameExist) {
+            return false;
+        }
+        bool inputNameCorrect{inputs.at(pipelineInputName.c_str()).name() == pipelineInputName};
+        EXPECT_TRUE(inputNameCorrect);
+        bool outputNameCorrect{outputs.at(pipelineOutputName.c_str()).name() == pipelineOutputName};
+        EXPECT_TRUE(outputNameCorrect);
+        if (!inputNameCorrect || !outputNameCorrect) {
+            return false;
+        }
+        bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+        EXPECT_TRUE(inputTypeCorrect);
+        bool outputTypeCorrect{outputs.at(pipelineOutputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+        EXPECT_TRUE(outputTypeCorrect);
+        if (!inputTypeCorrect || !outputTypeCorrect) {
+            return false;
+        }
+        auto isShape = [](
+                           const tensorflow::TensorShapeProto& actual,
+                           const std::vector<size_t>&& expected) -> bool {
+            if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
+                return false;
+            }
+            for (int i = 0; i < actual.dim_size(); i++) {
+                if (static_cast<unsigned int>(actual.dim(i).size()) != expected[i]) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        bool inputShapeCorrect{isShape(
+            inputs.at(pipelineInputName.c_str()).tensor_shape(),
+            {1, 10})};
+        EXPECT_TRUE(inputShapeCorrect);
+        bool outputShapeCorrect{isShape(
+            outputs.at(pipelineOutputName.c_str()).tensor_shape(),
+            {1, 10})};
+        EXPECT_TRUE(outputShapeCorrect);
+        if (!inputShapeCorrect || !outputShapeCorrect) {
+            return false;
+        }
+        return true;
+    }
+    void triggerGetPipelineMetadataInALoop(
+        std::future<void>& startSignal,
+        std::future<void>& stopSignal,
+        ModelManager& manager,
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
+        tensorflow::serving::GetModelMetadataRequest request;
+        tensorflow::serving::GetModelMetadataResponse response;
+        startSignal.get();
+        // stressIterationsCounter is additional safety measure
+        auto stressIterationsCounter = stressIterationsLimit;
+        while (stressIterationsCounter-- > 0) {
+            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Ending Load");
+                break;
+            }
+            auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
+            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager);
+            createPipelineRetCodesCounters[status.getCode()]++;
+            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
+                << status.string() << "\n";
+            if (!status.ok()) {
                 continue;
             }
-            if (counter == 0) {
-                continue;
+            // Check response if correct
+            EXPECT_TRUE(isMetadataResponseCorrect(response));
+            if (::testing::Test::HasFailure()) {
+                SPDLOG_INFO("Earlier fail detected. Stopping execution");
+                break;
             }
-            EXPECT_TRUE(allowedExecuteResults.find(retCode) != allowedExecuteResults.end()) << "Ret code:"
-                                                                                            << static_cast<uint>(retCode) << " message: " << ovms::Status(retCode).string()
-                                                                                            << " was not allowed in test but occured during load";
         }
     }
     void triggerPredictInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
         ModelManager& manager,
-        const std::string& pipelineName,
-        const std::vector<float>& requestData,
-        const std::set<StatusCode>& requiredCreatePDResults,
-        const std::set<StatusCode>& requiredExecuteResults,
-        const std::set<StatusCode>& allowedCreatePDResults,
-        const std::set<StatusCode>& allowedExecuteResults,
-        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters,
-        std::unordered_map<StatusCode, std::atomic<uint64_t>>& executePipelineRetCodesCounters) {
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         auto stressIterationsCounter = stressIterationsLimit;
@@ -516,21 +602,20 @@ public:
             input.mutable_tensor_content()->assign((char*)reqData.data(), reqData.size() * sizeof(float));
             tensorflow::serving::PredictResponse response;
             auto createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
-            createPipelineRetCodesCounters[createPipelineStatus.getCode()]++;
-
-            // then we need to make sure that all expected statuses happened and still accept
+            // we need to make sure that expected status happened and still accept
             // some that could happen but we may not hit them
-            EXPECT_TRUE((requiredCreatePDResults.find(createPipelineStatus.getCode()) != requiredCreatePDResults.end()) ||
-                        (allowedCreatePDResults.find(createPipelineStatus.getCode()) != allowedCreatePDResults.end()))
+            EXPECT_TRUE((requiredLoadResults.find(createPipelineStatus.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(createPipelineStatus.getCode()) != allowedLoadResults.end()))
                 << createPipelineStatus.string() << "\n";
             if (!createPipelineStatus.ok()) {
+                createPipelineRetCodesCounters[createPipelineStatus.getCode()]++;
                 continue;
             }
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
             executePipelineStatus = pipelinePtr->execute();
-            executePipelineRetCodesCounters[executePipelineStatus.getCode()]++;
-            EXPECT_TRUE((requiredExecuteResults.find(executePipelineStatus.getCode()) != requiredExecuteResults.end()) ||
-                        (allowedExecuteResults.find(executePipelineStatus.getCode()) != allowedExecuteResults.end()))
+            createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
+            EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
                 << executePipelineStatus.string() << "\n";
             if (executePipelineStatus.ok()) {
                 checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
@@ -545,11 +630,6 @@ public:
                 SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
             }
         }
-        for (auto& [retCode, counter] : executePipelineRetCodesCounters) {
-            if (counter > 0) {
-                SPDLOG_DEBUG("Execute:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
-            }
-        }
         EXPECT_GT(stressIterationsCounter, 0) << "Reaching 0 means that we might not test enough \"after config change\" operation was applied";
         std::stringstream ss;
         ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
@@ -558,105 +638,180 @@ public:
 };
 
 TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
-    bool performWholeConfigReload = false;                            // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK};   // we expect full continuouity of operation
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::defaultVersionRemove,
+    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::defaultVersionRemove,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
 TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};            // we hit when all config changes finish to propagate
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK,  // the model did not unload yet
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,               // we hit default version which is unloaded already but default is not changed yet
-        StatusCode::MODEL_VERSION_MISSING};                         // there is no default version since all are either not loaded properly or retired
-    // if we do not hit different execute results than OK it means that the stress was not really stress
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit when all config changes finish to propagate
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,    // we hit default version which is unloaded already but default is not changed yet
+        StatusCode::MODEL_VERSION_MISSING};              // there is no default version since all are either not loaded properly or retired
+    std::set<StatusCode> allowedLoadResults = {};
     // we need whole config reload since there is no other way to dispose
     // all model versions different than removing model from config
     bool performWholeConfigReload = true;
-    performStressTest(&StressPipelineConfigChanges::defaultVersionRemove,
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::defaultVersionRemove,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
-TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringPredictionLoad) {
+TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK};   // we expect full continuouity of operation
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::changeToAutoShape,
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeToAutoShape,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
-TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringLoad) {
+TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};         // we expect to stop creating pipelines
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::removePipelineDefinition,
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::removePipelineDefinition,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
-TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionName) {
+TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK};   // we expect full continuouity of operation
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::changeConnectionName,
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeConnectionName,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
-TEST_F(StressPipelineConfigChanges, AddedNewPipeline) {
+TEST_F(StressPipelineConfigChanges, AddedNewPipelineDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK};   // we expect full continuouity of operation
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::addNewPipeline,
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::addNewPipeline,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
 }
-TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsed) {
+TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringPredictLoad) {
     // we declare specific version used (1) and latest model version policy with count=1
     // then we add version 2 causing previous default to be retired
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
-    std::set<StatusCode> requiredCreatePDResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};             // we hit when all config changes finish to propagate
-    std::set<StatusCode> requiredExecuteResults = {StatusCode::OK,
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // version is retired but pipeline not invalidated yet
-    std::set<StatusCode> allowedCreatePDResults = {};
-    std::set<StatusCode> allowedExecuteResults = {};
-    performStressTest(&StressPipelineConfigChanges::retireSpecificVersionUsed,
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,          // we hit when all config changes finish to propagate
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::retireSpecificVersionUsed,
         performWholeConfigReload,
-        requiredCreatePDResults,
-        requiredExecuteResults,
-        allowedCreatePDResults,
-        allowedExecuteResults);
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, AddNewVersionDuringGetMetadataLoad) {
+    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::defaultVersionRemove,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit when all config changes finish to propagate
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,    // we hit default version which is unloaded already but default is not changed yet
+        StatusCode::MODEL_MISSING};                      // model instance not found during metadata request
+    std::set<StatusCode> allowedLoadResults = {};
+    // we need whole config reload since there is no other way to dispose
+    // all model versions different than removing model from config
+    bool performWholeConfigReload = true;
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::defaultVersionRemove,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::changeToAutoShape,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoad) {
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE,  // when pipeline is retired
+        StatusCode::MODEL_VERSION_NOT_LOADED_YET};           // we do not wait for models durign get metadata
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removePipelineDefinition,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringGetMetadataLoad) {
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::MODEL_VERSION_NOT_LOADED_YET};               // we do not wait for models durign get metadata
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::changeConnectionName,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, AddedNewPipelineDuringGetMetadataLoad) {
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::addNewPipeline,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLoad) {
+    // we declare specific version used (1) and latest model version policy with count=1
+    // then we add version 2 causing previous default to be retired
+    SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
+    bool performWholeConfigReload = false;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,          // we hit when all config changes finish to propagate
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::retireSpecificVersionUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
 }

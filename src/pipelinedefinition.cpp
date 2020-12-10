@@ -92,7 +92,7 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
         if (status.isAvailable()) {
-            SPDLOG_DEBUG("Succesfully waited for pipeline definition: {}", getName());
+            SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
             return StatusCode::OK;
         }
         unloadGuard.reset();
