@@ -147,8 +147,8 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
-RUN bazel build ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-RUN bazel build ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
