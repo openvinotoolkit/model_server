@@ -123,8 +123,13 @@ args_str=""
 for a in "${new_args[@]}"
 do
   args_str+="'$a' "
+  echo "Current Args str: " $args_str
+  echo "Current Args str2: " "$args_str"
+
 done
+echo "========================!!!===="
 echo $args_str
+echo "========================!!!===="
 
 (
 	sleep 1
@@ -148,7 +153,7 @@ echo $args_str
 
 (
 	echo "Starting Model Server..."
-	/ovms/bin/./ovms $args_str --grpc_bind_address 127.0.0.1 &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 "$args_str" &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
