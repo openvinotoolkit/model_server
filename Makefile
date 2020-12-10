@@ -26,7 +26,7 @@ STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-JOBS ?= $(nproc --all)
+JOBS ?= $(shell nproc --all)
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
