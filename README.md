@@ -26,7 +26,7 @@ A few key features:
 [Docker containers](docs/docker_container.md).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
-- [Directed Acyclic Graoh Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
+- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
 
