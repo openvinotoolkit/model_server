@@ -591,9 +591,13 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool changeState) {
+void ModelInstance::unloadModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    this->status.setUnloading();
+    if (isPermanent) {
+        this->status.setUnloading();
+    } else {
+        this->status.setLoading();
+    }
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
@@ -607,7 +611,7 @@ void ModelInstance::unloadModel(bool changeState) {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    if (changeState) {
+    if (isPermanent) {
         status.setEnd();
     }
 

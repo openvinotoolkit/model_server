@@ -337,12 +337,19 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
             continue;
         }
+        if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
+            continue;
+        }
         status = reloadModelWithVersions(modelConfig);
         modelsInConfigFile.emplace(modelName);
 
-        if (status.ok()) {
+        if (!status.ok()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
+        }
+        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
-        } else if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+        } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = this->servedModelConfigs.find(modelName);
             if (it == this->servedModelConfigs.end()) {
@@ -351,8 +358,6 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
-        } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);

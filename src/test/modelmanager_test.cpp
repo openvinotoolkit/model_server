@@ -350,6 +350,39 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
 }
 
+TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
+    const char* configWithTwoSameNames = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "/tmp/models/dummy1"
+      }
+    },
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "/tmp/models/dummy2"
+      }
+    }]})";
+    std::filesystem::create_directories(model_1_path);
+    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(configWithTwoSameNames, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    EXPECT_CALL(*modelMock, addVersion(_))
+        .Times(1)
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.startFromFile(fileToReload);
+    auto models = manager.getModels().size();
+    EXPECT_EQ(models, 1);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    modelMock.reset();
+}
+
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {

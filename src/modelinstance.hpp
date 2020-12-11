@@ -452,10 +452,10 @@ public:
 
     /**
          * @brief Unloads model version
-         * @param permanent defined if the unload operation should be permenent and should change instance stated after it is completed
+         * @param isPermanent defines if the unload operation should be permanent and should change instance state to End after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
          */
-    virtual void unloadModel(bool changeStatus = true);
+    virtual void unloadModel(bool isPermanent = true);
 
     /**
          * @brief Wait for model to change to AVAILABLE state
