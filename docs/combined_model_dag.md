@@ -4,7 +4,7 @@ This document presents a models ensemble as an example of [DAG Scheduler](dag_sc
 It describes how to combine several models to perform multiple inference operations with a single prediction call.
 When you need to execute several predictions on the same data, you can create a pipeline, which combines the results from several models.
 
-![diagram](model_ensemble_diagram.svg))
+![diagram](combined_model_dag.png))
 
 ### Step 1: Prepare the models
 
@@ -13,9 +13,6 @@ In this example the following models are used:
 [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0013.md)
 
 [emotions-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/emotions-recognition-retail-0003/description/emotions-recognition-retail-0003.md)
-
-```
-~$ mkdir models
 
 ```bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.bin -o models/age-gender-recognition/1/age-gender-recognition-retail-0013.xml

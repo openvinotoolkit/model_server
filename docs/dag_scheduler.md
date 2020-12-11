@@ -57,7 +57,7 @@ Below is depicted a basic pipeline section template:
                     "model_name": <reference to the model>,
                     "type": "DL model",
                     "inputs": [
-                        {"input": {"node_name": "request",  # reference to pipeline input>
+                        {"input": {"node_name": "request",  # reference to pipeline input
                                    "data_item": "<input1>"}}  # input name from the request
                     ], 
                     "outputs": [  # mapping the model output name to node output name

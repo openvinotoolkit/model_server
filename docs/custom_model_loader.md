@@ -129,10 +129,10 @@ python3 face_detection.py --batch_size 1 --width 300 --height 300 --input_images
 ```
 
 #### A note on blacklisting the model:
-Even though a model is specified the config file, based on certain conditions, for example license expiry, the model may needs to be disabled. 
+Even though a model is specified in the config file, under certain conditions, for example license expiry, the model may need to be disabled. 
 To demonstrate this capability, this sample loader allows the users to specify an optional parameter "enable_file" in "custom_loader_options" in configuration file. 
 The file needs to be present at the model version folder (base path with the version number).
 
-If user wants to black list the model, create the file with specified name and add a single line **DISABLED** to the file. 
+If user wants to disable the model, create the file with specified name and add a single line **DISABLED** to the file. 
 The customloader checks for this file periodically and if present with required string, marks the model for unloading. 
 To reload the model either remove the string from file or delete the file.
