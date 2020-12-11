@@ -29,8 +29,6 @@ There are two special kinds of nodes - Request and Response node. Both of them a
     - This node defines which outputs will be fetched from final pipeline state and packed into gRPC/REST response. 
     You cannot refer to it in your pipeline configuration since it is the pipeline final stage. To define final outputs fill `outputs` field. 
 
-> **NOTE:** Read <a href="#define-models">below</a> for example pipeline configuration.
-
 ### Deep Learning node type
 
 * DL model - this node contains underlying OpenVINO&trade; model and performs inference on selected target device. This can be defined in configuration file. 
