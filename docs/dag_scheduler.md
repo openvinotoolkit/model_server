@@ -125,6 +125,8 @@ It returns the definition of the pipelines inputs and outputs.
 Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api.md#model-status)
 and [REST Model Status](model_server_rest_api.md#model-status)
 
+The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
+version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
 ## Pipelines examples
 
