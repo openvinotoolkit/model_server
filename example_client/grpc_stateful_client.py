@@ -61,8 +61,8 @@ parser.add_argument('--output_name',required=False, default='affinetransform/Fus
 parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
                     dest='model_name')
 
-parser.add_argument('--utterances', required=False, default=10, help='How many utterances to process from ark file. default 10')
-parser.add_argument('--samples', required=False, default=500, help='How many samples to process from each utterance file. default 500')
+parser.add_argument('--utterances', required=False, default=0, help='How many utterances to process from ark file. default 0 meaning no limit')
+parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. default 0 meaning no limit')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
 
 args = vars(parser.parse_args())
@@ -110,7 +110,7 @@ sequence_id = 1020
 utterances_limit = int(args.get('utterances'))
 samples_limit = int(args.get('samples'))
 print('\tUtterances limit: {}'.format(utterances_limit))
-print('\tSamples limit: {}'.format(utterances_limit))
+print('\tSamples limit: {}'.format(samples_limit))
 
 numberOfKeys = 0
 
@@ -128,7 +128,7 @@ meanErrGlobal = 0.0
 ark_reader = ark_readers[0]
 for key, obj in ark_reader:
     utterance += 1
-    if utterance > utterances_limit:
+    if utterances_limit > 0 and utterance > utterances_limit:
         break
 
     scoreObjects = { k:m for k,m in ark_score }
@@ -142,7 +142,7 @@ for key, obj in ark_reader:
     meanErrSum = 0.0
 
     for x in range(0, batch_size):
-        if x >= samples_limit:
+        if samples_limit > 0 and x >= samples_limit:
             break
 
         printDebug('\tExecution: {}\n'.format(x))
@@ -209,12 +209,19 @@ for key, obj in ark_reader:
 
         #END utterance loop
 
-    meanErrAvg = meanErrSum/min(samples_limit,batch_size)
+    if samples_limit > 0:
+        meanErrAvg = meanErrSum/min(samples_limit,batch_size)
+    else:
+        meanErrAvg = meanErrSum/batch_size
     print("\tSequence {} mean error: {:.10f}\n".format(sequence_id, meanErrAvg))
     sequence_id += 1
     meanErrGlobal += meanErrAvg
     #END input name loop
 
-meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
+if utterance_limit > 0:
+    meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
+else:
+    meanGlobalErrAvg = meanErrGlobal/numberOfKeys
+
 print("Global mean error: {:.10f}\n".format(meanGlobalErrAvg))
 print_statistics(processing_times, batch_size)
