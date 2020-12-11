@@ -49,6 +49,16 @@ def CalculateUtteranceError(referenceArray, resultArray):
 
 delimiter = ","
 
+# Example commands:
+# grpc_stateful_client.py --model_input_path rm_lstm4f/test_feat_1_10.ark --model_score_path rm_lstm4f/test_score_1_10.ark 
+#     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
+#     --model_name rm_lstm4f --utterances 0 --samples 0 --debug
+
+# grpc_stateful_client.py --model_input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
+#     --model_score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark 
+#     --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine
+#     --model_name aspire_tdnn --utterances 0 --samples 0 --debug
+
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
 parser.add_argument('--model_input_path', required=False, default='rm_lstm4f/test_feat_1_10.ark', help='Path to input ark file')
