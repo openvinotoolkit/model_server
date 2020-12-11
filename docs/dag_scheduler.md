@@ -47,29 +47,30 @@ Nodes in the pipelines can reference only the models configured in model_config_
 
 Below is depicted a basic pipeline section template:
 
-```json
+```
+{
     "pipeline_config_list": [
         {
-            "name": <pipeline name>,
-            "inputs": [<input1>,...],
+            "name": "<pipeline name>",
+            "inputs": ["<input1>",...],
             "nodes": [
                 {
-                    "name": <node name>,
+                    "name": "<node name>",
                     "model_name": <reference to the model>,
                     "type": "DL model",
                     "inputs": [
                         {"input": {"node_name": "request",  # reference to pipeline input>
-                                   "data_item": <input1>}}  # input name from the request
+                                   "data_item": "<input1>"}}  # input name from the request
                     ], 
                     "outputs": [  # mapping the model output name to node output name
-                        {"data_item": <model output>,
-                         "alias": <node output name>}
+                        {"data_item": "<model output>",
+                         "alias": "<node output name>"}
                     ] 
                 }
             ],
             "outputs": [      # pipeline outputs
-                {"label": {"node_name": <node to return results>,
-                           "data_item": <node output name to return results>}}
+                {"label": {"node_name": "<node to return results>",
+                           "data_item": "<node output name to return results>"}}
             ]
         }
     ]
@@ -132,7 +133,7 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 [Models ensemble](ensemble_scheduler.md)
 
-[Face analysis with combined models](combined_models_dag.md)
+[Face analysis with combined models](combined_model_dag.md)
 
 
 
