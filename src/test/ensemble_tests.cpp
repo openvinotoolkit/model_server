@@ -2701,7 +2701,7 @@ static const char* pipelineNameOccupiedConfig = R"(
 })";
 
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
-    // Prepare manager
+    // Expected result - model added, adding pipeline failed
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineNameOccupiedConfig, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -2717,7 +2717,7 @@ TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
 }
 
 TEST_F(EnsembleFlowTest, PipelineLoadedAddModelWithSameName) {
-    // Prepare manager
+    // Expected result - adding model failed
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -2734,9 +2734,57 @@ TEST_F(EnsembleFlowTest, PipelineLoadedAddModelWithSameName) {
 
     ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
-        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+        PipelineDefinitionStateCode::AVAILABLE);
 
     auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
-    ASSERT_NE(instance, nullptr);
-    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+    ASSERT_EQ(instance, nullptr);
+}
+
+static const char* pipelineRetiredNameOccupiedConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        },
+        {
+        "config": {
+                "name": "pipeline1Dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineRetiredAddModelWithSameName) {
+    // Expected result - adding model failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineRetiredNameOccupiedConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+
+    auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_EQ(instance, nullptr);
 }

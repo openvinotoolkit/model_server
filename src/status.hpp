@@ -156,6 +156,7 @@ enum class StatusCode {
     REST_UNSUPPORTED_PRECISION,          /*!< Unsupported conversion from tensor_content to _val container */
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,
 
+    // Pipeline validation errors
     PIPELINE_DEFINITION_ALREADY_EXIST,
     PIPELINE_NODE_WRONG_KIND_CONFIGURATION,
     PIPELINE_MULTIPLE_ENTRY_NODES,
