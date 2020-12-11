@@ -22,7 +22,7 @@ Architecture of OVMS with NGINX
 2. Run `./build.sh` to build nginx image extra layer.
 3. Run `./generate_certs.sh`  script. It will generate self-signed certificates (for testing only - follow your organization process for requesting and generating the server and client certificates).
 3. In terminal 1, execute `./start_secure_model_server.sh` script. It will download sample model and start the container.
-4. In terminal 2, execute either/or `./test_grpc.sh or `./test_rest.sh`. Those will try to connect to abovemenationed container and use our example python client to test the system.
+4. In terminal 2, execute `./test_grpc.sh` or `./test_rest.sh`. Those will try to connect to mentioned above container and use our example python client to test the system.
 
 NOTE: Please ensure that your proxy setting are correct, both during model download and during `docker build` operation - adjust build.sh if needed.
 
