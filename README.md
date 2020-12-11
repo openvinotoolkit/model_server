@@ -24,7 +24,7 @@ A few key features:
 [Docker containers](docs/docker_container.md).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
-- [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
+- [Directed ](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
 
@@ -61,7 +61,7 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 * [Performance tuning](docs/performance_tuning.md)
 
-* [Model Ensemble Scheduler](docs/ensemble_scheduler.md)
+* [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
 
 
 ## API documentation
@@ -111,7 +111,7 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
+* [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
 
 ## Contact

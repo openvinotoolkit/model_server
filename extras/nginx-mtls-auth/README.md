@@ -1,14 +1,20 @@
 # Sample of using securing Model Server with nginx
 
-Dockerfile and scripts in this directory are an example of using Nginx mTLS module to implement authentication and authorization of OpenVINO Model Server.
+Dockerfile and scripts in this directory are an example of using NGINX mTLS module to implement authentication and authorization of OpenVINO Model Server.
 
 This can secure both GRPC and REST endpoints. Model Server will present server certificate, and allow connection only from clients who perform full TLS handshake (successful client certificate authentication), as described in [RFC 2246](https://www.ietf.org/rfc/rfc2246.txt).
 
 WARNING: Those contain certificate generation automation for development and testing purposes. Do not use those in production - follow best practices of your organization. For ensuring "fast fail", certificates generated here will expire after a single day.
 
-WARNING: Only a minimal Nginx configuration is provided here. All other options will have default settings - review them and adjust them according to your organization policies: you are responsible for developing and using a secure configuration.
+WARNING: Review the NGINX configuration settings and adjust them according to your organization policies: you are responsible for setting and using a secure configuration.
 
 WARNING: Please follow [security considerations for containers](../../docs/docker_container.md#sec).
+
+
+<p align="center">
+  <img width="441" height="231" src="nginx.png">
+</p>
+Architecture of OVMS with NGINX
 
 ## Quick Start
 
