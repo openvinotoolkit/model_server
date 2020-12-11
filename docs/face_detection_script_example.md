@@ -97,7 +97,7 @@ Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shap
 
 ```bash
 
- docker run -d -v $(pwd)/model:/models/person-detection -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
+ docker run -d  -u $(id -u):$(id -g) -v $(pwd)/model:/models/person-detection -p 9000:9000 openvino/model_server:latest --model_path /models/person-detection --model_name person-detection --port 9000  --shape auto
 
 ```
 

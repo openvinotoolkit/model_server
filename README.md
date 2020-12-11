@@ -1,5 +1,7 @@
 # OpenVINO&trade; Model Server
 
+![OVMS picture](docs/ovms.png)
+
 OpenVINO&trade; Model Server (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. 
 The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same 
 architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported 
@@ -24,27 +26,9 @@ A few key features:
 [Docker containers](docs/docker_container.md).
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
-- [Model ensemble](docs/ensemble_scheduler.md) (preview). Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
+- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
-
-## Build OpenVINO Model Server
-Build the docker image using command:
-```bash
-make docker_build
-```
-called from the root directory of this github repository.
-
-It will generate the images, tagged as:
-* `openvino/model_server:latest` - with CPU, NCS and HDDL support
-* `openvino/model_server:latest-gpu` - with CPU, NCS, HDDL and iGPU support
-
-as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
-
-The release package is compatible with linux machines on which `glibc` version is greater than or equal to the build image version 2.17.
-For debugging, an image with a suffix `-build` is also generated (i.e. `openvino/model_server-build:latest`).
-
-*Note:* Images include OpenVINO 2021.1 release. <br>
 
 
 ## Run OpenVINO Model Server
@@ -61,7 +45,7 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 * [Performance tuning](docs/performance_tuning.md)
 
-* [Model Ensemble Scheduler](docs/ensemble_scheduler.md)
+* [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
 
 
 ## API documentation
@@ -111,7 +95,7 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Inference at scale in Kubernetes](https://www.intel.ai/inference-at-scale-in-kubernetes)
+* [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
 
 ## Contact

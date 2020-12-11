@@ -17,7 +17,7 @@ This guide provides steps and coding standards to follow before sending merge re
 Before sending your merge requests, make sure you followed this list.
 
 - Changes are consistent with the <a href="#coding-style">Coding Style</a>
-- Each merge request should start with the coresponding Jira Ticket Number and short task description, eg: `CVS-3111 Implement feature XY`
+- Each merge request should start with the corresponding Jira Ticket Number and short task description, eg: `CVS-3111 Implement feature XY`
 - The branches should also correspond to Jira Task Name and start with Jira Ticket Number
 - Write a short description what the merge request introduces/improves
 - Always include unit tests when contributing new features
@@ -29,7 +29,7 @@ Before sending your merge requests, make sure you followed this list.
 #### 1. Variable Naming Conventions <a name="var-naming-conventions"></a>
 - Use PascalCase for classes and structs names
 - Use camelCase for methods 
-- For member names and arguments both are acceptable: camelCase or seperate by undescore'_'. However do not mix both in one class definition.
+- For member names and arguments both are acceptable: camelCase or separate by underscore'_'. However do not mix both in one class definition.
 - Use _t suffix for new typedefs 
 - Use UPPERCASE for consts 
 
@@ -151,12 +151,12 @@ Log at this level errors related to the internal model server state.
 </br>
 Example:
 
-- exceptions thrown during accesing local files
+- exceptions thrown during accessing local files
 - errors during models updates (failed to load/reload model)
 </br>
 
 #### `WARN`
-Log at this level informations about conditions that may lead to an error or behavior unwanted or unexpected by the user.
+Log at this level information about conditions that may lead to an error or behavior unwanted or unexpected by the user.
 </br>
 Example:
 

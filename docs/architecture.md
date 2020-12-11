@@ -18,4 +18,5 @@
 
 - OpenVINO&trade; Model Server is suitable for landing in Kubernetes environment. It can be also hosted on a bare metal server, virtual machine or inside a docker container. 
 
-- The only two exposed network interfaces are [gRPC](./model_server_grpc_api.md) and [RESTful API](./model_server_rest_api.md), which currently _do not_ include authorization, authentication, or data encryption. Those functions are expected to be implemented outside of the model server.
+- The only two exposed network interfaces are [gRPC](./model_server_grpc_api.md) and [RESTful API](./model_server_rest_api.md). They _do not_ include authorization, authentication, or data encryption. There is, however,
+a [documented method](../extras/nginx-mtls-auth) for including NGINX* reverse proxy with mTLS traffic termination.

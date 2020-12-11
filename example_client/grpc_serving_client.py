@@ -144,11 +144,15 @@ while iteration <= iterations:
         for i in range(nu.shape[0]):
             if is_pipeline_request:
                 # shape (1,)
+                print("response shape", output.shape)
                 ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
             else:
                 # shape (1,1000)
                 single_result = nu[[i],...]
-                ma = np.argmax(single_result)
+                offset = 0
+                if nu.shape[1] == 1001:
+                    offset = 1 
+                ma = np.argmax(single_result) - offset
             mark_message = ""
             if args.get('labels_numpy_path') is not None:
                 total_executed += 1

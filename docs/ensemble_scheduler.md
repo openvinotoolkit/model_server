@@ -1,40 +1,7 @@
-# Model Ensemble Scheduler in OpenVINO&trade; Model Server
 
-## Introduction
-OpenVINO&trade; Model Server provides possibility to create pipeline of models for execution in a single client request. Pipeline is a directed acyclic graph with different kinds of nodes which define how to process predict request. By using ensemble scheduler there is no need to return intermediate results of every inference to the client. This allows avoiding the network overhead by minimizing the number of requests sent to model server. Each model output can be mapped to another model input. Since intermediate results are kept in server's RAM these can be reused by subsequent inferences which reduces overall latency.
+## Image classification with models ensemble
 
-This guide gives information about following:
-
-* <a href="#node-type">Node Types</a>
-    * Pre-defined Node Types
-    * Other Node Types
-* <a href="#example">Example Use Case</a>
-    * Prepare the models
-    * Define a pipeline
-    * Start model server
-    * Requesting the service
-    * Analyze pipeline execution in server logs
-    * Requesting pipeline metadata
-
-
-## Node Types <a name="node-type"></a>
-### Pre-defined Node Types
-There are two special kinds of nodes - Request and Response node. Both of them are predefined and included in every pipeline definition you create:
-*  Request node
-    - This node defines which inputs are required to be sent via gRPC/REST request for pipeline usage. You can refer to it by node name: `request`.
-* Response node
-    - This node defines which outputs will be fetched from final pipeline state and packed into gRPC/REST response. You cannot refer to it in your pipeline since it is pipeline final stage. To define final outputs fill `outputs` field. 
-
-> **NOTE:** Read <a href="#define-models">below</a> for example pipeline configuration.
-
-### Other node types
-Internal pipeline nodes are created by user. Currently there is only one node type that a user can create:
-* DL model
-    - This node contains underlying OpenVINO&trade; model and performs inference on selected target device. This can be defined in configuration file. 
-    Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST request or another `DL model` output. 
-    Results of this node's inference may be mapped to another node's input or `response` node meaning it will be exposed in gRPC/REST response. 
-
-## Example use case<a name="example"></a>
+This document presents ensemble models as an example of [DAG Scheduler](dag_scheduler.md) implementation.
 
 - Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick most probable classification label. 
 - For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. Server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
@@ -71,8 +38,7 @@ Internal pipeline nodes are created by user. Currently there is only one node ty
 
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/argmax --output_dir /models/public/argmax/1
-
+~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/public/argmax/saved_model/ --output_dir /models/public/argmax/1
 ~$ mv ~/models/public/googlenet-v2-tf/FP32 ~/models/public/googlenet-v2-tf/1 && mv ~/models/public/resnet-50-tf/FP32 ~/models/public/resnet-50-tf/1
 
 ~$ tree models/public
@@ -183,39 +149,7 @@ Use the config.json as given below
 ```
 In `model_config_list` section, three models are defined as usual. We can refer to them by name in pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO&trade; Model Server will first try to search for model with requested name. If not found, it will try to find pipeline.
 
-### Pipeline configuration options explained
 
-|Option|Type|Description|Required|
-|:---|:---|:---|:---|
-|`"name"`|string|Pipeline identifier related to name field specified in gRPC/REST request|&check;|
-|`"inputs"`|array|Defines input names required to be present in gRPC/REST request|&check;|
-|`"outputs"`|array|Defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client|&check;|
-|`"nodes"`|array|Declares nodes used in pipeline and its connections|&check;|
-
-### Node options explained
-
-|Option|Type|Description|Required|
-|:---|:---|:---|:---|
-|`"name"`|string|Node name so you can refer to it from other nodes|&check;|
-|`"model_name"`|string|You can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
-|`"version"`|integer|You can specify model version for inference, available only for `DL model` nodes||
-|`"type"`|string|Node kind, currently there is only `DL model` kind available|&check;|
-|`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|&check;|
-|`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
-
-### Node input options explained
-
-|Option|Type|Description|Required|
-|:---|:---|:---|:---|
-|`"node_name"`|string|Defines which node we refer to|&check;|
-|`"data_item"`|string|Defines which resource of node we point to|&check;|
-
-### Node output options explained
-
-|Option|Type|Description|Required|
-|:---|:---|:---|:---|
-|`"data_item"`|string|Is the name of resource exposed by node - for `DL model` nodes it means model output|&check;|
-|`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
 ### Step 3: Start model server
 
@@ -228,7 +162,7 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 
 Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is example client to do exactly that. 
 
-1. Check accurracy of the pipeline by running the client:
+1. Check accuracy of the pipeline by running the client:
 ```
 ~$ cd model_server
 ~/model_server$ make venv
@@ -287,7 +221,7 @@ Classification accuracy: 100.00
 
 ### Step 5: Analyze pipeline execution in server logs
 
-By analyzing logs and timestamps it is seen that googlenet and resnet model inferences were started in parallel. About 50 miliseconds later, just after all inputs became ready - argmax node has started its job.
+By analyzing logs and timestamps it is seen that GoogleNet and ResNet model inferences were started in parallel. Just after all inputs became ready - argmax node has started its job.
 ```
 [2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:image_classification_pipeline; version:0.
 [2020-09-04 12:46:18.795] [serving] [info] [prediction_service.cpp:82] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
@@ -311,22 +245,3 @@ Outputs metadata:
 ```
 
 
-## Disclaimers
-<details>
-
-<summary>
-Model Ensemble feature is still in preview. Expand to know more.
-</summary>
-
-- More kind of nodes are planned to be added in the future
-- Models with dynamic batch size or shape cannot be referenced in pipeline
-- Input/Output shapes for subsequent node models need to exactly match each other
-- There is no automatic conversion between input/output model precisions or layouts
-- Pipeline definitions are defined once at program start-up and cannot be modified at runtime
-- REST requests with no named format (JSON body with one unnamed input) are not supported
-
-</details>
-
-## See Also
-
-- [Optimization of Performance](./performance_tuning.md)
