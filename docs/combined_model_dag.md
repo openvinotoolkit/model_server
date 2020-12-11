@@ -128,8 +128,8 @@ gender_results = make_ndarray(result.outputs["gender"])
 emotion_results = make_ndarray(result.outputs["emotion"])
 
 print("Age results:", age_results[0]*100)
-print("Gender results: Famale -", gender_results[0,0,0,0], "; Male-", gender_results[0,1,0,0] )
-print("Emotion results: Natural -", emotion_results[0,0,0,0], "; Happy-", emotion_results[0,1,0,0], "Sad -", emotion_results[0,2,0,0], "; Surprise -", emotion_results[0,3,0,0], "; Sad-", emotion_results[0,4,0,0] )
+print("Gender results: Famale-", gender_results[0,0,0,0], "; Male-", gender_results[0,1,0,0] )
+print("Emotion results: Natural-", emotion_results[0,0,0,0], "; Happy-", emotion_results[0,1,0,0], "; Sad-", emotion_results[0,2,0,0], "; Surprise-", emotion_results[0,3,0,0], "; Angry-", emotion_results[0,4,0,0] )
 ```
 
 Make sure there are installed python dependencies from [client_requirements.txt](../example_client/client_requirements.txt)
@@ -137,6 +137,6 @@ Make sure there are installed python dependencies from [client_requirements.txt]
 ```bash
 python combined_model_client.py
 Age results: [[[21.099794]]]
-Gender results: Famale - 0.9483401 ; Male- 0.051659893
-Emotion results: Natural - 0.0233579 ; Happy- 0.9449672 Sad - 0.0012368461 ; Surprise - 0.028111037 ; Sad- 0.0023269344
+Gender results: Famale- 0.9483401 ; Male- 0.051659893
+Emotion results: Natural- 0.0233579 ; Happy- 0.9449672 ; Sad- 0.0012368461 ; Surprise- 0.028111037 ; Angry- 0.0023269344
 ```
