@@ -223,6 +223,7 @@ Configuration options for server are defined only via command line options and d
 | `grpc_workers` | `integer` |  Number of the gRPC server instances (should be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. ||
 | `rest_workers` | `integer` |  Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. ||
 | `file_system_poll_wait_seconds` | `integer` |  Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. ||
+| `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_Extensibility_DG_Intro.html) (preview feature in OVMS).
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` |  Serving logging level ||
 | `log_path` | `string` |  Optional path to the log file. ||
 
