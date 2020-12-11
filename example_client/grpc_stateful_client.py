@@ -116,7 +116,7 @@ print('\tModel name: {}'.format(args.get('model_name')))
 
 SEQUENCE_START = 1
 SEQUENCE_END = 2
-sequence_id = 1020
+sequence_id = 1
 utterances_limit = int(args.get('utterances'))
 samples_limit = int(args.get('samples'))
 print('\tUtterances limit: {}'.format(utterances_limit))
@@ -208,6 +208,7 @@ for key, obj in ark_reader:
         referenceArray = scoreObjects[key][x]
 
         # Parse output
+        resultsArrays = dict()
         for output_name in output_names:
             resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
 
@@ -228,7 +229,7 @@ for key, obj in ark_reader:
     meanErrGlobal += meanErrAvg
     #END input name loop
 
-if utterance_limit > 0:
+if utterances_limit > 0:
     meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
 else:
     meanGlobalErrAvg = meanErrGlobal/numberOfKeys
