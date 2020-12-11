@@ -17,6 +17,7 @@
 #include <cstdio>
 
 #include <ie_iextension.h>
+#include <ngraph/ngraph.hpp>
 #include <ngraph/opsets/opset.hpp>
 
 namespace InferenceEngine {
@@ -53,6 +54,101 @@ StatusCode OvmsOperation::execute(std::vector<Blob::Ptr>& inputs, std::vector<Bl
     ::printf("CPU_EXTENSIONS: execute()\n");
     return OK;
 }
+
+class OvmsOp : public ngraph::op::Op {
+public:
+    static constexpr ngraph::NodeTypeInfo type_info{"Template", 0};
+    const ngraph::NodeTypeInfo& get_type_info() const override { return type_info; }
+
+    OvmsOp() = default;
+    OvmsOp(const ngraph::Output<ngraph::Node>& arg, int64_t add);
+    void validate_and_infer_types() override;
+    std::shared_ptr<ngraph::Node> clone_with_new_inputs(const ngraph::OutputVector& new_args) const override;
+    bool visit_attributes(ngraph::AttributeVisitor& visitor) override;
+    int64_t getAddAttr() const { return add; }
+    bool evaluate(const ngraph::HostTensorVector& outputs,
+        const ngraph::HostTensorVector& inputs) const override;
+
+private:
+    int64_t add;
+};
+
+constexpr ngraph::NodeTypeInfo OvmsOp::type_info;
+
+void OvmsOp::validate_and_infer_types() {
+    // Operation doesn't change shapes end element type
+    set_output_type(0, get_input_element_type(0), get_input_partial_shape(0));
+}
+
+std::shared_ptr<ngraph::Node> OvmsOp::clone_with_new_inputs(const ngraph::OutputVector& new_args) const {
+    if (new_args.size() != 1) {
+        throw ngraph::ngraph_error("Incorrect number of new arguments");
+    }
+
+    return std::make_shared<OvmsOp>(new_args.at(0), add);
+}
+
+bool OvmsOp::visit_attributes(ngraph::AttributeVisitor& visitor) {
+    visitor.on_attribute("add", add);
+    return true;
+}
+
+namespace {
+
+template <class T>
+void implementation(const T* input,
+    T* output,
+    int64_t add,
+    size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        output[i] = input[i] + add;
+    }
+}
+
+template <ngraph::element::Type_t ET>
+bool evaluate_op(const ngraph::HostTensorPtr& arg0,
+    const ngraph::HostTensorPtr& out, int64_t add) {
+    size_t size = ngraph::shape_size(arg0->get_shape());
+    implementation(arg0->get_data_ptr<ET>(),
+        out->get_data_ptr<ET>(),
+        add,
+        size);
+    return true;
+}
+
+}  // namespace
+
+bool OvmsOp::evaluate(const ngraph::HostTensorVector& outputs,
+    const ngraph::HostTensorVector& inputs) const {
+    switch (inputs[0]->get_element_type()) {
+    case ngraph::element::Type_t::i8:
+        return evaluate_op<ngraph::element::Type_t::i8>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::i16:
+        return evaluate_op<ngraph::element::Type_t::i16>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::i32:
+        return evaluate_op<ngraph::element::Type_t::i32>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::i64:
+        return evaluate_op<ngraph::element::Type_t::i64>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::u8:
+        return evaluate_op<ngraph::element::Type_t::u8>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::u16:
+        return evaluate_op<ngraph::element::Type_t::u16>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::u32:
+        return evaluate_op<ngraph::element::Type_t::u32>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::u64:
+        return evaluate_op<ngraph::element::Type_t::u8>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::bf16:
+        return evaluate_op<ngraph::element::Type_t::bf16>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::f16:
+        return evaluate_op<ngraph::element::Type_t::f16>(inputs[0], outputs[0], getAddAttr());
+    case ngraph::element::Type_t::f32:
+        return evaluate_op<ngraph::element::Type_t::f32>(inputs[0], outputs[0], getAddAttr());
+    default:
+        break;
+    }
+    return false;
+}
+
 class INFERENCE_ENGINE_API_CLASS(OvmsMinimalCpuExtension) :
     public IExtension {
 public:
@@ -83,7 +179,7 @@ std::map<std::string, ngraph::OpSet> OvmsMinimalCpuExtension::getOpSets() {
     ::printf("OvmsMinimalCpuExtension::getOpSets()\n");
     std::map<std::string, ngraph::OpSet> opsets;
     ngraph::OpSet opset;
-    //    opset.insert<OvmsOperation>();
+    opset.insert<OvmsOp>();
     opsets["custom_opset"] = opset;
     return opsets;
 }
