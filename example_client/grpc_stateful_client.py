@@ -75,6 +75,8 @@ parser.add_argument('--utterances', required=False, default=0, help='How many ut
 parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. default 0 meaning no limit')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
 
+print('### Starting grpc_stateful_client.py client processing ###')
+
 args = vars(parser.parse_args())
 
 global debug_mode
@@ -116,7 +118,7 @@ print('\tModel name: {}'.format(args.get('model_name')))
 
 SEQUENCE_START = 1
 SEQUENCE_END = 2
-sequence_id = 1
+sequence_id = 2
 utterances_limit = int(args.get('utterances'))
 samples_limit = int(args.get('samples'))
 print('\tUtterances limit: {}'.format(utterances_limit))
@@ -163,12 +165,14 @@ for key, obj in ark_reader:
         name_index = 0
         for ark_reader in ark_readers:
             input_name = input_names[name_index]
-            for key, obj in ark_reader:
-                printDebug('\tTensor before input in shape: {}\n'.format(obj[x].shape))
-                inputArray = np.expand_dims(obj[x], axis=0)
-                printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
-                request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
-                name_index += 1
+            for nameKey, nameObj in ark_reader:
+                if nameKey == key:
+                    printDebug('\tTensor before input in shape: {}\n'.format(nameObj[x].shape))
+                    inputArray = np.expand_dims(nameObj[x], axis=0)
+                    printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
+                    request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
+                    break
+            name_index += 1
 
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
@@ -236,3 +240,4 @@ else:
 
 print("Global mean error: {:.10f}\n".format(meanGlobalErrAvg))
 print_statistics(processing_times, batch_size)
+print('### Finished grpc_stateful_client.py client processing ###')
