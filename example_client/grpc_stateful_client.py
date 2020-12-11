@@ -47,6 +47,7 @@ def CalculateUtteranceError(referenceArray, resultArray):
 
     return rootMeanErr
 
+delimiter = ","
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
@@ -73,13 +74,44 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
 
-model_input_path = args.get('model_input_path')
-print('Reading ark file {}'.format(model_input_path))
-ark_reader = ArchiveReader(model_input_path)
+ark_readers = []
+ark_scores = []
+input_names = []
+output_names = []
 
-model_score_path = args.get('model_score_path')
-print('Reading scores ark file {}'.format(model_score_path))
-ark_score = ArchiveReader(model_score_path)
+model_input_paths = args.get('model_input_path').split(delimiter)
+for model_input_path in model_input_paths:
+    print('Reading input ark file {}'.format(model_input_path))
+    ark_reader = ArchiveReader(model_input_path)
+    ark_readers.append(ark_reader)
+
+model_score_paths = args.get('model_score_path').split(delimiter)
+for model_score_path in model_score_paths:
+    print('Reading scores ark file {}'.format(model_score_path))
+    ark_score = ArchiveReader(model_score_path)
+    ark_scores.append(ark_score)
+
+inputs = args['input_name'].split(delimiter)
+for input in inputs:
+    print('Adding input name {}'.format(input))
+    input_names.append(input)
+
+outputs = args['output_name'].split(delimiter)
+for output in outputs:
+    print('Adding output name {}'.format(output))
+    output_names.append(output)
+
+print('Start processing:')
+print('\tModel name: {}'.format(args.get('model_name')))
+
+SEQUENCE_START = 1
+SEQUENCE_END = 2
+sequence_id = 1020
+utterances_limit = int(args.get('utterances'))
+samples_limit = int(args.get('samples'))
+print('\tUtterances limit: {}'.format(utterances_limit))
+print('\tSamples limit: {}'.format(utterances_limit))
+
 numberOfKeys = 0
 
 for key, obj in ark_reader:
@@ -89,22 +121,17 @@ for key, obj in ark_reader:
 for key, obj in ark_score:
     printDebug("Scores ark file data range {0}: {1}".format(key, obj.shape))
 
-scoreObjects = { k:m for k,m in ark_score }
-
-print('Start processing:')
-print('\tModel name: {}'.format(args.get('model_name')))
-
-SEQUENCE_START = 1
-SEQUENCE_END = 2
-sequence_id = 1020
-utterances_limit = int(args.get('utterances'))
 utterance = 0
-
 meanErrGlobal = 0.0
+
+# First ark file is the one we will iterate through for all input ark files
+ark_reader = ark_readers[0]
 for key, obj in ark_reader:
     utterance += 1
     if utterance > utterances_limit:
         break
+
+    scoreObjects = { k:m for k,m in ark_score }
 
     batch_size = obj.shape[0]
     print('\n\tInput name: {}'.format(key))
@@ -114,9 +141,7 @@ for key, obj in ark_reader:
 
     meanErrSum = 0.0
 
-    samples_limit = int(args.get('samples'))
     for x in range(0, batch_size):
-
         if x >= samples_limit:
             break
 
@@ -124,11 +149,16 @@ for key, obj in ark_reader:
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.get('model_name')
 
-        printDebug('\tTensor before input in shape: {}\n'.format(obj[x].shape))
-        inputArray = np.expand_dims(obj[x], axis=0)
-        printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
-
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
+        #Add input data
+        name_index = 0
+        for ark_reader in ark_readers:
+            input_name = input_names[name_index]
+            for key, obj in ark_reader:
+                printDebug('\tTensor before input in shape: {}\n'.format(obj[x].shape))
+                inputArray = np.expand_dims(obj[x], axis=0)
+                printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
+                request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
+                name_index += 1
 
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
@@ -141,12 +171,14 @@ for key, obj in ark_reader:
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
-        if args['output_name'] not in result.outputs:
-            print("ERROR: Invalid output name", args['output_name'])
-            print("Available outputs:")
-            for Y in result.outputs:
-                print(Y)
-            exit(1)
+
+        for output_name in output_names:
+            if output_name not in result.outputs:
+                print("ERROR: Invalid output name", output_name)
+                print("Available outputs:")
+                for Y in result.outputs:
+                    print(Y)
+                exit(1)
 
         if 'sequence_id' not in result.outputs:
             print("ERROR: Missing sequence_id in model output")
@@ -157,16 +189,19 @@ for key, obj in ark_reader:
 
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        resultsArray = make_ndarray(result.outputs[args['output_name']])
 
         # Reset sequence end for testing purpose
         #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
         #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-        
-        #resultsArray = np.array(output)
+
+        # Only one reference results array - loop can be added here if needed
         referenceArray = scoreObjects[key][x]
-        
-        meanErr = CalculateUtteranceError(referenceArray, resultsArray[0])
+
+        # Parse output
+        for output_name in output_names:
+            resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
+
+        meanErr = CalculateUtteranceError(referenceArray, resultsArrays[output_name][0])
 
         meanErrSum += meanErr
         # Statistics
