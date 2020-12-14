@@ -88,7 +88,7 @@ do
                DELETE_NEXT_ARG=1
                continue
           fi
-          new_args+=" \"$a\" "
+          new_args+=( \"$a\" )
           echo "Current args: $new_args"
 done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
@@ -117,13 +117,13 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
 fi
 
-#args_str=""
-#for a in ${new_args[@]}
-#do
-#  echo "appending $a"
-#  args_str="$args_str \"$a\" "
-#done
-#echo "args_str $args_str"
+args_str=""
+for a in ${new_args[@]}
+do
+  echo "appending $a"
+  args_str="$args_str \"$a\" "
+done
+echo "args_str $args_str"
 
 (
 	sleep 1
@@ -147,8 +147,8 @@ fi
 
 (
 	echo "Starting Model Server..."
-	#/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
-	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 `echo $new_args` &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
+	#/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 `echo $new_args | sed "s/.$//" | sed "s/.^//"  ` &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
