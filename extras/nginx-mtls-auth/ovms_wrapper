@@ -148,7 +148,7 @@ fi
 (
 	echo "Starting Model Server..."
 	#/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
-	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $new_args &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 `echo $new_args` &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
