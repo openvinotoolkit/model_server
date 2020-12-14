@@ -35,6 +35,7 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
 }
 
 Status PipelineDefinition::validate(ModelManager& manager) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
     auto& models = manager.getModels();
     if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
@@ -52,6 +53,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         return validationResult;
     }
     notifier.passed = true;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     return validationResult;
 }
 
@@ -90,11 +92,18 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
         if (status.isAvailable()) {
-            break;
+            SPDLOG_DEBUG("Succesfully waited for pipeline definition: {}", getName());
+            return StatusCode::OK;
         }
         unloadGuard.reset();
-        if (!status.isLoadedOrRequiringValidation()) {
-            break;
+        if (!status.canEndLoaded()) {
+            if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
+                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
+                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+            } else {
+                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
+                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
+            }
         }
         SPDLOG_DEBUG("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
             getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
@@ -102,7 +111,7 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
             std::chrono::microseconds(waitLoadedTimestepMicroseconds),
             [this]() {
                 return this->status.isAvailable() ||
-                       !this->status.isLoadedOrRequiringValidation();
+                       !this->status.canEndLoaded();
             });
         unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
     }

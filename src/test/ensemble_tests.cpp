@@ -2169,23 +2169,22 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
         SPDLOG_INFO("Made pd validated");
     });
     auto status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
-    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(status.ok()) << status.string();
     pd.getControlableStatus().handle(UsedModelChangedEvent(notifierDetails));
     pd.getControlableStatus().handle(ValidationFailedEvent());
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
-    pd.getControlableStatus().handle(UsedModelChangedEvent());
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
     pd.getControlableStatus().handle(UsedModelChangedEvent(notifierDetails));
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
     std::thread t2([&managerWithDummyModel, &pd]() {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
         auto status = pd.validate(managerWithDummyModel);
-        ASSERT_TRUE(status.ok());
+        ASSERT_TRUE(status.ok()) << status.string();
         SPDLOG_INFO("Made pd validated");
     });
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
-    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(status.ok()) << status.string();
     uint dummySeriallyConnectedCount = 1;
     pipelineBeforeRetire->execute();
     checkDummyResponse(dummySeriallyConnectedCount);
