@@ -252,6 +252,7 @@ TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedAnymore) {
 }
 
 TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedYet) {
+    this->pipelineDefinition.getPipelineDefinitionStatus().handle(UsedModelChangedEvent());
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ValidationFailedEvent());
     auto status = ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();

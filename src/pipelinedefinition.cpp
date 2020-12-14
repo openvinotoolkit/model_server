@@ -56,6 +56,8 @@ Status PipelineDefinition::validate(ModelManager& manager) {
 }
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
+    // block creating new unloadGuards
+    this->status.handle(ReloadEvent());
     resetSubscriptions(manager);
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
@@ -643,7 +645,6 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
             return nodeInfo.nodeName == name;
         };
     };
-
     for (const auto& [dependantNodeName, allMappings] : connections) {
         const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
         for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
@@ -685,7 +686,6 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
             }
         }
     }
-
     return StatusCode::OK;
 }
 
@@ -698,7 +698,6 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
             return nodeInfo.nodeName == name;
         };
     };
-
     for (const auto& [dependantNodeName, allMappings] : connections) {
         const auto& dependantNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependantNodeName));
         if (dependantNodeInfo->kind != NodeKind::EXIT) {
@@ -742,7 +741,6 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
             }
         }
     }
-
     return StatusCode::OK;
 }
 
