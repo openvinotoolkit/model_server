@@ -1996,6 +1996,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewModelNameShouldPass) {
     status = pd.reload(managerWithDummyModel, std::move(infoNew), std::move(connections));
     EXPECT_TRUE(status.ok()) << status.string();
 }
+const std::string notifierDetails{"UnusedNotifierDetails"};
 
 TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewNonExistingModelNameShouldFail) {
     ConstructorEnabledModelManager managerWithDummyModel;
@@ -2066,6 +2067,7 @@ TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAva
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
+    pd.makeSubscriptions(managerWithDummyModel);
     auto status = pd.validate(managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
     managerWithDummyModel.findModelByName("dummy")->retireAllVersions();
@@ -2157,6 +2159,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     MockedPipelineDefinitionWithHandlingStatus pd(pipelineName, info, connections);
+    pd.makeSubscriptions(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipelineBeforeRetire;
     std::thread t([&managerWithDummyModel, &pd]() {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
@@ -2166,10 +2169,12 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     });
     auto status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
+    pd.getControlableStatus().handle(UsedModelChangedEvent(notifierDetails));
     pd.getControlableStatus().handle(ValidationFailedEvent());
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     pd.getControlableStatus().handle(UsedModelChangedEvent());
+    pd.getControlableStatus().handle(UsedModelChangedEvent(notifierDetails));
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     std::thread t2([&managerWithDummyModel, &pd]() {
