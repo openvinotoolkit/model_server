@@ -88,7 +88,7 @@ do
                DELETE_NEXT_ARG=1
                continue
           fi
-          new_args+=" $a "
+          new_args+=" \"$a\" "
 done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
@@ -144,7 +144,7 @@ done
 
 (
 	echo "Starting Model Server..."
-	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 "$args_str" &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
