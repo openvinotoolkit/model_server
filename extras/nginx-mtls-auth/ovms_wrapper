@@ -89,7 +89,8 @@ do
                continue
           fi
           new_args+=( \"$a\" )
-          echo "Current args: $new_args"
+          echo "Current args: $new_args[@]"
+	 echo "Args count: ${#new_args[@]}"
 done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
@@ -117,8 +118,11 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
 fi
 
+
 args_str=""
-for a in ${new_args[@]}
+
+#for a in ${new_args[@]}
+for a in $(seq 0 $((${#new_args[@]} - 1)))
 do
   echo "appending $a"
   args_str="$args_str \"$a\" "
