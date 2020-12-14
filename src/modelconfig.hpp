@@ -38,6 +38,8 @@ struct ShapeInfo {
     Mode shapeMode = FIXED;
     shape_t shape;
 
+    operator std::string() const;
+
     bool operator==(const ShapeInfo& rhs) const {
         return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
     }
