@@ -77,9 +77,18 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-ovms::tensor_map_t prepareTensors(
+static ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32);
+    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32) {
+    ovms::tensor_map_t result;
+    for (const auto& kv : tensors) {
+        result[kv.first] = std::make_shared<ovms::TensorInfo>(
+            kv.first,
+            precision,
+            kv.second);
+    }
+    return result;
+}
 
 static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs) {
     tensorflow::serving::PredictRequest request;
@@ -99,12 +108,6 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
     return request;
 }
 
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
-
-std::string readableError(const float* expected_output, const float* actual_output, const size_t size);
-
 static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
     std::vector<int> shape;
     for (int i = 0; i < proto.dim_size(); i++) {
@@ -120,7 +123,18 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 }
 
 // returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
+static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
+    std::ofstream configFile{filename};
+    spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
+    configFile << content << std::endl;
+    configFile.close();
+    if (configFile.fail()) {
+        spdlog::info("Closing configFile failed");
+    } else {
+        spdlog::info("Closing configFile succeed");
+    }
+    return filename;
+}
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -143,16 +157,6 @@ public:
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-    }
-    ovms::Status loadConfig(const std::string& jsonFilename) {
-        return ModelManager::loadConfig(jsonFilename);
-    }
-
-    /**
-     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
-     */
-    void updateConfigurationWithoutConfigFile() {
-        ModelManager::updateConfigurationWithoutConfigFile();
     }
 };
 class TestWithTempDir : public ::testing::Test {

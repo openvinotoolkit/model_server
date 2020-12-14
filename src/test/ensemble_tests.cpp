@@ -26,8 +26,6 @@
 
 #include <stdlib.h>
 
-#include "../localfilesystem.hpp"
-#include "../logging.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
@@ -52,20 +50,31 @@ protected:
         config.setNireq(NIREQ);
 
         // Prepare request
-        prepareRequest(bs1requestData, request, customPipelineInputName);
-        requestData = bs1requestData;
-    }
-
-    void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName) {
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        requestData = bs1requestData;
         proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
         proto.mutable_tensor_shape()->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1) {
-        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    void checkResponse(int seriesLength, int batchSize = 1) {
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+        const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+        ASSERT_EQ(output_proto.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), batchSize);
+        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), DUMMY_MODEL_OUTPUT_SIZE);
+
+        auto responseData = requestData;
+        std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+
+        float* actual_output = (float*)output_proto.tensor_content().data();
+        float* expected_output = responseData.data();
+        const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+            << readableError(expected_output, actual_output, dataLengthToCheck);
     }
 
     std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
@@ -130,7 +139,7 @@ TEST_F(EnsembleFlowTest, DummyModel) {
 
     pipeline.execute();
     const int dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
 }
 
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
@@ -186,7 +195,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
 
     pipeline.execute();
     const int dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
 
     // Do the inference directly on dummy model after inference on pipeline
     ASSERT_EQ(inference(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
@@ -244,7 +253,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
-    checkDummyResponse(N);
+    checkResponse(N);
     timer.stop("compare results");
 
     std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>("prepare pipeline") / 1000 << "ms\n";
@@ -294,7 +303,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
 
     pipeline.execute();
     const int seriallyConnectedDummyModels = 1;
-    checkDummyResponse(seriallyConnectedDummyModels, batchSize);
+    checkResponse(seriallyConnectedDummyModels, batchSize);
 }
 
 TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
@@ -476,7 +485,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
 
     const int seriallyConnectedDummyModels = 1;
-    checkDummyResponse(seriallyConnectedDummyModels, BATCH_SIZE);
+    checkResponse(seriallyConnectedDummyModels, BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowTest, ParallelDummyModels) {
@@ -1257,7 +1266,7 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
     // Execute pipeline
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
 }
 
 TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
@@ -1451,7 +1460,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
     ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
 }
 
-static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
+const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
 static const char* pipelineOneDummyConfig = R"(
 {
@@ -1508,7 +1517,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
     managerWithDummyModel.join();
 }
 
@@ -2130,7 +2139,7 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     pd.retire(managerWithDummyModel);
     pipelineBeforeRetire->execute();
     uint dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
 }
 
 class MockedPipelineDefinitionWithHandlingStatus : public PipelineDefinition {
@@ -2166,7 +2175,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
         auto status = pd.validate(managerWithDummyModel);
         ASSERT_TRUE(status.ok());
-        SPDLOG_INFO("Made pd validated");
+        SPDLOG_ERROR("Made pd validated");
     });
     auto status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
@@ -2182,13 +2191,13 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
         auto status = pd.validate(managerWithDummyModel);
         ASSERT_TRUE(status.ok());
-        SPDLOG_INFO("Made pd validated");
+        SPDLOG_ERROR("Made pd validated");
     });
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
     uint dummySeriallyConnectedCount = 1;
     pipelineBeforeRetire->execute();
-    checkDummyResponse(dummySeriallyConnectedCount);
+    checkResponse(dummySeriallyConnectedCount);
     t.join();
     t2.join();
 }
