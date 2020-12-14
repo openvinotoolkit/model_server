@@ -117,13 +117,13 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
 fi
 
-args_str=""
-for a in ${new_args[@]}
-do
-  echo "appending $a"
-  args_str="$args_str \"$a\" "
-done
-echo "args_str $args_str"
+#args_str=""
+#for a in ${new_args[@]}
+#do
+#  echo "appending $a"
+#  args_str="$args_str \"$a\" "
+#done
+#echo "args_str $args_str"
 
 (
 	sleep 1
@@ -147,7 +147,8 @@ echo "args_str $args_str"
 
 (
 	echo "Starting Model Server..."
-	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
+	#/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $new_args &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
