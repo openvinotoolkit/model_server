@@ -176,6 +176,7 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
+        "test/ensemble_config_change_stress.cpp",
         "test/get_model_metadata_response_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
