@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#set -x
+set -x
 SIGINT_HANDLER_CALLED=0
 MODEL_SERVER_PID=
 NGINX_PID=
@@ -89,6 +89,7 @@ do
                continue
           fi
           new_args+=" \"$a\" "
+          echo "Current args: $new_args"
 done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
@@ -119,8 +120,10 @@ fi
 args_str=""
 for a in ${new_args[@]}
 do
+  echo "appending $a"
   args_str="$args_str \"$a\" "
 done
+echo "args_str $args_str"
 
 (
 	sleep 1
