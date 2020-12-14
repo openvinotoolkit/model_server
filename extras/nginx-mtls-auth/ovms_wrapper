@@ -124,8 +124,9 @@ args_str=""
 #for a in ${new_args[@]}
 for a in $(seq 0 $((${#new_args[@]} - 1)))
 do
-  echo "appending $a"
-  args_str="$args_str \"$a\" "
+  echo "iter $a, appending ${new_args[$a]} "
+  args_str="$args_str \"${new_args[$a]}\" "
+  echo "!! $args_str !!"
 done
 echo "args_str $args_str"
 
