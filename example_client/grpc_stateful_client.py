@@ -90,8 +90,10 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
 
-cw_l = args.get('cw_l')
-cw_r = args.get('cw_l')
+cw_l = int(args.get('cw_l'))
+cw_r = int(args.get('cw_r'))
+print('\tContext window left padding cw_r: {}'.format(cw_l))
+print('\tContext window right padding cw_r: {}'.format(cw_l))
 
 ark_readers = []
 ark_scores = []
