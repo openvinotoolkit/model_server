@@ -50,14 +50,16 @@ def CalculateUtteranceError(referenceArray, resultArray):
 delimiter = ","
 
 # Example commands:
+# RM_LSTM4F
 # grpc_stateful_client.py --model_input_path rm_lstm4f/test_feat_1_10.ark --model_score_path rm_lstm4f/test_score_1_10.ark 
 #     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
 #     --model_name rm_lstm4f --utterances 0 --samples 0 --debug
 
+# ASPIRE_TDNN
 # grpc_stateful_client.py --model_input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
 #     --model_score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark 
 #     --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine
-#     --model_name aspire_tdnn --utterances 0 --samples 0 --debug
+#     --model_name aspire_tdnn --utterances 0 --samples 0 --cw_l 17 --cw_r 12 --debug
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
@@ -74,6 +76,8 @@ parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name
 parser.add_argument('--utterances', required=False, default=0, help='How many utterances to process from ark file. default 0 meaning no limit')
 parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. default 0 meaning no limit')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
+parser.add_argument('--cw_l', required=False, default=0, help='Left model input context window padding. default 0')
+parser.add_argument('--cw_r', required=False, default=0, help='Right model input context window padding. default 0')
 
 print('### Starting grpc_stateful_client.py client processing ###')
 
@@ -85,6 +89,9 @@ channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_p
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
 processing_times = np.zeros((0),int)
+
+cw_l = args.get('cw_l')
+cw_r = args.get('cw_l')
 
 ark_readers = []
 ark_scores = []
@@ -138,6 +145,8 @@ meanErrGlobal = 0.0
 
 # First ark file is the one we will iterate through for all input ark files
 ark_reader = ark_readers[0]
+
+score_index = (cw_l + cw_r) * -1
 for key, obj in ark_reader:
     utterance += 1
     if utterances_limit > 0 and utterance > utterances_limit:
@@ -153,7 +162,7 @@ for key, obj in ark_reader:
 
     meanErrSum = 0.0
 
-    for x in range(0, batch_size):
+    for x in range(0, batch_size + cw_l + cw_r):
         if samples_limit > 0 and x >= samples_limit:
             break
 
@@ -162,13 +171,26 @@ for key, obj in ark_reader:
         request.model_spec.name = args.get('model_name')
 
         #Add input data
+        input_index = x
+        # Input for context window padding
+        if x < cw_l:
+            # Left padding
+            input_index = 0
+        elif x >= cw_l and x < batch_size + cw_l:
+            # Middle
+            input_index = x-cw_l
+        else:
+            # Right padding
+            input_index = batch_size - 1
+
+        # Standard input
         name_index = 0
         for ark_reader in ark_readers:
             input_name = input_names[name_index]
             for nameKey, nameObj in ark_reader:
                 if nameKey == key:
-                    printDebug('\tTensor before input in shape: {}\n'.format(nameObj[x].shape))
-                    inputArray = np.expand_dims(nameObj[x], axis=0)
+                    printDebug('\tTensor before input in shape: {}\n'.format(nameObj[input_index].shape))
+                    inputArray = np.expand_dims(nameObj[input_index], axis=0)
                     printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
                     request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
                     break
@@ -179,7 +201,7 @@ for key, obj in ark_reader:
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size - 1 or x == samples_limit - 1:
+        if x == batch_size + cw_l + cw_r - 1 or x == samples_limit - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
@@ -208,20 +230,23 @@ for key, obj in ark_reader:
         #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
         #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
 
-        # Only one reference results array - loop can be added here if needed
-        referenceArray = scoreObjects[key][x]
+        # compare results after we are pass initial context window results
+        if score_index >= 0:
+            # Only one reference results array - loop can be added here if needed
+            referenceArray = scoreObjects[score_index][x]
 
-        # Parse output
-        resultsArrays = dict()
-        for output_name in output_names:
-            resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
+            # Parse output
+            resultsArrays = dict()
+            for output_name in output_names:
+                resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
 
-        meanErr = CalculateUtteranceError(referenceArray, resultsArrays[output_name][0])
+            meanErr = CalculateUtteranceError(referenceArray, resultsArrays[output_name][0])
 
-        meanErrSum += meanErr
-        # Statistics
-        printDebug('Iteration {}; Mean error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x,meanErr,round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)))
+            meanErrSum += meanErr
+            # Statistics
+            printDebug('Iteration {}; Mean error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x,meanErr,round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)))
 
+        score_index += 1
         #END utterance loop
 
     if samples_limit > 0:
