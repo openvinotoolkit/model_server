@@ -120,7 +120,7 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 fi
 
 args_str=""
-for a in "${new_args[@]}"
+for a in ${new_args[@]}
 do
   args_str="$args_str \"$a\" "
   echo "Current Args str: " $args_str
