@@ -62,7 +62,13 @@ private:
      */
     ModelManager(const ModelManager&) = delete;
 
-    Status cleanupModelTmpFiles(ModelConfig& config);
+    /**
+     * @brief Reads models from configuration file
+     * 
+     * @param jsonFilename configuration file
+     * @return Status 
+     */
+    Status loadConfig(const std::string& jsonFilename);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
@@ -291,20 +297,6 @@ public:
         std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
-
-protected:
-    /**
-     * @brief Reads models from configuration file
-     * 
-     * @param jsonFilename configuration file
-     * @return Status 
-     */
-    Status loadConfig(const std::string& jsonFilename);
-
-    /**
-     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
-     */
-    void updateConfigurationWithoutConfigFile();
 };
 
 }  // namespace ovms
