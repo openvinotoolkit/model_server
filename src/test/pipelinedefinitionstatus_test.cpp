@@ -123,35 +123,28 @@ TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenRetireShouldThrow
     ASSERT_THROW(pds.handle(RetireEvent()), std::logic_error);
 }
 
-TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenValidationPass) {
+TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenReloadThenValidationPass) {
     PipelineDefinitionStatus pds(unusedPipelineName);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
-TEST(PipelineDefinitionStatus, ValidationPassThenThenRetireThenValidationFail) {
+TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenReloadThenValidationFail) {
     PipelineDefinitionStatus pds(unusedPipelineName);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
-    pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-}
-
-TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenValidationFail) {
-    PipelineDefinitionStatus pds(unusedPipelineName);
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
-    pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(RetireEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
@@ -167,8 +160,8 @@ TEST(PipelineDefinitionStatus, ValidationPassThenValidationPassShouldThrow) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(ValidationPassedEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationPassedEvent()), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationPassThenValidationFailShouldThrow) {
@@ -176,8 +169,8 @@ TEST(PipelineDefinitionStatus, ValidationPassThenValidationFailShouldThrow) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationFailedEvent(modelNotifyingDetails)), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenValidationFailShouldThrow) {
@@ -185,8 +178,8 @@ TEST(PipelineDefinitionStatus, ValidationFailThenValidationFailShouldThrow) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-    pds.handle(ValidationFailedEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationFailedEvent(modelNotifyingDetails)), std::logic_error);
 }
 
 TEST(PipelineDefinitionStatus, ValidationFailThenValidationPassShouldThrow) {
@@ -194,6 +187,55 @@ TEST(PipelineDefinitionStatus, ValidationFailThenValidationPassShouldThrow) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationPassedEvent()), std::logic_error);
+}
+
+TEST(PipelineDefinitionStatus, ValidationFailThenReloadThenValidationFail) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    pds.handle(ValidationFailedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+}
+
+TEST(PipelineDefinitionStatus, ValidationFailThenReloadThenValidationPass) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenValidationPassShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationPassedEvent()), std::logic_error);
+}
+
+TEST(PipelineDefinitionStatus, ValidationPassThenRetireThenValidationFailShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    // should be reload in between
+    ASSERT_THROW(pds.handle(ValidationFailedEvent()), std::logic_error);
+}
+TEST(PipelineDefinitionStatus, ReloadFromBeginShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_THROW(pds.handle(ReloadEvent()), std::logic_error);
 }
