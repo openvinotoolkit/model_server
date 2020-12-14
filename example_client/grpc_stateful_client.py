@@ -235,7 +235,7 @@ for key, obj in ark_reader:
         # compare results after we are pass initial context window results
         if score_index >= 0:
             # Only one reference results array - loop can be added here if needed
-            referenceArray = scoreObjects[score_index][x]
+            referenceArray = scoreObjects[key][score_index]
 
             # Parse output
             resultsArrays = dict()
