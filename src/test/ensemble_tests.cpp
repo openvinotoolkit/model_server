@@ -2686,3 +2686,167 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     ASSERT_TRUE(instance->getModelConfig().isDynamicParameterEnabled());
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
+
+static const char* pipelineModelSameNameConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        },
+        {
+        "config": {
+                "name": "pipeline1Dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* pipelineModelSameNameConfigNoPipeline = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        },
+        {
+        "config": {
+                "name": "pipeline1Dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "auto"
+            }
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
+    // Expected result - model added, adding pipeline failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_FALSE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+
+    auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+}
+
+TEST_F(EnsembleFlowTest, ModelLoadedAddPipelineWithSameName) {
+    // Expected result - adding pipeline failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineModelSameNameConfigNoPipeline, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_FALSE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+
+    instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+}
+
+TEST_F(EnsembleFlowTest, PipelineLoadedAddModelWithSameName) {
+    // Expected result - adding model failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_EQ(instance, nullptr);
+}
+
+TEST_F(EnsembleFlowTest, PipelineRetiredAddModelWithSameName) {
+    // Expected result - adding model failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelineModelSameNameConfigNoPipeline, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+
+    auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
+    ASSERT_EQ(instance, nullptr);
+}
