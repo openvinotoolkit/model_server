@@ -46,11 +46,11 @@ INSTALL_RPMS_FROM_URL ?=
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 2020.4
+OV_SOURCE_BRANCH ?= releases/2021/2
 
 DLDT_PACKAGE_URL ?= ""
 OV_USE_BINARY ?= 1
-YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-2021.1.110.x86_64
+YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-*
 
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
@@ -80,7 +80,7 @@ OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.1"
+PRODUCT_VERSION ?= "2021.2"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
