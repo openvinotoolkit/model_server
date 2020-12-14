@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set -x
+#set -x
 SIGINT_HANDLER_CALLED=0
 MODEL_SERVER_PID=
 NGINX_PID=
@@ -55,44 +55,41 @@ GRPC_OVMS_NEW_PORT=
 REST_ORIGINAL_PORT=
 REST_OVMS_NEW_PORT=
 
-	for a in "$@"
-	do
-	    echo "ARG: $a"
-            if [ "$DELETE_NEXT_ARG" != "" ] ; then
-                 DELETE_NEXT_ARG=
-                 continue
-            fi
-            if [ "$ACTION_GRPC_PORT" != "" ] ; then
-                 GRPC_ORIGINAL_PORT=$a
-                 ACTION_GRPC_PORT=
-                 continue
-            fi
-            if [ "$ACTION_REST_PORT" != "" ] ; then
-                 REST_ORIGINAL_PORT=$a
-                 ACTION_REST_PORT=
-                 continue
-            fi
-            if [ "$a" == "--port" ] ; then
-                 ACTION_GRPC_PORT=1
-                 continue
-            fi
-            if [ "$a" == "--rest_port" ] ; then
-                 ACTION_REST_PORT=1
-                 continue
-            fi
-            if [ "$a" == "--grpc_bind_address" ] ; then
-                 DELETE_NEXT_ARG=1
-                 continue
-            fi
-            if [ "$a" == "--rest_bind_address" ] ; then
-                 DELETE_NEXT_ARG=1
-                 continue
-            fi
-            new_args+=" $a "
-            echo "current args: ${new_args[@]}"
-	done
-	echo "${new_args[@]}"
-
+for a in "$@"
+do
+    echo "ARG: $a"
+          if [ "$DELETE_NEXT_ARG" != "" ] ; then
+               DELETE_NEXT_ARG=
+               continue
+          fi
+          if [ "$ACTION_GRPC_PORT" != "" ] ; then
+               GRPC_ORIGINAL_PORT=$a
+               ACTION_GRPC_PORT=
+               continue
+          fi
+          if [ "$ACTION_REST_PORT" != "" ] ; then
+               REST_ORIGINAL_PORT=$a
+               ACTION_REST_PORT=
+               continue
+          fi
+          if [ "$a" == "--port" ] ; then
+               ACTION_GRPC_PORT=1
+               continue
+          fi
+          if [ "$a" == "--rest_port" ] ; then
+               ACTION_REST_PORT=1
+               continue
+          fi
+          if [ "$a" == "--grpc_bind_address" ] ; then
+               DELETE_NEXT_ARG=1
+               continue
+          fi
+          if [ "$a" == "--rest_bind_address" ] ; then
+               DELETE_NEXT_ARG=1
+               continue
+          fi
+          new_args+=" $a "
+done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
 # select random non-allocated port:
@@ -123,12 +120,7 @@ args_str=""
 for a in ${new_args[@]}
 do
   args_str="$args_str \"$a\" "
-  echo "Current Args str: " $args_str
-  echo "Current Args str2: " "$args_str"
 done
-echo "========================!!!===="
-echo $args_str
-echo "========================!!!===="
 
 (
 	sleep 1
