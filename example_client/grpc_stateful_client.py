@@ -32,18 +32,9 @@ def printDebug(msg):
         print(msg)
 
 def CalculateUtteranceError(referenceArray, resultArray):
-        
-    printDebug("OUTPUT: {} \n".format(resultArray))
-    printDebug("OUTPUT SHAPE: {} \n".format(resultArray.shape))
-    printDebug("REF SHAPE: {} \n".format(referenceArray.shape))
-    printDebug("REF: {} \n".format(referenceArray))
-    errorSum = 0.0
-
     rootMeanErr = math.sqrt((np.square(resultArray - referenceArray)).mean(axis=None))
     maxRef = np.amax(referenceArray)
     maxOut = np.amax(resultArray)
-    printDebug("OUTPUT MAX: {} \n".format(maxOut)) 
-    printDebug("REF MAX: {} \n".format(maxRef)) 
 
     return rootMeanErr
 
@@ -73,11 +64,9 @@ parser.add_argument('--output_name',required=False, default='affinetransform/Fus
 parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
                     dest='model_name')
 
-parser.add_argument('--utterances', required=False, default=0, help='How many utterances to process from ark file. Default value 0 means that all utterances will be used')
-parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. Default value 0 means that all utterances will be used')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
-parser.add_argument('--cw_l', required=False, default=0, help='Left model input context window padding. default 0')
-parser.add_argument('--cw_r', required=False, default=0, help='Right model input context window padding. default 0')
+parser.add_argument('--cw_l', required=False, default=0, help='Left model input context window width. default 0')
+parser.add_argument('--cw_r', required=False, default=0, help='Right model input context window width. default 0')
 
 print('### Starting grpc_stateful_client.py client processing ###')
 
@@ -125,37 +114,29 @@ for output in outputs:
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 
+# Validate input
+if len(ark_readers) != len(input_names):
+    print("ERROR: Number of input ark files {} must be equal to the number of input names {}".format(len(ark_readers), len(input_names)))
+    exit(1)
+
 SEQUENCE_START = 1
 SEQUENCE_END = 2
 sequence_id = 2
-utterances_limit = int(args.get('utterances'))
-samples_limit = int(args.get('samples'))
-print('\tUtterances limit: {}'.format(utterances_limit))
-print('\tSamples limit: {}'.format(samples_limit))
-
 numberOfKeys = 0
-
-for key, obj in ark_reader:
-    printDebug("Input ark file data range {0}: {1}".format(key, obj.shape))
-    numberOfKeys += 1
-
-for key, obj in ark_score:
-    printDebug("Scores ark file data range {0}: {1}".format(key, obj.shape))
-
-utterance = 0
 meanErrGlobal = 0.0
 
 # First ark file is the one we will iterate through for all input ark files
 ark_reader = ark_readers[0]
 
+for key, obj in ark_reader:
+    printDebug("Input sample file data shape {0}: {1}".format(key, obj.shape))
+    numberOfKeys += 1
+
+for key, obj in ark_score:
+    printDebug("Reference scores ark file data shape {0}: {1}".format(key, obj.shape))
+
 score_index = (cw_l + cw_r) * -1
 for key, obj in ark_reader:
-    utterance += 1
-    if utterances_limit > 0 and utterance > utterances_limit:
-        break
-
-    scoreObjects = { k:m for k,m in ark_score }
-
     batch_size = obj.shape[0]
     print('\n\tInput name: {}'.format(key))
     printDebug('\tInput in shape: {}'.format(obj.shape))
@@ -165,35 +146,31 @@ for key, obj in ark_reader:
     meanErrSum = 0.0
 
     for x in range(0, batch_size + cw_l + cw_r):
-        if samples_limit > 0 and x >= samples_limit:
-            break
 
         printDebug('\tExecution: {}\n'.format(x))
         request = predict_pb2.PredictRequest()
         request.model_spec.name = args.get('model_name')
 
-        #Add input data
+        # Set input data index
         input_index = x
-        # Input for context window padding
+        # Input for context window
         if x < cw_l:
-            # Left padding
+            # Left context window
             input_index = 0
         elif x >= cw_l and x < batch_size + cw_l:
-            # Middle
+            # Middle window
             input_index = x-cw_l
         else:
-            # Right padding
+            # Right context window
             input_index = batch_size - 1
 
-        # Standard input
+        # Procesing input
         name_index = 0
         for ark_reader in ark_readers:
             input_name = input_names[name_index]
             for nameKey, nameObj in ark_reader:
                 if nameKey == key:
-                    printDebug('\tTensor before input in shape: {}\n'.format(nameObj[input_index].shape))
                     inputArray = np.expand_dims(nameObj[input_index], axis=0)
-                    printDebug('\tTensor input in shape: {}\n'.format(inputArray.shape))
                     request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
                     break
             name_index += 1
@@ -203,7 +180,7 @@ for key, obj in ark_reader:
         
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
-        if x == batch_size + cw_l + cw_r - 1 or x == samples_limit - 1:
+        if x == batch_size + cw_l + cw_r - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
         start_time = datetime.datetime.now()
@@ -228,42 +205,48 @@ for key, obj in ark_reader:
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
 
-        # Reset sequence end for testing purpose
-        #request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
-        #result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-
-        # compare results after we are pass initial context window results
+        # Compare results after we are pass initial context window results
         if score_index >= 0:
-            # Only one reference results array - loop can be added here if needed
-            referenceArray = scoreObjects[key][score_index]
+            # Loop over reference output results
+            name_index = 0
+            referenceArrays = dict()
+            errPerNameSum = 0.0
+            for ark_score in ark_scores:
+                output_name = output_names[name_index]
+                for nameKey, nameObj in ark_score:
+                    if nameKey == key:
+                        scoreObjects = { k:m for k,m in ark_score }
+                        referenceArrays[output_name] = scoreObjects[key][score_index]
+                        break
+                name_index += 1
 
-            # Parse output
-            resultsArrays = dict()
-            for output_name in output_names:
-                resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
+                # Parse output
+                resultsArrays = dict()
+                for output_name in output_names:
+                    resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
 
-            meanErr = CalculateUtteranceError(referenceArray, resultsArrays[output_name][0])
+                # Calculate error
+                meanErr = CalculateUtteranceError(referenceArrays[output_name], resultsArrays[output_name][0])
 
-            meanErrSum += meanErr
+                errPerNameSum += meanErr
+                # Statistics
+                printDebug('Output name: {} Mean error: {:.10f}\n'.format(output_name,meanErr))
+
+            meanErrSum += errPerNameSum
             # Statistics
-            printDebug('Iteration {}; Mean error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x,meanErr,round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)))
+            printDebug('Iteration {}; Mean error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x,errPerNameSum,round(np.average(duration), 2), round(1000 * batch_size / np.average(duration), 2)))
+            #END output names loop
 
         score_index += 1
         #END utterance loop
 
-    if samples_limit > 0:
-        meanErrAvg = meanErrSum/min(samples_limit,batch_size)
-    else:
-        meanErrAvg = meanErrSum/batch_size
+    meanErrAvg = meanErrSum/(batch_size)
     print("\tSequence {} mean error: {:.10f}\n".format(sequence_id, meanErrAvg))
     sequence_id += 1
     meanErrGlobal += meanErrAvg
     #END input name loop
 
-if utterances_limit > 0:
-    meanGlobalErrAvg = meanErrGlobal/min(numberOfKeys, utterances_limit)
-else:
-    meanGlobalErrAvg = meanErrGlobal/numberOfKeys
+meanGlobalErrAvg = meanErrGlobal/numberOfKeys
 
 print("Global mean error: {:.10f}\n".format(meanGlobalErrAvg))
 print_statistics(processing_times, batch_size)
