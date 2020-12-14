@@ -53,13 +53,13 @@ delimiter = ","
 # RM_LSTM4F
 # grpc_stateful_client.py --model_input_path rm_lstm4f/test_feat_1_10.ark --model_score_path rm_lstm4f/test_score_1_10.ark 
 #     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
-#     --model_name rm_lstm4f --utterances 0 --samples 0 --debug
+#     --model_name rm_lstm4f --debug
 
 # ASPIRE_TDNN
 # grpc_stateful_client.py --model_input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
 #     --model_score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark 
 #     --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine
-#     --model_name aspire_tdnn --utterances 0 --samples 0 --cw_l 17 --cw_r 12 --debug
+#     --model_name aspire_tdnn --cw_l 17 --cw_r 12 --debug
 
 parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
                                              'It displays performance statistics and optionally')
@@ -73,8 +73,8 @@ parser.add_argument('--output_name',required=False, default='affinetransform/Fus
 parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
                     dest='model_name')
 
-parser.add_argument('--utterances', required=False, default=0, help='How many utterances to process from ark file. default 0 meaning no limit')
-parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. default 0 meaning no limit')
+parser.add_argument('--utterances', required=False, default=0, help='How many utterances to process from ark file. Default value 0 means that all utterances will be used')
+parser.add_argument('--samples', required=False, default=0, help='How many samples to process from each utterance file. Default value 0 means that all utterances will be used')
 parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. default 0')
 parser.add_argument('--cw_l', required=False, default=0, help='Left model input context window padding. default 0')
 parser.add_argument('--cw_r', required=False, default=0, help='Right model input context window padding. default 0')
