@@ -143,9 +143,8 @@ name_index = 0
 referenceArrays = dict()
 for ark_score in ark_scores:
     output_name = output_names[name_index]
-    for nameKey, nameObj in ark_score:
-        scoreObjects = { k:m for k,m in ark_score }
-        referenceArrays[output_name] = scoreObjects
+    scoreObjects = { k:m for k,m in ark_score }
+    referenceArrays[output_name] = scoreObjects
     name_index += 1
 
 SEQUENCE_START = 1
