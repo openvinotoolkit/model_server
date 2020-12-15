@@ -244,7 +244,7 @@ for key, obj in ark_reader:
                     resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
 
                 # Calculate error
-                meanErr = CalculateUtteranceError(scoreData[output_name], resultsArrays[output_name][0])
+                meanErr = CalculateUtteranceError(scoreData, resultsArrays[output_name][0])
 
                 errPerNameSum += meanErr
                 # Statistics
