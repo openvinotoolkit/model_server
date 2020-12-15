@@ -72,7 +72,7 @@ def ParseArguments():
     args = vars(parser.parse_args())
     return args
 
-def PrepareProcessingData():
+def PrepareProcessingData(args):
     delimiter = ","
     ark_readers = []
     ark_scores = []
@@ -177,7 +177,7 @@ def main():
     print('Start processing:')
     print('\tModel name: {}'.format(args.get('model_name')))
 
-    initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys = PrepareProcessingData()
+    initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys = PrepareProcessingData(args)
 
     SEQUENCE_START = 1
     SEQUENCE_END = 2
