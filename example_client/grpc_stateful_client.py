@@ -119,6 +119,35 @@ if len(ark_readers) != len(input_names):
     print("ERROR: Number of input ark files {} must be equal to the number of input names {}".format(len(ark_readers), len(input_names)))
     exit(1)
 
+if len(ark_scores) != len(output_names):
+    print("ERROR: Number of output ark files {} must be equal to the number of output names {}".format(len(ark_readers), len(input_names)))
+    exit(1)
+
+# Consolidate input
+inputArrays = dict()
+name_index = 0
+for ark_reader in ark_readers:
+    input_name = input_names[name_index]
+    inputSubArray = dict()
+    for nameKey, nameObj in ark_reader:
+        batch_size = nameObj.shape[0]
+        data = list()
+        for input_index in range (0 , batch_size):
+            data.append(np.expand_dims(nameObj[input_index], axis=0))
+        inputSubArray[nameKey] = data
+    inputArrays[input_name] = inputSubArray
+    name_index += 1
+
+# Consolidate output
+name_index = 0
+referenceArrays = dict()
+for ark_score in ark_scores:
+    output_name = output_names[name_index]
+    for nameKey, nameObj in ark_score:
+        scoreObjects = { k:m for k,m in ark_score }
+        referenceArrays[output_name] = scoreObjects
+    name_index += 1
+
 SEQUENCE_START = 1
 SEQUENCE_END = 2
 sequence_id = 2
@@ -127,13 +156,13 @@ meanErrGlobal = 0.0
 
 # First ark file is the one we will iterate through for all input ark files
 ark_reader = ark_readers[0]
-
+ark_score = ark_scores[0]
 for key, obj in ark_reader:
-    printDebug("Input sample file data shape {0}: {1}".format(key, obj.shape))
+    printDebug("Example input sample file data shape {0}: {1}".format(key, obj.shape))
     numberOfKeys += 1
 
 for key, obj in ark_score:
-    printDebug("Reference scores ark file data shape {0}: {1}".format(key, obj.shape))
+    printDebug("Example reference scores ark file data shape {0}: {1}".format(key, obj.shape))
 
 score_index = (cw_l + cw_r) * -1
 for key, obj in ark_reader:
@@ -164,16 +193,11 @@ for key, obj in ark_reader:
             # Right context window
             input_index = batch_size - 1
 
-        # Procesing input
-        name_index = 0
-        for ark_reader in ark_readers:
-            input_name = input_names[name_index]
-            for nameKey, nameObj in ark_reader:
-                if nameKey == key:
-                    inputArray = np.expand_dims(nameObj[input_index], axis=0)
-                    request.inputs[input_name].CopyFrom(make_tensor_proto(inputArray, shape=inputArray.shape))
-                    break
-            name_index += 1
+        # Setting request input
+        for input_name in input_names:
+            inputSubArray = inputArrays[input_name]
+            inputData = inputArray[key][input_index]
+            request.inputs[input_name].CopyFrom(make_tensor_proto(inputData, shape=inputData.shape))
 
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
@@ -187,6 +211,7 @@ for key, obj in ark_reader:
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()
 
+        # Validate model output
         for output_name in output_names:
             if output_name not in result.outputs:
                 print("ERROR: Invalid output name", output_name)
@@ -208,17 +233,11 @@ for key, obj in ark_reader:
         # Compare results after we are pass initial context window results
         if score_index >= 0:
             # Loop over reference output results
-            name_index = 0
             referenceArrays = dict()
             errPerNameSum = 0.0
-            for ark_score in ark_scores:
-                output_name = output_names[name_index]
-                for nameKey, nameObj in ark_score:
-                    if nameKey == key:
-                        scoreObjects = { k:m for k,m in ark_score }
-                        referenceArrays[output_name] = scoreObjects[key][score_index]
-                        break
-                name_index += 1
+
+            for output_name in output_names:
+                scoreData = referenceArrays[output_name][key][score_index]
 
                 # Parse output
                 resultsArrays = dict()
@@ -226,7 +245,7 @@ for key, obj in ark_reader:
                     resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
 
                 # Calculate error
-                meanErr = CalculateUtteranceError(referenceArrays[output_name], resultsArrays[output_name][0])
+                meanErr = CalculateUtteranceError(scoreData[output_name], resultsArrays[output_name][0])
 
                 errPerNameSum += meanErr
                 # Statistics
