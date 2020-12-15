@@ -88,7 +88,13 @@ REST_OVMS_NEW_PORT=
                  DELETE_NEXT_ARG=1
                  continue
             fi
-            new_args+=" $a"
+
+            if [[ "${a}" != "$(sed 's/ //g' <<< "${a}")" ]]; then
+                echo "This argument: ${a} will be changed to: '${a}'"
+                new_args+=("'$a'")
+            else
+                new_args+=("$a")
+            fi
             echo "current args: ${new_args[@]}"
 	done
 	echo "${new_args[@]}"
@@ -109,14 +115,14 @@ GRPC_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f1`
 REST_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f2`
 
 if [ "$GRPC_ORIGINAL_PORT" != "" ] ; then
-	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+    new_args+=("--port=$GRPC_OVMS_NEW_PORT")
 else
 	# default port shall be used if it is not provided:
 	GRPC_ORIGINAL_PORT=9178
-	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+    new_args+=("--port=$GRPC_OVMS_NEW_PORT")
 fi
 if [ "$REST_ORIGINAL_PORT" != "" ] ; then
-	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
+    new_args+=("--rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1")
 fi
 
 (
@@ -141,7 +147,7 @@ fi
 
 (
 	echo "Starting Model Server..."
-	/ovms/bin/./ovms ${new_args[@]} --grpc_bind_address 127.0.0.1 &
+    echo "${new_args[@]}" | { xargs /ovms/bin/./ovms --grpc_bind_address 127.0.0.1; } &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
 	echo "$MODEL_SERVER_PID" > /tmp/model_server_pid
