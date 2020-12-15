@@ -115,6 +115,18 @@ if [ "$REST_ORIGINAL_PORT" != "" ] ; then
 	echo " --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 " >>/tmp/ovms_args
 fi
 
+<<<<<<< HEAD
+=======
+
+args_str=""
+
+#for a in ${new_args[@]}
+for a in $(seq 0 $((${#new_args[@]} - 1)))
+do
+  echo "appending $a"
+  args_str="$args_str \"$a\" "
+done
+>>>>>>> parent of 4899c7a... test
 echo "args_str $args_str"
 
 (
