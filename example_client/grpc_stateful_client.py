@@ -196,7 +196,7 @@ for key, obj in ark_reader:
         # Setting request input
         for input_name in input_names:
             inputSubArray = inputArrays[input_name]
-            inputData = inputArray[key][input_index]
+            inputData = inputSubArray[key][input_index]
             request.inputs[input_name].CopyFrom(make_tensor_proto(inputData, shape=inputData.shape))
 
         if x == 0:
