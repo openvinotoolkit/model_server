@@ -136,6 +136,7 @@ def PrepareProcessingData(args):
     # First ark file is the one we will iterate through for all input ark files
     initial_ark_reader = ark_readers[0]
     ark_score = ark_scores[0]
+    numberOfKeys = 0
     for key, obj in ark_reader:
         printDebug("Example input sample file data shape {0}: {1}".format(key, obj.shape))
         numberOfKeys += 1
