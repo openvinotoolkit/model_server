@@ -144,7 +144,7 @@ def PrepareProcessingData(args):
     for key, obj in ark_score:
         printDebug("Example reference scores ark file data shape {0}: {1}".format(key, obj.shape))
 
-    return  initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys
+    return  initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys, inputArrays, referenceArrays
 
 def ValidateOutput(result):
     # Validate model output
@@ -178,7 +178,7 @@ def main():
     print('Start processing:')
     print('\tModel name: {}'.format(args.get('model_name')))
 
-    initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys = PrepareProcessingData(args)
+    initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys, inputArrays, referenceArrays = PrepareProcessingData(args)
 
     SEQUENCE_START = 1
     SEQUENCE_END = 2
