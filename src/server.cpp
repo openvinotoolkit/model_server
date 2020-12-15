@@ -116,11 +116,14 @@ void logConfig(Config& config) {
     }
     SPDLOG_DEBUG("gRPC port: {}", config.port());
     SPDLOG_DEBUG("REST port: {}", config.restPort());
+    SPDLOG_DEBUG("gRPC bind address: {}", config.grpcBindAddress());
+    SPDLOG_DEBUG("REST bind address: {}", config.restBindAddress());
     SPDLOG_DEBUG("REST workers: {}", config.restWorkers());
     SPDLOG_DEBUG("gRPC workers: {}", config.grpcWorkers());
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
+    SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
 }
 
 void onInterrupt(int status) {
