@@ -45,7 +45,6 @@ function sigint_handler() {
 }
 trap sigint_handler SIGINT
 
-new_args=()
 ACTION_GRPC_PORT=
 ACTION_REST_PORT=
 DELETE_NEXT_ARG=
@@ -88,9 +87,7 @@ do
                DELETE_NEXT_ARG=1
                continue
           fi
-          new_args+=( \"$a\" )
-          echo "Current args: $new_args[@]"
-	 echo "Args count: ${#new_args[@]}"
+          echo \"$a\" >>/tmp/ovms_args
 done
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
@@ -108,26 +105,16 @@ GRPC_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f1`
 REST_OVMS_NEW_PORT=`echo $SELECTED_PORTS | cut -d',' -f2`
 
 if [ "$GRPC_ORIGINAL_PORT" != "" ] ; then
-	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+	echo " --port=$GRPC_OVMS_NEW_PORT " >>/tmp/ovms_args
 else
 	# default port shall be used if it is not provided:
 	GRPC_ORIGINAL_PORT=9178
-	new_args+=" --port=$GRPC_OVMS_NEW_PORT "
+	echo " --port=$GRPC_OVMS_NEW_PORT " >>/tmp/ovms_args
 fi
 if [ "$REST_ORIGINAL_PORT" != "" ] ; then
-	new_args+=" --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 "
+	echo " --rest_port=$REST_OVMS_NEW_PORT --rest_bind_address 127.0.0.1 " >>/tmp/ovms_args
 fi
 
-
-args_str=""
-
-#for a in ${new_args[@]}
-for a in $(seq 0 $((${#new_args[@]} - 1)))
-do
-  echo "iter $a, appending ${new_args[$a]} "
-  args_str="$args_str \"${new_args[$a]}\" "
-  echo "!! $args_str !!"
-done
 echo "args_str $args_str"
 
 (
@@ -152,7 +139,7 @@ echo "args_str $args_str"
 
 (
 	echo "Starting Model Server..."
-	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 $args_str &
+	/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 `cat /tmp/ovms_args` &
 	#/ovms/bin/./ovms --grpc_bind_address 127.0.0.1 `echo $new_args | sed "s/.$//" | sed "s/.^//"  ` &
 	MODEL_SERVER_PID=$!
 	echo "Model Server PID: $MODEL_SERVER_PID"
