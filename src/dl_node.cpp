@@ -89,7 +89,7 @@ Status DLNode::setInputsForInference(InferenceEngine::InferRequest& infer_reques
         for (const auto& kv : this->inputBlobs) {
             std::string realModelInputName;
             if (!getRealInputName(kv.first, &realModelInputName).ok()) {
-                SPDLOG_WARN("DLNode::fetchResults (Node name {}); cannot find real model input name for ali{}", getName(), kv.first);
+                SPDLOG_WARN("DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}", __FUNCTION__, getName(), kv.first);
                 return StatusCode::INTERNAL_ERROR;
             }
             infer_request.SetBlob(realModelInputName, kv.second);
