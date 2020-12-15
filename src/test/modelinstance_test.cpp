@@ -277,7 +277,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithChangedModelMapping) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_TRUE(modelInstance.loadModel(config).ok());
     ovms::mapping_config_t mappingOutputs{{"a", "output"}};
