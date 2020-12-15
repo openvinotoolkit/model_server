@@ -19,11 +19,11 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.1"
+ARG PROJECT_NAME="OpenVINO Model Server 2021.2"
 
 LABEL description=${PROJECT_NAME}
 
-ARG ov_source_branch=2020.4
+ARG ov_source_branch=releases/2021/2
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
@@ -33,7 +33,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-2021.1.110.x86_64
+ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-*
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
