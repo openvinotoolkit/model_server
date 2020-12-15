@@ -163,7 +163,6 @@ for key, obj in ark_reader:
 for key, obj in ark_score:
     printDebug("Example reference scores ark file data shape {0}: {1}".format(key, obj.shape))
 
-score_index = (cw_l + cw_r) * -1
 for key, obj in ark_reader:
     batch_size = obj.shape[0]
     print('\n\tInput name: {}'.format(key))
@@ -172,6 +171,7 @@ for key, obj in ark_reader:
     printDebug('\tSequence id: {}'.format(sequence_id))
 
     meanErrSum = 0.0
+    score_index = (cw_l + cw_r) * -1
 
     for x in range(0, batch_size + cw_l + cw_r):
 
@@ -245,8 +245,8 @@ for key, obj in ark_reader:
 
                 # Calculate error
                 meanErr = CalculateUtteranceError(scoreData, resultsArray[0])
-
                 errPerNameSum += meanErr
+
                 # Statistics
                 printDebug('Output name: {} Mean error: {:.10f}\n'.format(output_name,meanErr))
 
