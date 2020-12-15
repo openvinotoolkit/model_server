@@ -198,11 +198,14 @@ for key, obj in ark_reader:
             inputData = inputSubArray[key][input_index]
             request.inputs[input_name].CopyFrom(make_tensor_proto(inputData, shape=inputData.shape))
 
+        # Add sequence start
         if x == 0:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
         
+        # Set sequence id
         request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
 
+        # Add sequence end
         if x == batch_size + cw_l + cw_r - 1:
             request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
@@ -238,12 +241,10 @@ for key, obj in ark_reader:
                 scoreData = referenceArrays[output_name][key][score_index]
 
                 # Parse output
-                resultsArrays = dict()
-                for output_name in output_names:
-                    resultsArrays[output_name] = make_ndarray(result.outputs[output_name])
+                resultsArray = make_ndarray(result.outputs[output_name])
 
                 # Calculate error
-                meanErr = CalculateUtteranceError(scoreData, resultsArrays[output_name][0])
+                meanErr = CalculateUtteranceError(scoreData, resultsArray[0])
 
                 errPerNameSum += meanErr
                 # Statistics
