@@ -146,7 +146,7 @@ def PrepareProcessingData(args):
 
     return  initial_ark_reader, ark_scores, input_names, output_names, numberOfKeys, inputArrays, referenceArrays
 
-def ValidateOutput(result):
+def ValidateOutput(result, output_names):
     # Validate model output
     for output_name in output_names:
         if output_name not in result.outputs:
@@ -234,7 +234,7 @@ def main():
             result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
             end_time = datetime.datetime.now()
 
-            ValidateOutput(result)
+            ValidateOutput(result, output_names)
 
             duration = (end_time - start_time).total_seconds() * 1000
             processing_times = np.append(processing_times,np.array([int(duration)]))
