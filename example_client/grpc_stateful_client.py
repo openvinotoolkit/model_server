@@ -233,7 +233,6 @@ for key, obj in ark_reader:
         # Compare results after we are pass initial context window results
         if score_index >= 0:
             # Loop over reference output results
-            referenceArrays = dict()
             errPerNameSum = 0.0
 
             for output_name in output_names:
