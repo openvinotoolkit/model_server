@@ -134,16 +134,10 @@ def PrepareProcessingData(args):
     data_iterator = dict()
     for key, obj in input_files[0]:
         data_iterator[key] = obj
-        # Validate reference output scores data
+        # Validate reference output scores data for existing keys and shapes
         keyValidated = True
         for score_objects in reference_scores:
-            keyValidated = True
-            for ref_key, ref_obj in score_objects:
-                if ref_key == key:
-                    if obj.shape[0] == ref_obj.shape[0]:
-                        keyValidated = True
-                        break
-            if not keyValidated:
+            if score_objects[key].shape[0] != obj.shape[0]:
                 print("Error reference scores ark file doest not contain proper data for key {0} and shape {1}".format(key, obj.shape))
                 exit(1)
 
