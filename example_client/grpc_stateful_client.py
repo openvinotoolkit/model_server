@@ -173,12 +173,12 @@ def main():
     processing_times = np.zeros((0),int)
     cw_l = int(args.get('cw_l'))
     cw_r = int(args.get('cw_r'))
-    print('\tContext window left width cw_l: {}'.format(cw_l))
-    print('\tContext window right width cw_r: {}'.format(cw_r))
+    print('Context window left width cw_l: {}'.format(cw_l))
+    print('Context window right width cw_r: {}'.format(cw_r))
     sequence_id = int(args.get('sequence_id'))
-    print('\tStarting sequence_id: {}'.format(sequence_id))
+    print('Starting sequence_id: {}'.format(sequence_id))
     print('Start processing:')
-    print('\tModel name: {}'.format(args.get('model_name')))
+    print('Model name: {}'.format(args.get('model_name')))
 
     data_iterator, input_names, output_names, input_data, reference_scores = PrepareProcessingData(args)
 
