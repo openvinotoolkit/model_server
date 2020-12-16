@@ -63,6 +63,8 @@ def ParseArguments():
     parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. Set to 1 to enable debug prints. Default: 0')
     parser.add_argument('--cw_l', required=False, default=0, help='Number of requests for left context window. Works only with context window networks. Default: 0')
     parser.add_argument('--cw_r', required=False, default=0, help='Number of requests for right context window. Works only with context window networks. Default: 0')
+    parser.add_argument('--sequence_id', required=False, default=0, help='Starting unique sequence id. Default: 0')
+
 
     print('### Starting grpc_stateful_client.py client ###')
 
@@ -173,16 +175,20 @@ def main():
     cw_r = int(args.get('cw_r'))
     print('\tContext window left width cw_l: {}'.format(cw_l))
     print('\tContext window right width cw_r: {}'.format(cw_r))
+    sequence_id = int(args.get('sequence_id'))
+    print('\tStarting sequence_id: {}'.format(sequence_id))
     print('Start processing:')
     print('\tModel name: {}'.format(args.get('model_name')))
 
     data_iterator, input_names, output_names, input_data, reference_scores = PrepareProcessingData(args)
 
+    # Input control tokens
     SEQUENCE_START = 1
     SEQUENCE_END = 2
-    sequence_id = 2
+    
     global_avg_rms_error_sum = 0.0
 
+    # Main inference loop
     for key in data_iterator:
         obj = data_iterator[key]
         sequence_size = obj.shape[0]
@@ -207,13 +213,13 @@ def main():
             input_index = x
             # Input for context window
             if x < cw_l:
-                # Left context window
+                # Repeating first input data infer request cw_l times for the context window model start
                 input_index = 0
             elif x >= cw_l and x < sequence_size + cw_l:
                 # Standard processing
                 input_index = x-cw_l
             else:
-                # Right context window
+                # Repeating last input data infer request cw_r times for the context window model end
                 input_index = sequence_size - 1
 
             # Setting request input
