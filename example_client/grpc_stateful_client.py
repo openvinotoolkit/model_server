@@ -195,7 +195,7 @@ def main():
             print('\nERROR: Sequence size equal {} in input data must be bigger than 1.'.format(sequence_size))
             exit(1)
 
-        seq_avg_rms_error_sum = 0.0
+        mean_avg_rms_error_sum = 0.0
         score_index = (cw_l + cw_r) * -1
 
         for x in range(0, sequence_size + cw_l + cw_r):
