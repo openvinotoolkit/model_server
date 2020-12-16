@@ -181,7 +181,7 @@ def main():
     SEQUENCE_START = 1
     SEQUENCE_END = 2
     sequence_id = 2
-    meanErrGlobal = 0.0
+    global_avg_rms_error_sum = 0.0
 
     for key in data_iterator:
         obj = data_iterator[key]
@@ -195,7 +195,7 @@ def main():
             print('\nERROR: Sequence size equal {} in input data must be bigger than 1.'.format(sequence_size))
             exit(1)
 
-        meanErrSum = 0.0
+        seq_avg_rms_error_sum = 0.0
         score_index = (cw_l + cw_r) * -1
 
         for x in range(0, sequence_size + cw_l + cw_r):
@@ -249,7 +249,7 @@ def main():
             # Compare results after we are pass initial context window results
             if score_index >= 0:
                 # Loop over reference output results
-                errPerNameSum = 0.0
+                avg_rms_error_sum = 0.0
 
                 for output_name in output_names:
                     scoreData = reference_scores[output_name][key][score_index]
