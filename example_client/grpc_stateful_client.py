@@ -130,9 +130,9 @@ def PrepareProcessingData(args):
         reference_scores[output_name] = scoreObjects
         name_index += 1
 
-    # First ark file is the one we will iterate through for all input ark files
+    # First ark file is the one we will iterate through for all input ark files per inference request input
     data_iterator = dict()
-    for key, obj in ark_readers[0]:
+    for key, obj in input_files[0]:
         data_iterator[key] = obj
         # Validate reference output scores data
         keyValidated = True
