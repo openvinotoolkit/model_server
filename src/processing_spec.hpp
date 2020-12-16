@@ -32,7 +32,7 @@ private:
     std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpecPtr;
 
 public:
-    SequenceProcessingSpec& getSequenceProcessingSpec() { return *sequenceProcessingSpecPtr; }
+    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpecPtr; }
 
     void setSequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) {
         sequenceProcessingSpecPtr = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
