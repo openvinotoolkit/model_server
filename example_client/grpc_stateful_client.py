@@ -136,7 +136,8 @@ def PrepareProcessingData(args):
         data_iterator[key] = obj
         # Validate reference output scores data for existing keys and shapes
         keyValidated = True
-        for score_objects in reference_scores:
+        for name in reference_scores:
+            score_objects = reference_scores[name]
             if score_objects[key].shape[0] != obj.shape[0]:
                 print("Error reference scores ark file doest not contain proper data for key {0} and shape {1}".format(key, obj.shape))
                 exit(1)
@@ -182,7 +183,8 @@ def main():
     sequence_id = 2
     meanErrGlobal = 0.0
 
-    for key, obj in data_iterator:
+    for key in data_iterator:
+        obj = data_iterator[key]
         sequence_size = obj.shape[0]
         print('\n\tInput name: {}'.format(key))
         print_debug('\tInput in shape: {}'.format(obj.shape))
