@@ -33,7 +33,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-*
+ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-2021.2.185.x86_64
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg

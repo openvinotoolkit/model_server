@@ -50,7 +50,7 @@ OV_SOURCE_BRANCH ?= releases/2021/2
 
 DLDT_PACKAGE_URL ?= ""
 OV_USE_BINARY ?= 1
-YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-*
+YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-2021.2.185.x86_64
 
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
