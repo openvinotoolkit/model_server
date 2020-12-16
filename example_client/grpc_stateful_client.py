@@ -42,7 +42,7 @@ def calculate_utterance_error(referenceArray, resultArray):
     return root_mean_err
 
 
-def ParseArguments():
+def parse_arguments():
     # Example commands:
     # RM_LSTM4F
     # grpc_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
@@ -121,7 +121,7 @@ def ParseArguments():
     return args
 
 
-def PrepareProcessingData(args):
+def prepare_processing_data(args):
     delimiter = ","
     input_files = []
     reference_files = []
@@ -170,12 +170,12 @@ def PrepareProcessingData(args):
     for ark_reader in input_files:
         input_name = input_names[name_index]
         input_sub_data = dict()
-        for nameKey, nameObj in ark_reader:
-            sequence_size = nameObj.shape[0]
+        for name_key, data_obj in ark_reader:
+            sequence_size = data_obj.shape[0]
             data = list()
             for input_index in range(0, sequence_size):
-                data.append(np.expand_dims(nameObj[input_index], axis=0))
-            input_sub_data[nameKey] = data
+                data.append(np.expand_dims(data_obj[input_index], axis=0))
+            input_sub_data[name_key] = data
         input_data[input_name] = input_sub_data
         name_index += 1
 
@@ -184,8 +184,8 @@ def PrepareProcessingData(args):
     reference_scores = dict()
     for ark_score in reference_files:
         output_name = output_names[name_index]
-        scoreObjects = {k: m for k, m in ark_score}
-        reference_scores[output_name] = scoreObjects
+        score_ojects = {k: m for k, m in ark_score}
+        reference_scores[output_name] = score_ojects
         name_index += 1
 
     # First ark file is the one we will iterate through for all input ark
@@ -194,7 +194,6 @@ def PrepareProcessingData(args):
     for key, obj in input_files[0]:
         data_iterator[key] = obj
         # Validate reference output scores data for existing keys and shapes
-        keyValidated = True
         for name in reference_scores:
             score_objects = reference_scores[name]
             if score_objects[key].shape[0] != obj.shape[0]:
@@ -206,26 +205,26 @@ def PrepareProcessingData(args):
     return data_iterator, input_names, output_names, input_data, reference_scores
 
 
-def ValidateOutput(result, output_names):
+def validate_output(result, output_names):
     # Validate model output
     for output_name in output_names:
         if output_name not in result.outputs:
             print("ERROR: Invalid output name", output_name)
             print("Available outputs:")
-            for Y in result.outputs:
-                print(Y)
+            for o in result.outputs:
+                print(o)
             return False
     if 'sequence_id' not in result.outputs:
         print("ERROR: Missing sequence_id in model output")
         print("Available outputs:")
-        for Y in result.outputs:
-            print(Y)
+        for o in result.outputs:
+            print(o)
         return False
     return True
 
 
 def main():
-    args = ParseArguments()
+    args = parse_arguments()
     global debug_mode
     debug_mode = int(args.get('debug'))
 
@@ -244,7 +243,7 @@ def main():
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
 
-    data_iterator, input_names, output_names, input_data, reference_scores = PrepareProcessingData(
+    data_iterator, input_names, output_names, input_data, reference_scores = prepare_processing_data(
         args)
 
     # Input control tokens
@@ -316,7 +315,7 @@ def main():
             result = stub.Predict(request, 10.0)
             end_time = datetime.datetime.now()
 
-            if not ValidateOutput(result, output_names):
+            if not validate_output(result, output_names):
                 print(
                     "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
                 request.inputs['sequence_control_input'].CopyFrom(
@@ -334,14 +333,14 @@ def main():
                 avg_rms_error_sum = 0.0
 
                 for output_name in output_names:
-                    scoreData = reference_scores[output_name][key][score_index]
+                    score_data = reference_scores[output_name][key][score_index]
 
                     # Parse output
-                    resultsArray = make_ndarray(result.outputs[output_name])
+                    results_array = make_ndarray(result.outputs[output_name])
 
                     # Calculate error
                     avg_rms_error = calculate_utterance_error(
-                        scoreData, resultsArray[0])
+                        score_data, results_array[0])
                     avg_rms_error_sum += avg_rms_error
 
                     # Statistics
