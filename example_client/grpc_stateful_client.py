@@ -63,7 +63,7 @@ def ParseArguments():
     parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. Set to 1 to enable debug prints. Default: 0')
     parser.add_argument('--cw_l', required=False, default=0, help='Number of requests for left context window. Works only with context window networks. Default: 0')
     parser.add_argument('--cw_r', required=False, default=0, help='Number of requests for right context window. Works only with context window networks. Default: 0')
-    parser.add_argument('--sequence_id', required=False, default=0, help='Starting unique sequence id. Default: 0')
+    parser.add_argument('--sequence_id', required=False, default=1, help='Starting unique sequence id. Default: 1')
 
 
     print('### Starting grpc_stateful_client.py client ###')
