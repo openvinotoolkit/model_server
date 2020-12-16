@@ -89,7 +89,6 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
     }
 
     // description.setLayout();  // Layout info is stored in model instance. If we find out it is required, then need to be set right before inference.
-
     try {
         switch (proto.dtype()) {
         case tensorflow::DataType::DT_FLOAT:

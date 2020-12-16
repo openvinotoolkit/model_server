@@ -21,7 +21,6 @@ using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
-
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
@@ -29,10 +28,15 @@ Status GetModelMetadataImpl::getModelStatus(
     if (!status.ok()) {
         return status;
     }
+    return getModelStatus(request, response, ModelManager::getInstance());
+}
 
+Status GetModelMetadataImpl::getModelStatus(
+    const tensorflow::serving::GetModelMetadataRequest* request,
+    tensorflow::serving::GetModelMetadataResponse* response,
+    ModelManager& manager) {
     const auto& name = request->model_spec().name();
     model_version_t version = request->model_spec().has_version() ? request->model_spec().version().value() : 0;
-    auto& manager = ovms::ModelManager::getInstance();
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
