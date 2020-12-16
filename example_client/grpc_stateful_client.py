@@ -252,7 +252,7 @@ def main():
                 errPerNameSum = 0.0
 
                 for output_name in output_names:
-                    scoreData = referenceArrays[output_name][key][score_index]
+                    scoreData = reference_scores[output_name][key][score_index]
 
                     # Parse output
                     resultsArray = make_ndarray(result.outputs[output_name])
