@@ -145,8 +145,6 @@ public:
 };
 
 TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy";
     MockModelInstanceCheckingUnloadingState mockModelInstance;
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
@@ -256,16 +254,12 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     auto config = DUMMY_MODEL_CONFIG;
     config.setNireq(100000 + 1);
@@ -276,12 +270,34 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
 class TestReloadModel : public ::testing::Test {};
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
-    std::filesystem::path dir = std::filesystem::current_path();
-    std::string dummy_model = dir.u8string() + "/src/test/dummy";
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithChangedModelMapping) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_TRUE(modelInstance.loadModel(config).ok());
+    ovms::mapping_config_t mappingOutputs{{"a", "output"}};
+    ovms::mapping_config_t mappingInputs{{"b", "input"}};
+    config.setMappingInputs(mappingInputs);
+    config.setMappingOutputs(mappingOutputs);
+    EXPECT_TRUE(modelInstance.reloadModel(config).ok());
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    auto inputsMap = modelInstance.getInputsInfo();
+    auto outputsMap = modelInstance.getOutputsInfo();
+    EXPECT_EQ(1, inputsMap.size());
+    EXPECT_EQ(1, outputsMap.size());
+    EXPECT_NE(inputsMap.find("input"), inputsMap.end());
+    EXPECT_NE(outputsMap.find("output"), outputsMap.end());
+    for (auto& [key, value] : inputsMap) {
+        std::cout << key << std::endl;
+    }
+    for (auto& [key, value] : outputsMap) {
+        std::cout << key << std::endl;
+    }
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {

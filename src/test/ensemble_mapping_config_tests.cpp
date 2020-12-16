@@ -237,8 +237,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
-// Disabled until CVS-41658 is resolved.
-TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_SuccessfullyReloadPipelineAfterAddingModelMapping) {
+TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
@@ -263,8 +262,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_SuccessfullyReloadPipeli
     // Validation fails since mapping is expected
     PipelineDefinition pd("UNUSED_NAME", info, connections);
     auto status = pd.validate(managerWithDummyModel);
-    EXPECT_TRUE(status.getCode() == ovms::StatusCode::INVALID_MISSING_INPUT ||
-                status.getCode() == ovms::StatusCode::INVALID_MISSING_OUTPUT)
+    EXPECT_TRUE(status.getCode() == ovms::StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT)
         << status.string();
 
     // Create mapping config for model
@@ -312,8 +310,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_SuccessfullyReloadPipeli
     ASSERT_EQ(asVector<float>(output_proto.tensor_content()), output_data);
 }
 
-// Disabled until CVS-41658 is resolved.
-TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_ReloadPipelineAfterRemovalOfModelMappingWillFail) {
+TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModelMappingWillFail) {
     // Create mapping config for model
     createConfigFileWithContent(R"({
         "inputs": {"b": "input_tensor"},
@@ -354,7 +351,6 @@ TEST_F(PipelineWithInputOutputNameMappedModel, DISABLED_ReloadPipelineAfterRemov
     status = managerWithDummyModel.reloadModelWithVersions(modelConfig);
     ASSERT_TRUE(status.ok()) << status.string();
     status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
-    EXPECT_TRUE(status.getCode() == ovms::StatusCode::INVALID_MISSING_INPUT ||
-                status.getCode() == ovms::StatusCode::INVALID_MISSING_OUTPUT)
+    EXPECT_TRUE(status.getCode() == ovms::StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT)
         << status.string();
 }

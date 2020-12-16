@@ -73,6 +73,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
+    this->inputsInfo.clear();
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
@@ -137,6 +138,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 }
 
 void ModelInstance::loadOutputTensors(const ModelConfig& config) {
+    this->outputsInfo.clear();
     for (const auto& pair : network->getOutputsInfo()) {
         const auto& name = pair.first;
         auto output = pair.second;
