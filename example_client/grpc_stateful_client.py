@@ -26,50 +26,100 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
 
+
 def print_debug(msg):
     global debug_mode
     if debug_mode:
         print(msg)
 
+
 def calculate_utterance_error(referenceArray, resultArray):
-    root_mean_err = math.sqrt((np.square(resultArray - referenceArray)).mean(axis=None))
+    root_mean_err = math.sqrt(
+        (np.square(
+            resultArray -
+            referenceArray)).mean(
+            axis=None))
     return root_mean_err
+
 
 def ParseArguments():
     # Example commands:
     # RM_LSTM4F
-    # grpc_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark 
+    # grpc_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
     #     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
     #     --model_name rm_lstm4f --debug
 
     # ASPIRE_TDNN
     # grpc_stateful_client.py --input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
-    #     --score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark 
+    #     --score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark
     #     --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine
     #     --model_name aspire_tdnn --cw_l 17 --cw_r 12 --debug
 
-    parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
-                                                 'It displays performance statistics and optionally')
-    parser.add_argument('--input_path', required=False, default='rm_lstm4f/test_feat_1_10.ark', help='Path to input ark file')
-    parser.add_argument('--score_path', required=False, default='rm_lstm4f/test_score_1_10.ark', help='Path to input ark file')
-    parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-    parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-    parser.add_argument('--input_name',required=False, default='Parameter', help='Specify input tensor name. default: Parameter')
-    parser.add_argument('--output_name',required=False, default='affinetransform/Fused_Add_',
-                        help='Specify output name. default: affinetransform/Fused_Add_')
-    parser.add_argument('--model_name', default='rm_lstm4f', help='Define model name, must be same as is in service. default: rm_lstm4f',
-                        dest='model_name')
+    parser = argparse.ArgumentParser(
+        description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
+        'It displays performance statistics and optionally')
+    parser.add_argument(
+        '--input_path',
+        required=False,
+        default='rm_lstm4f/test_feat_1_10.ark',
+        help='Path to input ark file')
+    parser.add_argument(
+        '--score_path',
+        required=False,
+        default='rm_lstm4f/test_score_1_10.ark',
+        help='Path to input ark file')
+    parser.add_argument(
+        '--grpc_address',
+        required=False,
+        default='localhost',
+        help='Specify url to grpc service. default:localhost')
+    parser.add_argument(
+        '--grpc_port',
+        required=False,
+        default=9000,
+        help='Specify port to grpc service. default: 9000')
+    parser.add_argument(
+        '--input_name',
+        required=False,
+        default='Parameter',
+        help='Specify input tensor name. default: Parameter')
+    parser.add_argument(
+        '--output_name',
+        required=False,
+        default='affinetransform/Fused_Add_',
+        help='Specify output name. default: affinetransform/Fused_Add_')
+    parser.add_argument(
+        '--model_name',
+        default='rm_lstm4f',
+        help='Define model name, must be same as is in service. default: rm_lstm4f',
+        dest='model_name')
 
-    parser.add_argument('--debug', required=False, default=0, help='Enabling debug prints. Set to 1 to enable debug prints. Default: 0')
-    parser.add_argument('--cw_l', required=False, default=0, help='Number of requests for left context window. Works only with context window networks. Default: 0')
-    parser.add_argument('--cw_r', required=False, default=0, help='Number of requests for right context window. Works only with context window networks. Default: 0')
-    parser.add_argument('--sequence_id', required=False, default=1, help='Starting unique sequence id. Default: 1')
-
+    parser.add_argument(
+        '--debug',
+        required=False,
+        default=0,
+        help='Enabling debug prints. Set to 1 to enable debug prints. Default: 0')
+    parser.add_argument(
+        '--cw_l',
+        required=False,
+        default=0,
+        help='Number of requests for left context window. Works only with context window networks. Default: 0')
+    parser.add_argument(
+        '--cw_r',
+        required=False,
+        default=0,
+        help='Number of requests for right context window. Works only with context window networks. Default: 0')
+    parser.add_argument(
+        '--sequence_id',
+        required=False,
+        default=1,
+        help='Starting unique sequence id. Default: 1')
 
     print('### Starting grpc_stateful_client.py client ###')
 
     args = vars(parser.parse_args())
     return args
+
 
 def PrepareProcessingData(args):
     delimiter = ","
@@ -101,11 +151,17 @@ def PrepareProcessingData(args):
 
     # Validate input
     if len(input_files) != len(input_names):
-        print("ERROR: Number of input ark files {} must be equal to the number of input names {}".format(len(input_files), len(input_names)))
+        print(
+            "ERROR: Number of input ark files {} must be equal to the number of input names {}".format(
+                len(input_files),
+                len(input_names)))
         exit(1)
 
     if len(reference_files) != len(output_names):
-        print("ERROR: Number of output ark files {} must be equal to the number of output names {}".format(len(input_files), len(input_names)))
+        print(
+            "ERROR: Number of output ark files {} must be equal to the number of output names {}".format(
+                len(input_files),
+                len(input_names)))
         exit(1)
 
     # Consolidate input
@@ -117,7 +173,7 @@ def PrepareProcessingData(args):
         for nameKey, nameObj in ark_reader:
             sequence_size = nameObj.shape[0]
             data = list()
-            for input_index in range (0 , sequence_size):
+            for input_index in range(0, sequence_size):
                 data.append(np.expand_dims(nameObj[input_index], axis=0))
             input_sub_data[nameKey] = data
         input_data[input_name] = input_sub_data
@@ -128,11 +184,12 @@ def PrepareProcessingData(args):
     reference_scores = dict()
     for ark_score in reference_files:
         output_name = output_names[name_index]
-        scoreObjects = { k:m for k,m in ark_score }
+        scoreObjects = {k: m for k, m in ark_score}
         reference_scores[output_name] = scoreObjects
         name_index += 1
 
-    # First ark file is the one we will iterate through for all input ark files per inference request input
+    # First ark file is the one we will iterate through for all input ark
+    # files per inference request input
     data_iterator = dict()
     for key, obj in input_files[0]:
         data_iterator[key] = obj
@@ -141,10 +198,13 @@ def PrepareProcessingData(args):
         for name in reference_scores:
             score_objects = reference_scores[name]
             if score_objects[key].shape[0] != obj.shape[0]:
-                print("Error reference scores ark file doest not contain proper data for key {0} and shape {1}".format(key, obj.shape))
+                print(
+                    "Error reference scores ark file doest not contain proper data for key {0} and shape {1}".format(
+                        key, obj.shape))
                 exit(1)
 
-    return  data_iterator, input_names, output_names, input_data, reference_scores
+    return data_iterator, input_names, output_names, input_data, reference_scores
+
 
 def ValidateOutput(result, output_names):
     # Validate model output
@@ -163,14 +223,18 @@ def ValidateOutput(result, output_names):
         return False
     return True
 
+
 def main():
     args = ParseArguments()
     global debug_mode
     debug_mode = int(args.get('debug'))
 
-    channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+    channel = grpc.insecure_channel(
+        "{}:{}".format(
+            args['grpc_address'],
+            args['grpc_port']))
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    processing_times = np.zeros((0),int)
+    processing_times = np.zeros((0), int)
     cw_l = int(args.get('cw_l'))
     cw_r = int(args.get('cw_r'))
     print('Context window left width cw_l: {}'.format(cw_l))
@@ -180,12 +244,13 @@ def main():
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
 
-    data_iterator, input_names, output_names, input_data, reference_scores = PrepareProcessingData(args)
+    data_iterator, input_names, output_names, input_data, reference_scores = PrepareProcessingData(
+        args)
 
     # Input control tokens
     SEQUENCE_START = 1
     SEQUENCE_END = 2
-    
+
     global_avg_rms_error_sum = 0.0
 
     # Main inference loop
@@ -198,7 +263,8 @@ def main():
         print_debug('\tSequence id: {}'.format(sequence_id))
 
         if sequence_size == 1:
-            print('\nERROR: Sequence size equal {} in input data must be bigger than 1.'.format(sequence_size))
+            print('\nERROR: Sequence size equal {} in input data must be bigger than 1.'.format(
+                sequence_size))
             exit(1)
 
         mean_avg_rms_error_sum = 0.0
@@ -213,44 +279,54 @@ def main():
             input_index = x
             # Input for context window
             if x < cw_l:
-                # Repeating first input data infer request cw_l times for the context window model start
+                # Repeating first input data infer request cw_l times for the
+                # context window model start
                 input_index = 0
             elif x >= cw_l and x < sequence_size + cw_l:
                 # Standard processing
-                input_index = x-cw_l
+                input_index = x - cw_l
             else:
-                # Repeating last input data infer request cw_r times for the context window model end
+                # Repeating last input data infer request cw_r times for the
+                # context window model end
                 input_index = sequence_size - 1
 
             # Setting request input
             for input_name in input_names:
                 input_sub_data = input_data[input_name]
                 tensor_data = input_sub_data[key][input_index]
-                request.inputs[input_name].CopyFrom(make_tensor_proto(tensor_data, shape=tensor_data.shape))
+                request.inputs[input_name].CopyFrom(
+                    make_tensor_proto(tensor_data, shape=tensor_data.shape))
 
             # Add sequence start
             if x == 0:
-                request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_START, dtype="uint32"))
-        
+                request.inputs['sequence_control_input'].CopyFrom(
+                    make_tensor_proto(SEQUENCE_START, dtype="uint32"))
+
             # Set sequence id
-            request.inputs['sequence_id'].CopyFrom(make_tensor_proto(sequence_id, dtype="uint64"))
+            request.inputs['sequence_id'].CopyFrom(
+                make_tensor_proto(sequence_id, dtype="uint64"))
 
             # Add sequence end
             if x == sequence_size + cw_l + cw_r - 1:
-                request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+                request.inputs['sequence_control_input'].CopyFrom(
+                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
 
             start_time = datetime.datetime.now()
-            result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+            # result includes a dictionary with all model outputs
+            result = stub.Predict(request, 10.0)
             end_time = datetime.datetime.now()
 
             if not ValidateOutput(result, output_names):
-                print("ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
-                request.inputs['sequence_control_input'].CopyFrom(make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+                print(
+                    "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
+                request.inputs['sequence_control_input'].CopyFrom(
+                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
                 result = stub.Predict(request, 10.0)
                 exit(1)
 
             duration = (end_time - start_time).total_seconds() * 1000
-            processing_times = np.append(processing_times,np.array([int(duration)]))
+            processing_times = np.append(
+                processing_times, np.array([int(duration)]))
 
             # Compare results after we are pass initial context window results
             if score_index >= 0:
@@ -264,31 +340,43 @@ def main():
                     resultsArray = make_ndarray(result.outputs[output_name])
 
                     # Calculate error
-                    avg_rms_error = calculate_utterance_error(scoreData, resultsArray[0])
-                    avg_rms_error_sum += avg_rms_error 
+                    avg_rms_error = calculate_utterance_error(
+                        scoreData, resultsArray[0])
+                    avg_rms_error_sum += avg_rms_error
 
                     # Statistics
-                    print_debug('Output name: {} Rms error: {:.10f}\n'.format(output_name, avg_rms_error ))
+                    print_debug(
+                        'Output name: {} Rms error: {:.10f}\n'.format(
+                            output_name, avg_rms_error))
 
                 mean_avg_rms_error_sum += avg_rms_error_sum
                 # Statistics
-                print_debug('Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(x, avg_rms_error_sum,round(np.average(duration), 2), round(1000 * sequence_size / np.average(duration), 2)))
-                #END output names loop
+                print_debug(
+                    'Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
+                        x, avg_rms_error_sum, round(
+                            np.average(duration), 2), round(
+                            1000 * sequence_size / np.average(duration), 2)))
+                # END output names loop
 
             score_index += 1
-            #END utterance loop
+            # END utterance loop
 
-        seq_avg_rms_error_sum = mean_avg_rms_error_sum/(sequence_size)
-        print("\tSequence {} average rms error: {:.10f}\n".format(sequence_id, seq_avg_rms_error_sum))
+        seq_avg_rms_error_sum = mean_avg_rms_error_sum / (sequence_size)
+        print(
+            "\tSequence {} average rms error: {:.10f}\n".format(
+                sequence_id,
+                seq_avg_rms_error_sum))
         sequence_id += 1
         global_avg_rms_error_sum += seq_avg_rms_error_sum
-        #END input name loop
+        # END input name loop
 
-    final_avg_rms_error_sum = global_avg_rms_error_sum/len(data_iterator)
+    final_avg_rms_error_sum = global_avg_rms_error_sum / len(data_iterator)
 
-    print("Global average rms error: {:.10f}\n".format(final_avg_rms_error_sum))
+    print("Global average rms error: {:.10f}\n".format(
+        final_avg_rms_error_sum))
     print_statistics(processing_times, sequence_size)
     print('### Finished grpc_stateful_client.py client processing ###')
+
 
 if __name__ == "__main__":
     main()
