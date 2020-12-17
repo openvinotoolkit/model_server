@@ -67,7 +67,7 @@ def parse_arguments():
         '--score_path',
         required=False,
         default='rm_lstm4f/test_score_1_10.ark',
-        help='Path to input ark file')
+        help='Path to reference scores ark file')
     parser.add_argument(
         '--grpc_address',
         required=False,
@@ -113,7 +113,7 @@ def parse_arguments():
         '--sequence_id',
         required=False,
         default=1,
-        help='Starting unique sequence id. Default: 1')
+        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
 
     print('### Starting grpc_stateful_client.py client ###')
 
@@ -136,8 +136,8 @@ def prepare_processing_data(args):
     score_paths = args.get('score_path').split(delimiter)
     for score_path in score_paths:
         print('Reading scores ark file {}'.format(score_path))
-        ark_score = ArchiveReader(score_path)
-        reference_files.append(ark_score)
+        ark_reader = ArchiveReader(score_path)
+        reference_files.append(ark_reader)
 
     inputs = args['input_name'].split(delimiter)
     for input in inputs:
@@ -190,19 +190,19 @@ def prepare_processing_data(args):
 
     # First ark file is the one we will iterate through for all input ark
     # files per inference request input
-    data_iterator = dict()
-    for key, obj in input_files[0]:
-        data_iterator[key] = obj
-        # Validate reference output scores data for existing keys and shapes
+    sequence_size_map = dict()
+    for sequence_name, data in input_files[0]:
+        sequence_size_map[sequence_name] = data
+        # Validate reference output scores data for existing sequence names and shapes
         for name in reference_scores:
             score_objects = reference_scores[name]
-            if score_objects[key].shape[0] != obj.shape[0]:
+            if score_objects[sequence_name].shape[0] != data.shape[0]:
                 print(
-                    "Error reference scores ark file doest not contain proper data for key {0} and shape {1}".format(
-                        key, obj.shape))
+                    "Error reference scores ark file doest not contain proper data for sequence name {0} and data shape {1}".format(
+                        sequence_name, data.shape))
                 exit(1)
 
-    return data_iterator, input_names, output_names, input_data, reference_scores
+    return sequence_size_map, input_names, output_names, input_data, reference_scores
 
 
 def validate_output(result, output_names):
@@ -238,12 +238,15 @@ def main():
     cw_r = int(args.get('cw_r'))
     print('Context window left width cw_l: {}'.format(cw_l))
     print('Context window right width cw_r: {}'.format(cw_r))
+    get_sequence_id = False
     sequence_id = int(args.get('sequence_id'))
+    if sequence_id == 0:
+        get_sequence_id = True
     print('Starting sequence_id: {}'.format(sequence_id))
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
 
-    data_iterator, input_names, output_names, input_data, reference_scores = prepare_processing_data(
+    sequence_size_map, input_names, output_names, input_data, reference_scores = prepare_processing_data(
         args)
 
     # Input control tokens
@@ -253,11 +256,11 @@ def main():
     global_avg_rms_error_sum = 0.0
 
     # Main inference loop
-    for key in data_iterator:
-        obj = data_iterator[key]
-        sequence_size = obj.shape[0]
-        print('\n\tInput name: {}'.format(key))
-        print_debug('\tInput in shape: {}'.format(obj.shape))
+    for sequence_name in sequence_size_map:
+        data = data_iterator[sequence_name]
+        sequence_size = data.shape[0]
+        print('\n\tInput name: {}'.format(sequence_name))
+        print_debug('\tInput in shape: {}'.format(data.shape))
         print_debug('\tInput sequence size: {}'.format(sequence_size))
         print_debug('\tSequence id: {}'.format(sequence_id))
 
@@ -292,7 +295,7 @@ def main():
             # Setting request input
             for input_name in input_names:
                 input_sub_data = input_data[input_name]
-                tensor_data = input_sub_data[key][input_index]
+                tensor_data = input_sub_data[sequence_name][input_index]
                 request.inputs[input_name].CopyFrom(
                     make_tensor_proto(tensor_data, shape=tensor_data.shape))
 
@@ -323,6 +326,11 @@ def main():
                 result = stub.Predict(request, 10.0)
                 exit(1)
 
+            # Unique sequence_id provided by OVMS
+            if get_sequence_id:
+                sequence_id = int(result.outputs['sequence_id'])
+                get_sequence_id = False
+
             duration = (end_time - start_time).total_seconds() * 1000
             processing_times = np.append(
                 processing_times, np.array([int(duration)]))
@@ -333,7 +341,7 @@ def main():
                 avg_rms_error_sum = 0.0
 
                 for output_name in output_names:
-                    score_data = reference_scores[output_name][key][score_index]
+                    score_data = reference_scores[output_name][sequence_name][score_index]
 
                     # Parse output
                     results_array = make_ndarray(result.outputs[output_name])
