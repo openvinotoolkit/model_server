@@ -269,7 +269,7 @@ def main():
 
     # Main inference loop
     for sequence_name, sequence_size in sequence_size_map.items():
-        print('\tSequence name: {}'.format(sequence_name))
+        print('\n\tSequence name: {}'.format(sequence_name))
         print('\tSequence size: {}'.format(sequence_size))
         print('\tSequence id: {}'.format(sequence_id))
 
