@@ -52,7 +52,7 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
 ## Running the Serving
 1. The server can be started using the command in the folder, where OVMS was installed: 
 ```Bash
-./ovms/bin/ovms -help
+./ovms/bin/ovms --help
 ```
 2. The server can be started in interactive mode, as  a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
