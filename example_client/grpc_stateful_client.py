@@ -264,7 +264,8 @@ def main():
     # Output shape information
     for output_name in output_names:
         score_data = reference_scores[output_name][list(sequence_size_map.keys())[0]][0]
-        print_debug('\Output {} in shape: {}'.format(output_name, score_data.shape))
+        score_data = np.expand_dims(score_data, axis=0)
+        print_debug('\tOutput {} in shape: {}'.format(output_name, score_data.shape))
 
     # Main inference loop
     for sequence_name, sequence_size in sequence_size_map.items():
