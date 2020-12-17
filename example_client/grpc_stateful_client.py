@@ -58,7 +58,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
         'It displays performance statistics and average rms errors comparing results with reference scores.'
-        'Optionally you can aneble debug mode to print additinal shape data and detailed frame results errors.')
+        'Optionally you can enable debug mode to print additional information about inputs and outputs and detailed accuracy numbers.')
     parser.add_argument(
         '--input_path',
         required=False,
