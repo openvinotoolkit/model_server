@@ -29,13 +29,13 @@ struct SequenceProcessingSpec {
 
 class ProcessingSpec {
 private:
-    std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpecPtr;
+    std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpec;
 
 public:
-    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpecPtr; }
+    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpec; }
 
     void setSequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) {
-        sequenceProcessingSpecPtr = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
+        sequenceProcessingSpec = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
     }
 };
 }  // namespace ovms
