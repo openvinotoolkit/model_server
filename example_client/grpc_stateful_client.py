@@ -257,7 +257,7 @@ def main():
 
     # Main inference loop
     for sequence_name in sequence_size_map:
-        data = data_iterator[sequence_name]
+        data = sequence_size_map[sequence_name]
         sequence_size = data.shape[0]
         print('\n\tInput name: {}'.format(sequence_name))
         print_debug('\tInput in shape: {}'.format(data.shape))
@@ -377,7 +377,7 @@ def main():
         global_avg_rms_error_sum += seq_avg_rms_error_sum
         # END input name loop
 
-    final_avg_rms_error_sum = global_avg_rms_error_sum / len(data_iterator)
+    final_avg_rms_error_sum = global_avg_rms_error_sum / len(sequence_size_map)
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
