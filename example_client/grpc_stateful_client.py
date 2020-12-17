@@ -192,7 +192,7 @@ def prepare_processing_data(args):
     # files per inference request input
     sequence_size_map = dict()
     for sequence_name, data in input_files[0]:
-        sequence_size_map[sequence_name] = data
+        sequence_size_map[sequence_name] = data.shape[0]
         # Validate reference output scores data for existing sequence names and shapes
         for name in reference_scores:
             score_objects = reference_scores[name]
@@ -255,17 +255,25 @@ def main():
 
     global_avg_rms_error_sum = 0.0
 
+    # Input shape information
+    for input_name in input_names:
+        input_sub_data = input_data[input_name]
+        tensor_data = input_sub_data[sequence_size_map.keys()[0]][0]
+        print_debug('\tInput {} in shape: {}'.format(input_name, tensor_data.shape))
+
+    # Output shape information
+    for output_name in output_names:
+        score_data = reference_scores[output_name][sequence_size_map.keys()[0]][0]
+        print_debug('\Output {} in shape: {}'.format(output_name, score_data.shape))
+
     # Main inference loop
-    for sequence_name in sequence_size_map:
-        data = sequence_size_map[sequence_name]
-        sequence_size = data.shape[0]
-        print('\n\tInput name: {}'.format(sequence_name))
-        print_debug('\tInput in shape: {}'.format(data.shape))
-        print_debug('\tInput sequence size: {}'.format(sequence_size))
-        print_debug('\tSequence id: {}'.format(sequence_id))
+    for sequence_name, sequence_size in sequence_size_map:
+        print('\tSequence name: {}'.format(sequence_name))
+        print('\tSequence size: {}'.format(sequence_size))
+        print('\tSequence id: {}'.format(sequence_id))
 
         if sequence_size == 1:
-            print('\nERROR: Sequence size equal {} in input data must be bigger than 1.'.format(
+            print('\nERROR: Detected sequence with only one frame. Every sequence must contain at least 2 frames.'.format(
                 sequence_size))
             exit(1)
 
@@ -281,14 +289,14 @@ def main():
             input_index = x
             # Input for context window
             if x < cw_l:
-                # Repeating first input data infer request cw_l times for the
+                # Repeating first frame infer request cw_l times for the
                 # context window model start
                 input_index = 0
             elif x >= cw_l and x < sequence_size + cw_l:
                 # Standard processing
                 input_index = x - cw_l
             else:
-                # Repeating last input data infer request cw_r times for the
+                # Repeating last frame infer request cw_r times for the
                 # context window model end
                 input_index = sequence_size - 1
 
