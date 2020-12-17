@@ -140,7 +140,7 @@ Config& Config::parse(int argc, char** argv) {
                 "Determines how many frames can be processed with one sequence. Exceeding this number will cause error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
-            
+
         // clang-format on
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
