@@ -258,12 +258,12 @@ def main():
     # Input shape information
     for input_name in input_names:
         input_sub_data = input_data[input_name]
-        tensor_data = input_sub_data[sequence_size_map.keys()[0]][0]
+        tensor_data = input_sub_data[list(sequence_size_map.keys())[0]][0]
         print_debug('\tInput {} in shape: {}'.format(input_name, tensor_data.shape))
 
     # Output shape information
     for output_name in output_names:
-        score_data = reference_scores[output_name][sequence_size_map.keys()[0]][0]
+        score_data = reference_scores[output_name][list(sequence_size_map.keys())[0]][0]
         print_debug('\Output {} in shape: {}'.format(output_name, score_data.shape))
 
     # Main inference loop
