@@ -239,7 +239,7 @@ def main():
     print('Context window left width cw_l: {}'.format(cw_l))
     print('Context window right width cw_r: {}'.format(cw_r))
     get_sequence_id = False
-    sequence_id = int(args.get('sequence_id'))
+    sequence_id = np.uint64(args.get('sequence_id'))
     if sequence_id == 0:
         get_sequence_id = True
     print('Starting sequence_id: {}'.format(sequence_id))
@@ -336,7 +336,7 @@ def main():
 
             # Unique sequence_id provided by OVMS
             if get_sequence_id:
-                sequence_id = int(result.outputs['sequence_id'])
+                sequence_id = np.uint64(result.outputs['sequence_id'])
                 get_sequence_id = False
 
             duration = (end_time - start_time).total_seconds() * 1000
