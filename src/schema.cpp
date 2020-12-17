@@ -75,7 +75,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"type": ["object", "string"]
 						},
 						"nireq": {
-							"type": "integer"
+							"type": "integer",
+							"minimum": 0
 						},
 						"target_device": {
 							"type": "string"
