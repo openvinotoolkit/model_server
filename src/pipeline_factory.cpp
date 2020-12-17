@@ -25,7 +25,6 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const pipeline_connections_t& connections,
     ModelManager& manager) {
     if (definitionExists(pipelineName)) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Two pipelines with the same name: {} defined in config file. Ignoring the second definition", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
