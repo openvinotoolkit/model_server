@@ -757,4 +757,38 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     return it != models.end() ? it->second : nullptr;
 }
 
+Status ModelManager::getModelInstance(const std::string& modelName,
+    ovms::model_version_t modelVersionId,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
+
+    auto model = findModelByName(modelName);
+    if (model == nullptr) {
+        return StatusCode::MODEL_NAME_MISSING;
+    }
+    if (modelVersionId != 0) {
+        modelInstance = model->getModelInstanceByVersion(modelVersionId);
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    } else {
+        modelInstance = model->getDefaultModelInstance();
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    }
+
+    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+}
+
+Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response) {
+
+    SPDLOG_DEBUG("Requesting pipeline: {};", request->model_spec().name());
+    auto status = createPipeline(pipelinePtr, request->model_spec().name(), request, response);
+    return status;
+}
+
 }  // namespace ovms

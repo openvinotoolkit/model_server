@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "logging.hpp"
+#include "modelmanager.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 
@@ -264,12 +265,11 @@ public:
     }
 
     Status fetchUnderlyingModelInstance() {
-        if (!getModelInstance(
-                manager,
-                dependantNodeInfo.modelName,
-                dependantNodeInfo.modelVersion.value_or(0),
-                dependantModelInstance,
-                dependantModelUnloadGuard)
+        if (!manager.getModelInstance(
+                        dependantNodeInfo.modelName,
+                        dependantNodeInfo.modelVersion.value_or(0),
+                        dependantModelInstance,
+                        dependantModelUnloadGuard)
                  .ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Missing model: {}; version: {}",
                 pipelineName,
@@ -444,12 +444,11 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard> dependencyModelUnloadGuard;
         std::shared_ptr<ModelInstance> dependencyModelInstance;
         if (dependencyNodeInfo.kind == NodeKind::DL) {
-            if (!getModelInstance(
-                    manager,
-                    dependencyNodeInfo.modelName,
-                    dependencyNodeInfo.modelVersion.value_or(0),
-                    dependencyModelInstance,
-                    dependencyModelUnloadGuard)
+            if (!manager.getModelInstance(
+                            dependencyNodeInfo.modelName,
+                            dependencyNodeInfo.modelVersion.value_or(0),
+                            dependencyModelInstance,
+                            dependencyModelUnloadGuard)
                      .ok()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Dependency DL model node refers to unavailable model - name:{}; version:{}",
                     pipelineName,

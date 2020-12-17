@@ -141,7 +141,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-    auto status = ovms::getModelInstance(managerWithDummyModel, dummyModelName, 0, model, unload_guard);
+    auto status = managerWithDummyModel.getModelInstance(dummyModelName, 0, model, unload_guard);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     // Prepare request for dummy model directly
@@ -154,7 +154,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
 
     tensorflow::serving::PredictResponse simpleModelResponse;
     // Do the inference directly on dummy model before inference on pipeline
-    ASSERT_EQ(inference(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(model->infer(&simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
 
     ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
     auto& output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];
@@ -189,7 +189,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     checkDummyResponse(dummySeriallyConnectedCount);
 
     // Do the inference directly on dummy model after inference on pipeline
-    ASSERT_EQ(inference(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(model->infer(&simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
 
     ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
     output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];

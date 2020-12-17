@@ -25,7 +25,7 @@
 #include <inference_engine.hpp>
 #include <stdlib.h>
 
-#include "../executinstreamidguard.hpp"
+#include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../model.hpp"
@@ -34,6 +34,7 @@
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../processing_spec.hpp"
 #include "../schema.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -276,13 +277,13 @@ public:
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
         std::shared_ptr<ovms::ModelInstance> model;
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-        auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
+        auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
         if (!status.ok()) {
             return status;
         }
 
         response.Clear();
-        return ovms::inference(*model, &request, &response, unload_guard);
+        return model->infer(&request, &response, unload_guard);
     }
 
 public:
@@ -312,6 +313,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ProcessingSpec processingSpec;
 
     auto& tensorProto = request.inputs().find("b")->second;
     size_t batchSize = tensorProto.tensor_shape().dim(0).size();
@@ -324,7 +326,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
         std::cout << "Waiting before getModelInstance. Batch size: " << batchSize << std::endl;
         waitBeforeGettingModelInstance->get();
     }
-    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     if (waitBeforePerformInference) {
         std::cout << "Waiting before performInfernce." << std::endl;
@@ -335,17 +337,15 @@ void TestCustomLoader::performPredict(const std::string modelName,
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(reloadModelIfRequired(validationStatus, *modelInstance, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::OVInferRequestsQueue& inferRequestsQueue = modelInstance->getInferRequestsQueue();
-    ovms::ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
-    int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
+    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
+    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     std::vector<float> input(inputSize);
     std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
-    auto status = performInference(inferRequestsQueue, executingInferId, inferRequest);
+    auto status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest);
@@ -942,7 +942,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
 
     std::shared_ptr<ovms::ModelInstance> model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-    ASSERT_EQ(ovms::getModelInstance(manager, "dummy", 1, model, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.getModelInstance("dummy", 1, model, unload_guard), ovms::StatusCode::OK);
 
     tensorflow::serving::GetModelMetadataResponse response;
     ovms::GetModelMetadataImpl::buildResponse(model, &response);

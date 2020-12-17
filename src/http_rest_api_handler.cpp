@@ -216,8 +216,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = getModelInstance(
-        ModelManager::getInstance(),
+    auto status = ModelManager::getInstance().getModelInstance(
         modelName,
         modelVersion.value_or(0),
         modelInstance,
@@ -243,7 +242,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     if (modelVersion.has_value()) {
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
-    status = inference(*modelInstance, &requestProto, &responseProto, modelInstanceUnloadGuard);
+    status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
     return status;
 }
 
@@ -267,7 +266,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = getPipeline(ModelManager::getInstance(), pipelinePtr, &requestProto, &responseProto);
+    status = ModelManager::getInstance().getPipeline(pipelinePtr, &requestProto, &responseProto);
     if (!status.ok()) {
         return status;
     }

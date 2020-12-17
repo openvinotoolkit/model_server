@@ -28,6 +28,8 @@
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "model.hpp"
@@ -35,6 +37,9 @@
 #include "pipeline_factory.hpp"
 
 namespace ovms {
+
+const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+
 class IVersionReader;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
@@ -305,6 +310,14 @@ protected:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     void updateConfigurationWithoutConfigFile();
+    Status getModelInstance(const std::string& modelName,
+        ovms::model_version_t modelVersionId,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+
+    Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response);
 };
 
 }  // namespace ovms
