@@ -267,7 +267,7 @@ def main():
         print_debug('\Output {} in shape: {}'.format(output_name, score_data.shape))
 
     # Main inference loop
-    for sequence_name, sequence_size in sequence_size_map:
+    for sequence_name, sequence_size in sequence_size_map.items():
         print('\tSequence name: {}'.format(sequence_name))
         print('\tSequence size: {}'.format(sequence_size))
         print('\tSequence id: {}'.format(sequence_id))
