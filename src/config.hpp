@@ -255,6 +255,48 @@ public:
     }
 
     /**
+         * @brief Get stateful flag
+         *
+         * @return bool
+         */
+    bool stateful() {
+        return result->operator[]("stateful").as<bool>();
+    }
+
+    /**
+     * @brief Get stateful sequence timeout
+     *
+     * @return uint
+     */
+    uint32_t statefulTimeout() {
+        if (!result->count("stateful_timeout")) {
+            return 0;
+        }
+        return result->operator[]("stateful_timeout").as<uint32_t>();
+    }
+
+    /**
+         * @brief low latency transformation flag
+         *
+         * @return bool
+         */
+    bool lowLatencyTransformation() {
+        return result->operator[]("low_latency_transformation").as<bool>();
+    }
+
+    /**
+     * @brief Get stateful maximum sequence frames number
+     *
+     * @return uint
+     */
+    uint32_t maxSequenceNumber() {
+        if (!result->count("max_sequence_number")) {
+            return 0;
+        }
+        return result->operator[]("max_sequence_number").as<uint32_t>();
+    }
+
+    /**
         * @brief Get the log level
         *
         * @return const std::string&

@@ -163,6 +163,26 @@ private:
          */
     std::string customLoaderOptionsStr;
 
+    /**
+         * @brief Flag determing if model is of a stateful flag
+         */
+    bool stateful;
+
+    /**
+         * @brief Flag determing if model will use low latency transformation
+         */
+    bool lowLatencyTransformation;
+
+    /**
+         * @brief Timeout for stateful model sequence
+         */
+    uint32_t statefulTimeout;
+
+    /**
+         * @brief Number of maximum frames in one sequence
+         */
+    uint32_t maxSequenceNumber;
+
 public:
     /**
          * @brief Construct a new Model Config object
@@ -178,6 +198,10 @@ public:
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
+        bool stateful = false,
+        bool lowLatencyTransformation = false,
+        uint32_t maxSequenceNumber = 0,
+        uint32_t statefultimeout = 0,
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -187,6 +211,10 @@ public:
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         pluginConfig({}),
+        stateful(stateful),
+        statefulTimeout(statefulTimeout),
+        lowLatencyTransformation(lowLatencyTransformation),
+        maxSequenceNumber(maxSequenceNumber),
         layout(""),
         shapes({}),
         layouts({}),
@@ -442,6 +470,78 @@ public:
          */
     void setPluginConfig(const plugin_config_t& pluginConfig) {
         this->pluginConfig = pluginConfig;
+    }
+
+    /**
+     * @brief Get stateful model flag
+     *
+     * @return bool
+     */
+    const bool isStateful() const {
+        return this->stateful;
+    }
+
+    /**
+     * @brief Set stateful model flag
+     *
+     * @return bool
+     */
+    void setStateful(bool stateful) {
+        this->stateful = stateful;
+    }
+
+    /**
+     * @brief Set stateful low latency transformation flag
+     *
+     * @return bool
+     */
+    void setLowLatencyTransformation(bool lowLatencyTransformation) {
+        this->lowLatencyTransformation = lowLatencyTransformation;
+    }
+
+    /**
+     * @brief Get stateful low latency transformation flag
+     *
+     * @return bool
+     */
+    const bool isLowLatencyTransformation() const {
+        return this->lowLatencyTransformation;
+    }
+
+    /**
+     * @brief Get stateful maximum sequence frames number
+     *
+     * @return uint
+     */
+    uint64_t getMaxSequenceNumber() const {
+        return this->maxSequenceNumber;
+    }
+
+    /**
+     * @brief Set stateful maximum sequence frames number
+     *
+     * @return uint
+     */
+    void setMaxSequenceNumber(const uint32_t maxSequenceNumber) {
+        this->maxSequenceNumber = maxSequenceNumber;
+    }
+
+    /**
+     * @brief Get stateful sequence timeout
+     *
+     * @return uint
+     */
+    uint64_t getStatefulTimeout() const {
+        return this->statefulTimeout;
+    }
+
+    /**
+     * @brief Set stateful sequence timeout
+     *
+     * @return uint
+     */
+    void setStatefulTimeout(const uint32_t statefulTimeout) {
+        this->statefulTimeout = statefulTimeout;
     }
 
     /**
