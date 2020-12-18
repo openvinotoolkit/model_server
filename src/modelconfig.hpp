@@ -176,7 +176,7 @@ private:
     /**
          * @brief Timeout for stateful model sequence
          */
-    uint32_t statefulTimeout;
+    uint32_t sequenceTimeout;
 
     /**
          * @brief Number of maximum frames in one sequence
@@ -200,8 +200,8 @@ public:
         uint64_t nireq = 0,
         bool stateful = false,
         bool lowLatencyTransformation = false,
-        uint32_t maxSequenceNumber = 0,
-        uint32_t statefultimeout = 0,
+        uint32_t maxSequenceNumber = 500,
+        uint32_t sequenceTimeout = 60,
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -212,7 +212,7 @@ public:
         nireq(nireq),
         pluginConfig({}),
         stateful(stateful),
-        statefulTimeout(statefulTimeout),
+        sequenceTimeout(sequenceTimeout),
         lowLatencyTransformation(lowLatencyTransformation),
         maxSequenceNumber(maxSequenceNumber),
         layout(""),
@@ -531,8 +531,8 @@ public:
      *
      * @return uint
      */
-    uint64_t getStatefulTimeout() const {
-        return this->statefulTimeout;
+    uint64_t getSequenceTimeout() const {
+        return this->sequenceTimeout;
     }
 
     /**
@@ -540,8 +540,8 @@ public:
      *
      * @return uint
      */
-    void setStatefulTimeout(const uint32_t statefulTimeout) {
-        this->statefulTimeout = statefulTimeout;
+    void setSequenceTimeout(const uint32_t sequenceTimeout) {
+        this->sequenceTimeout = sequenceTimeout;
     }
 
     /**

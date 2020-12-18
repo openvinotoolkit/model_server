@@ -268,11 +268,11 @@ public:
      *
      * @return uint
      */
-    uint32_t statefulTimeout() {
-        if (!result->count("stateful_timeout")) {
+    uint32_t sequenceTimeout() {
+        if (!result->count("sequence_timeout")) {
             return 0;
         }
-        return result->operator[]("stateful_timeout").as<uint32_t>();
+        return result->operator[]("sequence_timeout").as<uint32_t>();
     }
 
     /**
