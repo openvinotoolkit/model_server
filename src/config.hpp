@@ -285,7 +285,7 @@ public:
     }
 
     /**
-     * @brief Get stateful maximum sequence frames number
+     * @brief Get max number of sequences that can be processed concurrently 
      *
      * @return uint
      */
