@@ -137,7 +137,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "LOW_LATENCY_TRANSFORMATION")
             ("max_sequence_number",
-                "Determines how many frames can be processed with one sequence. Exceeding this number will cause error.",
+                "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
 
