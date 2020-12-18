@@ -518,7 +518,7 @@ public:
     }
 
     /**
-     * @brief Set stateful maximum sequence frames number
+     * @brief Set max number of sequences handled concurrently by the model
      *
      * @return uint
      */
