@@ -198,12 +198,12 @@ public:
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
+        model_version_t version = 0,
+        const std::string& localPath = "",
         bool stateful = false,
         bool lowLatencyTransformation = false,
         uint32_t maxSequenceNumber = 500,
-        uint32_t sequenceTimeout = 60,
-        model_version_t version = 0,
-        const std::string& localPath = "") :
+        uint32_t sequenceTimeout = 60):
         name(name),
         basePath(basePath),
         localPath(localPath),
@@ -211,16 +211,17 @@ public:
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         pluginConfig({}),
-        stateful(stateful),
-        sequenceTimeout(sequenceTimeout),
-        lowLatencyTransformation(lowLatencyTransformation),
-        maxSequenceNumber(maxSequenceNumber),
         layout(""),
         shapes({}),
         layouts({}),
         version(version),
         mappingInputs({}),
-        mappingOutputs({}) {
+        mappingOutputs({}),
+        stateful(stateful),
+        sequenceTimeout(sequenceTimeout),
+        lowLatencyTransformation(lowLatencyTransformation),
+        maxSequenceNumber(maxSequenceNumber)
+        {
         setBatchingParams(configBatchSize);
     }
 
