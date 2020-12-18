@@ -123,19 +123,19 @@ Config& Config::parse(int argc, char** argv) {
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG");
+                "PLUGIN_CONFIG")
             ("stateful",
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
-                "STATEFUL");
+                "STATEFUL")
             ("stateful_timeout",
                 "Determines how long stateful model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
                 cxxopts::value<uint32_t>(),
-                "STATEFUL_TIMEOUT");
+                "STATEFUL_TIMEOUT")
             ("low_latency_transformation",
                 "Flag indicating model is using low latency transformation",
                 cxxopts::value<bool>()->default_value("false"),
-                "LOW_LATENCY_TRANSFORMATION");
+                "LOW_LATENCY_TRANSFORMATION")
             ("max_sequence_number",
                 "Determines how many frames can be processed with one sequence. Exceeding this number will cause error.",
                 cxxopts::value<uint32_t>(),
@@ -260,7 +260,7 @@ void Config::validate() {
     }
 
     // check stateful flags:
-    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("stateful_timeout") && !result->count("stateful"))) {
+    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("stateful_timeout")) && !result->count("stateful")) {
         std::cerr << "low_latency_transformation, max_sequence_number and stateful_timeout require --statefull enabling flag for model serving." << std::endl;
         exit(EX_USAGE);
     }
