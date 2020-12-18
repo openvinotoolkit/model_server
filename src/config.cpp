@@ -133,7 +133,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>(),
                 "STATEFUL_TIMEOUT")
             ("low_latency_transformation",
-                "Flag indicating model is using low latency transformation",
+                "Flag indicating that Model Server should perform low latency transformation on that model",
                 cxxopts::value<bool>()->default_value("false"),
                 "LOW_LATENCY_TRANSFORMATION")
             ("max_sequence_number",
