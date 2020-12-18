@@ -276,7 +276,7 @@ public:
     }
 
     /**
-         * @brief low latency transformation flag
+         * @brief Get low latency transformation flag
          *
          * @return bool
          */
