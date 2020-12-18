@@ -203,7 +203,7 @@ public:
         bool stateful = false,
         bool lowLatencyTransformation = false,
         uint32_t maxSequenceNumber = 500,
-        uint32_t sequenceTimeout = 60):
+        uint32_t sequenceTimeout = 60) :
         name(name),
         basePath(basePath),
         localPath(localPath),
@@ -220,8 +220,7 @@ public:
         stateful(stateful),
         sequenceTimeout(sequenceTimeout),
         lowLatencyTransformation(lowLatencyTransformation),
-        maxSequenceNumber(maxSequenceNumber)
-        {
+        maxSequenceNumber(maxSequenceNumber) {
         setBatchingParams(configBatchSize);
     }
 
