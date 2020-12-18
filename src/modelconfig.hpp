@@ -204,7 +204,7 @@ public:
         bool lowLatencyTransformation = false,
 <<<<<<< HEAD
         uint32_t sequenceTimeout = 60,
-        uint32_t maxSequenceNumber = 500):
+        uint32_t maxSequenceNumber = 500) :
 =======
         uint32_t maxSequenceNumber = 500,
         uint32_t sequenceTimeout = 60) :
