@@ -70,7 +70,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
-                "serving log level - one of DEBUG, INFO, ERROR",
+                "serving log level - one of DEBUG, INFO, WARNING, ERROR",
                 cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
             ("log_path",
                 "optional path to the log file",
@@ -242,6 +242,16 @@ void Config::validate() {
         std::cerr << "File path provided as an --cpu_extension parameter does not exists in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
         exit(EX_USAGE);
     }
+
+    // check log_level values
+    if (result->count("log_level")) {
+	std::vector v({"DEBUG", "INFO", "WARNING", "ERROR"});
+	if (std::find(v.begin(), v.end(), this->logLevel) != v.end()) {
+	    std::cerr << "log_level should be on of: DEBUG, INFO, WARNING, ERROR" << std::endl;
+            exit(EX_USAGE);
+	}
+    }
+
     return;
 }
 
