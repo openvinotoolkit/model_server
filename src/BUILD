@@ -172,7 +172,7 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
-        # "test/deserialization_tests.cpp",
+        "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
@@ -205,7 +205,7 @@ cc_test(
         "test/rest_parser_column_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
-        # "test/serialization_tests.cpp",
+        "test/serialization_tests.cpp",
         "test/stringutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
