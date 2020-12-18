@@ -129,7 +129,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
             ("stateful_timeout",
-                "Determines how long stateful model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
+                "Determines how long model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
                 cxxopts::value<uint32_t>(),
                 "STATEFUL_TIMEOUT")
             ("low_latency_transformation",
