@@ -504,7 +504,7 @@ public:
      *
      * @return bool
      */
-    const bool isLowLatencyTransformation() const {
+    const bool isLowLatencyTransformationUsed() const {
         return this->lowLatencyTransformation;
     }
 
