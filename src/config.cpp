@@ -261,7 +261,7 @@ void Config::validate() {
 
     // check stateful flags:
     if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("stateful_timeout")) && !result->count("stateful")) {
-        std::cerr << "low_latency_transformation, max_sequence_number and stateful_timeout require --statefull enabling flag for model serving." << std::endl;
+        std::cerr << "Setting low_latency_transformation, max_sequence_number and stateful_timeout require setting stateful flag for the model." << std::endl;
         exit(EX_USAGE);
     }
     return;
