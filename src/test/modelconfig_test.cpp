@@ -56,6 +56,22 @@ TEST(ModelConfig, getters_setters) {
     config.setVersion(ver);
     auto version = config.getVersion();
     EXPECT_EQ(version, ver);
+
+    config.setStateful(true);
+    auto is = config.isStateful();
+    EXPECT_EQ(is, true);
+
+    config.setLowLatencyTransformation(true);
+    auto is = config.isLowLatencyTransformationUsed();
+    EXPECT_EQ(is, true);
+
+    config.setMaxSequenceNumber(11);
+    auto seq = config.getMaxSequenceNumber();
+    EXPECT_EQ(seq, 11);
+
+    config.setSequenceTimeout(11);
+    auto seq = config.getSequenceTimeout();
+    EXPECT_EQ(seq, 11);
 }
 
 TEST(ModelConfig, layout_single) {
