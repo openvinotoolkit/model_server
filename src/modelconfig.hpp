@@ -202,13 +202,8 @@ public:
         const std::string& localPath = "",
         bool stateful = false,
         bool lowLatencyTransformation = false,
-<<<<<<< HEAD
         uint32_t sequenceTimeout = 60,
         uint32_t maxSequenceNumber = 500) :
-=======
-        uint32_t maxSequenceNumber = 500,
-        uint32_t sequenceTimeout = 60) :
->>>>>>> 7e992249ad700149a2eb8f2bce89f9714ec1a191
         name(name),
         basePath(basePath),
         localPath(localPath),
