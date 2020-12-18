@@ -83,7 +83,7 @@ Status ModelManager::startFromConfig() {
             config.modelPath(),
             config.targetDevice(),
             config.batchSize(),
-            config.nireq()
+            config.nireq(),
             config.stateful(),
             config.sequenceTimeout(),
             config.lowLatencyTransformation(),
