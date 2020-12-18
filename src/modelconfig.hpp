@@ -202,8 +202,8 @@ public:
         const std::string& localPath = "",
         bool stateful = false,
         bool lowLatencyTransformation = false,
-        uint32_t maxSequenceNumber = 500,
-        uint32_t sequenceTimeout = 60):
+        uint32_t sequenceTimeout = 60,
+        uint32_t maxSequenceNumber = 500):
         name(name),
         basePath(basePath),
         localPath(localPath),
@@ -218,8 +218,8 @@ public:
         mappingInputs({}),
         mappingOutputs({}),
         stateful(stateful),
-        sequenceTimeout(sequenceTimeout),
         lowLatencyTransformation(lowLatencyTransformation),
+        sequenceTimeout(sequenceTimeout),
         maxSequenceNumber(maxSequenceNumber)
         {
         setBatchingParams(configBatchSize);
