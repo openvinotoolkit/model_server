@@ -45,6 +45,20 @@
 
 namespace ovms {
 
+void print_vector(std::vector<model_version_t> versions_vector) {
+    std::ostringstream vts;
+    for (const auto version : versions_vector) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "version {}; ", version);
+    }
+}
+
+void print_sp(std::shared_ptr<model_versions_t>& versions) {
+    std::ostringstream vts;
+    if (!versions->empty()) {
+        std::copy(versions->begin(), versions->end(), std::ostream_iterator<int>(vts, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions: {}; ", vts.str());
+    }
+}
 static bool watcherStarted = false;
 
 Status ModelManager::start() {
@@ -620,10 +634,10 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs);
+        status = model->addVersions(versionsToStart, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -661,15 +675,20 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());
-    std::vector<model_version_t> requestedVersions;
-    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
+    std::vector<model_version_t> availableVersions;
+    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
     if (!blocking_status.ok()) {
         return blocking_status;
     }
-    requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
+    auto requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    spdlog::debug("test1");
+    print_vector(availableVersions);
+    spdlog::debug("test2");
+    print_vector(requestedVersions);
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
+    std::shared_ptr<model_versions_t> versionsFailed = std::make_shared<model_versions_t>(0);
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();
 
@@ -698,12 +717,47 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
+
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
-    if (versionsToStart->size() > 0) {
-        auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
+    // debugging
+    std::ostringstream vts1;
+    if (!versionsToStart->empty()) {
+        std::copy(versionsToStart->begin(), versionsToStart->end(), std::ostream_iterator<int>(vts1, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to add: {}; ", vts1.str());
+    }
+    std::ostringstream vts2;
+    if (!versionsToReload->empty()) {
+        std::copy(versionsToReload->begin(), versionsToReload->end(), std::ostream_iterator<int>(vts2, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload: {}; ", vts2.str());
+    }
+    std::ostringstream vts3;
+    if (!versionsToRetire->empty()) {
+        std::copy(versionsToRetire->begin(), versionsToRetire->end(), std::ostream_iterator<int>(vts3, ", "));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire: {}; ", vts3.str());
+    }
+    // debugging
+
+    while (versionsToStart->size() > 0) {
+        auto blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "staring adding versions: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            return blocking_status;
+            //remove versionsFailed from availableVersions
+            print_vector(requestedVersions);
+            for (const auto version : *versionsFailed) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "removing requested version {}; ", version);
+                if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+                    availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+                }
+            }
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "available versions");
+            print_vector(availableVersions);
+            requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requested versions");
+            print_vector(requestedVersions);
+            getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+        } else {
+            break;
         }
     }
 

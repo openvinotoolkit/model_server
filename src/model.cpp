@@ -130,9 +130,12 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t>& versionsFailed) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
+    SPDLOG_INFO("clearning vector versionsFailed");
+    versionsFailed->clear();
+    SPDLOG_INFO("cleared vector versionsFailed");
     for (const auto version : *versionsToStart) {
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
@@ -143,6 +146,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
                 getName(),
                 version,
                 status.string());
+            versionsFailed->push_back(version);
             result = status;
             cleanupModelTmpFiles(config);
         }
