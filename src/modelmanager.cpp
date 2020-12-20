@@ -742,7 +742,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         auto blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "staring adding versions: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            //remove versionsFailed from availableVersions
+            // remove versionsFailed from availableVersions
             print_vector(requestedVersions);
             for (const auto version : *versionsFailed) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "removing requested version {}; ", version);
