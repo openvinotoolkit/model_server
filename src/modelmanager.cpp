@@ -721,11 +721,11 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     // debugging
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to start:");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to start:");
     print_sp(versionsToStart);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to reload:");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload:");
     print_sp(versionsToReload);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to retire:");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire:");
     print_sp(versionsToRetire);
     // debugging
 
