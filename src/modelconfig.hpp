@@ -197,7 +197,6 @@ public:
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
-        const std::string& localPath = "",
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         model_version_t version = 0,
@@ -205,7 +204,8 @@ public:
         bool stateful = false,
         bool lowLatencyTransformation = false,
         uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT,
-        uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER) :
+        uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
+        const std::string& localPath = "") :
         name(name),
         basePath(basePath),
         localPath(localPath),
