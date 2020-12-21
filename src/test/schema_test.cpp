@@ -719,15 +719,15 @@ TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
 TEST(SchemaTest, ModelConfigNireqNegative) {
     const char* modelConfigNireqNegative = R"(
     {
-        "model_config_list": [
-            {
-                "config": {
-                    "name": "dummy",
-                    "base_path": "dummy_path:,
-                    "nireq": -1
-                }
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "nireq": -1
             }
-        ],
+        }
+    ]
     })";
 
     rapidjson::Document modelConfigNireqNegativeParsed;
