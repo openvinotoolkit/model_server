@@ -106,6 +106,26 @@ private:
     uint64_t nireq;
 
     /**
+         * @brief Flag determining if model is stateful
+         */
+    bool stateful;
+
+    /**
+         * @brief Flag determining if model will use low latency transformation
+         */
+    bool lowLatencyTransformation;
+
+    /**
+         * @brief Timeout for stateful model sequence
+         */
+    uint32_t sequenceTimeout;
+
+    /**
+         * @brief Number of maximum frames in one sequence
+         */
+    uint32_t maxSequenceNumber;
+
+    /**
          * @brief Plugin config
          */
     plugin_config_t pluginConfig;
@@ -165,26 +185,6 @@ private:
          */
     std::string customLoaderOptionsStr;
 
-    /**
-         * @brief Flag determining if model is stateful
-         */
-    bool stateful;
-
-    /**
-         * @brief Flag determining if model will use low latency transformation
-         */
-    bool lowLatencyTransformation;
-
-    /**
-         * @brief Timeout for stateful model sequence
-         */
-    uint32_t sequenceTimeout;
-
-    /**
-         * @brief Number of maximum frames in one sequence
-         */
-    uint32_t maxSequenceNumber;
-
 public:
     /**
          * @brief Construct a new Model Config object
@@ -212,11 +212,11 @@ public:
         targetDevice(targetDevice),
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
-        pluginConfig({}),
         stateful(stateful),
         lowLatencyTransformation(lowLatencyTransformation),
         sequenceTimeout(sequenceTimeout),
         maxSequenceNumber(maxSequenceNumber),
+        pluginConfig({}),
         layout(""),
         shapes({}),
         layouts({}),
