@@ -85,8 +85,8 @@ Status ModelManager::startFromConfig() {
             config.batchSize(),
             config.nireq(),
             config.stateful(),
-            config.sequenceTimeout(),
             config.lowLatencyTransformation(),
+            config.sequenceTimeout(),
             config.maxSequenceNumber()});
 
     if (!success) {

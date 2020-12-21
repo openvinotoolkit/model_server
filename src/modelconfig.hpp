@@ -57,6 +57,8 @@ using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
+const uint32_t DEFAULT_SEQUENCE_TIMEOUT = 60;
+const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
      * @brief This class represents model configuration
@@ -164,12 +166,12 @@ private:
     std::string customLoaderOptionsStr;
 
     /**
-         * @brief Flag determing if model is of a stateful flag
+         * @brief Flag determining if model is of a stateful flag
          */
     bool stateful;
 
     /**
-         * @brief Flag determing if model will use low latency transformation
+         * @brief Flag determining if model will use low latency transformation
          */
     bool lowLatencyTransformation;
 
@@ -195,32 +197,33 @@ public:
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
+        const std::string& localPath = "",
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
-        uint64_t nireq = 0,
         model_version_t version = 0,
-        const std::string& localPath = "",
+        uint64_t nireq = 0,
         bool stateful = false,
         bool lowLatencyTransformation = false,
-        uint32_t sequenceTimeout = 60,
-        uint32_t maxSequenceNumber = 500) :
+        uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT,
+        uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER) :
         name(name),
         basePath(basePath),
         localPath(localPath),
         targetDevice(targetDevice),
+        configBatchSize(configBatchSize),
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
+        stateful(stateful),
+        lowLatencyTransformation(lowLatencyTransformation),
+        sequenceTimeout(sequenceTimeout),
+        maxSequenceNumber(maxSequenceNumber),
         pluginConfig({}),
         layout(""),
         shapes({}),
         layouts({}),
         version(version),
         mappingInputs({}),
-        mappingOutputs({}),
-        stateful(stateful),
-        lowLatencyTransformation(lowLatencyTransformation),
-        sequenceTimeout(sequenceTimeout),
-        maxSequenceNumber(maxSequenceNumber) {
+        mappingOutputs({}) {
         setBatchingParams(configBatchSize);
     }
 
