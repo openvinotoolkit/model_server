@@ -676,7 +676,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());
     std::vector<model_version_t> availableVersions;
-    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
+    Status blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
     if (!blocking_status.ok()) {
         return blocking_status;
     }
@@ -728,9 +728,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire:");
     print_sp(versionsToRetire);
     // debugging
-
+    // Status blocking_status = StatusCode::OK;
     while (versionsToStart->size() > 0) {
-        auto blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
             print_vector(requestedVersions);
