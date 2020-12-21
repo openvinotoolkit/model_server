@@ -649,11 +649,11 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     return status;
 }
 
-Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed) {
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs);
+        auto status = model->reloadVersions(versionsToReload, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -721,31 +721,21 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     // debugging
-    std::ostringstream vts1;
-    if (!versionsToStart->empty()) {
-        std::copy(versionsToStart->begin(), versionsToStart->end(), std::ostream_iterator<int>(vts1, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to add: {}; ", vts1.str());
-    }
-    std::ostringstream vts2;
-    if (!versionsToReload->empty()) {
-        std::copy(versionsToReload->begin(), versionsToReload->end(), std::ostream_iterator<int>(vts2, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload: {}; ", vts2.str());
-    }
-    std::ostringstream vts3;
-    if (!versionsToRetire->empty()) {
-        std::copy(versionsToRetire->begin(), versionsToRetire->end(), std::ostream_iterator<int>(vts3, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire: {}; ", vts3.str());
-    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to start:");
+    print_sp(versionsToStart);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to reload:");
+    print_sp(versionsToReload);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"versions to retire:");
+    print_sp(versionsToRetire);
     // debugging
 
     while (versionsToStart->size() > 0) {
         auto blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "staring adding versions: {};", blocking_status.string());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            // remove versionsFailed from availableVersions
             print_vector(requestedVersions);
             for (const auto version : *versionsFailed) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "removing requested version {}; ", version);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure; ", version);
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
@@ -762,8 +752,18 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload);
+        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
     }
+    for (const auto version : *versionsFailed) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure.", version);
+        if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+            availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+        }
+    }
+    // refresh versions to retire based on failed reloads
+    requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+
     if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {

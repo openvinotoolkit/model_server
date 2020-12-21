@@ -196,7 +196,7 @@ void Model::retireAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t>& versionsFailed) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
@@ -228,6 +228,8 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 version,
                 status.string());
             result = status;
+            modelVersion->unloadModel();  // invalidate version when reloading fails due to corrupted or missing model files
+            versionsFailed->push_back(version);
             continue;
         }
         updateDefaultVersion();
