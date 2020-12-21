@@ -166,7 +166,7 @@ private:
     std::string customLoaderOptionsStr;
 
     /**
-         * @brief Flag determining if model is of a stateful flag
+         * @brief Flag determining if model is stateful
          */
     bool stateful;
 
@@ -210,14 +210,13 @@ public:
         basePath(basePath),
         localPath(localPath),
         targetDevice(targetDevice),
-        configBatchSize(configBatchSize),
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
+        pluginConfig({}),
         stateful(stateful),
         lowLatencyTransformation(lowLatencyTransformation),
         sequenceTimeout(sequenceTimeout),
         maxSequenceNumber(maxSequenceNumber),
-        pluginConfig({}),
         layout(""),
         shapes({}),
         layouts({}),
