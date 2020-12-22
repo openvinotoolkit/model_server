@@ -257,7 +257,7 @@ private:
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
-    const bool checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
+    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
 
     const Status validatePrecision(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);

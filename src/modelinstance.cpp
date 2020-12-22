@@ -632,12 +632,15 @@ void ModelInstance::unloadModel(bool isPermanent) {
     }
 }
 
-const bool ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput) {
+const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput) {
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        if (requestInput.tensor_shape().dim(i).size() < 0)
-            return true;
+        if (requestInput.tensor_shape().dim(i).size() < 0) {
+            const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+            return Status(StatusCode::INVALID_SHAPE, details);
+        }
     }
-    return false;
+    return StatusCode::OK;
 }
 
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,
@@ -778,13 +781,11 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         Mode batchingMode = getModelConfig().getBatchingMode();
         Mode shapeMode = getModelConfig().isShapeAuto(name) ? AUTO : FIXED;
 
-        if (checkIfShapeValuesNegative(requestInput)) {
-            const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-            SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_SHAPE, details);
-        }
+        auto status = checkIfShapeValuesNegative(requestInput);
+        if (!status.ok())
+            return status;
 
-        auto status = validatePrecision(*networkInput, requestInput);
+        status = validatePrecision(*networkInput, requestInput);
         if (!status.ok())
             return status;
 
