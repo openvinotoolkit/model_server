@@ -2855,3 +2855,90 @@ TEST_F(EnsembleFlowTest, PipelineRetiredAddModelWithSameName) {
     auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
     ASSERT_EQ(instance, nullptr);
 }
+
+static const char* pipelinePipelineSameNameConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        },
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode2",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
+    // Expected result - adding second pipeline fails
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    waitForOVMSConfigReload(manager);
+    createConfigFileWithContent(pipelinePipelineSameNameConfig, fileToReload);
+    waitForOVMSConfigReload(manager);
+
+    ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+}
