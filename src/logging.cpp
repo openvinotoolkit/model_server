@@ -25,7 +25,7 @@ std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
 
-const std::string default_pattern = "[%Y-%m-%d %T.%e][%n][%l][%s:%#] %v";
+const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
 void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
     logger->set_level(spdlog::level::info);

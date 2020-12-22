@@ -450,6 +450,14 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
     }
 }
 
+void ModelManager::updateConfigurationWithoutConfigFile() {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
+    for (auto& [name, config] : servedModelConfigs) {
+        reloadModelWithVersions(config);
+    }
+    pipelineFactory.revalidatePipelines(*this);
+}
+
 void ModelManager::watcher(std::future<void> exit) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started config watcher thread");
     int64_t lastTime;
@@ -464,10 +472,7 @@ void ModelManager::watcher(std::future<void> exit) {
             lastTime = statTime.st_ctime;
             loadConfig(configFilename);
         }
-        for (auto& [name, config] : servedModelConfigs) {
-            reloadModelWithVersions(config);
-        }
-        pipelineFactory.revalidatePipelines(*this);
+        updateConfigurationWithoutConfigFile();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");
@@ -492,9 +497,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    SPDLOG_DEBUG("Currently registered versions count: {}", modelVersionsInstances.size());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        SPDLOG_DEBUG("version: {} state: {}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -656,6 +661,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
     auto model = getModelIfExistCreateElse(config.getName());
     if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
@@ -669,11 +675,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return blocking_status;
     }
     requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
-
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
-
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();
 

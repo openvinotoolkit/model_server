@@ -186,6 +186,8 @@ enum class StatusCode {
     CUSTOM_LOADER_NOT_PRESENT,
     CUSTOM_LOADER_INIT_FAILED,
     CUSTOM_LOADER_ERROR,
+
+    STATUS_CODE_END
 };
 
 class Status {
