@@ -45,20 +45,6 @@
 
 namespace ovms {
 
-void print_vector(std::vector<model_version_t> versions_vector) {
-    std::ostringstream vts;
-    for (const auto version : versions_vector) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "version {}; ", version);
-    }
-}
-
-void print_sp(std::shared_ptr<model_versions_t>& versions) {
-    std::ostringstream vts;
-    if (!versions->empty()) {
-        std::copy(versions->begin(), versions->end(), std::ostream_iterator<int>(vts, ", "));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions: {}; ", vts.str());
-    }
-}
 static bool watcherStarted = false;
 
 Status ModelManager::start() {
@@ -716,31 +702,17 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
-    // debugging
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to start:");
-    print_sp(versionsToStart);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to reload:");
-    print_sp(versionsToReload);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire:");
-    print_sp(versionsToRetire);
-    // debugging
-
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            print_vector(requestedVersions);
             for (const auto version : *versionsFailed) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure; ", version);
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
             }
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "available versions");
-            print_vector(availableVersions);
             requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requested versions");
-            print_vector(requestedVersions);
             getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
         } else {
             break;
@@ -751,7 +723,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
     }
     for (const auto version : *versionsFailed) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure.", version);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
             availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
         }
