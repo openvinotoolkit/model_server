@@ -2941,4 +2941,7 @@ TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
     ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
+    auto& nodeInfos = manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getNodeInfos();
+    ASSERT_FALSE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode"; }) == nodeInfos.end());
+    ASSERT_TRUE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode2"; }) == nodeInfos.end());
 }
