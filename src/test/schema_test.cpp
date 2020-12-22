@@ -715,3 +715,23 @@ TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
     result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+TEST(SchemaTest, ModelConfigNireqNegative) {
+    const char* modelConfigNireqNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "nireq": -1
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigNireqNegativeParsed;
+    modelConfigNireqNegativeParsed.Parse(modelConfigNireqNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigNireqNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
