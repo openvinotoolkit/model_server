@@ -681,10 +681,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return blocking_status;
     }
     auto requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
-    spdlog::debug("test1");
-    print_vector(availableVersions);
-    spdlog::debug("test2");
-    print_vector(requestedVersions);
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
@@ -728,7 +724,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "versions to retire:");
     print_sp(versionsToRetire);
     // debugging
-    // Status blocking_status = StatusCode::OK;
+
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());

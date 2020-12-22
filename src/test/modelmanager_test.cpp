@@ -23,6 +23,7 @@
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
+#include "../prediction_service_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
@@ -348,6 +349,93 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     config.setBasePath("/ovms/src/test/dummy");
     auto status = manager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+}
+
+class dummyModel {
+private:
+    std::string model_source_path;
+public:
+    dummyModel(std::string model_name): model_source_path("/ovms/src/test/dummy/1/") {
+        name = model_name;
+        std::string model_path = "/tmp/" + name;
+        std::filesystem::remove_all(model_path);
+    };
+    ~dummyModel() {
+        std::string model_path = "/tmp/" + name;
+        std::filesystem::remove_all(model_path);
+    };
+
+    std::string name;
+
+    void addVersion(int number, bool valid){
+        std::string version_path = "/tmp/" + name + "/" + std::to_string(number);
+        std::filesystem::create_directories(version_path);
+        std::filesystem::copy(model_source_path, version_path, std::filesystem::copy_options::recursive);
+        if (!valid) {
+            std::filesystem::copy(version_path + "/dummy.bin", version_path + "/dummy.xml", std::filesystem::copy_options::overwrite_existing);
+        }
+    }
+    void removeVersion(int number) {
+        std::string version_path = "/tmp/" + name + "/" + std::to_string(number);
+        std::filesystem::remove_all(version_path);
+    }
+
+
+};
+
+TEST(ModelManager, HandlingInvalidLastVersion) {
+    dummyModel model("HandlingInvalidLastVersion");
+    model.addVersion(1, true);
+    model.addVersion(2, true);
+    model.addVersion(3, false);
+    ovms::ModelConfig config;
+    config.setBasePath("/tmp/" + model.name);
+    config.setName(model.name);
+    config.setNireq(1);
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+    std::shared_ptr<ovms::ModelInstance> modelInstance1;
+    std::shared_ptr<ovms::ModelInstance> modelInstance2;
+    std::shared_ptr<ovms::ModelInstance> modelInstance3;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = ovms::getModelInstance(manager, model.name, 2, modelInstance2, modelInstanceUnloadGuard);
+    // modelInstance2->decreasePredictRequestsHandlesCount();
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+    status = ovms::getModelInstance(manager, model.name, 3, modelInstance3, modelInstanceUnloadGuard);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
+
+    model.removeVersion(3);
+    model.removeVersion(2);
+    std::cout << "Removed versions 3 and 2" << std::endl;
+    modelInstance2->decreasePredictRequestsHandlesCount();
+    std::cout << "can unload 2 " << modelInstance2->canUnloadInstance() << std::endl;
+    manager.reloadModelWithVersions(config);
+    std::cout << "test" << std::endl;
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
+    status = ovms::getModelInstance(manager, model.name, 1, modelInstance1, modelInstanceUnloadGuard);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+
+
+    model.addVersion(2, false);
+    std::cout << "Added invalid version 2" << std::endl;
+    modelInstance2->increasePredictRequestsHandlesCount();
+    std::cout << "can unload 2 " << modelInstance2->canUnloadInstance() << std::endl;
+    manager.reloadModelWithVersions(config);
+
+    ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
+
+    std::cout << "Fixed invalid version 2" << std::endl;
+    model.removeVersion(2);
+    model.addVersion(2, true);
+    modelInstance1->decreasePredictRequestsHandlesCount();
+    manager.reloadModelWithVersions(config);
+    ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+
+
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {

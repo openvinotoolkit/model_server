@@ -228,7 +228,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 version,
                 status.string());
             result = status;
-            modelVersion->unloadModel();  // invalidate version when reloading fails due to corrupted or missing model files
+            // modelVersion->unloadModel();  // invalidate version when reloading fails due to corrupted or missing model files
             versionsFailed->push_back(version);
             continue;
         }
