@@ -126,6 +126,11 @@ private:
     uint32_t maxSequenceNumber;
 
     /**
+         * @brief Model version
+         */
+    model_version_t version = -1;
+
+    /**
          * @brief Plugin config
          */
     plugin_config_t pluginConfig;
@@ -144,11 +149,6 @@ private:
          * @brief Map of layouts
          */
     layouts_map_t layouts;
-
-    /**
-         * @brief Model version
-         */
-    model_version_t version = -1;
 
     /**
          * @brief Input mapping configuration
