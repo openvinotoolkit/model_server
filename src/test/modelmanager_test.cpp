@@ -354,8 +354,10 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
 class dummyModel {
 private:
     std::string model_source_path;
+
 public:
-    dummyModel(std::string model_name): model_source_path("/ovms/src/test/dummy/1/") {
+    dummyModel(std::string model_name) :
+        model_source_path("/ovms/src/test/dummy/1/") {
         name = model_name;
         std::string model_path = "/tmp/" + name;
         std::filesystem::remove_all(model_path);
@@ -367,7 +369,7 @@ public:
 
     std::string name;
 
-    void addVersion(int number, bool valid){
+    void addVersion(int number, bool valid) {
         std::string version_path = "/tmp/" + name + "/" + std::to_string(number);
         std::filesystem::create_directories(version_path);
         std::filesystem::copy(model_source_path, version_path, std::filesystem::copy_options::recursive);
@@ -379,8 +381,6 @@ public:
         std::string version_path = "/tmp/" + name + "/" + std::to_string(number);
         std::filesystem::remove_all(version_path);
     }
-
-
 };
 
 TEST(ModelManager, HandlingInvalidLastVersion) {
@@ -417,7 +417,6 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
 
-
     model.addVersion(2, false);
     std::cout << "Added invalid version 2" << std::endl;
     modelInstance2->increasePredictRequestsHandlesCount();
@@ -434,8 +433,6 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
-
-
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
