@@ -199,12 +199,12 @@ public:
         const std::string& basePath = "",
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
-        model_version_t version = 0,
         uint64_t nireq = 0,
         bool stateful = false,
         bool lowLatencyTransformation = false,
         uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
+        model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
         basePath(basePath),
@@ -216,11 +216,11 @@ public:
         lowLatencyTransformation(lowLatencyTransformation),
         sequenceTimeout(sequenceTimeout),
         maxSequenceNumber(maxSequenceNumber),
+        version(version),
         pluginConfig({}),
         layout(""),
         shapes({}),
         layouts({}),
-        version(version),
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
