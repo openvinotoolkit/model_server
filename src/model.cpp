@@ -130,12 +130,10 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t>& versionsFailed) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
-    SPDLOG_INFO("clearning vector versionsFailed");
     versionsFailed->clear();
-    SPDLOG_INFO("cleared vector versionsFailed");
     for (const auto version : *versionsToStart) {
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
@@ -196,7 +194,7 @@ void Model::retireAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t>& versionsFailed) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
@@ -228,7 +226,6 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 version,
                 status.string());
             result = status;
-            // modelVersion->unloadModel();  // invalidate version when reloading fails due to corrupted or missing model files
             versionsFailed->push_back(version);
             continue;
         }
