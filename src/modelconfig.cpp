@@ -415,6 +415,18 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         }
     }
 
+    if (v.HasMember("stateful"))
+        this->setStateful(v["stateful"].GetBool());
+
+    if (v.HasMember("low_latency_transformation"))
+        this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
+
+    if (v.HasMember("sequence_timeout"))
+        this->setSequenceTimeout(v["sequence_timeout"].GetUint());
+
+    if (v.HasMember("max_sequence_number"))
+        this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
+
     if (v.HasMember("model_version_policy")) {
         rapidjson::StringBuffer buffer;
         buffer.Clear();

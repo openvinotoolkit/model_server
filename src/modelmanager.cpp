@@ -83,7 +83,11 @@ Status ModelManager::startFromConfig() {
             config.modelPath(),
             config.targetDevice(),
             config.batchSize(),
-            config.nireq()});
+            config.nireq(),
+            config.stateful(),
+            config.lowLatencyTransformation(),
+            config.sequenceTimeout(),
+            config.maxSequenceNumber()});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;

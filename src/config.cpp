@@ -42,9 +42,9 @@ Config& Config::parse(int argc, char** argv) {
         // clang-format off
         options->add_options()
             ("h, help",
-                "show this help message and exit")
+                "Show this help message and exit")
             ("version",
-                "show binary version")
+                "Show binary version")
             ("port",
                 "gRPC server port",
                 cxxopts::value<uint64_t>()->default_value("9178"),
@@ -62,18 +62,18 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("0.0.0.0"),
                 "REST_BIND_ADDRESS")
             ("grpc_workers",
-                "number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
+                "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint>()->default_value("1"),
                 "GRPC_WORKERS")
             ("rest_workers",
-                "number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
+                "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
-                "serving log level - one of DEBUG, INFO, ERROR",
+                "Serving log level - one of DEBUG, INFO, ERROR",
                 cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
             ("log_path",
-                "optional path to the log file",
+                "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
             ("grpc_channel_arguments",
                 "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
@@ -84,28 +84,28 @@ Config& Config::parse(int argc, char** argv) {
                 "SECONDS");
         options->add_options("multi model")
             ("config_path",
-                "absolute path to json configuration file",
+                "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
 
         options->add_options("single model")
             ("model_name",
-                "name of the model",
+                "Name of the model",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
             ("model_path",
-                "absolute path to model, as in tf serving",
+                "Absolute path to model, as in tf serving",
                 cxxopts::value<std::string>(),
                 "MODEL_PATH")
             ("batch_size",
-                "resets models batchsize, int value or auto. This parameter will be ignored if shape is set",
+                "Resets models batchsize, int value or auto. This parameter will be ignored if shape is set",
                 cxxopts::value<std::string>(),
                 "BATCH_SIZE")
             ("shape",
-                "resets models shape (model must support reshaping). If set, batch_size parameter is ignored",
+                "Resets models shape (model must support reshaping). If set, batch_size parameter is ignored",
                 cxxopts::value<std::string>(),
                 "SHAPE")
             ("model_version_policy",
-                "model version policy",
+                "Model version policy",
                 cxxopts::value<std::string>(),
                 "MODEL_VERSION_POLICY")
             ("nireq",
@@ -117,13 +117,29 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("cpu_extension",
-                "a path to shared library containing custom CPU layer implementation. Default: empty.",
+                "A path to shared library containing custom CPU layer implementation. Default: empty.",
                 cxxopts::value<std::string>()->default_value(""),
                 "CPU_EXTENSION")
             ("plugin_config",
-                "a dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
+                "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG");
+                "PLUGIN_CONFIG")
+            ("stateful",
+                "Flag indicating model is stateful",
+                cxxopts::value<bool>()->default_value("false"),
+                "STATEFUL")
+            ("sequence_timeout",
+                "Determines how long model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
+                cxxopts::value<uint32_t>(),
+                "SEQUENCE_TIMEOUT")
+            ("low_latency_transformation",
+                "Flag indicating that Model Server should perform low latency transformation on that model",
+                cxxopts::value<bool>()->default_value("false"),
+                "LOW_LATENCY_TRANSFORMATION")
+            ("max_sequence_number",
+                "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
+                cxxopts::value<uint32_t>(),
+                "MAX_SEQUENCE_NUMBER");
 
         // clang-format on
 
@@ -240,6 +256,12 @@ void Config::validate() {
     // check cpu_extension path:
     if (result->count("cpu_extension") && !std::filesystem::exists(this->cpuExtensionLibraryPath())) {
         std::cerr << "File path provided as an --cpu_extension parameter does not exists in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // check stateful flags:
+    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("sequence_timeout")) && !result->count("stateful")) {
+        std::cerr << "Setting low_latency_transformation, max_sequence_number and sequence_timeout require setting stateful flag for the model." << std::endl;
         exit(EX_USAGE);
     }
     return;
