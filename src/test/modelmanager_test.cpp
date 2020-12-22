@@ -361,11 +361,11 @@ public:
         name = model_name;
         std::string model_path = "/tmp/" + name;
         std::filesystem::remove_all(model_path);
-    };
+    }
     ~dummyModel() {
         std::string model_path = "/tmp/" + name;
         std::filesystem::remove_all(model_path);
-    };
+    }
 
     std::string name;
 
@@ -399,27 +399,28 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     std::shared_ptr<ovms::ModelInstance> modelInstance3;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = ovms::getModelInstance(manager, model.name, 2, modelInstance2, modelInstanceUnloadGuard);
-    // modelInstance2->decreasePredictRequestsHandlesCount();
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+    modelInstanceUnloadGuard.reset();
     status = ovms::getModelInstance(manager, model.name, 3, modelInstance3, modelInstanceUnloadGuard);
+    modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
 
     model.removeVersion(3);
     model.removeVersion(2);
     std::cout << "Removed versions 3 and 2" << std::endl;
-    modelInstance2->decreasePredictRequestsHandlesCount();
     std::cout << "can unload 2 " << modelInstance2->canUnloadInstance() << std::endl;
+
     manager.reloadModelWithVersions(config);
     std::cout << "test" << std::endl;
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
     status = ovms::getModelInstance(manager, model.name, 1, modelInstance1, modelInstanceUnloadGuard);
+    modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
 
     model.addVersion(2, false);
     std::cout << "Added invalid version 2" << std::endl;
-    modelInstance2->increasePredictRequestsHandlesCount();
     std::cout << "can unload 2 " << modelInstance2->canUnloadInstance() << std::endl;
     manager.reloadModelWithVersions(config);
 
@@ -429,7 +430,6 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     std::cout << "Fixed invalid version 2" << std::endl;
     model.removeVersion(2);
     model.addVersion(2, true);
-    modelInstance1->decreasePredictRequestsHandlesCount();
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
