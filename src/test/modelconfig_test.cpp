@@ -62,7 +62,7 @@ TEST(ModelConfig, getters_setters) {
     EXPECT_EQ(is, true);
 
     config.setLowLatencyTransformation(true);
-    auto is = config.isLowLatencyTransformationUsed();
+    is = config.isLowLatencyTransformationUsed();
     EXPECT_EQ(is, true);
 
     config.setMaxSequenceNumber(11);
@@ -70,7 +70,7 @@ TEST(ModelConfig, getters_setters) {
     EXPECT_EQ(seq, 11);
 
     config.setSequenceTimeout(11);
-    auto seq = config.getSequenceTimeout();
+    seq = config.getSequenceTimeout();
     EXPECT_EQ(seq, 11);
 }
 
