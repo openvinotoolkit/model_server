@@ -143,6 +143,10 @@ public:
         return this->status;
     }
 
+    const std::vector<NodeInfo>& getNodeInfos() {
+        return this->nodeInfos;
+    }
+
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 

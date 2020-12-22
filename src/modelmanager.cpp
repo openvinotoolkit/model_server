@@ -183,6 +183,10 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
 
 void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
+    if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);
+        return;
+    }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
 
