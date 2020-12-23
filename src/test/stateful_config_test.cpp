@@ -68,7 +68,7 @@ static const char* modelDefaultConfig = R"(
     ]
 })";
 
-/*static const char* modelStatefulChangedConfig = R"(
+static const char* modelStatefulChangedConfig = R"(
 {
     "model_config_list": [
         {
@@ -78,6 +78,10 @@ static const char* modelDefaultConfig = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"latest": {"num_versions":1}},
                 "nireq": 100,
+                "stateful": true,
+                "low_latency_transformation": true,
+                "sequence_timeout": 120,
+                "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -109,7 +113,7 @@ static const char* modelDefaultConfig = R"(
         }
     ]
 })";
-*/
+
 class StatefulConfigTest : public TestWithTempDir {
 public:
     std::string configFilePath;
@@ -134,7 +138,6 @@ public:
 };
 
 TEST_F(StatefulConfigTest, DefaultValues) {
-    //SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -153,6 +156,22 @@ TEST_F(StatefulConfigTest, DefaultValues) {
     ASSERT_EQ(seq, 60);
 }
 
+TEST_F(StatefulConfigTest, ChangedValues) {
+    SetUpConfig(modelStatefulChangedConfig);
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
 
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto modelConfig = modelInstance->getModelConfig();
 
-
+    auto is = modelConfig.isLowLatencyTransformationUsed();
+    ASSERT_EQ(is, true);
+    is = modelConfig.isStateful();
+    ASSERT_EQ(is, true);
+    auto seq = modelConfig.getMaxSequenceNumber();
+    ASSERT_EQ(seq, 1000);
+    seq = modelConfig.getSequenceTimeout();
+    ASSERT_EQ(seq, 120);
+}
