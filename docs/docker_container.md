@@ -206,6 +206,7 @@ Here the numerical values depict the version number of the model.
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
 
 #### To know more about batch size and shape parameters refer [Batch Size and Shape document](shape_and_batch_size.md)
+#### NOTICE: For CLI numerical values in quotes are allowed but for JSON config aren't.
 
 </details>
 
