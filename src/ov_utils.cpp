@@ -64,4 +64,58 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEng
     return StatusCode::OK;
 }
 
+/*InferenceEngine::Blob::Ptr constBlobClone(InferenceEngine::Blob::CPtr sourceBlob) {
+    auto copyBlob = InferenceEngine::Blob::CreateFromData(std::make_shared<InferenceEngine::Data>("", sourceBlob->getTensorDesc()));
+    copyBlob->allocate();
+    if (copyBlob->byteSize() != sourceBlob->byteSize()) {
+        return nullptr;
+    }
+    std::memcpy((void*)copyBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
+    return copyBlob;
+} */
+
+Status constBlobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::CPtr sourceBlob) {
+    auto& description = sourceBlob->getTensorDesc();
+
+    try {
+        switch (description.getPrecision()) {
+        case InferenceEngine::Precision::FP32:
+            destinationBlob = InferenceEngine::make_shared_blob<float>(description);
+            break;
+        case InferenceEngine::Precision::U8:
+            destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(description);
+            break;
+        case InferenceEngine::Precision::I8:
+            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(description);
+            break;
+        case InferenceEngine::Precision::I16:
+            destinationBlob = InferenceEngine::make_shared_blob<int16_t>(description);
+            break;
+        case InferenceEngine::Precision::I32:
+            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(description);
+            break;
+        default: {
+            SPDLOG_ERROR("Blob clone failed, unsupported precision");
+            return StatusCode::INVALID_PRECISION;
+        }
+        }
+    }
+    catch (const InferenceEngine::details::InferenceEngineException& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+    catch (std::logic_error& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+
+    destinationBlob->allocate();
+    if (destinationBlob->byteSize() != sourceBlob->byteSize()) {
+        destinationBlob = nullptr;
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+    std::memcpy((void*)destinationBlob->buffer(), (void*)sourceBlob->buffer(), sourceBlob->byteSize());
+    return StatusCode::OK;
+}
+
 }  // namespace ovms
