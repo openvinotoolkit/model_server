@@ -80,7 +80,7 @@ static const char* modelStatefulChangedConfig = R"(
                 "nireq": 100,
                 "stateful": true,
                 "low_latency_transformation": true,
-                " sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 120,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
