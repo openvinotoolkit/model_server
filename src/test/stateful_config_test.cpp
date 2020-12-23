@@ -124,7 +124,7 @@ public:
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
         dummyModelName = "dummy";
-        const std::string modelPathToReplace{ "/ovms/src/test/dummy" };
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
         configFilePath = directoryPath + "/ovms_config.json";
     }
