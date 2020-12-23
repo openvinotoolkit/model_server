@@ -84,6 +84,18 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"plugin_config": {
 							"type": "object"
 						},
+						"stateful": {
+							"type": "boolean"
+						},
+						"sequence_timeout_seconds": {
+							"type": "integer"
+						},
+						"low_latency_transformation": {
+							"type": "boolean"
+						},
+						"max_sequence_number": {
+							"type": "integer"
+						},
 						"custom_loader_options": {
 							"type": "object",
                                                         "required": ["loader_name"],

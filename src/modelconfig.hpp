@@ -57,7 +57,7 @@ using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
-const uint32_t DEFAULT_SEQUENCE_TIMEOUT = 60;
+const uint32_t DEFAULT_SEQUENCE_TIMEOUT_SECONDS = 60;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
@@ -202,7 +202,7 @@ public:
         uint64_t nireq = 0,
         bool stateful = false,
         bool lowLatencyTransformation = false,
-        uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT,
+        uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT_SECONDS,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
         model_version_t version = 0,
         const std::string& localPath = "") :

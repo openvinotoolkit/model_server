@@ -128,10 +128,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
-            ("sequence_timeout",
-                "Determines how long model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
+            ("sequence_timeout_seconds",
+                "Determines how many seconds model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
                 cxxopts::value<uint32_t>(),
-                "SEQUENCE_TIMEOUT")
+                "SEQUENCE_TIMEOUT_SECONDS")
             ("low_latency_transformation",
                 "Flag indicating that Model Server should perform low latency transformation on that model",
                 cxxopts::value<bool>()->default_value("false"),
@@ -260,8 +260,8 @@ void Config::validate() {
     }
 
     // check stateful flags:
-    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("sequence_timeout")) && !result->count("stateful")) {
-        std::cerr << "Setting low_latency_transformation, max_sequence_number and sequence_timeout require setting stateful flag for the model." << std::endl;
+    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("sequence_timeout_seconds")) && !result->count("stateful")) {
+        std::cerr << "Setting low_latency_transformation, max_sequence_number and sequence_timeout_seconds require setting stateful flag for the model." << std::endl;
         exit(EX_USAGE);
     }
     return;
