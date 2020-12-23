@@ -114,7 +114,7 @@ Status constBlobClone(InferenceEngine::Blob::Ptr& destinationBlob, const Inferen
         destinationBlob = nullptr;
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
-    std::memcpy((void*)destinationBlob->buffer(), (void*)sourceBlob->buffer(), sourceBlob->byteSize());
+    std::memcpy((void*)destinationBlob->buffer(), (void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
     return StatusCode::OK;
 }
 

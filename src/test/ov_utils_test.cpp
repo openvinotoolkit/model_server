@@ -93,7 +93,7 @@ TEST(OVUtils, ConstCopyBlob) {
     ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
 
     std::vector<float> originalBlobActualData;
-    originalBlobActualData.assign((float*)originalBlob->buffer(), ((float*)originalBlob->buffer()) + elementsCount);
+    originalBlobActualData.assign((float*)originalBlob->cbuffer(), ((float*)originalBlob->cbuffer()) + elementsCount);
 
     std::vector<float> copyBlobActualData;
     copyBlobActualData.assign((float*)copyBlob->buffer(), ((float*)copyBlob->buffer()) + elementsCount);
@@ -102,5 +102,5 @@ TEST(OVUtils, ConstCopyBlob) {
     EXPECT_EQ(copyBlobActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE((float*)copyBlob->buffer(), (float*)originalBlob->buffer());
+    EXPECT_NE((float*)copyBlob->buffer(), (float*)originalBlob->cbuffer());
 }
