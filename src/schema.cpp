@@ -89,13 +89,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						},
 						"sequence_timeout": {
 							"type": "integer"
-						}
+						},
 						"low_latency_transformation": {
 							"type": "boolean"
 						},
 						"max_sequence_number": {
 							"type": "integer"
-						}
+						},
 						"custom_loader_options": {
 							"type": "object",
                                                         "required": ["loader_name"],
