@@ -359,11 +359,12 @@ public:
         return (state == PipelineDefinitionStateCode::AVAILABLE) ||
                (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
     }
-    bool isLoadedOrRequiringValidation() const {
+    bool canEndLoaded() const {
         auto state = getStateCode();
         return isAvailable() ||
                (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
-               (state == PipelineDefinitionStateCode::BEGIN);
+               (state == PipelineDefinitionStateCode::BEGIN) ||
+               (state == PipelineDefinitionStateCode::RELOADING);
     }
     bool isRevalidationRequired() const {
         auto state = getStateCode();
