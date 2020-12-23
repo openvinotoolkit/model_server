@@ -421,8 +421,8 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("low_latency_transformation"))
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
 
-    if (v.HasMember(" sequence_timeout_seconds"))
-        this->setSequenceTimeout(v[" sequence_timeout_seconds"].GetUint());
+    if (v.HasMember("sequence_timeout_seconds"))
+        this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());
 
     if (v.HasMember("max_sequence_number"))
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());

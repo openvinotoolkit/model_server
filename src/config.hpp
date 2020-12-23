@@ -269,10 +269,10 @@ public:
      * @return uint
      */
     uint32_t sequenceTimeout() {
-        if (!result->count(" sequence_timeout_seconds")) {
+        if (!result->count("sequence_timeout_seconds")) {
             return 0;
         }
-        return result->operator[](" sequence_timeout_seconds").as<uint32_t>();
+        return result->operator[]("sequence_timeout_seconds").as<uint32_t>();
     }
 
     /**
