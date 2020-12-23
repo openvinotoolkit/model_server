@@ -111,12 +111,15 @@ static const char* modelDefaultConfig = R"(
 })";
 */
 class StatefulConfigTest : public TestWithTempDir {
+public:
     std::string configFilePath;
     std::string ovmsConfig;
     std::string modelPath;
-public:
+    std::string dummyModelName;
+
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
+        dummyModelName = "dummy";
         const std::string modelPathToReplace{ "/ovms/src/test/dummy" };
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
         configFilePath = directoryPath + "/ovms_config.json";
@@ -137,13 +140,17 @@ TEST_F(StatefulConfigTest, DefaultValues) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
-    auto modelInstance = managerWithDummyModel.findModelInstance(dummyModelName);
+    auto modelInstance = manager.findModelInstance(dummyModelName);
     auto modelConfig = modelInstance->getModelConfig();
 
-    ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), false);
-    ASSERT_EQ(modelConfig.isStateful(), false);
-    ASSERT_EQ(modelConfig.getMaxSequenceNumber(), 500);
-    ASSERT_EQ(modelConfig.getSequenceTimeout(), 60);
+    auto is = modelConfig.isLowLatencyTransformationUsed();
+    ASSERT_EQ(is, false);
+    is = modelConfig.isStateful();
+    ASSERT_EQ(is, false);
+    auto seq = modelConfig.getMaxSequenceNumber();
+    ASSERT_EQ(seq, 500);
+    seq = modelConfig.getSequenceTimeout();
+    ASSERT_EQ(seq, 60);
 }
 
 
