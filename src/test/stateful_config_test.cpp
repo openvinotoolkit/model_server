@@ -111,22 +111,33 @@ static const char* modelDefaultConfig = R"(
 })";
 */
 class StatefulConfigTest : public TestWithTempDir {
-protected:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+public:
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        const std::string modelPathToReplace{ "/ovms/src/test/dummy" };
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
     void SetUp() override {
         TestWithTempDir::SetUp();
         // Prepare manager
-        config = modelDefaultConfig;
+        modelPath = directoryPath + "/dummy/";
+        SetUpConfig(modelDefaultConfig);
+        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
-
-    ModelConfig config;
 };
 
 TEST_F(StatefulConfigTest, DefaultValues) {
-    ConstructorEnabledModelManager managerWithDummyModel;
-    managerWithDummyModel.reloadModelWithVersions(config);
+    //SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
 
     auto modelInstance = managerWithDummyModel.findModelInstance(dummyModelName);
-
     auto modelConfig = modelInstance->getModelConfig();
 
     ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), false);
