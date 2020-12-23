@@ -93,7 +93,7 @@ TEST(OVUtils, ConstCopyBlob) {
     ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
 
     std::vector<float> originalBlobActualData;
-    originalBlobActualData.assign((float*)originalBlob->cbuffer(), ((const float*)originalBlob->cbuffer()) + elementsCount);
+    originalBlobActualData.assign((const float*)originalBlob->cbuffer(), ((const float*)originalBlob->cbuffer()) + elementsCount);
 
     std::vector<float> copyBlobActualData;
     copyBlobActualData.assign((float*)copyBlob->buffer(), ((float*)copyBlob->buffer()) + elementsCount);
