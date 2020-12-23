@@ -102,5 +102,5 @@ TEST(OVUtils, ConstCopyBlob) {
     EXPECT_EQ(copyBlobActualData, data);
     */
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE((float*)copyBlob->buffer(), (const float*)originalBlob->cbuffer());
+    EXPECT_NE((void*)copyBlob->buffer(), (const void*)originalBlob->cbuffer());
 }
