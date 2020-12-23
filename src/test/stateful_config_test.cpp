@@ -39,7 +39,7 @@ static const char* modelDefaultConfig = R"(
                 "shape": {"b": "(1,10) "}
             }
         }
-    ],
+    ]
 })";
 
 static const char* modelStatefulChangedConfig = R"(
@@ -59,7 +59,7 @@ static const char* modelStatefulChangedConfig = R"(
                 "shape": {"b": "(1,10) "}
             }
         }
-    ],
+    ]
 })";
 
 class StatefulConfigTest : public TestWithTempDir {
