@@ -68,7 +68,7 @@ static const char* modelDefaultConfig = R"(
     ]
 })";
 
-static const char* modelStatefulChangedConfig = R"(
+/*static const char* modelStatefulChangedConfig = R"(
 {
     "model_config_list": [
         {
@@ -109,7 +109,7 @@ static const char* modelStatefulChangedConfig = R"(
         }
     ]
 })";
-
+*/
 class StatefulConfigTest : public TestWithTempDir {
 protected:
     void SetUp() override {
@@ -121,7 +121,7 @@ protected:
     ModelConfig config;
 };
 
-TEST_P(StatefulConfigTest, DefaultValues) {
+TEST_F(StatefulConfigTest, DefaultValues) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
