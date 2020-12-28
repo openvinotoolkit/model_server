@@ -21,8 +21,8 @@
 #include <spdlog/spdlog.h>
 
 namespace ovms {
-
-Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob) {
+template <typename T>
+Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, T sourceBlob) {
     auto& description = sourceBlob->getTensorDesc();
 
     try {

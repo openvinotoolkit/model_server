@@ -21,7 +21,48 @@
 
 namespace ovms {
 
-Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob);
-Status constBlobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::CPtr sourceBlob);
+template <typename T>
+Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob,const T sourceBlob) {
+    auto& description = sourceBlob->getTensorDesc();
 
+    try {
+        switch (description.getPrecision()) {
+        case InferenceEngine::Precision::FP32:
+            destinationBlob = InferenceEngine::make_shared_blob<float>(description);
+            break;
+        case InferenceEngine::Precision::U8:
+            destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(description);
+            break;
+        case InferenceEngine::Precision::I8:
+            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(description);
+            break;
+        case InferenceEngine::Precision::I16:
+            destinationBlob = InferenceEngine::make_shared_blob<int16_t>(description);
+            break;
+        case InferenceEngine::Precision::I32:
+            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(description);
+            break;
+        default: {
+            SPDLOG_ERROR("Blob clone failed, unsupported precision");
+            return StatusCode::INVALID_PRECISION;
+        }
+        }
+    }
+    catch (const InferenceEngine::details::InferenceEngineException& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+    catch (std::logic_error& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+
+    destinationBlob->allocate();
+    if (destinationBlob->byteSize() != sourceBlob->byteSize()) {
+        destinationBlob = nullptr;
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+    std::memcpy((void*)destinationBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
+    return StatusCode::OK;
+}
 }  // namespace ovms
