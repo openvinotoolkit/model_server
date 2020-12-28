@@ -65,13 +65,13 @@ TEST(OVUtils, CopyBlob) {
 }
 
 TEST(OVUtils, ConstCopyBlob) {
-    const std::vector<size_t> shape{ 2, 3, 4, 5 };
-    const InferenceEngine::Precision precision{ InferenceEngine::Precision::FP32 };
-    const InferenceEngine::Layout layout{ InferenceEngine::Layout::NCHW };
+    const std::vector<size_t> shape{2, 3, 4, 5};
+    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::NCHW};
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
     const size_t totalByteSize = elementsCount * precision.size();
 
-    const InferenceEngine::TensorDesc desc{ precision, shape, layout };
+    const InferenceEngine::TensorDesc desc{precision, shape, layout};
 
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
@@ -101,7 +101,7 @@ TEST(OVUtils, ConstCopyBlob) {
 
     EXPECT_EQ(originalBlobActualData, data);
     EXPECT_EQ(copyBlobActualData, data);
-    
+
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
     EXPECT_NE((void*)copyBlob->buffer(), (const void*)originalBlob->cbuffer());
 }

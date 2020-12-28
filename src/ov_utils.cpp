@@ -89,12 +89,10 @@ Status constBlobClone(InferenceEngine::Blob::Ptr& destinationBlob, const Inferen
             return StatusCode::INVALID_PRECISION;
         }
         }
-    }
-    catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
-    }
-    catch (std::logic_error& e) {
+    } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
