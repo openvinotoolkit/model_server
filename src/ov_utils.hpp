@@ -16,6 +16,9 @@
 #pragma once
 
 #include <inference_engine.hpp>
+#include <memory>
+
+#include <spdlog/spdlog.h>
 
 #include "status.hpp"
 
