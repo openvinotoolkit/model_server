@@ -64,16 +64,6 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEng
     return StatusCode::OK;
 }
 
-/*InferenceEngine::Blob::Ptr constBlobClone(InferenceEngine::Blob::CPtr sourceBlob) {
-    auto copyBlob = InferenceEngine::Blob::CreateFromData(std::make_shared<InferenceEngine::Data>("", sourceBlob->getTensorDesc()));
-    copyBlob->allocate();
-    if (copyBlob->byteSize() != sourceBlob->byteSize()) {
-        return nullptr;
-    }
-    std::memcpy((void*)copyBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
-    return copyBlob;
-} */
-
 Status constBlobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::CPtr sourceBlob) {
     auto& description = sourceBlob->getTensorDesc();
 
