@@ -15,9 +15,9 @@
 //*****************************************************************************
 #pragma once
 
-#include <inference_engine.hpp>
 #include <memory>
 
+#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
 #include "status.hpp"
@@ -25,7 +25,7 @@
 namespace ovms {
 
 template <typename T>
-Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob,const T sourceBlob) {
+Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {
     auto& description = sourceBlob->getTensorDesc();
 
     try {
@@ -50,12 +50,10 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob,const T sourceBlob)
             return StatusCode::INVALID_PRECISION;
         }
         }
-    }
-    catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
-    }
-    catch (std::logic_error& e) {
+    } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
