@@ -63,3 +63,45 @@ TEST(OVUtils, CopyBlob) {
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
     EXPECT_NE((float*)copyBlob->buffer(), (float*)originalBlob->buffer());
 }
+
+TEST(OVUtils, ConstCopyBlob) {
+    const std::vector<size_t> shape{2, 3, 4, 5};
+    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::NCHW};
+    const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    const size_t totalByteSize = elementsCount * precision.size();
+
+    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+
+    std::vector<float> data(elementsCount);
+    std::iota(data.begin(), data.end(), 0);
+
+    InferenceEngine::Blob::CPtr originalBlob = InferenceEngine::make_shared_blob<float>(desc, data.data());
+    InferenceEngine::Blob::Ptr copyBlob = nullptr;
+    ASSERT_EQ(ovms::blobClone(copyBlob, originalBlob), ovms::StatusCode::OK);
+
+    ASSERT_EQ(originalBlob->getTensorDesc().getDims(), shape);
+    ASSERT_EQ(copyBlob->getTensorDesc().getDims(), shape);
+
+    ASSERT_EQ(originalBlob->getTensorDesc().getLayout(), layout);
+    ASSERT_EQ(copyBlob->getTensorDesc().getLayout(), layout);
+
+    ASSERT_EQ(originalBlob->getTensorDesc().getPrecision(), precision);
+    ASSERT_EQ(copyBlob->getTensorDesc().getPrecision(), precision);
+
+    ASSERT_EQ(originalBlob->byteSize(), totalByteSize);
+    ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
+
+    std::vector<float> originalBlobActualData;
+    const void* start = (const void*)(originalBlob->cbuffer());
+    originalBlobActualData.assign((float*)start, (float*)start + elementsCount);
+
+    std::vector<float> copyBlobActualData;
+    copyBlobActualData.assign((float*)copyBlob->buffer(), ((float*)copyBlob->buffer()) + elementsCount);
+
+    EXPECT_EQ(originalBlobActualData, data);
+    EXPECT_EQ(copyBlobActualData, data);
+
+    // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
+    EXPECT_NE((void*)copyBlob->buffer(), (const void*)originalBlob->cbuffer());
+}
