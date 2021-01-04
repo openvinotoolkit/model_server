@@ -36,7 +36,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/i
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/plugins.xml /ovms_release/lib/ && cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; rm -vrf /ovms_release/deps/*-devel-*
 
-RUN find /ovms/bazel-out/k8-*/bin -iname '*.so' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 RUN rm -f /ovms_release/lib/libsampleloader*
 
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; find /openvino/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
