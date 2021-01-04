@@ -432,4 +432,13 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
     auto status = instance.validate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
 }
+
+TEST_F(PredictValidation, RequestNegativeValueInShape) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(-4);
+
+    auto status = instance.validate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
 #pragma GCC diagnostic pop
