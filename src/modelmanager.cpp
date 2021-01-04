@@ -620,10 +620,10 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs);
+        status = model->addVersions(versionsToStart, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -635,11 +635,11 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     return status;
 }
 
-Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs);
+        auto status = model->reloadVersions(versionsToReload, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -661,15 +661,16 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());
-    std::vector<model_version_t> requestedVersions;
-    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
+    std::vector<model_version_t> availableVersions;
+    Status blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
     if (!blocking_status.ok()) {
         return blocking_status;
     }
-    requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
+    auto requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
+    std::shared_ptr<model_versions_t> versionsFailed = std::make_shared<model_versions_t>();
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();
 
@@ -698,18 +699,39 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
+
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
-    if (versionsToStart->size() > 0) {
-        auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
+    while (versionsToStart->size() > 0) {
+        blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            return blocking_status;
+            for (const auto version : *versionsFailed) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure; ", version);
+                if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+                    availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+                }
+            }
+            requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+            getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+        } else {
+            break;
         }
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload);
+        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
     }
+    for (const auto version : *versionsFailed) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
+        if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+            availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+        }
+    }
+    // refresh versions to retire based on failed reloads
+    requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+
     if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
