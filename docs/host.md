@@ -1,9 +1,5 @@
 # Landing OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines
 
-> **NOTES**:
-> * These steps apply to Ubuntu*, CentOS*
-> * An internet connection is required to follow the steps in this guide.
-
 ## Introduction
 OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. 
 In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
@@ -14,11 +10,10 @@ OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machi
 
 #### Operating Systems 
 
-We are testing OpenVINO Model Server execution on baremetal on the following OSes: 
-* Ubuntu 20.04.x
-* CentOS 7.8
+We are testing OpenVINO Model Server execution on baremetal on Ubuntu 20.04.x
 
 For other operating systems we recommend using [OVMS docker containers](./docker_container.md).
+
 
 #### Hardware 
 

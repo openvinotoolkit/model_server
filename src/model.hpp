@@ -160,7 +160,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs);
+    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed);
 
     /**
          * @brief Retires versions of Model
@@ -183,7 +183,7 @@ public:
          *
          * @return status
          */
-    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs);
+    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed);
 
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);
