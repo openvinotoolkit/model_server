@@ -175,6 +175,15 @@ public:
      */
     const std::shared_ptr<Model> findModelByName(const std::string& name) const;
 
+    Status getModelInstance(const std::string& modelName,
+        ovms::model_version_t modelVersionId,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+
+    Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response);
+
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)
             return false;
@@ -310,14 +319,6 @@ protected:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     void updateConfigurationWithoutConfigFile();
-    Status getModelInstance(const std::string& modelName,
-        ovms::model_version_t modelVersionId,
-        std::shared_ptr<ovms::ModelInstance>& modelInstance,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
-
-    Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response);
 };
 
 }  // namespace ovms

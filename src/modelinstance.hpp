@@ -198,8 +198,8 @@ protected:
          */
     Status loadOVCNNNetworkUsingCustomLoader();
 
-	const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
-	
+    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
+
     virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs);
 

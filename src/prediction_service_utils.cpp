@@ -22,7 +22,6 @@
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "processing_spec.hpp"
 #include "serialization.hpp"
 
 #define DEBUG

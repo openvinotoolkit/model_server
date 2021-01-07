@@ -401,11 +401,11 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     std::shared_ptr<ovms::ModelInstance> modelInstance2;
     std::shared_ptr<ovms::ModelInstance> modelInstance3;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = ovms::getModelInstance(manager, modelDirectory.name, 2, modelInstance2, modelInstanceUnloadGuard);
+    auto status = manager.getModelInstance(modelDirectory.name, 2, modelInstance2, modelInstanceUnloadGuard);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
     modelInstanceUnloadGuard.reset();
-    status = ovms::getModelInstance(manager, modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
+    status = manager.getModelInstance(modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
 
@@ -415,7 +415,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     modelDirectory.removeVersion(2);
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
-    status = ovms::getModelInstance(manager, modelDirectory.name, 1, modelInstance1, modelInstanceUnloadGuard);
+    status = manager.getModelInstance(modelDirectory.name, 1, modelInstance1, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);

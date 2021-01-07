@@ -558,15 +558,18 @@ Status ModelInstance::reloadModelIfRequired(
     if (status.batchSizeChangeRequired()) {
         status = reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
         if (!status.ok()) {
-            SPDLOG_ERROR("Model instance reload (batch size change) failed. Status Code: {}, Error {}", status.getCode(), status.string());
+            SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed. Status Code: {}, Error {}",
+                getName(), getVersion(), status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
         status = reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
         if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
-            SPDLOG_ERROR("Model instance reload (reshape) failed. Status Code: {}, Error: {}", status.getCode(), status.string());
+            SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
+                getName(), getVersion(), status.getCode(), status.string());
         }
     } else if (!status.ok()) {
-        SPDLOG_WARN("Validation of inferRequest failed. Status Code: {}, Error: {}", status.getCode(), status.string());
+        SPDLOG_WARN("Model: {}, version: {} validation of inferRequest failed. Status Code: {}, Error: {}",
+            getName(), getVersion(), status.getCode(), status.string());
     }
     return status;
 }
@@ -667,6 +670,9 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
+    }
+    return StatusCode::OK;
+}
 const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
         std::stringstream ss;
