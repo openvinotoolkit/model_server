@@ -132,6 +132,44 @@ Status GetModelStatusImpl::getModelStatus(
     return StatusCode::OK;
 }
 
+Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager){
+    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
+    for(auto const& model : models)
+    {
+        std::optional<int64_t> noValueModelVersion;
+        tensorflow::serving::GetModelStatusRequest request;
+        GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
+        tensorflow::serving::GetModelStatusResponse response;
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        modelsStatusesTmp.insert({model.first, response});
+    }
+    modelsStatuses.merge(modelsStatusesTmp);
+
+    return StatusCode::OK;
+}
+
+Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output){
+    std::string outputTmp;
+    for(auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++)
+    {
+        outputTmp += ("{\n\"" + modelStatus->first + "\" : \n");
+        std::string response_str;
+        auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &response_str);
+        if(status != StatusCode::OK)
+        {
+            return status;
+        }
+        outputTmp += (response_str + "}");
+        if(std::next(modelStatus) != modelsStatuses.end()){
+            outputTmp += (",\n");
+        }
+    }
+    output = outputTmp;
+
+    return StatusCode::OK;
+}
+
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(
     ::grpc::ServerContext* context, const tensorflow::serving::ReloadConfigRequest* request,
     tensorflow::serving::ReloadConfigResponse* response) {

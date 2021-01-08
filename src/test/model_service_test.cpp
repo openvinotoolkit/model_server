@@ -313,3 +313,225 @@ TEST(RestModelStatus, serialize2Json) {
     ASSERT_EQ(error_status, StatusCode::OK);
     EXPECT_EQ(json_output, expected_json);
 }
+
+const ovms::ModelConfig DUMMY_MODEL_WITH_ONLY_NAME_CONFIG{
+    "dummy",
+};
+
+TEST(ModelService, getAllModelsStatuses_one_model_one_version) {
+    ConstructorEnabledModelManager manager;
+
+    auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    EXPECT_EQ(modelsStatuses.size(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
+
+    config = DUMMY_MODEL_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
+    
+    ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 1);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->version(), 1);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->has_status(), true);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->status().error_message(), "OK");
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 1);
+}
+
+TEST(ModelService, getAllModelsStatuses_two_models_with_one_versions) {
+    ConstructorEnabledModelManager manager;
+
+    auto config = DUMMY_MODEL_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    ASSERT_EQ(modelsStatuses.size(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status().begin()->version(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status().begin()->has_status(), true);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status().begin()->status().error_message(), "OK");
+
+    config = SUM_MODEL_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
+    auto dummyModelStatus = modelsStatusesAfterReload.find("dummy");
+    auto sumModelStatus = modelsStatusesAfterReload.find("sum");
+
+    ASSERT_EQ(modelsStatusesAfterReload.size(), 2);
+
+    EXPECT_EQ(dummyModelStatus->second.model_version_status_size(), 1);
+    EXPECT_EQ(dummyModelStatus->second.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+    EXPECT_EQ(dummyModelStatus->second.model_version_status().begin()->version(), 1);
+    EXPECT_EQ(dummyModelStatus->second.model_version_status().begin()->has_status(), true);
+    EXPECT_EQ(dummyModelStatus->second.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+    EXPECT_EQ(dummyModelStatus->second.model_version_status().begin()->status().error_message(), "OK");
+
+    EXPECT_EQ(sumModelStatus->second.model_version_status_size(), 1);
+    EXPECT_EQ(sumModelStatus->second.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+    EXPECT_EQ(sumModelStatus->second.model_version_status().begin()->version(), 1);
+    EXPECT_EQ(sumModelStatus->second.model_version_status().begin()->has_status(), true);
+    EXPECT_EQ(sumModelStatus->second.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
+    EXPECT_EQ(sumModelStatus->second.model_version_status().begin()->status().error_message(), "OK");
+}
+
+TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versions) {
+    ConstructorEnabledModelManager manager;
+
+    auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    EXPECT_EQ(modelsStatuses.size(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setBasePath(modelPath);
+    config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
+    
+    ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
+    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 2);
+    for(int i = 0; i < modelsStatusesAfterReload.begin()->second.model_version_status_size(); i++){
+        auto response = modelsStatusesAfterReload.begin()->second.model_version_status()[i];
+        EXPECT_EQ(response.state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+        EXPECT_EQ(response.version(), i + 1);
+        EXPECT_EQ(response.has_status(), true);
+        EXPECT_EQ(response.status().error_code(), tensorflow::error::OK);
+        EXPECT_EQ(response.status().error_message(), "OK");
+    }
+}
+
+TEST(ModelService, serializeModelsStatuses2Json_with_one_response) {
+    const char* expected_json = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "2",
+   "state": "START",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    tensorflow::serving::GetModelStatusResponse response;
+    model_version_t requested_version = 2;
+    const std::string& model_name = "dummy";
+    ModelVersionStatus status = ModelVersionStatus(model_name, requested_version, ModelVersionState::START);
+    addStatusToResponse(&response, requested_version, status);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json);
+}
+
+TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
+    const char* expected_json = R"({
+"dummy1" : 
+{
+ "model_version_status": [
+  {
+   "version": "2",
+   "state": "START",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+},
+{
+"dummy2" : 
+{
+ "model_version_status": [
+  {
+   "version": "3",
+   "state": "LOADING",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    tensorflow::serving::GetModelStatusResponse firstResponse;
+    model_version_t requested_version = 2;
+    const std::string& modelName1 = "dummy1";
+    ModelVersionStatus status = ModelVersionStatus(modelName1, requested_version, ModelVersionState::START);
+    addStatusToResponse(&firstResponse, requested_version, status);
+    
+    tensorflow::serving::GetModelStatusResponse secondResponse;
+    requested_version = 3;
+    const std::string& modelName2 = "dummy2";
+    status = ModelVersionStatus(modelName2, requested_version, ModelVersionState::LOADING);
+    addStatusToResponse(&secondResponse, requested_version, status);
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy1", firstResponse));
+    modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy2", secondResponse));
+
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json);
+}
+
+TEST(ModelService, serializeModelsStatuses2Json_one_response_with_two_versions) {
+    const char* expected_json = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "2",
+   "state": "START",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  },
+  {
+   "version": "3",
+   "state": "LOADING",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    tensorflow::serving::GetModelStatusResponse response;
+    model_version_t requested_version = 2;
+    const std::string& modelName = "dummy";
+    ModelVersionStatus status = ModelVersionStatus(modelName, requested_version, ModelVersionState::START);
+    addStatusToResponse(&response, requested_version, status);
+    
+    requested_version = 3;
+    status = ModelVersionStatus(modelName, requested_version, ModelVersionState::LOADING);
+    addStatusToResponse(&response, requested_version, status);
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));
+
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json);
+}
