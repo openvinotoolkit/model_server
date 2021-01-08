@@ -138,6 +138,9 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true 
 
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; \
     ln -s /opt/intel/openvino_2021 /opt/intel/openvino
+
+# install sample apps including benchmark_app
+RUN ln -s /usr/bin/cmake3 /usr/bin/cmake && /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build OpenVINO Model Server
