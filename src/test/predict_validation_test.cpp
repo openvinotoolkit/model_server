@@ -21,6 +21,7 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "../processing_spec.hpp"
 #include "test_utils.hpp"
 
 using ::testing::NiceMock;
@@ -47,6 +48,7 @@ protected:
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t networkInputs;
     std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
+    ovms::ProcessingSpec processingSpec;
 
     void SetUp() override {
         tensors = tensor_desc_map_t({

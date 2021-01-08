@@ -61,8 +61,7 @@ Status DLNode::execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQ
 
 Status DLNode::requestExecuteRequiredResources() {
     Status status = StatusCode::OK;
-    status = getModelInstance(
-        this->modelManager,
+    status = this->modelManager.getModelInstance(
         this->modelName,
         this->modelVersion.value_or(0),
         this->model,

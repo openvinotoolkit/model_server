@@ -121,6 +121,27 @@ protected:
     size_t batchSize = 0;
 
     /**
+      * @brief Stores required openVINO model files extensions to be able to load model
+      *        Order is important, first file on the list is passed to LoadNetwork
+      */
+    static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
+
+    /**
+      * @brief Stores required onnx model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
+
+    /**
+         * @brief Notifies model instance users who wait for loading
+         */
+    std::condition_variable modelLoadedNotify;
+
+    /**
+         * @brief Holds currently loaded model configuration
+         */
+    ModelConfig config;
+
+    /**
          * @brief Load OV CNNNetwork ptr
          *
          * @return CNNNetwork ptr
@@ -171,32 +192,32 @@ protected:
     std::string findModelFilePathWithExtension(const std::string& extension) const;
 
     /**
-      * @brief Stores required openVINO model files extensions to be able to load model
-      *        Order is important, first file on the list is passed to LoadNetwork
-      */
-    static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
-
-    /**
-      * @brief Stores required onnx model files extensions to be able to load model
-      */
-    static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
-
-    /**
-         * @brief Notifies model instance users who wait for loading
-         */
-    std::condition_variable modelLoadedNotify;
-
-    /**
-         * @brief Holds currently loaded model configuration
-         */
-    ModelConfig config;
-
-    /**
          * @brief Loads OV CNNNetwork Using the Custom Loader
          *
          * @return Status
          */
     Status loadOVCNNNetworkUsingCustomLoader();
+
+    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
+
+    virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
+        const size_t expectedNumberOfInputs);
+
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput,
+        const Mode& batchingMode);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
 
 private:
     /**
@@ -256,24 +277,6 @@ private:
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput,
-        const Mode& batchingMode);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     uint32_t getNumOfParallelInferRequests(const ModelConfig& config);
     uint32_t getNumOfParallelInferRequestsUnbounded(const ModelConfig& config);
@@ -453,6 +456,19 @@ public:
     virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
 
     /**
+         * @brief Reloads model version if status of request validation indicates there's a need for reshape or batch size change
+         *
+         * @param validationStatus status of request validation 
+         * @param requestProto pointer to the request proto
+         * @param modelUnloadGuardPtr unloadGuardPtr
+         * 
+         * @return Status
+         */
+
+    Status reloadModelIfRequired(Status validationStatus, const tensorflow::serving::PredictRequest* requestProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+
+    /**
          * @brief Unloads model version
          * @param isPermanent defines if the unload operation should be permanent and should change instance state to End after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
@@ -476,6 +492,12 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    const Status validate(const tensorflow::serving::PredictRequest* request);
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+
+    Status performInference(InferenceEngine::InferRequest& inferRequest);
+
+    virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
+        tensorflow::serving::PredictResponse* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 };
 }  // namespace ovms

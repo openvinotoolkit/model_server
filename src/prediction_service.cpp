@@ -54,14 +54,14 @@ Status getModelInstance(const PredictRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
-    return getModelInstance(manager, request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
+    return manager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
 }
 
 Status getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     ModelManager& manager = ModelManager::getInstance();
-    return getPipeline(manager, pipelinePtr, request, response);
+    return manager.getPipeline(pipelinePtr, request, response);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
@@ -93,7 +93,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     if (pipelinePtr) {
         status = pipelinePtr->execute();
     } else {
-        status = inference(*modelInstance, request, response, modelInstanceUnloadGuard);
+        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
     }
 
     if (!status.ok()) {
