@@ -16,6 +16,7 @@
 #pragma once
 
 #include "modelinstance.hpp"
+#include "processing_spec.hpp"
 //#include "sequence_manager.hpp"
 
 namespace ovms {
