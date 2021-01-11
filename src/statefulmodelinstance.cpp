@@ -67,7 +67,6 @@ namespace ovms {
     }
 
     const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
-
         uint64_t sequenceId = 0;
         uint32_t sequenceControlInput = 0;
 
@@ -102,7 +101,6 @@ namespace ovms {
         }
         return StatusCode::OK;
     }
-}
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     auto status = validateSpecialKeys(request, processingSpecPtr);

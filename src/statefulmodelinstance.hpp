@@ -34,10 +34,10 @@ private:
     //SequenceManager sequenceManager;
 protected:
     const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
-        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override;
+        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
 
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) override
+        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
 
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
