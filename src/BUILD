@@ -93,6 +93,8 @@ cc_library(
         "serialization.cpp",
         "schema.hpp",
         "schema.cpp",
+        "sequence.cpp",
+        "sequence.hpp",
         "serialization.hpp",
         "server.cpp",
         "status.cpp",
