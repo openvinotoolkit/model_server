@@ -86,6 +86,8 @@ cc_library(
         "rest_utils.hpp",
         "s3filesystem.cpp",
         "s3filesystem.hpp",
+        "statefulmodelinstance.cpp",
+        "statefulmodelinstance.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
