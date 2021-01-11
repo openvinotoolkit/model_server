@@ -44,63 +44,61 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
-    uint64_t extractSequenceId(const tensorflow::TensorProto& proto) {
-        if (proto.uint64_val_size() == 1)
-            return proto.uint64_val(0);
-        return 0;
+uint64_t extractSequenceId(const tensorflow::TensorProto& proto) {
+    if (proto.uint64_val_size() == 1)
+        return proto.uint64_val(0);
+    return 0;
+}
+
+uint32_t extractSequenceControlInput(const tensorflow::TensorProto& proto) {
+    if (proto.uint32_val_size() == 1)
+        return proto.uint32_val(0);
+    return 0;
+}
+
+const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
+    // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
+    auto completeInputsNumber = expectedNumberOfInputs;
+    for (auto specialInputName : SPECIAL_INPUT_NAMES) {
+        if (request->inputs().count(specialInputName))
+            completeInputsNumber++;
     }
+    return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
+}
 
-    uint32_t extractSequenceControlInput(const tensorflow::TensorProto& proto) {
-        if (proto.uint32_val_size() == 1)
-            return proto.uint32_val(0);
-        return 0;
-    }
+const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
+    uint64_t sequenceId = 0;
+    uint32_t sequenceControlInput = 0;
 
-    const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-        // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
-        auto completeInputsNumber = expectedNumberOfInputs;
-        for (auto specialInputName : SPECIAL_INPUT_NAMES) {
-            if (request->inputs().count(specialInputName))
-                completeInputsNumber++;
-        }
-        return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
-    }
+    auto it = request->inputs().find("sequence_id");
+    if (it != request->inputs().end())
+        sequenceId = extractSequenceId(it->second);
+    it = request->inputs().find("sequence_control_input");
+    if (it != request->inputs().end())
+        sequenceControlInput = extractSequenceControlInput(it->second);
 
-    const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
-        uint64_t sequenceId = 0;
-        uint32_t sequenceControlInput = 0;
-
-        auto it = request->inputs().find("sequence_id");
-        if (it != request->inputs().end())
-            sequenceId = extractSequenceId(it->second);
-        it = request->inputs().find("sequence_control_input");
-        if (it != request->inputs().end())
-            sequenceControlInput = extractSequenceControlInput(it->second);
-
-        if (sequenceControlInput == SEQUENCE_START) { // First request in the sequence 
-            //if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
-            //    return StatusCode::SEQUENCE_ALREADY_EXISTS;
-            //}
-            //processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
-            return StatusCode::OK;
-        }
-        else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) { // Intermediate and last request in the sequence 
-            if (sequenceId == 0) {
-                return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
-            }
-            //else if (sequenceManager.hasSequence(sequenceId)) {
-            //    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
-            //    return StatusCode::OK;
-            //}
-            else {
-                return StatusCode::SEQUENCE_MISSING;
-            }
-        }
-        else {
-            return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
-        }
+    if (sequenceControlInput == SEQUENCE_START) {  // First request in the sequence
+        //if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
+        //    return StatusCode::SEQUENCE_ALREADY_EXISTS;
+        //}
+        //processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         return StatusCode::OK;
+    } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) {  // Intermediate and last request in the sequence
+        if (sequenceId == 0) {
+            return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
+        }
+        //else if (sequenceManager.hasSequence(sequenceId)) {
+        //    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+        //    return StatusCode::OK;
+        //}
+        else {
+            return StatusCode::SEQUENCE_MISSING;
+        }
+    } else {
+        return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
+    return StatusCode::OK;
+}
 
 const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     auto status = validateSpecialKeys(request, processingSpecPtr);
