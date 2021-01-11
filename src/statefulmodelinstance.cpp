@@ -106,7 +106,7 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
     auto status = validateSpecialKeys(request, processingSpecPtr);
     if (!status.ok())
         return status;
-    return ModelInstance::validate(request, processingSpecPtr);
+    return ModelInstance::validate(request);
 }
 
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
