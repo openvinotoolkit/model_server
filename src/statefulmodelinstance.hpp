@@ -16,7 +16,6 @@
 #pragma once
 
 #include "modelinstance.hpp"
-#include "processing_spec.hpp"
 //#include "sequence_manager.hpp"
 
 namespace ovms {
@@ -42,7 +41,7 @@ protected:
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
-    const Status validate(const tensorflow::serving::PredictRequest* request) override;
+    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
 
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 

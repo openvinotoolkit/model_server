@@ -38,6 +38,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "processing_spec.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -492,7 +493,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
 

@@ -102,7 +102,7 @@ namespace ovms {
         return StatusCode::OK;
     }
 
-const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     auto status = validateSpecialKeys(request, processingSpecPtr);
     if (!status.ok())
         return status;
