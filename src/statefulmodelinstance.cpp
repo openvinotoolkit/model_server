@@ -102,14 +102,14 @@ namespace ovms {
         return StatusCode::OK;
     }
 
-const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
+const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     auto status = validateSpecialKeys(request, processingSpecPtr);
     if (!status.ok())
         return status;
     return ModelInstance::validate(request, processingSpecPtr);
 }
 
-Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
+Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     return StatusCode::OK;
