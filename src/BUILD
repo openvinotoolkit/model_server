@@ -214,6 +214,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
+        "test/sequence_test.cpp",
         "test/environment.hpp",
     ],
     data = [

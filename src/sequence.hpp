@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ private:
     void updateLastActivityTime();
 
 public:
+    Sequence() :
+        mutex(new std::mutex()) {}
     const sequence_memory_state_t& getMemoryState();
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
