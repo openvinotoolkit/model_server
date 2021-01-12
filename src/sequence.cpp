@@ -33,7 +33,7 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
     for (auto&& state : newState) {
         auto stateName = state.GetName();
         Blob::CPtr originalBlobPtr = state.GetState();
-        Blob::Ptr copyBlobPtr = nullptr;
+        Blob::Ptr copyBlobPtr;
         auto status = blobClone<InferenceEngine::Blob::CPtr>(copyBlobPtr, originalBlobPtr);
         if (!status.ok()) {
             return status;
