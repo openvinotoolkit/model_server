@@ -15,8 +15,6 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
-#include <string>
-
 using namespace InferenceEngine;
 
 namespace ovms {

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "modelinstance.hpp"
 #include "processing_spec.hpp"
