@@ -1259,7 +1259,7 @@ TEST(SchemaTest, ModelNodeConfigModelNameLibraryName) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, CustomNodeConfigParamsInvalidType){
+TEST(SchemaTest, CustomNodeConfigParamsInvalidType) {
     const char* customNodeConfigParamsInvalidType = R"(
     {
         "model_config_list": [
