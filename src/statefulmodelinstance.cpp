@@ -15,31 +15,6 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
-#include <algorithm>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <thread>
-#include <utility>
-
-#include <dirent.h>
-#include <spdlog/spdlog.h>
-#include <sys/types.h>
-
-#include "config.hpp"
-#include "customloaders.hpp"
-#include "deserialization.hpp"
-#include "executingstreamidguard.hpp"
-#include "filesystem.hpp"
-#include "logging.hpp"
-#include "prediction_service_utils.hpp"
-#include "serialization.hpp"
-#include "stringutils.hpp"
-
-#define DEBUG
-#include "timer.hpp"
-
 using namespace InferenceEngine;
 
 namespace ovms {
@@ -78,21 +53,13 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
         sequenceControlInput = extractSequenceControlInput(it->second);
 
     if (sequenceControlInput == SEQUENCE_START) {  // First request in the sequence
-        // if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
-        //     return StatusCode::SEQUENCE_ALREADY_EXISTS;
-        // }
-        // processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+        processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         return StatusCode::OK;
     } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) {  // Intermediate and last request in the sequence
         if (sequenceId == 0) {
             return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
-        } else {
-            return StatusCode::SEQUENCE_MISSING;
         }
-        // else if (sequenceManager.hasSequence(sequenceId)) {
-        //    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
-        //    return StatusCode::OK;
-        // }
+        return StatusCode::OK;
     } else {
         return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }

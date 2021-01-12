@@ -16,7 +16,7 @@
 #pragma once
 
 #include "modelinstance.hpp"
-// #include "sequence_manager.hpp"
+#include "processing_spec.hpp"
 
 #include <memory>
 
@@ -32,7 +32,6 @@ const uint32_t SEQUENCE_END = 2;
 class StatefulModelInstance : public ModelInstance {
 private:
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
-    // SequenceManager sequenceManager;
 protected:
     const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
         InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
