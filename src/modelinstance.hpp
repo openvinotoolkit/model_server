@@ -106,6 +106,11 @@ protected:
     const model_version_t version = -1;
 
     /**
+         * @brief A model subscription manager
+         */
+    ModelChangeSubscription subscriptionManager;
+
+    /**
          * @brief A model status
          */
     ModelVersionStatus status;
@@ -289,8 +294,6 @@ private:
          * @return Status
          */
     Status recoverFromReloadingError(const Status& status);
-
-    ModelChangeSubscription subscriptionManager;
 
 public:
     /**
