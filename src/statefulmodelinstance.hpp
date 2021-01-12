@@ -30,6 +30,15 @@ const uint32_t SEQUENCE_END = 2;
      * @brief This class contains all the information about inference engine model
      */
 class StatefulModelInstance : public ModelInstance {
+public:
+    /**
+         * @brief A default constructor
+         */
+    StatefulModelInstance(const std::string& name, model_version_t version) :
+        name(name),
+        version(version),
+        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) {}
+
 private:
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 protected:
