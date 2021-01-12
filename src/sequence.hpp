@@ -43,11 +43,11 @@ private:
 public:
     Sequence() :
         mutex(new std::mutex()) {}
-    const sequence_memory_state_t& getMemoryState();
+    const sequence_memory_state_t& getMemoryState() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
-    std::chrono::steady_clock::time_point getLastActivityTime();
-    std::unique_ptr<std::mutex>& getMutexRef();
+    std::chrono::steady_clock::time_point getLastActivityTime() const;
+    const std::unique_ptr<std::mutex>& getMutexRef() const;
     std::unique_ptr<std::mutex>&& moveMutex();
 };
 

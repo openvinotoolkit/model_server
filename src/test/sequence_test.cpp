@@ -23,7 +23,7 @@
 
 TEST(Sequence, MovedMutexNullified) {
     ovms::Sequence sequence;
-    std::unique_ptr<std::mutex>& mutexRef = sequence.getMutexRef();
+    const std::unique_ptr<std::mutex>& mutexRef = sequence.getMutexRef();
     ASSERT_FALSE(mutexRef == nullptr);
     std::unique_ptr<std::mutex> mutex = sequence.moveMutex();
     // Pointer in Sequence object should be now null

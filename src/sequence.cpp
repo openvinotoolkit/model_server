@@ -25,7 +25,7 @@ void Sequence::updateLastActivityTime() {
     lastActivityTime = std::chrono::steady_clock::now();
 }
 
-const sequence_memory_state_t& Sequence::getMemoryState() {
+const sequence_memory_state_t& Sequence::getMemoryState() const {
     return memoryState;
 }
 
@@ -44,11 +44,11 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
     return StatusCode::OK;
 }
 
-std::chrono::steady_clock::time_point Sequence::getLastActivityTime() {
+std::chrono::steady_clock::time_point Sequence::getLastActivityTime() const {
     return lastActivityTime;
 }
 
-std::unique_ptr<std::mutex>& Sequence::getMutexRef() {
+const std::unique_ptr<std::mutex>& Sequence::getMutexRef() const {
     return mutex;
 }
 
