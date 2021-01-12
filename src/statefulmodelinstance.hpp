@@ -15,10 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+
 #include "modelinstance.hpp"
 #include "processing_spec.hpp"
-
-#include <memory>
 
 namespace ovms {
 
@@ -39,6 +39,7 @@ public:
 
 private:
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+
 protected:
     const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
         InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);

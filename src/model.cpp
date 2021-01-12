@@ -113,8 +113,7 @@ std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::stri
     if (isStateful) {
         spdlog::info("Producing new StatefulModelInstance");
         return std::move(std::static_pointer_cast<ModelInstance>(std::make_shared<StatefulModelInstance>(modelName, modelVersion)));
-    }
-    else {
+    } else {
         spdlog::info("Producing new ModelInstance");
         return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
     }
