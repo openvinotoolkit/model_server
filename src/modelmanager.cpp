@@ -662,7 +662,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
-    auto model = getModelIfExistCreateElse(config.getName());
+    auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
     if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
