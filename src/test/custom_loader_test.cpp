@@ -224,7 +224,7 @@ std::shared_ptr<MockModel> modelMock;
 
 class MockModelManager : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelMock;
     }
 };
