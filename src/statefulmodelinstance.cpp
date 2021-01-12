@@ -86,14 +86,13 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) {  // Intermediate and last request in the sequence
         if (sequenceId == 0) {
             return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
+        } else {
+            return StatusCode::SEQUENCE_MISSING;
         }
         // else if (sequenceManager.hasSequence(sequenceId)) {
         //    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         //    return StatusCode::OK;
         // }
-        else {
-            return StatusCode::SEQUENCE_MISSING;
-        }
     } else {
         return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
