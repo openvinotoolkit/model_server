@@ -78,19 +78,19 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
         sequenceControlInput = extractSequenceControlInput(it->second);
 
     if (sequenceControlInput == SEQUENCE_START) {  // First request in the sequence
-        //if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
-        //    return StatusCode::SEQUENCE_ALREADY_EXISTS;
-        //}
-        //processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+        // if (sequenceId != 0 && sequenceManager.hasSequence(sequenceId)) {
+        //     return StatusCode::SEQUENCE_ALREADY_EXISTS;
+        // }
+        // processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         return StatusCode::OK;
     } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) {  // Intermediate and last request in the sequence
         if (sequenceId == 0) {
             return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
         }
-        //else if (sequenceManager.hasSequence(sequenceId)) {
+        // else if (sequenceManager.hasSequence(sequenceId)) {
         //    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
         //    return StatusCode::OK;
-        //}
+        // }
         else {
             return StatusCode::SEQUENCE_MISSING;
         }
