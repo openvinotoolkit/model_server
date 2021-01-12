@@ -154,6 +154,24 @@ cc_binary(
 )
 
 cc_binary(
+    name = "lib_node_mock.so",
+    srcs = [
+	"test/custom_nodes/node_mock.cpp",
+	"custom_node_interface.hpp",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
+    name = "lib_node_missing_implementation.so",
+    srcs = [
+	"test/custom_nodes/node_missing_implementation.cpp",
+	"custom_node_interface.hpp",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -192,6 +210,7 @@ cc_test(
         "test/model_test.cpp",
         "test/modelinstance_test.cpp",
         "test/modelconfig_test.cpp",
+        "test/node_library_manager_test.cpp",
         "test/modelmanager_test.cpp",
         "test/ovmsconfig_test.cpp",
         "test/modelversionstatus_test.cpp",
@@ -234,6 +253,8 @@ cc_test(
     deps = [
         "//src:ovms_lib",
         "//src:libsampleloader.so",
+        "//src:lib_node_mock.so",
+        "//src:lib_node_missing_implementation.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [

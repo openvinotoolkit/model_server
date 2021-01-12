@@ -13,21 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-struct CustomNodeTensor {
-    const char* name;
-    unsigned char* data;
-    int dataLength;
-    int* dims;
-    int dimsLength;
-    int precision;
-};
+#include "../../custom_node_interface.hpp"
 
-struct CustomNodeParam {
-    const char *key, *value;
-};
+extern "C" int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+    return 1;
+}
 
-extern "C" int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-extern "C" int releaseBuffer(struct CustomNodeTensor* output);
-extern "C" int releaseTensors(struct CustomNodeTensor* outputs);
+// Missing implementation
+// extern "C" int releaseBuffer(struct CustomNodeTensor* output) {
+//     return 2;
+// }
+
+extern "C" int releaseTensors(struct CustomNodeTensor* outputs) {
+    return 3;
+}
