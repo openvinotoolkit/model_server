@@ -57,8 +57,8 @@ public:
     std::string modelPath;
     std::string dummyModelName;
     inputs_info_t modelInput;
-    std::pair<std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
-    std::pair<std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
