@@ -15,25 +15,27 @@
 //*****************************************************************************
 #pragma once
 
-#include <set>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+
+#include <inference_engine.hpp>
+
+#include "blobmap.hpp"
+#include "nodesession.hpp"
+#include "nodesessionmetadata.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-using session_id_t = uint64_t;
-using session_key_t = std::string;
+class Node;
+class TensorInfo;
 
-class NodeSessionMetadata {
-    std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
-
+class ExitNodeSession : public NodeSession {
 public:
-    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
-    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
-    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
-    session_id_t getSubsessionSize(const std::string& subsessionName) const;
+    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount);
+    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount);
+    virtual ~ExitNodeSession();
+
+    const BlobMap& getInputBlobs() const;
+    void release() override;
 };
 }  // namespace ovms

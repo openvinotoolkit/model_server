@@ -30,6 +30,7 @@
 #pragma GCC diagnostic pop
 
 #include "modelmanager.hpp"
+#include "pipelinedefinition.hpp"
 #include "status.hpp"
 
 using google::protobuf::util::JsonPrintOptions;

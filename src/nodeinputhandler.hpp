@@ -15,25 +15,30 @@
 //*****************************************************************************
 #pragma once
 
-#include <set>
+#include <memory>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <vector>
+
+#include <inference_engine.hpp>
+
+#include "blobmap.hpp"
 
 namespace ovms {
 
-using session_id_t = uint64_t;
-using session_key_t = std::string;
+using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
 
-class NodeSessionMetadata {
-    std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
+class NodeInputHandler {
+    BlobMap inputBlobs;
+    uint32_t expectedDependencies;
 
 public:
-    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
-    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
-    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
-    session_id_t getSubsessionSize(const std::string& subsessionName) const;
+    NodeInputHandler(uint32_t inputsMissingCount);
+    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr);
+    const BlobMap& getInputs() const { return inputBlobs; }
+    void clearInputs();
+    virtual bool isReady();
+    void notifyFinishedDependency();
+    const BlobMap& getInputBlobs() const;
 };
 }  // namespace ovms

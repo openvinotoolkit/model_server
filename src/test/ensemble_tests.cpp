@@ -18,9 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../dl_node.hpp"
+#include "../entry_node.hpp"
+#include "../exit_node.hpp"
 #include "../modelconfig.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
+#include "../pipelinedefinition.hpp"
 #define DEBUG
 #include <cstdio>
 
@@ -83,15 +87,13 @@ protected:
         std::string fileToReload = directoryPath + "/ovms_config_file1.json";
         createConfigFileWithContent(configFileContent, fileToReload);
         ConstructorEnabledModelManager managerWithDummyModel;
-        managerWithDummyModel.startFromFile(fileToReload);
-        waitForOVMSConfigReload(managerWithDummyModel);
+        managerWithDummyModel.loadConfig(fileToReload);
         std::unique_ptr<Pipeline> pipeline;
         auto status = managerWithDummyModel.createPipeline(pipeline,
             "pipeline1Dummy",
             &request,
             &response);
         ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
-        managerWithDummyModel.join();
     }
 
     ModelConfig config;
@@ -129,6 +131,7 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
+    SPDLOG_ERROR("JERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -185,6 +188,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
+    SPDLOG_DEBUG("HERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -241,6 +245,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
     pipeline.execute();
+    SPDLOG_ERROR("JERE");
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
@@ -589,7 +594,7 @@ class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
-    ovms::Status fetchResults(BlobMap&) override {
+    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults&) override {
         return StatusCode::UNKNOWN_ERROR;
     }
 };
@@ -1497,8 +1502,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
-    managerWithDummyModel.startFromFile(fileToReload);
-    waitForOVMSConfigReload(managerWithDummyModel);
+    managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1508,7 +1512,6 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
-    managerWithDummyModel.join();
 }
 
 static const char* pipelineOneDummyConfig2ParallelDummy = R"(
@@ -1572,8 +1575,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig2ParallelDummy, fileToReload);
     ConstructorEnabledModelManager managerWithDummyModel;
-    managerWithDummyModel.startFromFile(fileToReload);
-    waitForOVMSConfigReload(managerWithDummyModel);
+    managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
     auto status = managerWithDummyModel.createPipeline(pipeline,
         "pipeline1Dummy",
@@ -1612,7 +1614,6 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     actual_output = (float*)output_proto2.tensor_content().data();
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
         << readableError(expected_output, actual_output, dataLengthToCheck);
-    managerWithDummyModel.join();
 }
 
 static const char* pipelineOneDummyConfigWrongNodeKind = R"(
@@ -2153,7 +2154,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
         {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
-    std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>> connections;
+    std::unordered_map<std::string, std::unordered_map<std::string, Aliases>> connections;
     connections["dummy_node"] = {
         {ENTRY_NODE_NAME, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
     connections[EXIT_NODE_NAME] = {
@@ -2210,14 +2211,12 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(configJsonWithNoPipeline, fileToReload);
-    waitForOVMSConfigReload(manager);
+    manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
 }
@@ -2263,12 +2262,11 @@ static const char* pipelineOneDummyConfigWithChangedInputName = R"(
 })";
 const std::string NEW_INPUT_NAME = "NEW_INPUT_NAME";
 
-TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) {
+TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccessfullyChangedInputName) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
@@ -2280,9 +2278,8 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccesfullyChangedInputName) 
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDummyConfigWithChangedInputName, fileToReload);
-    waitForOVMSConfigReload(manager);
+    manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
     tensor_map_t inputsInfoAfter;
@@ -2325,14 +2322,12 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToMissingModel) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDummyConfigWithMissingModel, fileToReload);
-    waitForOVMSConfigReload(manager);
+    manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
@@ -2380,13 +2375,11 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToCorruptedModel) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineOneDummyConfigWithCorruptedModel, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 }
@@ -2532,8 +2525,7 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(pipelineTwoDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
@@ -2548,9 +2540,8 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineTwoDummyConfigAfterChanges, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RETIRE)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD)->getStateCode(),
@@ -2615,16 +2606,14 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersForModelUsedInPipeline) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineOneDynamicParamDummyConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
@@ -2661,16 +2650,14 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(dummyWithDynamicParamConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::RETIRED);
@@ -2762,8 +2749,7 @@ TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_FALSE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
@@ -2778,17 +2764,15 @@ TEST_F(EnsembleFlowTest, ModelLoadedAddPipelineWithSameName) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineModelSameNameConfigNoPipeline, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     auto instance = manager.findModelInstance(PIPELINE_1_DUMMY_NAME);
     ASSERT_NE(instance, nullptr);
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_FALSE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
 
@@ -2802,16 +2786,14 @@ TEST_F(EnsembleFlowTest, PipelineLoadedAddModelWithSameName) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
@@ -2826,16 +2808,14 @@ TEST_F(EnsembleFlowTest, PipelineRetiredAddModelWithSameName) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelineModelSameNameConfigNoPipeline, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
@@ -2916,16 +2896,14 @@ TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
 
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    waitForOVMSConfigReload(manager);
     createConfigFileWithContent(pipelinePipelineSameNameConfig, fileToReload);
-    waitForOVMSConfigReload(manager);
+    status = manager.loadConfig(fileToReload);
 
     ASSERT_TRUE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),

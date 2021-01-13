@@ -18,10 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../entry_node.hpp"
+#include "../exit_node.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
+#include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

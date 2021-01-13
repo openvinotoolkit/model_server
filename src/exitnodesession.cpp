@@ -5,7 +5,6 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,27 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "exitnodesession.hpp"
 
-#include <set>
-#include <string>
-#include <tuple>
-#include <unordered_map>
 #include <utility>
-#include <vector>
+
+#include "logging.hpp"
+#include "nodeinputhandler.hpp"
 
 namespace ovms {
+ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount) :
+    NodeSession(metadata, nodeName, inputsCount) {}
 
-using session_id_t = uint64_t;
-using session_key_t = std::string;
+ExitNodeSession::ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount) :
+    NodeSession(std::move(metadata), nodeName, inputsCount) {}
 
-class NodeSessionMetadata {
-    std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
+ExitNodeSession::~ExitNodeSession() = default;
 
-public:
-    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
-    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
-    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
-    session_id_t getSubsessionSize(const std::string& subsessionName) const;
-};
+void ExitNodeSession::release() {}
+
+const BlobMap& ExitNodeSession::getInputBlobs() const {
+    return this->inputHandler->getInputBlobs();
+}
 }  // namespace ovms

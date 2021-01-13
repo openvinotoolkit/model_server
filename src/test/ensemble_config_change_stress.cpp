@@ -24,6 +24,7 @@
 #include "../modelinstance.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
+#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "test_utils.hpp"
