@@ -57,8 +57,8 @@ public:
     std::string modelPath;
     std::string dummyModelName;
     inputs_info_t modelInput;
-    std::pair sequenceId;
-    std::pair sequenceControlStart;
+    std::pair<std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
@@ -76,8 +76,8 @@ public:
         modelInput = { {DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
 
-        sequenceInput = { "sequence_id", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT64} };
-        sequenceControlStart = { "sequence_control_input", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT32} };
+        sequenceId = std::make_pair("sequence_id", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT_UINT64});
+        sequenceControlStart = std::make_pair("sequence_control_input", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT_UINT32});
     }
 
     void TearDown() override {
