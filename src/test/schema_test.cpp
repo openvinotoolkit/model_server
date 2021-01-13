@@ -818,7 +818,7 @@ TEST(SchemaTest, CustomNodeLibraryConfigMatchingSchema) {
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
-TEST(SchemaTest, CustomNodeLibraryConfigMissingName) {
+TEST(SchemaTest, CustomNodeLibraryConfigMissingLibraryName) {
     const char* customNodeLibraryConfigMissingName = R"(
     {
         "model_config_list": [
@@ -980,8 +980,8 @@ TEST(SchemaTest, CustomNodeConfigInvalidLibraryNameType) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, CustomNodeConfigNoLibraryNameNoModelName) {
-    const char* customNodeConfigNoLibraryNameNoModelName = R"(
+TEST(SchemaTest, CustomNodeConfigNoLibraryName) {
+    const char* customNodeConfigNoLibraryName = R"(
     {
         "model_config_list": [
             {
@@ -1025,13 +1025,13 @@ TEST(SchemaTest, CustomNodeConfigNoLibraryNameNoModelName) {
         ]
     })";
 
-    rapidjson::Document customNodeConfigNoLibraryNameNoModelNameParsed;
-    customNodeConfigNoLibraryNameNoModelNameParsed.Parse(customNodeConfigNoLibraryNameNoModelName);
-    auto result = ovms::validateJsonAgainstSchema(customNodeConfigNoLibraryNameNoModelNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    rapidjson::Document customNodeConfigNoLibraryNameParsed;
+    customNodeConfigNoLibraryNameParsed.Parse(customNodeConfigNoLibraryName);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigNoLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, CustomNodeConfigModelName) {
+TEST(SchemaTest, CustomNodeConfigModelNameShouldNotBeAcceptedInCustomNode) {
     const char* customNodeConfigModelName = R"(
     {
         "model_config_list": [
@@ -1052,6 +1052,7 @@ TEST(SchemaTest, CustomNodeConfigModelName) {
                 "nodes": [
                     {
                         "name": "dummyNode",
+                        "library_name": "dummy_library",
                         "model_name": "dummy",
                         "type": "custom",
                         "params": {
@@ -1083,8 +1084,8 @@ TEST(SchemaTest, CustomNodeConfigModelName) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, CustomNodeConfigModelNameLibraryName) {
-    const char* customNodeConfigModelNameLibraryName = R"(
+TEST(SchemaTest, CustomNodeConfigNotAppropiateParameterShouldNotBeAcceptedInCustomNode) {
+    const char* customNodeConfigNotAppropiateParameter = R"(
     {
         "model_config_list": [
             {
@@ -1110,7 +1111,6 @@ TEST(SchemaTest, CustomNodeConfigModelNameLibraryName) {
                 "nodes": [
                     {
                         "name": "dummyNode",
-                        "model_name": "dummy",
                         "library_name": "dummy_library",
                         "type": "custom",
                         "params": {
@@ -1124,7 +1124,8 @@ TEST(SchemaTest, CustomNodeConfigModelNameLibraryName) {
                         "outputs": [
                             {"data_item": "a",
                             "alias": "new_dummy_output"}
-                        ]
+                        ],
+                        "not_appropiate": "not_appropiate"
                     }
                 ],
                 "outputs": [
@@ -1136,13 +1137,13 @@ TEST(SchemaTest, CustomNodeConfigModelNameLibraryName) {
         ]
     })";
 
-    rapidjson::Document customNodeConfigModelNameLibraryNameParsed;
-    customNodeConfigModelNameLibraryNameParsed.Parse(customNodeConfigModelNameLibraryName);
-    auto result = ovms::validateJsonAgainstSchema(customNodeConfigModelNameLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    rapidjson::Document customNodeConfigNotAppropiateParameterParsed;
+    customNodeConfigNotAppropiateParameterParsed.Parse(customNodeConfigNotAppropiateParameter);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigNotAppropiateParameterParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, ModelNodeConfigLibraryName) {
+TEST(SchemaTest, ModelNodeConfigLibraryNameShouldNotBeAcceptedInDLNode) {
     const char* modelNodeConfigLibraryName = R"(
     {
         "model_config_list": [
@@ -1170,6 +1171,7 @@ TEST(SchemaTest, ModelNodeConfigLibraryName) {
                     {
                         "name": "dummyNode",
                         "library_name": "dummy_library",
+                        "model_name": "dummy",
                         "type": "DL model",
                         "params": {
                             "a": "1024",
@@ -1200,8 +1202,8 @@ TEST(SchemaTest, ModelNodeConfigLibraryName) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, ModelNodeConfigModelNameLibraryName) {
-    const char* modelNodeConfigModelNameLibraryName = R"(
+TEST(SchemaTest, ModelNodeConfigNotAppropiateParameterShouldNotBeAcceptedInDLNode) {
+    const char* modelNodeConfigNotAppropiateParameter = R"(
     {
         "model_config_list": [
             {
@@ -1228,7 +1230,6 @@ TEST(SchemaTest, ModelNodeConfigModelNameLibraryName) {
                     {
                         "name": "dummyNode",
                         "model_name": "dummy",
-                        "library_name": "dummy_library",
                         "type": "DL model",
                         "params": {
                             "a": "1024",
@@ -1241,7 +1242,8 @@ TEST(SchemaTest, ModelNodeConfigModelNameLibraryName) {
                         "outputs": [
                             {"data_item": "a",
                             "alias": "new_dummy_output"}
-                        ]
+                        ],
+                        "not_appropiate": "not_appropiate"
                     }
                 ],
                 "outputs": [
@@ -1253,9 +1255,9 @@ TEST(SchemaTest, ModelNodeConfigModelNameLibraryName) {
         ]
     })";
 
-    rapidjson::Document modelNodeConfigModelNameLibraryNameParsed;
-    modelNodeConfigModelNameLibraryNameParsed.Parse(modelNodeConfigModelNameLibraryName);
-    auto result = ovms::validateJsonAgainstSchema(modelNodeConfigModelNameLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    rapidjson::Document modelNodeConfigNotAppropiateParameterParsed;
+    modelNodeConfigNotAppropiateParameterParsed.Parse(modelNodeConfigNotAppropiateParameter);
+    auto result = ovms::validateJsonAgainstSchema(modelNodeConfigNotAppropiateParameterParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
