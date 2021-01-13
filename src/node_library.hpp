@@ -20,7 +20,7 @@
 namespace ovms {
 
 typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int);
-typedef int (*release_fn)(struct Tensor*);
+typedef int (*release_fn)(struct CustomNodeTensor*);
 
 struct NodeLibrary {
     execute_fn execute = nullptr;

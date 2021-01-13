@@ -65,7 +65,6 @@ cc_library(
         "model_service.cpp",
         "node.cpp",
         "node.hpp",
-        "node_library.cpp",
         "node_library.hpp",
         "nodestreamidguard.hpp",
         "ovinferrequestsqueue.cpp",
