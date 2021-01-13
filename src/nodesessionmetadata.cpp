@@ -18,11 +18,16 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 #include "logging.hpp"
 
 namespace ovms {
 
+/*NodeSessionMetadata::NodeSessionMetadata(const NodeSessionMetadata& metadata) : details(metadata.details) {}
+
+NodeSessionMetadata::NodeSessionMetadata(const NodeSessionMetadata&& metadata) : details(std::move(metadata.details)) {}
+*/
 std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const {
     if (nodeName.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with empty node name");

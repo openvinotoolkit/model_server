@@ -25,11 +25,17 @@
 namespace ovms {
 
 using session_id_t = uint64_t;
+using session_key_t = std::string;
 
 class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
 
 public:
+    /*NodeSessionMetadata() {};
+    NodeSessionMetadata(const NodeSessionMetadata& metadata);
+    NodeSessionMetadata(const NodeSessionMetadata&& metadata);
+    operator=(const ovms::NodeSessionMetadata&);
+    operator=(const ovms::NodeSessionMetadata&&) = default;*/
     std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
     std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
     NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;

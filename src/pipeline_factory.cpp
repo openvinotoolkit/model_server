@@ -16,9 +16,36 @@
 #include "pipeline_factory.hpp"
 
 #include "logging.hpp"
+#include "pipeline.hpp"
+#include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
+
+bool PipelineFactory::definitionExists(const std::string& name) const {
+    std::shared_lock lock(definitionsMtx);
+    return definitions.count(name) == 1;
+}
+
+PipelineDefinition* PipelineFactory::findDefinitionByName(const std::string& name) const {
+    std::shared_lock lock(definitionsMtx);
+    auto it = definitions.find(name);
+    if (it == std::end(definitions)) {
+        return nullptr;
+    } else {
+        return it->second.get();
+    }
+}
+
+void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
+    std::for_each(definitions.begin(),
+        definitions.end(),
+        [&pipelinesInConfigFile, &manager](auto& nameDefinitionPair) {
+            if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
+                nameDefinitionPair.second->retire(manager);
+            }
+        });
+}
 
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,

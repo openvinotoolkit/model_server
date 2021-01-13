@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -22,14 +23,17 @@
 
 #include <inference_engine.hpp>
 
+#include "blobmap.hpp"
+#include "nodesession.hpp"
+#include "pipelineeventqueue.hpp"
 #include "status.hpp"
-#include "threadsafequeue.hpp"
 
 namespace ovms {
 
-using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+using SessionResults = std::unordered_map<session_key_t, std::pair<NodeSessionMetadata, BlobMap>>;
 using BlobNames = std::vector<std::string>;
 using InputPairs = std::vector<std::pair<std::string, std::string>>;
+using session_key_t = std::string;
 
 class Node {
 protected:
@@ -41,24 +45,29 @@ protected:
     size_t finishedDependenciesCount = 0;
 
     // Blobs ready and waiting for execution
+    std::unordered_map<session_key_t, std::unique_ptr<NodeSession>> nodeSessions;
     BlobMap inputBlobs;
 
     // Input/Output name mapping and list of required inputs from previous nodes
     std::unordered_map<std::string, InputPairs> blobNamesMapping;
 
 public:
-    Node(const std::string& nodeName) :
-        nodeName(nodeName) {
-    }
+    Node(const std::string& nodeName);
 
     virtual ~Node() = default;
 
     const std::string& getName() const { return this->nodeName; }
 
-    virtual Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) = 0;
-    virtual Status fetchResults(BlobMap& outputs) = 0;
+    virtual Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) { return StatusCode::OK; }  // TODO remove
+    Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs);
 
+protected:
+    virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
+
+public:
+    Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, BlobMap& inputs);
+    Status setInputs(const Node& dependency, SessionResults& inputs);
 
     virtual void addDependency(Node& node, const InputPairs& blobNamesMapping) {
         this->previous.emplace_back(node);
@@ -73,13 +82,19 @@ public:
     bool isReady() const {
         return finishedDependenciesCount == previous.size();
     }
+    std::vector<session_key_t> getReadySessions() const;
     const std::vector<std::reference_wrapper<Node>>& getNextNodes() {
         return next;
     }
-    virtual void release() {}
-    virtual bool tryDisarmStreamIdGuard(const uint microseconds = 1) { return true; }
+    virtual void release(session_key_t sessionId) {}
+    virtual bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) { return true; }
 
     static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs);
+
+protected:
+    NodeSession& getNodeSession(const NodeSessionMetadata& metadata);
+    NodeSession& getNodeSession(const session_key_t& sessionKey) const;
+    virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata);
 };
 
 }  // namespace ovms

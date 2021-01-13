@@ -36,13 +36,14 @@ public:
         Node(ENTRY_NODE_NAME),
         request(request) {}
 
-    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {
-        notifyEndQueue.push(*this);
-        return StatusCode::OK;
-    }
+    Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(BlobMap& outputs) override;
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
+protected:
+    Status fetchResults(BlobMap& outputs);
+
+public:
     // Entry nodes have no dependency
     void addDependency(Node&, const InputPairs&) override {
         throw std::logic_error("This node cannot have dependency");

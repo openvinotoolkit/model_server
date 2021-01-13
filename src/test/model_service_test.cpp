@@ -27,6 +27,7 @@
 #include "../model_service.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
+#include "../pipelinedefinition.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
 

@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <set>
 #include <shared_mutex>
@@ -31,46 +32,21 @@
 #pragma GCC diagnostic pop
 
 #include "model_version_policy.hpp"
-#include "node.hpp"
-#include "pipeline.hpp"
+#include "node.hpp"  // TODO remove
+#include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
 class ModelManager;
+class Pipeline;
 
 using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>;
-
-enum class NodeKind {
-    ENTRY,
-    DL,
-    EXIT
-};
-
-const std::string DL_NODE_CONFIG_TYPE = "DL model";
-
-Status toNodeKind(const std::string& str, NodeKind& nodeKind);
-
-struct NodeInfo {
-    NodeKind kind;
-    std::string nodeName;
-    std::string modelName;
-    std::optional<model_version_t> modelVersion;
-    std::unordered_map<std::string, std::string> outputNameAliases;
-
-    NodeInfo(NodeKind kind,
-        const std::string& nodeName,
-        const std::string& modelName = "",
-        std::optional<model_version_t> modelVersion = std::nullopt,
-        std::unordered_map<std::string, std::string> outputNameAliases = {}) :
-        kind(kind),
-        nodeName(nodeName),
-        modelName(modelName),
-        modelVersion(modelVersion),
-        outputNameAliases(outputNameAliases) {}
-};
+using InputPairs = std::vector<std::pair<std::string, std::string>>;
+using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class PipelineDefinition {
     struct ValidationResultNotifier {

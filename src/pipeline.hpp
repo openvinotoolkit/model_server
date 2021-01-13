@@ -21,12 +21,15 @@
 #include <utility>
 #include <vector>
 
-#include "dl_node.hpp"
-#include "entry_node.hpp"
-#include "exit_node.hpp"
 #include "status.hpp"
 
 namespace ovms {
+
+struct Node;
+struct EntryNode;
+struct ExitNode;
+
+using InputPairs = std::vector<std::pair<std::string, std::string>>;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs);
 
@@ -37,24 +40,15 @@ class Pipeline {
     ExitNode& exit;
 
 public:
-    Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name = "default_name") :
-        name(name),
-        entry(entry),
-        exit(exit) {}
+    Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name = "default_name");
 
-    void push(std::unique_ptr<Node> node) {
-        nodes.emplace_back(std::move(node));
-    }
+    void push(std::unique_ptr<Node> node);
+    ~Pipeline();
 
     EntryNode& getEntry() const { return this->entry; }
     ExitNode& getExit() const { return this->exit; }
 
-    static void connect(Node& from, Node& to, const InputPairs& blobNamesMapping) {
-        SPDLOG_DEBUG("Connecting from: {}, to: {}", from.getName(), to.getName());
-        printNodeConnections(to.getName(), from.getName(), blobNamesMapping);
-        from.addDependant(to);
-        to.addDependency(from, blobNamesMapping);
-    }
+    static void connect(Node& from, Node& to, const InputPairs& blobNamesMapping);
 
     Status execute();
     const std::string& getName() const {

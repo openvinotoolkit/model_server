@@ -18,6 +18,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../dl_node.hpp"
+#include "../entry_node.hpp"
+#include "../exit_node.hpp"
 #include "../modelconfig.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
@@ -129,6 +132,7 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
+    SPDLOG_ERROR("JERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -185,6 +189,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
+    SPDLOG_DEBUG("HERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -241,6 +246,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
     pipeline.execute();
+    SPDLOG_ERROR("JERE");
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
@@ -589,7 +595,7 @@ class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
-    ovms::Status fetchResults(BlobMap&) override {
+    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults&) override {
         return StatusCode::UNKNOWN_ERROR;
     }
 };

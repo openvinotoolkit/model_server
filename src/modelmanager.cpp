@@ -35,6 +35,8 @@
 #include "config.hpp"
 #include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
+#include "entry_node.hpp"  // need for ENTRY_NODE_NAME
+#include "exit_node.hpp"   // need for EXIT_NODE_NAME
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
