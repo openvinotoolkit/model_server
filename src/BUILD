@@ -99,6 +99,8 @@ cc_library(
         "schema.cpp",
         "sequence.cpp",
         "sequence.hpp",
+        "sequence_manager.cpp",
+        "sequence_manager.hpp",
         "serialization.hpp",
         "server.cpp",
         "status.cpp",
