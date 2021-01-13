@@ -35,31 +35,31 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     char* error = dlerror();
     if (handle == NULL) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, error);
-        return StatusCode::NODE_LIBRARY_LOAD_FAILED;
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
 
-    execute_fn execute = (execute_fn)dlsym(handle, "execute");
+    execute_fn execute = reinterpret_cast<execute_fn>(dlsym(handle, "execute"));
     error = dlerror();
     if (error || execute == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
-        return StatusCode::NODE_LIBRARY_LOAD_FAILED;
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    release_fn releaseBuffer = (release_fn)dlsym(handle, "releaseBuffer");
+    release_fn releaseBuffer = reinterpret_cast<release_fn>(dlsym(handle, "releaseBuffer"));
     error = dlerror();
     if (error || releaseBuffer == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
-        return StatusCode::NODE_LIBRARY_LOAD_FAILED;
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    release_fn releaseTensors = (release_fn)dlsym(handle, "releaseTensors");
+    release_fn releaseTensors = reinterpret_cast<release_fn>(dlsym(handle, "releaseTensors"));
     error = dlerror();
     if (error || releaseBuffer == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
-        return StatusCode::NODE_LIBRARY_LOAD_FAILED;
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
     libraries.emplace(std::make_pair(name, NodeLibrary{execute, releaseBuffer, releaseTensors}));

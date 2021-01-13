@@ -59,14 +59,20 @@ TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
 
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/tmp/lib_node_missing_implementation.so");
-    EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED);
+    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
+    EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
 }
 
 TEST(NodeLibraryManagerTest, TryLoadingCorruptedLibraryNextLoadCorrectLibrary) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/tmp/lib_node_missing_implementation.so");
-    EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED);
+    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
+    ASSERT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
     status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     EXPECT_EQ(status, StatusCode::OK);
+}
+
+TEST(NodeLibraryManagerTest, LibraryLoadingMissingFile) {
+    CustomNodeLibraryManager manager;
+    auto status = manager.loadLibrary("random_name", "/tmp/non_existing_library_file");
+    EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN);
 }
