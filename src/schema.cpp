@@ -173,7 +173,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				},
 				"type": {
 					"type": "string",
-					"enum": ["DL model", "Demultiplexer", "Batch dispatcher", "custom"]
+					"enum": ["DL model", "custom"]
 				},
 				"version": {
 					"type": "integer",
