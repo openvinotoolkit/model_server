@@ -58,6 +58,7 @@ public:
     std::string dummyModelName;
     inputs_info_t modelInput;
     std::pair sequenceId;
+    std::pair sequenceControlStart;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
