@@ -345,7 +345,7 @@ TEST_F(PredictValidation, RequestWrongShapeValuesAutoFirstDim) {
 
 TEST_F(PredictValidation, RequestValidShapeValuesTwoInputsFixed) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\", \"Input_U16_1_2_8_4_NCHW\": \"(1,2,8,4)\"}");
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
@@ -358,7 +358,7 @@ TEST_F(PredictValidation, RequestWrongShapeValuesFixed) {
     input.mutable_tensor_shape()->mutable_dim(2)->set_size(63);
     input.mutable_tensor_shape()->mutable_dim(3)->set_size(63);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 TEST_F(PredictValidation, RequestWrongShapeValuesFixedFirstDim) {
@@ -370,7 +370,7 @@ TEST_F(PredictValidation, RequestWrongShapeValuesFixedFirstDim) {
     input.mutable_tensor_shape()->mutable_dim(2)->set_size(62);
     input.mutable_tensor_shape()->mutable_dim(3)->set_size(62);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
@@ -378,7 +378,7 @@ TEST_F(PredictValidation, RequestIncorrectContentSize) {
     auto& input = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
     *input.mutable_tensor_content() = std::string(1 * 6, '1');
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
@@ -387,7 +387,7 @@ TEST_F(PredictValidation, RequestIncorrectContentSizeBatchAuto) {
     auto& input = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(3);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
@@ -396,7 +396,7 @@ TEST_F(PredictValidation, RequestIncorrectContentSizeShapeAuto) {
     auto& input = (*request.mutable_inputs())["Input_I64_1_6_128_128_16_NCDHW"];
     input.mutable_tensor_shape()->mutable_dim(1)->set_size(8);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
@@ -405,7 +405,7 @@ TEST_F(PredictValidation, RequestIncorrectValueCount) {
     input.mutable_int_val()->Clear();
     input.mutable_int_val()->Resize(2, 1);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -414,7 +414,7 @@ TEST_F(PredictValidation, RequestIncorrectValueCountBatchAuto) {
     auto& input = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
     input.mutable_tensor_shape()->mutable_dim(0)->set_size(3);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -423,7 +423,7 @@ TEST_F(PredictValidation, RequestIncorrectValueCountShapeAuto) {
     auto& input = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
     input.mutable_tensor_shape()->mutable_dim(2)->set_size(10);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -431,7 +431,7 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.set_dtype(tensorflow::DataType::DT_UINT8);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
 }
 
@@ -439,7 +439,7 @@ TEST_F(PredictValidation, RequestNegativeValueInShape) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.mutable_tensor_shape()->mutable_dim(1)->set_size(-4);
 
-    auto status = instance.validate(&request);
+    auto status = instance.validate(&request, nullptr);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 

@@ -97,7 +97,7 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     modelInput.insert(sequenceControlStart);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
 
-    status = modelInstance->validate(&request);
+    status = modelInstance->validate(&request, nullptr);
     ASSERT_TRUE(status.ok());
 }
 }
