@@ -208,6 +208,7 @@ cc_test(
         "test/rest_utils_test.cpp",
         "test/serialization_tests.cpp",
         "test/stateful_config_test.cpp",
+        "test/stateful_modelinstance_test.cpp"
         "test/stringutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
