@@ -49,6 +49,14 @@ TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateName) {
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_ALREADY_LOADED);
 }
 
+TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
+    CustomNodeLibraryManager manager;
+    auto status = manager.loadLibrary("library_A", "/ovms/bazel-bin/src/lib_node_mock.so");
+    ASSERT_EQ(status, StatusCode::OK);
+    status = manager.loadLibrary("library_B", "/ovms/bazel-bin/src/lib_node_mock.so");
+    EXPECT_EQ(status, StatusCode::OK);
+}
+
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/tmp/lib_node_missing_implementation.so");
