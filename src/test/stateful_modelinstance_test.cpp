@@ -82,7 +82,7 @@ public:
 
     void TearDown() override {
         TestWithTempDir::TearDown();
-        modelInput.erase();
+        modelInput.clear()
     }
 };
 
