@@ -76,8 +76,8 @@ public:
         modelInput = { {DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
 
-        sequenceInput = std::make_pair("sequence_id", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT64});
-        sequenceControlStart = std::make_pair("sequence_control_input", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT32});
+        sequenceInput = { "sequence_id", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT64} };
+        sequenceControlStart = { "sequence_control_input", std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT::UINT32} };
     }
 
     void TearDown() override {
