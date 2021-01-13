@@ -19,7 +19,6 @@
 #include <string>
 
 #include "modelinstance.hpp"
-#include "processing_spec.hpp"
 
 namespace ovms {
 
