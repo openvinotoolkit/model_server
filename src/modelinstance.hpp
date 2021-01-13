@@ -495,7 +495,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
 

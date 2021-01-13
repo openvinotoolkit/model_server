@@ -51,7 +51,7 @@ protected:
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
-    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
 
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 
