@@ -792,7 +792,7 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
     return StatusCode::OK;
 }
 
-const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request ,ProcessingSpec* processingSpecPtr) {
     Status finalStatus = StatusCode::OK;
 
     // Network and request must have the same amount of inputs
@@ -886,7 +886,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     Timer timer;
     using std::chrono::microseconds;
 
-    auto status = validate(requestProto);
+    auto status = validate(requestProto, nullptr);
     status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
