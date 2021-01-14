@@ -819,7 +819,7 @@ TEST(SchemaTest, CustomNodeLibraryConfigMatchingSchema) {
 }
 
 TEST(SchemaTest, CustomNodeLibraryConfigMissingLibraryName) {
-    const char* customNodeLibraryConfigMissingName = R"(
+    const char* customNodeLibraryConfigMissingLibraryName = R"(
     {
         "model_config_list": [
             {
@@ -839,9 +839,9 @@ TEST(SchemaTest, CustomNodeLibraryConfigMissingLibraryName) {
         ]
     })";
 
-    rapidjson::Document customNodeLibraryConfigMissingNameParsed;
-    customNodeLibraryConfigMissingNameParsed.Parse(customNodeLibraryConfigMissingName);
-    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigMissingNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    rapidjson::Document customNodeLibraryConfigMissingLibraryNameParsed;
+    customNodeLibraryConfigMissingLibraryNameParsed.Parse(customNodeLibraryConfigMissingLibraryName);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigMissingLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
