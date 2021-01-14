@@ -35,6 +35,7 @@
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
+#include "custom_node_library_manager.hpp"
 
 namespace ovms {
 
@@ -61,6 +62,8 @@ protected:
 
     PipelineFactory pipelineFactory;
 
+    CustomNodeLibraryManager customNodeLibraryManager;
+
 private:
     /**
      * @brief Private copying constructor
@@ -72,6 +75,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
+    Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 

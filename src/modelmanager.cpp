@@ -245,6 +245,20 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     pipelinesInConfigFile.insert(pipelineName);
 }
 
+Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
+    const auto doc = configJson.FindMember("custom_node_library_config_list");
+    if (doc == configJson.MemberEnd()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
+        return StatusCode::OK;
+    }
+    for (const auto& libraryConfig : doc->value.GetArray()) {
+        this->customNodeLibraryManager.loadLibrary(
+            libraryConfig.FindMember("name")->value.GetString(),
+            libraryConfig.FindMember("base_path")->value.GetString());
+    }
+    return StatusCode::OK;
+}
+
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
@@ -424,6 +438,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
+    status = loadCustomNodeLibrariesConfig(configJson);
     status = loadPipelinesConfig(configJson);
     tryReloadGatedModelConfigs(gatedModelConfigs);
     return StatusCode::OK;
