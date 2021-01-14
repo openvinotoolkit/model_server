@@ -97,6 +97,8 @@ cc_library(
         "serialization.cpp",
         "schema.hpp",
         "schema.cpp",
+        "sequence.cpp",
+        "sequence.hpp",
         "serialization.hpp",
         "server.cpp",
         "status.cpp",
@@ -235,6 +237,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
+        "test/sequence_test.cpp",
         "test/environment.hpp",
     ],
     data = [
