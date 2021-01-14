@@ -111,7 +111,7 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
 
     auto& input = (*request.mutable_inputs())[SEQUENCE_ID_INPUT];
-    input.mutable_tensor_content()->assign((char*)seqId.data(), seqId.size() * sizeof(uint64_t));
+    input.mutable_tensor_content()->assign((uint64_t*)seqId.data(), seqId.size() * sizeof(uint64_t));
     status = modelInstance->validate(&request, nullptr);
     ASSERT_TRUE(status.ok());
 }
