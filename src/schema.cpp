@@ -194,6 +194,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"params": {
 					"type": "object",
 					"additionalProperties": { "type": "string" } 
+				},
+				"demultiply_count": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"gather_from_node": {
+					"type": "string"
 				}
 			},
 			"additionalProperties": false
