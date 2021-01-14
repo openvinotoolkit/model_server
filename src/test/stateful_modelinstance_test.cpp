@@ -101,10 +101,10 @@ TEST_F(StatefulModelInstance, positiveValidate) {
 
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
-    std::vector<string> seqId{ "1" };
-    std::vector<string> seqControl{ SEQUENCE_START };
-    std::vector<string> seqData{ "90","91","92","93","94","96","97","98","99","100" };
-    std::map<std::string, std::vector<string>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
+    std::vector<std::string> seqId{ "1" };
+    std::vector<std::string> seqControl{ SEQUENCE_START };
+    std::vector<std::string> seqData{ "90","91","92","93","94","96","97","98","99","100" };
+    std::map<std::string, std::vector<std::string>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
 
     modelInput.insert(sequenceId);
     modelInput.insert(sequenceControlStart);
