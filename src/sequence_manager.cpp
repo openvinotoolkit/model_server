@@ -13,3 +13,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#include <spdlog/spdlog.h>
+
+#include "sequence_manager.hpp"
+
+bool SequenceManager::hasSequence(uint64_t sequenceId) {
+    return sequences.count(sequenceId);
+}
+
+Status SequenceManager::addSequence(uint64_t sequenceId) {
+    if (sequences.count(sequenceId)) {
+        spdlog::debug("Sequence with provided ID already exists");
+        return StatusCode::SEQUENCE_ALREADY_EXISTS
+    } else {
+        spdlog::debug("Adding new sequence with ID: {}", sequenceId);
+        sequences[sequenceId] = Sequence();
+    }
+    return StatusCode::OK;
+}
+
+Status SequenceManager::removeSequence(uint64_t sequenceId) {
+    if (sequences.count(sequenceId)) {
+        // TO DO: care for thread safety
+        spdlog::debug("Removing sequence with ID: {}", sequenceId);
+        sequences.erase(sequenceId);
+    } else {
+        spdlog::debug("Sequence with provided ID does not exists");
+        return StatusCode::SEQUENCE_NOT_FOUND
+    }
+    return StatusCode::OK;
+}
+
+Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime) {
+    return StatusCode::OK;
+}
+
+std::mutex& SequenceManager::getMutexRef() const {
+    return mutex;
+}
+
+const sequence_memory_state_t& SequenceManager::getSequenceMemoryState(uint64_t sequenceId) const {
+    return sequences[sequenceId].getLastMemoryState();
+}
+
+Status SequenceManager::updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState) {
+    return sequences[sequenceId].updateMemoryState(newState);
+}

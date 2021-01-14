@@ -13,3 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#pragma once
+
+#include <mutex>
+#include <unordered_map>
+
+#include "sequence.hpp"
+#include "status.hpp"
+
+namespace ovms {
+class SequenceManager {
+private:
+	std::unordered_map<uint64_t, Sequence> sequences;
+	uint32_t timeout;
+	uint32_t maxSequenceNumber;
+    std::mutex mutex;
+public:
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) : 
+        timeout(timeout), 
+        maxSequenceNumber(maxSequenceNumber) {};
+    bool hasSequence(uint64_t sequenceId);
+	Status addSequence(uint64_t sequenceId);
+	Status removeSequence(uint64_t sequenceId);
+	Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
+    std::mutex& getMutexRef() const;
+	const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
+	Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
+};
+} // namespace ovms
