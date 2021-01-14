@@ -30,9 +30,9 @@ using testing::Return;
 
 namespace {
 
-const uint32_t NO_CONTROL_INPUT = 0;
-const uint32_t SEQUENCE_START = 1;
-const uint32_t SEQUENCE_END = 2;
+const std::string NO_CONTROL_INPUT = "0";
+const std::string SEQUENCE_START = "1";
+const std::string SEQUENCE_END = "2";
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
@@ -101,10 +101,10 @@ TEST_F(StatefulModelInstance, positiveValidate) {
 
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
-    std::vector<uint32_t> seqId{ 1 };
-    std::vector<uint32_t> seqControl{ SEQUENCE_START };
-    std::vector<uint32_t> seqData{ 90,91,92,93,94,96,97,98,99,100 };
-    std::map<std::string, std::vector<std::uint32_t>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
+    std::vector<std::string> seqId{ "1" };
+    std::vector<std::string> seqControl{ SEQUENCE_START };
+    std::vector<std::string> seqData{ "90","91","92","93","94","96","97","98","99","100" };
+    std::map<std::string, std::vector<std::string>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
 
     modelInput.insert(sequenceId);
     modelInput.insert(sequenceControlStart);
