@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "../get_model_metadata_impl.hpp"
+#include "../processing_spec.hpp"
 #include "../statefulmodelinstance.hpp"
 #include "test_utils.hpp"
 
@@ -89,14 +90,14 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
-
+    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
     auto modelInstance = manager.findModelInstance(dummyModelName);
     uint64_t seqId = 1;
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    setRequestSequenceId(request, seqId);
-    setRequestSequenceControl(request, SEQUENCE_START);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, SEQUENCE_START);
 
-    status = modelInstance->validate(&request, nullptr);
+    status = modelInstance->validate(&request, &spec);
     ASSERT_TRUE(status.ok());
 }
 }

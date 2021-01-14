@@ -113,13 +113,13 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
     return request;
 }
 
-static void setRequestSequenceId(tensorflow::serving::PredictRequest request, uint64_t sequence_id) {
-        auto& input = (*request.mutable_inputs())[SEQUENCE_ID_INPUT];
-        input.add_uint64_val(sequence_id);
+static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequence_id) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
+    input.add_uint64_val(sequence_id);
 }
 
-static void setRequestSequenceControl(tensorflow::serving::PredictRequest request, uint32_t sequence_control) {
-    auto& input = (*request.mutable_inputs())[SEQUENCE_CONTROL_INPUT];
+static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequence_control) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
     input.add_uint32_val(sequence_control);
 }
 
