@@ -33,7 +33,7 @@ private:
 public:
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         timeout(timeout),
-        maxSequenceNumber(maxSequenceNumber){};
+        maxSequenceNumber(maxSequenceNumber) {}
     bool hasSequence(uint64_t sequenceId) const;
     Status addSequence(uint64_t sequenceId);
     Status removeSequence(uint64_t sequenceId);
