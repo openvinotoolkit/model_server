@@ -52,17 +52,15 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     if (it != request->inputs().end())
         sequenceControlInput = extractSequenceControlInput(it->second);
 
-    if (sequenceControlInput == SEQUENCE_START) {  // First request in the sequence
-        processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
-        return StatusCode::OK;
-    } else if (sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) {  // Intermediate and last request in the sequence
-        if (sequenceId == 0) {
+    if ((sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) && sequenceId == 0) {
+        // Intermediate and last request in the sequence
             return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
         }
-        return StatusCode::OK;
-    } else {
+    } else if ( sequenceControlInput != SEQUENCE_START) {
         return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
+
+    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
     return StatusCode::OK;
 }
 
