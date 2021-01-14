@@ -109,7 +109,7 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
 
 template <typename T>
 static void setPredictRequestData(tensorflow::serving::PredictRequest request, std::map<std::string, std::vector<T>> requestData) {
-    for (auto const& it : request) {
+    for (auto const& it : requestData) {
         auto& name = it.first;
         auto& input = (*request.mutable_inputs())[name];
         input.mutable_tensor_content()->assign((char*)requestData[name].data(), requestData[name].size()*sizeof(T));
