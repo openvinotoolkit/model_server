@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
     auto library = manager.getLibrary("random_name");
-    EXPECT_NE(library.execute, nullptr);
-    EXPECT_NE(library.releaseBuffer, nullptr);
-    EXPECT_NE(library.releaseTensors, nullptr);
+    ASSERT_NE(library.execute, nullptr);
+    ASSERT_NE(library.releaseBuffer, nullptr);
+    ASSERT_NE(library.releaseTensors, nullptr);
     EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0), 1);
     EXPECT_EQ(library.releaseBuffer(nullptr), 2);
     EXPECT_EQ(library.releaseTensors(nullptr), 3);

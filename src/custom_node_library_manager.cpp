@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,21 +27,21 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
 
     if (libraries.count(name) == 1) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom node library name: {} is already loaded", name);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
 
     void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
     char* error = dlerror();
     if (handle == NULL) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, error);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
 
     execute_fn execute = reinterpret_cast<execute_fn>(dlsym(handle, "execute"));
     error = dlerror();
     if (error || execute == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -49,7 +49,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     release_fn releaseBuffer = reinterpret_cast<release_fn>(dlsym(handle, "releaseBuffer"));
     error = dlerror();
     if (error || releaseBuffer == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -57,13 +57,14 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     release_fn releaseTensors = reinterpret_cast<release_fn>(dlsym(handle, "releaseTensors"));
     error = dlerror();
     if (error || releaseBuffer == nullptr) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
     libraries.emplace(std::make_pair(name, NodeLibrary{execute, releaseBuffer, releaseTensors}));
 
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Succeeded to load custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
 }
 
