@@ -16,7 +16,7 @@
 
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
 FROM $BASE_IMAGE as base_build
-
+RUN yum install -y xz
 WORKDIR /
 COPY ovms.tar.xz /
 RUN env
