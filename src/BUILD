@@ -231,6 +231,7 @@ cc_test(
         "test/rest_parser_column_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
+        "test/sequence_test.cpp",
         "test/sequence_manager_test.cpp",
         "test/serialization_tests.cpp",
         "test/stateful_config_test.cpp",
@@ -240,7 +241,6 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
-        "test/sequence_test.cpp",
         "test/environment.hpp",
     ],
     data = [

@@ -20,32 +20,34 @@
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
 
+using namespace ovms;
+
 TEST(SequenceManager, AddSequenceOK) {
-    ovms::SequenceManager sequenceManager;
-    ASSERT_FALSE(sequence.hasSequence(42));
+    SequenceManager sequenceManager(120, 24);
+    ASSERT_FALSE(sequenceManager.hasSequence(42));
     auto status = sequenceManager.addSequence(42);
     ASSERT_TRUE(status.ok());
-    ASSERT_TRUE(sequence.hasSequence(42));
+    ASSERT_TRUE(sequenceManager.hasSequence(42));
 }
 
 TEST(SequenceManager, AddSequenceConflict) {
-    ovms::SequenceManager sequenceManager;
+    SequenceManager sequenceManager(120, 24);
     sequenceManager.addSequence(42);
     auto status = sequenceManager.addSequence(42);
     ASSERT_TRUE(status == StatusCode::SEQUENCE_ALREADY_EXISTS);
-    ASSERT_TRUE(sequence.hasSequence(42));
+    ASSERT_TRUE(sequenceManager.hasSequence(42));
 }
 
 TEST(SequenceManager, RemoveSequenceOK) {
-    ovms::SequenceManager sequenceManager;
+    SequenceManager sequenceManager(120, 24);
     sequenceManager.addSequence(42);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status.ok());
-    ASSERT_FALSE(sequence.hasSequence(42)); 
+    ASSERT_FALSE(sequenceManager.hasSequence(42));
 }
 
 TEST(SequenceManager, RemoveSequenceNotExists) {
-    ovms::SequenceManager sequenceManager;
+    SequenceManager sequenceManager(120, 24);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status == StatusCode::SEQUENCE_MISSING);
 }

@@ -25,20 +25,21 @@
 namespace ovms {
 class SequenceManager {
 private:
-	std::unordered_map<uint64_t, Sequence> sequences;
-	uint32_t timeout;
-	uint32_t maxSequenceNumber;
+    std::unordered_map<uint64_t, Sequence> sequences;
+    uint32_t timeout;
+    uint32_t maxSequenceNumber;
     std::mutex mutex;
+
 public:
-    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) : 
-        timeout(timeout), 
-        maxSequenceNumber(maxSequenceNumber) {};
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
+        timeout(timeout),
+        maxSequenceNumber(maxSequenceNumber){};
     bool hasSequence(uint64_t sequenceId) const;
-	Status addSequence(uint64_t sequenceId);
-	Status removeSequence(uint64_t sequenceId);
-	Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
-    std::mutex& getMutexRef() const;
-	const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
-	Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
+    Status addSequence(uint64_t sequenceId);
+    Status removeSequence(uint64_t sequenceId);
+    Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
+    const std::mutex& getMutexRef() const;
+    const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
+    Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
 };
-} // namespace ovms
+}  // namespace ovms

@@ -14,10 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <spdlog/spdlog.h>
-
 #include "sequence_manager.hpp"
 
+#include <spdlog/spdlog.h>
+
+namespace ovms {
 bool SequenceManager::hasSequence(uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
@@ -25,7 +26,7 @@ bool SequenceManager::hasSequence(uint64_t sequenceId) const {
 Status SequenceManager::addSequence(uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
         spdlog::debug("Sequence with provided ID already exists");
-        return StatusCode::SEQUENCE_ALREADY_EXISTS
+        return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
         spdlog::debug("Adding new sequence with ID: {}", sequenceId);
         sequences[sequenceId] = Sequence();
@@ -40,7 +41,7 @@ Status SequenceManager::removeSequence(uint64_t sequenceId) {
         sequences.erase(sequenceId);
     } else {
         spdlog::debug("Sequence with provided ID does not exists");
-        return StatusCode::SEQUENCE_NOT_FOUND
+        return StatusCode::SEQUENCE_MISSING;
     }
     return StatusCode::OK;
 }
@@ -49,14 +50,15 @@ Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_
     return StatusCode::OK;
 }
 
-std::mutex& SequenceManager::getMutexRef() const {
+const std::mutex& SequenceManager::getMutexRef() const {
     return mutex;
 }
 
 const sequence_memory_state_t& SequenceManager::getSequenceMemoryState(uint64_t sequenceId) const {
-    return sequences[sequenceId].getLastMemoryState();
+    return sequences.at(sequenceId).getMemoryState();
 }
 
 Status SequenceManager::updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState) {
-    return sequences[sequenceId].updateMemoryState(newState);
+    return sequences.at(sequenceId).updateMemoryState(newState);
 }
+}  // namespace ovms
