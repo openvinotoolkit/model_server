@@ -101,7 +101,7 @@ TEST_F(StatefulModelInstance, positiveValidate) {
 
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
-    std::vector<uint32_t> seqId{ 1 };
+    std::vector<uint64_t> seqId{ 1 };
     std::vector<uint32_t> seqControl{ SEQUENCE_START };
     std::vector<uint32_t> seqData{ 90,91,92,93,94,96,97,98,99,100 };
     std::map<std::string, std::vector<std::uint32_t>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
@@ -110,8 +110,8 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     modelInput.insert(sequenceControlStart);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
 
-    setPredictRequestData(request, requestData);
-
+    auto& input = (*request.mutable_inputs())[SEQUENCE_ID_INPUT];
+    input.mutable_tensor_content()->assign((char*)seqId.data(), seqId.size() * sizeof(uint64_t));
     status = modelInstance->validate(&request, nullptr);
     ASSERT_TRUE(status.ok());
 }
