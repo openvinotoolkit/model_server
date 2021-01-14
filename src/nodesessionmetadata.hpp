@@ -24,15 +24,15 @@
 
 namespace ovms {
 
-using session_id_t = uint;
+using session_id_t = uint64_t;
 
 class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
 
 public:
-    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize);
-    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {});
-    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames);
-    session_id_t getSubsessionSize(const std::string& subsessionName);
+    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
+    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
+    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
+    session_id_t getSubsessionSize(const std::string& subsessionName) const;
 };
 }  // namespace ovms

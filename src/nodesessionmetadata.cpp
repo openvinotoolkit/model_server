@@ -23,13 +23,13 @@
 
 namespace ovms {
 
-std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) {
+std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const {
     if (nodeName.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with empty node name");
-        throw std::logic_error("Cannot generate session with empty parent name");
+        throw std::logic_error("Cannot generate subsession with empty parent name");
     }
     if (details.find(nodeName) != details.end()) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with node name:{} but it already spawned subsession.", nodeName);
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with node name: {} but it already spawned subsession.", nodeName);
         throw std::logic_error("Cannot generate subsession with already used name");
     }
     if (subsessionSize == 0) {
@@ -45,7 +45,7 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     return std::move(metas);
 }
 
-std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) {
+std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
     if (details.size() == 0) {
         return "";
     }
@@ -54,7 +54,7 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
             [this](auto& ignoredNodeName) {
                 bool notFound = (this->details.find(ignoredNodeName) == this->details.end());
                 if (notFound) {
-                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to create session key ignoring subsession name:{} but it does not exist", ignoredNodeName);
+                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to create session key ignoring subsession name: {} but it does not exist", ignoredNodeName);
                 }
                 return notFound;
             })) {
@@ -72,13 +72,15 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
     }
     return ss.str();
 }
-NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) {
-    if (std::any_of(ignoredNodeNames.begin(),
+
+NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
+    if (std::any_of(
+            ignoredNodeNames.begin(),
             ignoredNodeNames.end(),
             [this](auto& ignoredNodeName) {
                 bool notFound = (this->details.find(ignoredNodeName) == this->details.end());
                 if (notFound) {
-                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession:{} but it does not exist", ignoredNodeName);
+                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession: {} but it does not exist", ignoredNodeName);
                 }
                 return notFound;
             })) {
@@ -95,10 +97,10 @@ NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::
     return std::move(newMeta);
 }
 
-session_id_t NodeSessionMetadata::getSubsessionSize(const std::string& subsessionName) {
+session_id_t NodeSessionMetadata::getSubsessionSize(const std::string& subsessionName) const {
     auto it = details.find(subsessionName);
     if (it == details.end()) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to get non-existing subsession:{} size", subsessionName);
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to get non-existing subsession: {} size", subsessionName);
         throw std::logic_error("Tried to take non existing subsession size");
     }
     return std::get<1>(it->second);
