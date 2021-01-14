@@ -121,7 +121,7 @@ static tensorflow::serving::PredictRequest preparePredictRequestWithData(inputs_
             input.mutable_tensor_shape()->add_dim()->set_size(dim);
             numberOfElements *= dim;
         }
-        *input.mutable_tensor_content()->assign((T*)requestData[name].data(), requestData[name].size() * sizeof(T));
+        *input.mutable_tensor_content()->assign(requestData[name].begin(), requestData[name].end());
     }
     return request;
 }
