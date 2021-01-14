@@ -23,7 +23,7 @@
 
 namespace ovms {
 
-std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(std::string nodeName, session_id_t subsessionSize) {
+std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) {
     if (nodeName.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with empty node name");
         throw std::logic_error("Cannot generate session with empty parent name");

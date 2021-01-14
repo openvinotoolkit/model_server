@@ -30,7 +30,7 @@ class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
 
 public:
-    std::vector<NodeSessionMetadata> generateSubsessions(std::string nodeName, session_id_t subsessionSize);
+    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize);
     std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {});
     NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames);
     session_id_t getSubsessionSize(const std::string& subsessionName);
