@@ -123,7 +123,6 @@ static void setRequestSequenceControl(tensorflow::serving::PredictRequest* reque
     input.add_uint32_val(sequence_control);
 }
 
-
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);

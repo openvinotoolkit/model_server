@@ -65,7 +65,7 @@ public:
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
         dummyModelName = "dummy";
-        const std::string modelPathToReplace{ "/ovms/src/test/dummy" };
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
         configFilePath = directoryPath + "/ovms_config.json";
     }
@@ -75,9 +75,9 @@ public:
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(modelStatefulConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-        modelInput = { {DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
-}
+        modelInput = {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}};
+    }
 
     void TearDown() override {
         TestWithTempDir::TearDown();
@@ -100,4 +100,4 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     status = modelInstance->validate(&request, &spec);
     ASSERT_TRUE(status.ok());
 }
-}
+}  // namespace
