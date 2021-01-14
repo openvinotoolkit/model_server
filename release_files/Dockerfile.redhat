@@ -1,0 +1,78 @@
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+FROM $BASE_IMAGE as base_build
+
+WORKDIR /
+COPY ovms.tar.xz /
+RUN env
+RUN tar -xf ovms.tar.xz
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM registry.access.redhat.com/ubi8/ubi:8.2 as release
+ARG INSTALL_RPMS_FROM_URL=
+ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
+ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
+ARG GPU=1
+ENV GPU=$GPU
+WORKDIR /
+
+RUN     set -e ; \
+        set -x ; \
+        if [ "$GPU" == "1" ] ; then \
+                yum install -y pkgconf-pkg-config.x86_64 ; \
+                mkdir /tmp/gpu_deps ; \
+                curl -L -o /tmp/gpu_deps/intel-igc-core-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-core-1.0.2597-1.el7.x86_64.rpm/download ; \
+                curl -L -o /tmp/gpu_deps/intel-opencl-19.41.14441-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-opencl-19.41.14441-1.el7.x86_64.rpm/download ; \
+                curl -L -o /tmp/gpu_deps/intel-igc-opencl-devel-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-opencl-devel-1.0.2597-1.el7.x86_64.rpm/download ; \
+                curl -L -o /tmp/gpu_deps/intel-igc-opencl-1.0.2597-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-igc-opencl-1.0.2597-1.el7.x86_64.rpm/download ; \
+                curl -L -o /tmp/gpu_deps/intel-gmmlib-19.3.2-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-gmmlib-19.3.2-1.el7.x86_64.rpm/download ; \
+                curl -L -o /tmp/gpu_deps/intel-gmmlib-devel-19.3.2-1.el7.x86_64.rpm https://sourceforge.net/projects/intel-compute-runtime/files/19.41.14441/centos-7/intel-gmmlib-devel-19.3.2-1.el7.x86_64.rpm/download ; \
+                cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
+        fi ; \
+        if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+                dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm ; \
+                yum update -y ; \
+                yum install -y \
+                        libgusb.x86_64 \
+                        boost169-thread boost169-system boost169-filesystem \
+                        boost169-program-options boost169-chrono boost169-date-time boost169-atomic ; \
+                yum clean all ; \
+        else  \
+                mkdir /tmp_ovms /src ; \
+                cd /tmp_ovms ; \
+                curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
+                tar -xf deps.tar.xz ; \
+                ls -Rahl . ; \
+                mv -v pkg/src/*.src.rpm /src/ ; \
+                rpm -vi pkg/bin/*.rpm ; \
+                cd / ; \
+                rm -rf /tmp_ovms ; \
+        fi ; \
+        cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
+        groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/bash --skel /dev/null ovms
+
+COPY --from=base_build /ovms /ovms
+
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]
+
