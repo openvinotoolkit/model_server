@@ -107,27 +107,18 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
     return request;
 }
 
-template <typename T>
-static tensorflow::serving::PredictRequest preparePredictRequestWithData(inputs_info_t requestInputs, std::map<std::string, std::vector<T>> requestData) {
-    tensorflow::serving::PredictRequest request;
-    for (auto const& it : requestInputs) {
-        auto& name = it.first;
-        auto[shape, dtype] = it.second;
-
-        auto& input = (*request.mutable_inputs())[name];
+static void setRequestSequenceId(tensorflow::serving::PredictRequest request, uint64_t sequence_id) {
+        auto& input = (*request.mutable_inputs())[SEQUENCE_ID_INPUT];
         input.set_dtype(dtype);
-        size_t numberOfElements = 1;
-        for (auto const& dim : shape) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim);
-            numberOfElements *= dim;
-        }
-        std::string data;
-        for (const auto &subdata : requestData[name])
-            data += subdata;
-        *input.mutable_tensor_content() = data;
-    }
-    return request;
+        input.add_uint64_val(sequence_id);
 }
+
+static void setRequestSequenceControl(tensorflow::serving::PredictRequest request, uint32_t sequence_control) {
+    auto& input = (*request.mutable_inputs())[SEQUENCE_CONTROL_INPUT];
+    input.set_dtype(dtype);
+    input.add_uint32_val(sequence_id);
+}
+
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,

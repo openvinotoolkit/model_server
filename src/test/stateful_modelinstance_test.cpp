@@ -30,9 +30,9 @@ using testing::Return;
 
 namespace {
 
-const std::string NO_CONTROL_INPUT = "0";
-const std::string SEQUENCE_START = "1";
-const std::string SEQUENCE_END = "2";
+const uint32_t NO_CONTROL_INPUT = 0;
+const uint32_t SEQUENCE_START = 1;
+const uint32_t SEQUENCE_END = 2;
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
@@ -82,10 +82,7 @@ public:
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
         modelInput = { {DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
-
-        sequenceId = std::make_pair(SEQUENCE_ID_INPUT, std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT_UINT64});
-        sequenceControlStart = std::make_pair(SEQUENCE_CONTROL_INPUT, std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 1}, tensorflow::DataType::DT_UINT32});
-    }
+}
 
     void TearDown() override {
         TestWithTempDir::TearDown();
@@ -100,15 +97,10 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     ASSERT_TRUE(status.ok());
 
     auto modelInstance = manager.findModelInstance(dummyModelName);
-
-    std::vector<std::string> seqId{ "1" };
-    std::vector<std::string> seqControl{ SEQUENCE_START };
-    std::vector<std::string> seqData{ "90","91","92","93","94","96","97","98","99","100" };
-    std::map<std::string, std::vector<std::string>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
-
-    modelInput.insert(sequenceId);
-    modelInput.insert(sequenceControlStart);
-    tensorflow::serving::PredictRequest request = preparePredictRequestWithData(modelInput, requestData);
+    uint64_t seqId = 1;
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(request, seqId);
+    setRequestSequenceControl(request, SEQUENCE_START);
 
     status = modelInstance->validate(&request, nullptr);
     ASSERT_TRUE(status.ok());
