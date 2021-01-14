@@ -18,7 +18,7 @@
 
 #include "sequence_manager.hpp"
 
-bool SequenceManager::hasSequence(uint64_t sequenceId) {
+bool SequenceManager::hasSequence(uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
