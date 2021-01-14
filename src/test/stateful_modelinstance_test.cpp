@@ -30,12 +30,6 @@ using testing::Return;
 
 namespace {
 
-const uint32_t NO_CONTROL_INPUT = 0;
-const uint32_t SEQUENCE_START = 1;
-const uint32_t SEQUENCE_END = 2;
-const std::string SEQUENCE_ID_INPUT = "sequence_id";
-const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
-
 static const char* modelStatefulConfig = R"(
 {
     "model_config_list": [
