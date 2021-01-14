@@ -104,7 +104,7 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     std::vector<uint64_t> seqId{ 1 };
     std::vector<uint32_t> seqControl{ SEQUENCE_START };
     std::vector<uint32_t> seqData{ 90,91,92,93,94,96,97,98,99,100 };
-    std::map<std::string, std::vector<std::uint32_t>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
+    //std::map<std::string, std::vector<std::uint32_t>> requestData = { {SEQUENCE_ID_INPUT, seqId}, {SEQUENCE_CONTROL_INPUT, seqControl}, {DUMMY_MODEL_INPUT_NAME, seqData} };
 
     modelInput.insert(sequenceId);
     modelInput.insert(sequenceControlStart);
