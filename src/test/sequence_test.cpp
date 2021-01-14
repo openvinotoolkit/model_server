@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -91,11 +92,13 @@ TEST(Sequence, UpdateLastActivityTime) {
     addState(newState, "state1", shape1, state1);
 
     ovms::Sequence sequence;
+    sequence.updateMemoryState(newState);
     auto time1 = sequence.getLastActivityTime();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     sequence.updateMemoryState(newState);
     auto time2 = sequence.getLastActivityTime();
-    EXPECT_NE(time1, time2);
+    ASSERT_TRUE(std::chrono::duration_cast<std::chrono::milliseconds>(time2.time_since_epoch()).count() >
+                std::chrono::duration_cast<std::chrono::milliseconds>(time1.time_since_epoch()).count());
 }
 
 TEST(Sequence, UpdateSequenceState) {
