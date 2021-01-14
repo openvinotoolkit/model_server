@@ -121,7 +121,9 @@ static tensorflow::serving::PredictRequest preparePredictRequestWithData(inputs_
             input.mutable_tensor_shape()->add_dim()->set_size(dim);
             numberOfElements *= dim;
         }
-        input.mutable_tensor_content()->assign((char*)requestData[name].data(), requestData[name].size()*sizeof(T));
+        static_assert(tensorflow::DataTypeSize(dtype) != sizeof(T), "Invalida template type size.")
+
+        input.mutable_tensor_content()->assign((char*)requestData[name].data(), requestData[name].size()*tensorflow::DataTypeSize(dtype));
     }
     return request;
 }
