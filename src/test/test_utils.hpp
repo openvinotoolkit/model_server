@@ -108,12 +108,22 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
 }
 
 template <typename T>
-static void setPredictRequestData(tensorflow::serving::PredictRequest request, std::map<std::string, std::vector<T>> requestData) {
-    for (auto const& it : requestData) {
+static tensorflow::serving::PredictRequest preparePredictRequestWithData(inputs_info_t requestInputs, std::map<std::string, std::vector<T>> requestData) {
+    tensorflow::serving::PredictRequest request;
+    for (auto const& it : requestInputs) {
         auto& name = it.first;
+        auto[shape, dtype] = it.second;
+
         auto& input = (*request.mutable_inputs())[name];
-        input.mutable_tensor_content()->assign((char*)requestData[name].data(), requestData[name].size()*sizeof(T));
+        input.set_dtype(dtype);
+        size_t numberOfElements = 1;
+        for (auto const& dim : shape) {
+            input.mutable_tensor_shape()->add_dim()->set_size(dim);
+            numberOfElements *= dim;
+        }
+        *input.mutable_tensor_content() = requestData[name].data());
     }
+    return request;
 }
 
 void checkDummyResponse(const std::string outputName,
