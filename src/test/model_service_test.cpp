@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -340,7 +340,6 @@ TEST(ModelService, getAllModelsStatuses_one_model_one_version) {
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->has_status(), true);
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->status().error_message(), "OK");
-    EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 1);
 }
 
 TEST(ModelService, getAllModelsStatuses_two_models_with_one_versions) {
@@ -412,7 +411,7 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
 }
 
 TEST(ModelService, serializeModelsStatuses2Json_with_one_response) {
-    const char* expected_json = R"({
+    const char* expectedJson = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -428,20 +427,20 @@ TEST(ModelService, serializeModelsStatuses2Json_with_one_response) {
 }
 })";
     tensorflow::serving::GetModelStatusResponse response;
-    model_version_t requested_version = 2;
+    model_version_t requestedVersion = 2;
     const std::string& model_name = "dummy";
-    ModelVersionStatus status = ModelVersionStatus(model_name, requested_version, ModelVersionState::START);
-    addStatusToResponse(&response, requested_version, status);
+    ModelVersionStatus status = ModelVersionStatus(model_name, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&response, requestedVersion, status);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));
-    std::string json_output;
-    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
-    ASSERT_EQ(error_status, StatusCode::OK);
-    EXPECT_EQ(json_output, expected_json);
+    std::string jsonOutput;
+    Status status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonOutput);
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(jsonOutput, expectedJson);
 }
 
 TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
-    const char* expected_json = R"({
+    const char* expectedJson = R"({
 "dummy1" : 
 {
  "model_version_status": [
@@ -472,29 +471,29 @@ TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
 }
 })";
     tensorflow::serving::GetModelStatusResponse firstResponse;
-    model_version_t requested_version = 2;
+    model_version_t requestedVersion = 2;
     const std::string& modelName1 = "dummy1";
-    ModelVersionStatus status = ModelVersionStatus(modelName1, requested_version, ModelVersionState::START);
-    addStatusToResponse(&firstResponse, requested_version, status);
+    ModelVersionStatus status = ModelVersionStatus(modelName1, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&firstResponse, requestedVersion, status);
     
     tensorflow::serving::GetModelStatusResponse secondResponse;
-    requested_version = 3;
+    requestedVersion = 3;
     const std::string& modelName2 = "dummy2";
-    status = ModelVersionStatus(modelName2, requested_version, ModelVersionState::LOADING);
-    addStatusToResponse(&secondResponse, requested_version, status);
+    status = ModelVersionStatus(modelName2, requestedVersion, ModelVersionState::LOADING);
+    addStatusToResponse(&secondResponse, requestedVersion, status);
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy1", firstResponse));
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy2", secondResponse));
 
-    std::string json_output;
-    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
-    ASSERT_EQ(error_status, StatusCode::OK);
-    EXPECT_EQ(json_output, expected_json);
+    std::string jsonOutput;
+    Status status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonOutput);
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(jsonOutput, expectedJson);
 }
 
 TEST(ModelService, serializeModelsStatuses2Json_one_response_with_two_versions) {
-    const char* expected_json = R"({
+    const char* expectedJson = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -518,20 +517,20 @@ TEST(ModelService, serializeModelsStatuses2Json_one_response_with_two_versions) 
 }
 })";
     tensorflow::serving::GetModelStatusResponse response;
-    model_version_t requested_version = 2;
+    model_version_t requestedVersion = 2;
     const std::string& modelName = "dummy";
-    ModelVersionStatus status = ModelVersionStatus(modelName, requested_version, ModelVersionState::START);
-    addStatusToResponse(&response, requested_version, status);
+    ModelVersionStatus status = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&response, requestedVersion, status);
     
-    requested_version = 3;
-    status = ModelVersionStatus(modelName, requested_version, ModelVersionState::LOADING);
-    addStatusToResponse(&response, requested_version, status);
+    requestedVersion = 3;
+    status = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::LOADING);
+    addStatusToResponse(&response, requestedVersion, status);
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));
 
-    std::string json_output;
-    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, json_output);
-    ASSERT_EQ(error_status, StatusCode::OK);
-    EXPECT_EQ(json_output, expected_json);
+    std::string jsonOutput;
+    Status status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonOutput);
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(jsonOutput, expectedJson);
 }
