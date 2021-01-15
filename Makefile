@@ -80,6 +80,7 @@ endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
 endif
