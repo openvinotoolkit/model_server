@@ -589,7 +589,8 @@ class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
-    ovms::Status fetchResults(BlobMap&) override {
+    ovms::Status fetchResults(BlobMap& blobs) override {
+        DLNode::fetchResults(blobs);
         return StatusCode::UNKNOWN_ERROR;
     }
 };
