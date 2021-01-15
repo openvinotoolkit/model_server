@@ -50,7 +50,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= releases/2021/2
 
-DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.2.203.tgz
+DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.2/l_openvino_toolkit_runtime_rhel8_p_2021.2.185.tgz
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
@@ -80,8 +80,8 @@ endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
-  DIST_OS=centos
-  DIST_OS_TAG=$(BASE_OS_TAG_CENTOS)
+  DIST_OS=redhat
+  DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
