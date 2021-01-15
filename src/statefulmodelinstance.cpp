@@ -21,18 +21,18 @@ namespace ovms {
 
 const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t* sequence_id) {
     if (proto.uint64_val_size() == 1) {
-        sequence_id = proto.uint64_val(0);
+        *sequence_id = proto.uint64_val(0);
         return StatusCode::OK;
     }
     return StatusCode::SEQUENCE_ID_BAD_TYPE;
 }
 
 const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t* sequenceControlInput) {
-     if (proto.uint32_val_size() == 1) {
-         sequenceControlInput = proto.uint32_val(0);
-         return StatusCode::OK;
-     }
-     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
+    if (proto.uint32_val_size() == 1) {
+        *sequenceControlInput = proto.uint32_val(0);
+        return StatusCode::OK;
+    }
+    return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
 }
 
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
@@ -48,16 +48,16 @@ const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::ser
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
-
+    Status status;
     auto it = request->inputs().find("sequence_id");
     if (it != request->inputs().end()) {
-        sequenceId = extractSequenceId(it->second);
+        status = extractSequenceId(it->second, &sequenceId);
         if (!status.ok())
             return status;
     }
     it = request->inputs().find("sequence_control_input");
     if (it != request->inputs().end()) {
-        sequenceControlInput = extractSequenceControlInput(it->second);
+        status = extractSequenceControlInput(it->second, &sequenceControlInput);
         if (!status.ok())
             return status;
     }

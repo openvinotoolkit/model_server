@@ -126,10 +126,10 @@ TEST_F(StatefulModelInstance, missingSeqId) {
     setRequestSequenceControl(&request, SEQUENCE_END);
 
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, SEQUENCE_ID_NOT_PROVIDED);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstance, wrongSeqId) {
+TEST_F(StatefulModelInstance, wrongSeqIdEnd) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -139,10 +139,26 @@ TEST_F(StatefulModelInstance, wrongSeqId) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    uint64_t seqId = 1;
+    uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+}
+
+TEST_F(StatefulModelInstance, wrongSeqIdNoControl) {
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+
+    uint64_t seqId = 0;
+    setRequestSequenceId(&request, seqId);
+    status = modelInstance->validate(&request, &spec);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
 TEST_F(StatefulModelInstance, wrongProtoKeywords) {
@@ -153,16 +169,16 @@ TEST_F(StatefulModelInstance, wrongProtoKeywords) {
     ovms::ProcessingSpec spec = ovms::ProcessingSpec();
     auto modelInstance = manager.findModelInstance(dummyModelName);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequenceid"];
+    auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 
     request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequencecontrolinput"];
+    input = (*request.mutable_inputs())["sequencecontrolinput"];
     input.add_uint32_val(1);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
 TEST_F(StatefulModelInstance, noControlInput) {
@@ -173,16 +189,16 @@ TEST_F(StatefulModelInstance, noControlInput) {
     ovms::ProcessingSpec spec = ovms::ProcessingSpec();
     auto modelInstance = manager.findModelInstance(dummyModelName);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequenceid"];
+    auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint64_val(12);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 
     request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequencecontrolinput"];
-    input.add_uint32_val(1);
+    input = (*request.mutable_inputs())["sequence_control_input"];
+    input.add_uint32_val(999);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
 TEST_F(StatefulModelInstance, invalidProtoTypes) {
@@ -193,16 +209,16 @@ TEST_F(StatefulModelInstance, invalidProtoTypes) {
     ovms::ProcessingSpec spec = ovms::ProcessingSpec();
     auto modelInstance = manager.findModelInstance(dummyModelName);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequence_id"];
+    auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint32_val(12);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, SEQUENCE_ID_BAD_TYPE);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
 
     request = preparePredictRequest(modelInput);
-    auto& input = (*request->mutable_inputs())["sequence_control_input"];
+    input = (*request.mutable_inputs())["sequence_control_input"];
     input.add_uint64_val(1);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status, SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
 }
 
 }  // namespace
