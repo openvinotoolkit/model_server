@@ -47,6 +47,14 @@ Status SequenceManager::removeSequence(uint64_t sequenceId) {
 }
 
 Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime) {
+    for (auto it = sequences.cbegin(); it != sequences.cend();) {
+        auto& sequence = it->second;
+        auto timeDiff = currentTime - sequence.getLastActivityTime();
+        if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout)
+            it = sequences.erase(it);
+        else
+            ++it;
+    }
     return StatusCode::OK;
 }
 

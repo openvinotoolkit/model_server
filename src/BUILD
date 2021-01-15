@@ -232,6 +232,7 @@ cc_test(
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
         "test/sequence_test.cpp",
+        "test/sequence_test_utils.hpp",
         "test/sequence_manager_test.cpp",
         "test/serialization_tests.cpp",
         "test/stateful_config_test.cpp",
