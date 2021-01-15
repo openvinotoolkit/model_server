@@ -67,7 +67,9 @@ enum class StatusCode {
     SEQUENCE_MISSING,               /*!< Sequence with provided ID does not exist */
     SEQUENCE_ALREADY_EXISTS,        /*!< Sequence with provided ID already exists */
     SEQUENCE_ID_NOT_PROVIDED,       /*!< Sequence ID has not been provided in request inputs */
+    SEQUENCE_ID_BAD_TYPE,           /*!< Wrong sequence ID type */
     INVALID_SEQUENCE_CONTROL_INPUT, /*!< Unexpected value of sequence control input */
+    SEQUENCE_CONTROL_INPUT_BAD_TYPE,/*!< Sequence control input in bad type*/
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */

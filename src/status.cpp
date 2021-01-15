@@ -53,6 +53,8 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::SEQUENCE_ALREADY_EXISTS, "Sequence with provided ID already exists"},
     {StatusCode::SEQUENCE_ID_NOT_PROVIDED, "Sequence ID has not been provided in request inputs"},
     {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, "Sequence ID has been provided with bad proto type"},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, "Sequence control input was provided with bad proto type"},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
