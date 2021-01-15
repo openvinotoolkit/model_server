@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
+
 #include "sequence.hpp"
 
 using namespace InferenceEngine;
@@ -91,13 +92,13 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
 const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
     if (sequenceProcessingSpec.sequenceControlInput == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
-        for (auto &&state : inferRequest.QueryState()) {
+        for (auto&& state : inferRequest.QueryState()) {
             state.Reset();
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        sequence_memory_state_t& sequenceMemoryState = sequenceManager.getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
-        for (auto &&state : inferRequest.QueryState()) {
+        const sequence_memory_state_t& sequenceMemoryState = sequenceManager.getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        for (auto&& state : inferRequest.QueryState()) {
             auto stateName = state.GetName();
             if (!sequenceMemoryState.count(stateName))
                 return StatusCode::INTERNAL_ERROR;

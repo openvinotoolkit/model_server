@@ -86,7 +86,7 @@ Status ModelManager::startFromConfig() {
             config.nireq(),
             config.stateful(),
             config.lowLatencyTransformation(),
-            config.sequenceTimeout(),
+            config.sequenceTimeoutSeconds(),
             config.maxSequenceNumber()});
 
     if (!success) {

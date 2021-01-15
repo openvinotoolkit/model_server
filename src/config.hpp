@@ -268,7 +268,7 @@ public:
      *
      * @return uint
      */
-    uint32_t sequenceTimeout() {
+    uint32_t sequenceTimeoutSeconds() {
         if (!result->count("sequence_timeout_seconds")) {
             return 0;
         }

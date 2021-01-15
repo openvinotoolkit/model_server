@@ -19,6 +19,27 @@
 #include <spdlog/spdlog.h>
 
 namespace ovms {
+
+const uint32_t SequenceManager::getTimeout() const {
+    return timeout;
+}
+
+void SequenceManager::setTimeout(uint32_t timeout) {
+    this->timeout = timeout;
+}
+
+const uint32_t SequenceManager::getMaxSequenceNumber() const {
+    return maxSequenceNumber;
+}
+
+void SequenceManager::setMaxSequenceNumber(uint32_t maxSequenceNumber) {
+    this->maxSequenceNumber = maxSequenceNumber;
+}
+
+const std::mutex& SequenceManager::getMutexRef() const {
+    return mutex;
+}
+
 bool SequenceManager::hasSequence(uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
@@ -56,10 +77,6 @@ Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_
             ++it;
     }
     return StatusCode::OK;
-}
-
-const std::mutex& SequenceManager::getMutexRef() const {
-    return mutex;
 }
 
 const sequence_memory_state_t& SequenceManager::getSequenceMemoryState(uint64_t sequenceId) const {

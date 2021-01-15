@@ -29,7 +29,7 @@ struct SequenceProcessingSpec {
 
 // For now stateless ModelInstance does not need this class and it's not necessary for common execution path
 // For stateful models SequenceProcessingSpec shall be sufficient
-// I recommend removing this class after we get rid of dependencies that it created 
+// I recommend removing this class after we get rid of dependencies that it created
 class ProcessingSpec {
 private:
     SequenceProcessingSpec* sequenceProcessingSpec;

@@ -18,7 +18,9 @@
 #include <memory>
 #include <string>
 
+#include "modelconfig.hpp"
 #include "modelinstance.hpp"
+#include "sequence_manager.hpp"
 
 namespace ovms {
 
@@ -39,9 +41,11 @@ public:
 
 private:
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    SequenceManager sequenceManager;
+    bool performLowLatencyTransformation;
 
 protected:
-    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
+    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
