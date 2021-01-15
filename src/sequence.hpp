@@ -42,7 +42,7 @@ private:
 
 public:
     Sequence() :
-        mutex(new std::mutex()) {}
+        mutex(new std::mutex()) { updateLastActivityTime(); }
     const sequence_memory_state_t& getMemoryState() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
