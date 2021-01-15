@@ -20,22 +20,25 @@
 namespace ovms {
 
 struct SequenceProcessingSpec {
-    uint32_t sequenceControlInput;
-    uint64_t sequenceId;
+    const uint32_t sequenceControlInput;
+    const uint64_t sequenceId;
     SequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) :
         sequenceControlInput(sequenceControlInput),
         sequenceId(sequenceId) {}
 };
 
+// For now stateless ModelInstance does not need this class and it's not necessary for common execution path
+// For stateful models SequenceProcessingSpec shall be sufficient
+// I recommend removing this class after we get rid of dependencies that it created 
 class ProcessingSpec {
 private:
-    std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpec;
+    SequenceProcessingSpec* sequenceProcessingSpec;
 
 public:
-    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpec; }
+    SequenceProcessingSpec* getSequenceProcessingSpecPtr() { return sequenceProcessingSpec; }
 
     void setSequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) {
-        sequenceProcessingSpec = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
+        sequenceProcessingSpec = new SequenceProcessingSpec(sequenceControlInput, sequenceId);
     }
 };
 }  // namespace ovms

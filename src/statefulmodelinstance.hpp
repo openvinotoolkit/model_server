@@ -41,8 +41,7 @@ private:
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 
 protected:
-    const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
-        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
+    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
 
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
