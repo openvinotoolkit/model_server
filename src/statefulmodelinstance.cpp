@@ -55,15 +55,13 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     if ((sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) && sequenceId == 0) {
         // Intermediate and last request in the sequence
         return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
+    } else if (sequenceControlInput != SEQUENCE_START) {
+        return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
     }
-}
-else if (sequenceControlInput != SEQUENCE_START) {
-    return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
-}
 
-processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
-return StatusCode::OK;
-}  // namespace ovms
+    processingSpecPtr->setSequenceProcessingSpec(sequenceControlInput, sequenceId);
+    return StatusCode::OK;
+}
 
 const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     auto status = validateSpecialKeys(request, processingSpecPtr);
