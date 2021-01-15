@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,6 +92,8 @@ cc_library(
         "rest_utils.hpp",
         "s3filesystem.cpp",
         "s3filesystem.hpp",
+        "statefulmodelinstance.cpp",
+        "statefulmodelinstance.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
@@ -234,6 +236,7 @@ cc_test(
         "test/rest_utils_test.cpp",
         "test/serialization_tests.cpp",
         "test/stateful_config_test.cpp",
+        "test/stateful_modelinstance_test.cpp",
         "test/stringutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ std::shared_ptr<MockModel> modelMock;
 
 class MockModelManager : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelMock;
     }
 };
@@ -471,7 +471,7 @@ TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
 
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
     }
     ovms::Status readAvailableVersions(
@@ -981,7 +981,7 @@ std::shared_ptr<ovms::Model> model;
 
 class MockModelManagerWith1Model : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return model;
     }
 };
@@ -1083,7 +1083,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedStuckInLoadingState> modelWithModelI
 
 class ModelManagerWithModelInstanceLoadedStuckInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelWithModelInstanceLoadedStuckInLoadingState;
     }
 };
@@ -1130,7 +1130,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedWaitInLoadingState> modelWithModelIn
 
 class ModelManagerWithModelInstanceLoadedWaitInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelWithModelInstanceLoadedWaitInLoadingState;
     }
 };

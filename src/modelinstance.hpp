@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "processing_spec.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -104,6 +105,11 @@ protected:
          * @brief A model version
          */
     const model_version_t version = -1;
+
+    /**
+         * @brief A model subscription manager
+         */
+    ModelChangeSubscription subscriptionManager;
 
     /**
          * @brief A model status
@@ -289,8 +295,6 @@ private:
          * @return Status
          */
     Status recoverFromReloadingError(const Status& status);
-
-    ModelChangeSubscription subscriptionManager;
 
 public:
     /**
@@ -492,7 +496,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
 

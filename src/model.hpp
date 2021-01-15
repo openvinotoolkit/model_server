@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include "filesystem.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelinstance.hpp"
+#include "statefulmodelinstance.hpp"
 
 namespace ovms {
 class PipelineDefinition;
@@ -36,6 +37,11 @@ private:
      * @brief Mutex for protecting concurrent modfying and accessing modelVersions
      */
     mutable std::shared_mutex modelVersionsMtx;
+
+    /**
+     * @brief Flag indicating whether model is stateful or not
+     */
+    bool isStateful;
 
     /**
       * @brief Update default version
@@ -99,7 +105,8 @@ public:
     /**
          * @brief Constructor
          */
-    Model(const std::string& name) :
+    Model(const std::string& name, bool isStateful = false) :
+        isStateful(isStateful),
         name(name),
         defaultVersion(0),
         subscriptionManager(std::string("model: ") + name) {}
