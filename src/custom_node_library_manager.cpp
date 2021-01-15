@@ -64,7 +64,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
 
     libraries.emplace(std::make_pair(name, NodeLibrary{execute, releaseBuffer, releaseTensors}));
 
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Succeeded to load custom node library name: {}; base_path: {}", name, basePath);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
 }
 

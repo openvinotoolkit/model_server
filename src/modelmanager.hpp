@@ -30,12 +30,12 @@
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
-#include "custom_node_library_manager.hpp"
 
 namespace ovms {
 
@@ -168,6 +168,10 @@ public:
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
+    }
+
+    const CustomNodeLibraryManager& getCustomNodeLibraryManager() const {
+        return customNodeLibraryManager;
     }
 
     /**
