@@ -1573,7 +1573,7 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsOne) {
                             {"data_item": "a",
                             "alias": "new_dummy_output"}
                         ],
-                        "demultiply_count": 0
+                        "demultiply_count": 1
                     }
                 ],
                 "outputs": [
