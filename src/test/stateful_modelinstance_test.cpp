@@ -23,8 +23,10 @@
 #include <stdlib.h>
 
 #include "../get_model_metadata_impl.hpp"
+#include "../ov_utils.hpp"
 #include "../processing_spec.hpp"
 #include "../statefulmodelinstance.hpp"
+#include "sequence_test_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Return;
@@ -82,6 +84,17 @@ public:
     void TearDown() override {
         TestWithTempDir::TearDown();
         modelInput.clear();
+    }
+};
+
+class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
+public:
+    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
+        StatefulModelInstance(name, version) {}
+
+    void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
+        getSequenceManager().addSequence(sequenceId);
+        getSequenceManager().updateSequenceMemoryState(sequenceId, state);
     }
 };
 
@@ -208,6 +221,110 @@ TEST_F(StatefulModelInstance, invalidProtoTypes) {
     input.add_uint64_val(1);
     status = modelInstance->validate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+}
+
+TEST_F(StatefulModelInstance, PreprocessingFirstRequest) {
+    // Prepare model instance and processing spec
+    MockedStatefulModelInstance modelInstance("model", 1);
+    uint32_t sequenceControlInput = SEQUENCE_START;
+    uint64_t sequenceId = 42;
+    ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
+
+    // Prepare states blob desc
+    std::vector<size_t> shape{1, 10};
+    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    const Precision precision{Precision::FP32};
+    const Layout layout{Layout::NC};
+    const TensorDesc desc{precision, shape, layout};
+
+    // Prepare default state blob
+    std::vector<float> defaultState(elementsCount);
+    std::iota(defaultState.begin(), defaultState.end(), 0);
+    Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
+
+    // Prepare new state blob
+    std::vector<float> currentState(elementsCount);
+    std::iota(currentState.begin(), currentState.end(), 10);
+    Blob::Ptr currentBlob = make_shared_blob<float>(desc, currentState.data());
+
+    // Initialize InferRequest with current state and default state
+    std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", currentBlob, defaultBlob);
+    InferRequest inferRequest(iireqPtr);
+
+    // Check if InferRequest has been initialized properly
+    const ovms::model_memory_state_t& irMemoryState = inferRequest.QueryState();
+    EXPECT_EQ(irMemoryState.size(), 1);
+    EXPECT_EQ(irMemoryState[0].GetName(), "state");
+
+    InferenceEngine::Blob::Ptr stateCloneBlob = nullptr;
+    EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
+
+    std::vector<float> currentBlobIrData;
+    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    EXPECT_EQ(currentBlobIrData, currentState);
+
+    // Perform preprocessing (load state from sequence to infer request)
+    modelInstance.preInferenceProcessing(inferRequest, sequenceProcessingSpec);
+
+    // Check if InferRequest memory state has been reset to default
+    EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
+    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    EXPECT_EQ(currentBlobIrData, defaultState);
+}
+
+TEST_F(StatefulModelInstance, PreprocessingIntermediateRequest) {
+    for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
+        // Prepare model instance and processing spec
+        MockedStatefulModelInstance modelInstance("model", 1);
+        uint64_t sequenceId = 42;
+        ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
+
+        // Prepare states blob desc
+        std::vector<size_t> shape{1, 10};
+        size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+        const Precision precision{Precision::FP32};
+        const Layout layout{Layout::NC};
+        const TensorDesc desc{precision, shape, layout};
+
+        // Prepare default state blob
+        std::vector<float> defaultState(elementsCount);
+        std::iota(defaultState.begin(), defaultState.end(), 0);
+        Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
+
+        // Prepare new state blob
+        std::vector<float> newState(elementsCount);
+        std::iota(newState.begin(), newState.end(), 10);
+        Blob::Ptr newBlob = make_shared_blob<float>(desc, newState.data());
+
+        // Initialize InferRequest with default state as both default and current states
+        std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", defaultBlob, defaultBlob);
+        InferRequest inferRequest(iireqPtr);
+
+        // Check if InferRequest has been initialized properly
+        const ovms::model_memory_state_t& irMemoryState = inferRequest.QueryState();
+        EXPECT_EQ(irMemoryState.size(), 1);
+        EXPECT_EQ(irMemoryState[0].GetName(), "state");
+
+        InferenceEngine::Blob::Ptr stateCloneBlob = nullptr;
+        EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
+
+        std::vector<float> currentBlobIrData;
+        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+        EXPECT_EQ(currentBlobIrData, defaultState);
+
+        // Inject sequence with newState as the last state written to sequence memory state
+        ovms::model_memory_state_t memoryState;
+        addState(memoryState, "state", shape, newState);
+        modelInstance.injectSequence(sequenceId, memoryState);
+
+        // Perform preprocessing (load state from sequence to infer request)
+        modelInstance.preInferenceProcessing(inferRequest, sequenceProcessingSpec);
+
+        // Check if InferRequest memory state has been updated to sequence memory state
+        EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
+        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+        EXPECT_EQ(currentBlobIrData, newState);
+    }
 }
 
 }  // namespace
