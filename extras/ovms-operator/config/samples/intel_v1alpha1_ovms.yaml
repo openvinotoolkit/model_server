@@ -1,0 +1,23 @@
+apiVersion: intel.com/v1alpha1
+kind: Ovms
+metadata:
+  name: ovms-sample
+spec:
+  # Default values copied from <project_dir>/helm-charts/ovms/values.yaml
+  aws_access_key_id: ""
+  aws_region: ""
+  aws_secret_access_key: ""
+  config_configmap_name: ""
+  gcp_creds_secret_name: ""
+  image_name: openvino/model_server:latest
+  log_level: INFO
+  model_name: ""
+  model_path: ""
+  nireq: ""
+  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}'
+  replicas: 1
+  s3_compat_api_endpoint: ""
+  service_type: LoadBalancer
+  target_device: CPU
+  
+  

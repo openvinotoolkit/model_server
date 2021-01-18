@@ -1,0 +1,125 @@
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ovms
+  labels:
+    app: ovms
+spec:
+  selector:
+    matchLabels:
+       app: ovms
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        app: ovms
+    spec:
+      containers:
+      - name: ovms
+        image: {{ .Values.image_name }}
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{ if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy }}
+        env:
+        {{ end }}
+        {{ if .Values.http_proxy }}
+        - name: http_proxy
+          value: {{ .Values.http_proxy }}
+        {{ end }}
+        {{ if .Values.https_proxy }}
+        - name: https_proxy
+          value: {{ .Values.https_proxy }}
+        {{ end }}
+        {{ if .Values.no_proxy }}
+        - name: no_proxy
+          value: {{ .Values.no_proxy }}
+        {{ end }}
+        {{ if .Values.gcp_creds_secret_name }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /secret/gcp-creds.json
+        {{ end }}
+        {{ if .Values.aws_access_key_id }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.aws_access_key_id }}
+        {{ end }}
+        {{ if .Values.aws_secret_access_key }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ovms-aws-secret
+              key: secret_access_key
+        {{ end }}
+        {{ if .Values.aws_region }}
+        - name: AWS_REGION
+          value: {{ .Values.aws_region }}
+        {{ end }}
+        {{ if .Values.s3_compat_api_endpoint }}
+        - name: S3_ENDPOINT
+          value: {{ .Values.s3_compat_api_endpoint }}
+        {{ end }}
+        args: [
+        {{ if .Values.config_configmap_name }}
+               "--config_path", "/config/config.json",
+        {{ else }}
+               "--model_path", "{{ .Values.model_path }}",
+               "--model_name", "{{ .Values.model_name }}",
+               "--target_device", "{{ .Values.target_device }}",
+               {{ if .Values.nireq }}
+               "--nireq", "{{ .Values.nireq }}",
+               {{ end }}
+               {{ if .Values.plugin_config }}
+               "--plugin_config", "{{ .Values.plugin_config }}",
+               {{ end }}
+        {{ end }}
+               "--log_level", "{{ .Values.log_level }}",
+               "--port", "8080",
+               "--rest_port", "8081"]
+        {{ if or .Values.gcp_creds_secret_name .Values.config_configmap_name }}
+        volumeMounts:
+        {{ end }}
+        {{ if .Values.gcp_creds_secret_name }}
+        - name: gcpcreds
+          mountPath: "/secret"
+          readOnly: true
+        {{ end }}
+        {{ if .Values.config_configmap_name }}
+        - name: config
+          mountPath: "/config"
+          readOnly: true
+        {{ end }}
+      {{ if or .Values.gcp_creds_secret_name .Values.config_configmap_name }}
+      volumes:
+      {{ end }}
+      {{ if .Values.gcp_creds_secret_name }}
+      - name: gcpcreds
+        secret:
+          secretName: gcpcreds
+      {{ end }}
+      {{ if .Values.config_configmap_name }}
+      - name: config
+        configMap:
+          name: {{ .Values.config_configmap_name }}
+      {{ end }}
