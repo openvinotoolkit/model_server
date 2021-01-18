@@ -19,12 +19,18 @@
 
 #include <dlfcn.h>
 
+#include "filesystem.hpp"
 #include "logging.hpp"
 
 namespace ovms {
 
 Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std::string& basePath) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
+
+    if (FileSystem::isPathEscaped(basePath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", basePath);
+        return StatusCode::PATH_INVALID;
+    }
 
     if (libraries.count(name) == 1) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom node library name: {} is already loaded", name);

@@ -78,6 +78,12 @@ TEST(NodeLibraryManagerTest, LibraryLoadingMissingFile) {
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN);
 }
 
+TEST(NodeLibraryManagerTest, ErrorWhenLibraryPathNotEscaped) {
+    CustomNodeLibraryManager manager;
+    auto status = manager.loadLibrary("random_name", "/tmp/../my_dir/non_existing_library_file");
+    EXPECT_EQ(status, StatusCode::PATH_INVALID);
+}
+
 class ModelManagerNodeLibraryTest : public TestWithTempDir {};
 
 TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
@@ -139,6 +145,14 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     auto lib1Before = manager.getCustomNodeLibraryManager().getLibrary("lib1");
     auto lib2Before = manager.getCustomNodeLibraryManager().getLibrary("lib2");
 
+    // Expect lib1 to be loaded but lib2 not
+    EXPECT_NE(lib1Before.execute, nullptr);
+    EXPECT_NE(lib1Before.releaseBuffer, nullptr);
+    EXPECT_NE(lib1Before.releaseTensors, nullptr);
+    EXPECT_EQ(lib2Before.execute, nullptr);
+    EXPECT_EQ(lib2Before.releaseBuffer, nullptr);
+    EXPECT_EQ(lib2Before.releaseTensors, nullptr);
+
     // Reload with configAfter
     createConfigFileWithContent(configAfter, fileToReload);
     status = manager.loadConfig(fileToReload);
@@ -150,9 +164,6 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     EXPECT_EQ(lib1Before.execute, lib1After.execute);
     EXPECT_EQ(lib1Before.releaseBuffer, lib1After.releaseBuffer);
     EXPECT_EQ(lib1Before.releaseTensors, lib1After.releaseTensors);
-    EXPECT_EQ(lib2Before.execute, nullptr);
-    EXPECT_EQ(lib2Before.releaseBuffer, nullptr);
-    EXPECT_EQ(lib2Before.releaseTensors, nullptr);
     EXPECT_NE(lib2After.execute, nullptr);
     EXPECT_NE(lib2After.releaseBuffer, nullptr);
     EXPECT_NE(lib2After.releaseTensors, nullptr);
