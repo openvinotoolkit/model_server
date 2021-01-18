@@ -41,10 +41,6 @@ class MockModelServiceImpl : ModelServiceImpl {
     static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output) {
         StatusCode::JSON_SERIALIZATION_ERROR
     };
-
-   
-    static Status serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, std::string& output);
-};
 };
 
 TEST(ModelService, errorStatuses) {
