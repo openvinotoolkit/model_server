@@ -429,8 +429,8 @@ TEST(ModelService, serializeModelsStatuses2Json_with_one_response) {
     tensorflow::serving::GetModelStatusResponse response;
     model_version_t requestedVersion = 2;
     const std::string& model_name = "dummy";
-    ModelVersionStatus status = ModelVersionStatus(model_name, requestedVersion, ModelVersionState::START);
-    addStatusToResponse(&response, requestedVersion, status);
+    ModelVersionStatus modelStatus = ModelVersionStatus(model_name, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&response, requestedVersion, modelStatus);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));
     std::string jsonOutput;
@@ -473,14 +473,14 @@ TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
     tensorflow::serving::GetModelStatusResponse firstResponse;
     model_version_t requestedVersion = 2;
     const std::string& modelName1 = "dummy1";
-    ModelVersionStatus status = ModelVersionStatus(modelName1, requestedVersion, ModelVersionState::START);
-    addStatusToResponse(&firstResponse, requestedVersion, status);
+    ModelVersionStatus modelStatus = ModelVersionStatus(modelName1, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&firstResponse, requestedVersion, modelStatus);
     
     tensorflow::serving::GetModelStatusResponse secondResponse;
     requestedVersion = 3;
     const std::string& modelName2 = "dummy2";
-    status = ModelVersionStatus(modelName2, requestedVersion, ModelVersionState::LOADING);
-    addStatusToResponse(&secondResponse, requestedVersion, status);
+    modelStatus = ModelVersionStatus(modelName2, requestedVersion, ModelVersionState::LOADING);
+    addStatusToResponse(&secondResponse, requestedVersion, modelStatus);
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy1", firstResponse));
@@ -519,12 +519,12 @@ TEST(ModelService, serializeModelsStatuses2Json_one_response_with_two_versions) 
     tensorflow::serving::GetModelStatusResponse response;
     model_version_t requestedVersion = 2;
     const std::string& modelName = "dummy";
-    ModelVersionStatus status = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::START);
-    addStatusToResponse(&response, requestedVersion, status);
+    ModelVersionStatus modelStatus = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::START);
+    addStatusToResponse(&response, requestedVersion, modelStatus);
     
     requestedVersion = 3;
-    status = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::LOADING);
-    addStatusToResponse(&response, requestedVersion, status);
+    modelStatus = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::LOADING);
+    addStatusToResponse(&response, requestedVersion, modelStatus);
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     modelsStatuses.insert(std::pair<std::string, tensorflow::serving::GetModelStatusResponse>("dummy", response));

@@ -142,6 +142,10 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        if(status != StatusCode::OK)
+        {
+            return status;
+        }
         modelsStatusesTmp.insert({model.first, response});
     }
     modelsStatuses.merge(modelsStatusesTmp);
@@ -154,13 +158,13 @@ Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::stri
     for(auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++)
     {
         outputTmp += ("{\n\"" + modelStatus->first + "\" : \n");
-        std::string response_str;
-        auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &response_str);
+        std::string responseStr;
+        auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &responseStr);
         if(status != StatusCode::OK)
         {
             return status;
         }
-        outputTmp += (response_str + "}");
+        outputTmp += (responseStr + "}");
         if(std::next(modelStatus) != modelsStatuses.end()){
             outputTmp += (",\n");
         }
