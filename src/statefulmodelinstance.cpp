@@ -47,7 +47,7 @@ const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::ser
 
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     uint64_t sequenceId = 0;
-    uint32_t sequenceControlInput = 0;
+    uint32_t sequenceControlInput = 99;
     Status status;
     auto it = request->inputs().find("sequence_id");
     if (it != request->inputs().end()) {
