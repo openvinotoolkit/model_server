@@ -1590,6 +1590,7 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsOne) {
     auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsOneParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
 TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
     const char* demultiplexerConfigGatherFromNodeTypeInvalid = R"(
     {
