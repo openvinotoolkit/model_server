@@ -1360,7 +1360,7 @@ TEST(SchemaTest, DemultiplexerConfigMatchingSchema) {
                             {"data_item": "a",
                             "alias": "new_dummy_output"}
                         ],
-                        "demultiply_count": 10,
+                        "demultiply_count": 2,
                         "gather_from_node": "dummyNode"
                     }
                 ],
@@ -1485,6 +1485,111 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegative) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
+TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsZero) {
+    const char* demultiplexerConfigDemultiplyCountEqualsZero = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ],
+                        "demultiply_count": 0
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsZeroParsed;
+    demultiplexerConfigDemultiplyCountEqualsZeroParsed.Parse(demultiplexerConfigDemultiplyCountEqualsZero);
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsZeroParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsOne) {
+    const char* demultiplexerConfigDemultiplyCountEqualsOne = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ],
+                        "demultiply_count": 0
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsOneParsed;
+    demultiplexerConfigDemultiplyCountEqualsOneParsed.Parse(demultiplexerConfigDemultiplyCountEqualsOne);
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsOneParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
 TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
     const char* demultiplexerConfigGatherFromNodeTypeInvalid = R"(
     {
