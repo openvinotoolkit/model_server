@@ -32,6 +32,43 @@
 
 using namespace ovms;
 
+class MockModelServiceImpl : ModelServiceImpl {
+    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager)
+    {
+        return return StatusCode::MODEL_NAME_MISSING;
+    };
+    
+    static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output) {
+        StatusCode::JSON_SERIALIZATION_ERROR
+    };
+
+   
+    static Status serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, std::string& output);
+};
+};
+
+TEST(ModelService, errorStatuses) {
+    auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    Status status = MockModelServiceImpl::getAllModelsStatuses(modelsStatuses, manager);
+    ASSERT_EQ(status, StatusCode::MODEL_NAME_MISSING);
+}
+
+TEST(ModelService, errorJsonParse) {
+    const tensorflow::serving::GetModelStatusResponse response_const;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST(ModelService, errorStatusesJsonParse) {
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, &json_output);
+    ASSERT_EQ(error_status, StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
 TEST(ModelService, config_reload) {
     ModelServiceImpl s;
 
