@@ -172,27 +172,7 @@ TEST_F(StatefulModelInstance, wrongProtoKeywords) {
     auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
     status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
-
-    request = preparePredictRequest(modelInput);
-    input = (*request.mutable_inputs())["sequencecontrolinput"];
-    input.add_uint32_val(1);
-    status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
-}
-
-TEST_F(StatefulModelInstance, noControlInput) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request.mutable_inputs())["sequence_id"];
-    input.add_uint64_val(12);
-    status = modelInstance->validate(&request, &spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
 TEST_F(StatefulModelInstance, badControlInput) {
