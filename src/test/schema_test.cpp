@@ -1485,7 +1485,7 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegative) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsZero) {
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZero) {
     const char* demultiplexerConfigDemultiplyCountEqualsZero = R"(
     {
         "model_config_list": [
@@ -1538,7 +1538,7 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsZero) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyEqualsOne) {
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOne) {
     const char* demultiplexerConfigDemultiplyCountEqualsOne = R"(
     {
         "model_config_list": [
