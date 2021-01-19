@@ -33,6 +33,7 @@
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
+#include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
@@ -46,6 +47,13 @@
 namespace ovms {
 
 static bool watcherStarted = false;
+
+ModelManager::ModelManager() {
+    this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
+}
+
+ModelManager::~ModelManager() {
+}
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
@@ -252,7 +260,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
         return StatusCode::OK;
     }
     for (const auto& libraryConfig : doc->value.GetArray()) {
-        this->customNodeLibraryManager.loadLibrary(
+        this->customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
             libraryConfig.FindMember("base_path")->value.GetString());
     }
@@ -804,6 +812,10 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
     SPDLOG_DEBUG("Requesting pipeline: {};", request->model_spec().name());
     auto status = createPipeline(pipelinePtr, request->model_spec().name(), request, response);
     return status;
+}
+
+const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
+    return *customNodeLibraryManager;
 }
 
 }  // namespace ovms
