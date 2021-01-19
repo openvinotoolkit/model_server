@@ -54,7 +54,7 @@ static const char* modelStatefulConfig = R"(
 })";
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
-class StatefulModelInstance : public TestWithTempDir {
+class StatefulModelInstanceTempDir : public TestWithTempDir {
 public:
     std::string configFilePath;
     std::string ovmsConfig;
@@ -116,7 +116,7 @@ public:
 
     void SetUp() override {
         // Prepare model instance and processing spec
-        modelInstance = MockedStatefulModelInstance("model", 1);
+        modelInstance("model", 1);
 
         // Prepare states blob desc
         std::vector<size_t> shape{ 1, 10 };
@@ -146,7 +146,7 @@ public:
 
 };
 
-TEST_F(StatefulModelInstance, positiveValidate) {
+TEST_F(StatefulModelInstanceTempDir, positiveValidate) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -176,7 +176,7 @@ TEST_F(StatefulModelInstance, positiveValidate) {
     ASSERT_TRUE(status.ok());
 }
 
-TEST_F(StatefulModelInstance, missingSeqId) {
+TEST_F(StatefulModelInstanceTempDir, missingSeqId) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -190,7 +190,7 @@ TEST_F(StatefulModelInstance, missingSeqId) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstance, wrongSeqIdEnd) {
+TEST_F(StatefulModelInstanceTempDir, wrongSeqIdEnd) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -206,7 +206,7 @@ TEST_F(StatefulModelInstance, wrongSeqIdEnd) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstance, wrongSeqIdNoControl) {
+TEST_F(StatefulModelInstanceTempDir, wrongSeqIdNoControl) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -222,7 +222,7 @@ TEST_F(StatefulModelInstance, wrongSeqIdNoControl) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstance, wrongProtoKeywords) {
+TEST_F(StatefulModelInstanceTempDir, wrongProtoKeywords) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -236,7 +236,7 @@ TEST_F(StatefulModelInstance, wrongProtoKeywords) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstance, badControlInput) {
+TEST_F(StatefulModelInstanceTempDir, badControlInput) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
@@ -251,7 +251,7 @@ TEST_F(StatefulModelInstance, badControlInput) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
-TEST_F(StatefulModelInstance, invalidProtoTypes) {
+TEST_F(StatefulModelInstanceTempDir, invalidProtoTypes) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
