@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,6 +129,44 @@ Status GetModelStatusImpl::getModelStatus(
     }
     SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
     SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
+    return StatusCode::OK;
+}
+
+Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
+    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
+    for (auto const& model : models) {
+        std::optional<int64_t> noValueModelVersion;
+        tensorflow::serving::GetModelStatusRequest request;
+        GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
+        tensorflow::serving::GetModelStatusResponse response;
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        modelsStatusesTmp.insert({model.first, response});
+    }
+    modelsStatuses.merge(modelsStatusesTmp);
+
+    return StatusCode::OK;
+}
+
+Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output) {
+    std::string outputTmp;
+    for (auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++) {
+        outputTmp += ("{\n\"" + modelStatus->first + "\" : \n");
+        std::string responseStr;
+        auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &responseStr);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        outputTmp += (responseStr + "}");
+        if (std::next(modelStatus) != modelsStatuses.end()) {
+            outputTmp += (",\n");
+        }
+    }
+    output = outputTmp;
+
     return StatusCode::OK;
 }
 

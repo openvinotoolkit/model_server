@@ -15,20 +15,26 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
+#include "sequence.hpp"
+
 using namespace InferenceEngine;
 
 namespace ovms {
 
-uint64_t extractSequenceId(const tensorflow::TensorProto& proto) {
-    if (proto.uint64_val_size() == 1)
-        return proto.uint64_val(0);
-    return 0;
+const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
+    if (proto.uint64_val_size() == 1) {
+        sequenceId = proto.uint64_val(0);
+        return StatusCode::OK;
+    }
+    return StatusCode::SEQUENCE_ID_BAD_TYPE;
 }
 
-uint32_t extractSequenceControlInput(const tensorflow::TensorProto& proto) {
-    if (proto.uint32_val_size() == 1)
-        return proto.uint32_val(0);
-    return 0;
+const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput) {
+    if (proto.uint32_val_size() == 1) {
+        sequenceControlInput = proto.uint32_val(0);
+        return StatusCode::OK;
+    }
+    return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
 }
 
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
@@ -44,13 +50,19 @@ const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::ser
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
-
+    Status status;
     auto it = request->inputs().find("sequence_id");
-    if (it != request->inputs().end())
-        sequenceId = extractSequenceId(it->second);
+    if (it != request->inputs().end()) {
+        status = extractSequenceId(it->second, sequenceId);
+        if (!status.ok())
+            return status;
+    }
     it = request->inputs().find("sequence_control_input");
-    if (it != request->inputs().end())
-        sequenceControlInput = extractSequenceControlInput(it->second);
+    if (it != request->inputs().end()) {
+        status = extractSequenceControlInput(it->second, sequenceControlInput);
+        if (!status.ok())
+            return status;
+    }
 
     if (sequenceControlInput != SEQUENCE_END && sequenceControlInput != NO_CONTROL_INPUT && sequenceControlInput != SEQUENCE_START) {
         return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
@@ -67,6 +79,7 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
     auto status = validateSpecialKeys(request, processingSpecPtr);
     if (!status.ok())
         return status;
+
     return ModelInstance::validate(request, processingSpecPtr);
 }
 
@@ -76,8 +89,22 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
-    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
+    if (sequenceProcessingSpec.sequenceControlInput == SEQUENCE_START) {
+        // On SEQUENCE_START reset memory state of infer request to default
+        for (auto&& state : inferRequest.QueryState()) {
+            state.Reset();
+        }
+    } else {
+        // For next requests in the sequence set infer request memory state to the last state saved by the sequence
+        const sequence_memory_state_t& sequenceMemoryState = sequenceManager.getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        for (auto&& state : inferRequest.QueryState()) {
+            auto stateName = state.GetName();
+            if (!sequenceMemoryState.count(stateName))
+                return StatusCode::INTERNAL_ERROR;
+            state.SetState(sequenceMemoryState.at(stateName));
+        }
+    }
     return StatusCode::OK;
 }
 

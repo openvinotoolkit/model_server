@@ -31,14 +31,21 @@ private:
     std::mutex mutex;
 
 public:
+    SequenceManager() = default;
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber) {}
+
+    const uint32_t getTimeout() const;
+    void setTimeout(uint32_t timeout);
+    const uint32_t getMaxSequenceNumber() const;
+    void setMaxSequenceNumber(uint32_t maxSequenceNumber);
+    const std::mutex& getMutexRef() const;
+
     bool hasSequence(uint64_t sequenceId) const;
     Status addSequence(uint64_t sequenceId);
     Status removeSequence(uint64_t sequenceId);
     Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
-    const std::mutex& getMutexRef() const;
     const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
     Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
 };

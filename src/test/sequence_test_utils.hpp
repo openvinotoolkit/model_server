@@ -24,6 +24,9 @@
 #include <gtest/gtest.h>
 #include <inference_engine.hpp>
 
+#include "../sequence.hpp"
+#include "mock_iinferrequest.hpp"
+
 #include <gmock/gmock-generated-function-mockers.h>
 
 using namespace InferenceEngine;
@@ -39,12 +42,17 @@ public:
 class MockIVariableStateWithData : public MockIVariableState {
 public:
     std::string stateName;
-    Blob::Ptr stateBlob;
+    Blob::Ptr currentBlob;
+    const Blob::Ptr defaultBlob;
 
-    MockIVariableStateWithData(std::string name, Blob::Ptr blob) {
-        stateName = name;
-        stateBlob = blob;
-    }
+    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob) :
+        stateName(name),
+        currentBlob(currentBlob) {}
+
+    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob, Blob::Ptr defaultBlob) :
+        stateName(name),
+        currentBlob(currentBlob),
+        defaultBlob(defaultBlob) {}
 
     StatusCode GetName(char* name, size_t len, ResponseDesc* resp) const noexcept override {
         snprintf(name, sizeof(stateName), stateName.c_str());
@@ -52,7 +60,17 @@ public:
     }
 
     StatusCode GetState(Blob::CPtr& state, ResponseDesc* resp) const noexcept override {
-        state = stateBlob;
+        state = currentBlob;
+        return StatusCode::OK;
+    }
+
+    StatusCode Reset(ResponseDesc* resp) noexcept override {
+        currentBlob = defaultBlob;
+        return StatusCode::OK;
+    }
+
+    StatusCode SetState(Blob::Ptr newState, ResponseDesc* resp) noexcept override {
+        currentBlob = newState;
         return StatusCode::OK;
     }
 };
@@ -66,3 +84,20 @@ static void addState(ovms::model_memory_state_t& states, std::string name, std::
     std::shared_ptr<IVariableState> ivarPtr = std::make_shared<MockIVariableStateWithData>(name, stateBlob);
     states.push_back(VariableState(ivarPtr));
 }
+
+class MockIInferRequestStateful : public MockIInferRequest {
+public:
+    IVariableState::Ptr memoryState;
+
+    MockIInferRequestStateful(std::string name, Blob::Ptr currentBlob, Blob::Ptr defaultBlob) {
+        this->memoryState = std::make_shared<MockIVariableStateWithData>(name, currentBlob, defaultBlob);
+    }
+
+    InferenceEngine::StatusCode QueryState(IVariableState::Ptr& pState, size_t idx, ResponseDesc* resp) noexcept override {
+        if (idx == 0) {
+            pState = memoryState;
+            return InferenceEngine::StatusCode::OK;
+        }
+        return InferenceEngine::StatusCode::OUT_OF_BOUNDS;
+    }
+};
