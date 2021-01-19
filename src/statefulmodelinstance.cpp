@@ -109,16 +109,15 @@ const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::Infe
 }
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+    InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
 
-    SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
+    SequenceProcessingSpec& sequenceSpec = sequenceProcessingSpec.getSequenceProcessingSpec();
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceSpec.sequenceControlInput == SEQUENCE_END) {
         spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
         for (auto &&state : inferRequest.QueryState()) {
             state.Reset();
         }
-        sequenceManager.removeSequence(sequenceSpec.sequenceId);
     }
     else {
         auto modelState = inferRequest.QueryState();
