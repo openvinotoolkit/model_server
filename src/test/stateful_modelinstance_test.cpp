@@ -231,11 +231,11 @@ TEST_F(StatefulModelInstance, PreprocessingFirstRequest) {
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
     // Prepare states blob desc
-    std::vector<size_t> shape{ 1, 10 };
+    std::vector<size_t> shape{1, 10};
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const Precision precision{ Precision::FP32 };
-    const Layout layout{ Layout::NC };
-    const TensorDesc desc{ precision, shape, layout };
+    const Precision precision{Precision::FP32};
+    const Layout layout{Layout::NC};
+    const TensorDesc desc{precision, shape, layout};
 
     // Prepare default state blob
     std::vector<float> defaultState(elementsCount);
@@ -335,11 +335,11 @@ TEST_F(StatefulModelInstance, PostprocessingLastRequest) {
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
     // Prepare states blob desc
-    std::vector<size_t> shape{ 1, 10 };
+    std::vector<size_t> shape{1, 10};
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const Precision precision{ Precision::FP32 };
-    const Layout layout{ Layout::NC };
-    const TensorDesc desc{ precision, shape, layout };
+    const Precision precision{Precision::FP32};
+    const Layout layout{Layout::NC};
+    const TensorDesc desc{precision, shape, layout};
 
     // Prepare default state blob
     std::vector<float> defaultState(elementsCount);
@@ -373,7 +373,7 @@ TEST_F(StatefulModelInstance, PostprocessingLastRequest) {
 
     auto& output = (*response.mutable_outputs())["sequence_id"];
     EXPECT_EQ(output.uint64_val_size(), 1);
-    EXPECT_EQ(proto.uint64_val(0), sequenceId);
+    EXPECT_EQ(output.uint64_val(0), sequenceId);
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
@@ -385,15 +385,15 @@ TEST_F(StatefulModelInstance, PostprocessingStartAndNoControl) {
     for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
         // Prepare model instance and processing spec
         MockedStatefulModelInstance modelInstance("model", 1);
-        uint64_t sequenceId = 42;
+        uint64_t sequenceId = 33;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
         // Prepare states blob desc
-        std::vector<size_t> shape{ 1, 10 };
+        std::vector<size_t> shape{1, 10};
         size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-        const Precision precision{ Precision::FP32 };
-        const Layout layout{ Layout::NC };
-        const TensorDesc desc{ precision, shape, layout };
+        const Precision precision{Precision::FP32};
+        const Layout layout{Layout::NC};
+        const TensorDesc desc{precision, shape, layout};
 
         // Prepare default state blob
         std::vector<float> defaultState(elementsCount);
@@ -432,12 +432,12 @@ TEST_F(StatefulModelInstance, PostprocessingStartAndNoControl) {
 
         auto& output = (*response.mutable_outputs())["sequence_id"];
         EXPECT_EQ(output.uint64_val_size(), 1);
-        EXPECT_EQ(proto.uint64_val(0), sequenceId);
+        EXPECT_EQ(output.uint64_val(0), sequenceId);
 
         // Check if InferRequest memory state has been updated to sequence memory state
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
         currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
-        EXPECT_EQ(currentBlobIrData, newState);
+        EXPECT_EQ(currentBlobIrData, defaultState);
     }
 }
 
