@@ -18,7 +18,9 @@
 #include <memory>
 #include <string>
 
+#include "modelconfig.hpp"
 #include "modelinstance.hpp"
+#include "sequence_manager.hpp"
 
 namespace ovms {
 
@@ -26,10 +28,11 @@ const uint32_t NO_CONTROL_INPUT = 0;
 const uint32_t SEQUENCE_START = 1;
 const uint32_t SEQUENCE_END = 2;
 
-/**
-     * @brief This class contains all the information about inference engine model
-     */
 class StatefulModelInstance : public ModelInstance {
+    static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    SequenceManager sequenceManager;
+    bool performLowLatencyTransformation;
+
 public:
     /**
          * @brief A default constructor
@@ -37,25 +40,25 @@ public:
     StatefulModelInstance(const std::string& name, model_version_t version) :
         ModelInstance(name, version) {}
 
-private:
-    static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    SequenceManager& getSequenceManager() {
+        return sequenceManager;
+    }
 
-protected:
-    const Status preInferenceProcessing(const tensorflow::serving::PredictRequest* request,
-        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
+    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
 
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs) override;
-
     const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
-
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 
     Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
+
+protected:
+    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
+        const size_t expectedNumberOfInputs) override;
+
+    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
 };
 }  // namespace ovms

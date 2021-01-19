@@ -200,7 +200,6 @@ void TestPredict::performPredict(const std::string modelName,
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    ovms::ProcessingSpec processingSpec;
 
     auto& tensorProto = request.inputs().find("b")->second;
     size_t batchSize = tensorProto.tensor_shape().dim(0).size();

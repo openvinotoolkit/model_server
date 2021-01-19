@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -268,7 +268,7 @@ public:
      *
      * @return uint
      */
-    uint32_t sequenceTimeout() {
+    uint32_t sequenceTimeoutSeconds() {
         if (!result->count("sequence_timeout_seconds")) {
             return 0;
         }
