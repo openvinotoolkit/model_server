@@ -83,6 +83,25 @@ const Status StatefulModelInstance::preInferenceProcessing(const tensorflow::ser
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
     InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr) {
+
+    SequenceProcessingSpec& sequenceSpec = processingSpecPtr->getSequenceProcessingSpec();
+    // Reset inferRequest states on SEQUENCE_END
+    if (sequenceSpec.sequenceControlInput == SEQUENCE_END) {
+        spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        for (auto &&state : inferRequest.QueryState()) {
+            state.Reset();
+        }
+        sequenceManager.removeSequence(sequenceSpec.sequenceId);
+    }
+    else {
+        auto modelState = inferRequest.QueryState();
+        sequenceManager.updateSequenceMemoryState(sequenceSpec.sequenceId, modelState);
+    }
+
+    // Include sequence_id in server response
+    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
+    tensorProto.add_uint64_val(sequenceSpec.sequenceId);
+
     return StatusCode::OK;
 }
 }  // namespace ovms
