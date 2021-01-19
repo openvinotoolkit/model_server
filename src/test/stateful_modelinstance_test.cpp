@@ -98,6 +98,54 @@ public:
     }
 };
 
+class StatefulModelInstanceTest : public::testing::Test
+{
+public:
+    MockedStatefulModelInstance modelInstance;
+    const TensorDesc desc;
+    Blob::Ptr defaultBlob;
+    Blob::Ptr currentBlob;
+    Blob::Ptr newBlob;
+
+    std::vector<float> defaultState;
+    std::vector<float> currentState;
+    std::vector<float> newState;
+
+    size_t elementsCount;
+    tensorflow::serving::PredictResponse response;
+
+    void SetUp() override {
+        // Prepare model instance and processing spec
+        modelInstance = MockedStatefulModelInstance("model", 1);
+
+        // Prepare states blob desc
+        std::vector<size_t> shape{ 1, 10 };
+        elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+        const Precision precision{ Precision::FP32 };
+        const Layout layout{ Layout::NC };
+        desc = { precision, shape, layout };
+
+        // Prepare default state blob
+        defaultState(elementsCount);
+        std::iota(defaultState.begin(), defaultState.end(), 0);
+        Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
+
+        // Prepare new state blob
+        currentState(elementsCount);
+        std::iota(currentState.begin(), currentState.end(), 10);
+        Blob::Ptr currentBlob = make_shared_blob<float>(desc, currentState.data());
+
+        newState(elementsCount);
+        std::iota(newState.begin(), newState.end(), 10);
+        Blob::Ptr newBlob = make_shared_blob<float>(desc, newState.data());
+    }
+
+    void TearDown() override {
+        
+    }
+
+};
+
 TEST_F(StatefulModelInstance, positiveValidate) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
@@ -223,29 +271,12 @@ TEST_F(StatefulModelInstance, invalidProtoTypes) {
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
 }
 
-TEST_F(StatefulModelInstance, PreprocessingFirstRequest) {
+TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     // Prepare model instance and processing spec
     MockedStatefulModelInstance modelInstance("model", 1);
     uint32_t sequenceControlInput = SEQUENCE_START;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
-
-    // Prepare states blob desc
-    std::vector<size_t> shape{1, 10};
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const Precision precision{Precision::FP32};
-    const Layout layout{Layout::NC};
-    const TensorDesc desc{precision, shape, layout};
-
-    // Prepare default state blob
-    std::vector<float> defaultState(elementsCount);
-    std::iota(defaultState.begin(), defaultState.end(), 0);
-    Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
-
-    // Prepare new state blob
-    std::vector<float> currentState(elementsCount);
-    std::iota(currentState.begin(), currentState.end(), 10);
-    Blob::Ptr currentBlob = make_shared_blob<float>(desc, currentState.data());
 
     // Initialize InferRequest with current state and default state
     std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", currentBlob, defaultBlob);
@@ -272,29 +303,12 @@ TEST_F(StatefulModelInstance, PreprocessingFirstRequest) {
     EXPECT_EQ(currentBlobIrData, defaultState);
 }
 
-TEST_F(StatefulModelInstance, PreprocessingIntermediateRequest) {
+TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
     for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
         // Prepare model instance and processing spec
         MockedStatefulModelInstance modelInstance("model", 1);
         uint64_t sequenceId = 42;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
-
-        // Prepare states blob desc
-        std::vector<size_t> shape{1, 10};
-        size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-        const Precision precision{Precision::FP32};
-        const Layout layout{Layout::NC};
-        const TensorDesc desc{precision, shape, layout};
-
-        // Prepare default state blob
-        std::vector<float> defaultState(elementsCount);
-        std::iota(defaultState.begin(), defaultState.end(), 0);
-        Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
-
-        // Prepare new state blob
-        std::vector<float> newState(elementsCount);
-        std::iota(newState.begin(), newState.end(), 10);
-        Blob::Ptr newBlob = make_shared_blob<float>(desc, newState.data());
 
         // Initialize InferRequest with default state as both default and current states
         std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", defaultBlob, defaultBlob);
@@ -327,29 +341,12 @@ TEST_F(StatefulModelInstance, PreprocessingIntermediateRequest) {
     }
 }
 
-TEST_F(StatefulModelInstance, PostprocessingLastRequest) {
+TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     // Prepare model instance and processing spec
     MockedStatefulModelInstance modelInstance("model", 1);
     uint32_t sequenceControlInput = SEQUENCE_END;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
-
-    // Prepare states blob desc
-    std::vector<size_t> shape{1, 10};
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const Precision precision{Precision::FP32};
-    const Layout layout{Layout::NC};
-    const TensorDesc desc{precision, shape, layout};
-
-    // Prepare default state blob
-    std::vector<float> defaultState(elementsCount);
-    std::iota(defaultState.begin(), defaultState.end(), 0);
-    Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
-
-    // Prepare new state blob
-    std::vector<float> currentState(elementsCount);
-    std::iota(currentState.begin(), currentState.end(), 10);
-    Blob::Ptr currentBlob = make_shared_blob<float>(desc, currentState.data());
 
     // Initialize InferRequest with current state and default state
     std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", currentBlob, defaultBlob);
@@ -367,8 +364,6 @@ TEST_F(StatefulModelInstance, PostprocessingLastRequest) {
     currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
     EXPECT_EQ(currentBlobIrData, currentState);
 
-    tensorflow::serving::PredictResponse response;
-
     modelInstance.postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
     auto& output = (*response.mutable_outputs())["sequence_id"];
@@ -381,29 +376,12 @@ TEST_F(StatefulModelInstance, PostprocessingLastRequest) {
     EXPECT_EQ(currentBlobIrData, defaultState);
 }
 
-TEST_F(StatefulModelInstance, PostprocessingStartAndNoControl) {
+TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
     for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
         // Prepare model instance and processing spec
         MockedStatefulModelInstance modelInstance("model", 1);
         uint64_t sequenceId = 33;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
-
-        // Prepare states blob desc
-        std::vector<size_t> shape{1, 10};
-        size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-        const Precision precision{Precision::FP32};
-        const Layout layout{Layout::NC};
-        const TensorDesc desc{precision, shape, layout};
-
-        // Prepare default state blob
-        std::vector<float> defaultState(elementsCount);
-        std::iota(defaultState.begin(), defaultState.end(), 0);
-        Blob::Ptr defaultBlob = make_shared_blob<float>(desc, defaultState.data());
-
-        // Prepare new state blob
-        std::vector<float> newState(elementsCount);
-        std::iota(newState.begin(), newState.end(), 10);
-        Blob::Ptr newBlob = make_shared_blob<float>(desc, newState.data());
 
         // Initialize InferRequest with default state as both default and current states
         std::shared_ptr<IInferRequest> iireqPtr = std::make_shared<MockIInferRequestStateful>("state", defaultBlob, defaultBlob);
@@ -425,8 +403,6 @@ TEST_F(StatefulModelInstance, PostprocessingStartAndNoControl) {
         ovms::model_memory_state_t memoryState;
         addState(memoryState, "state", shape, newState);
         modelInstance.injectSequence(sequenceId, memoryState);
-
-        tensorflow::serving::PredictResponse response;
 
         modelInstance.postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
