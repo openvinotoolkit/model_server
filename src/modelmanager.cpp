@@ -52,8 +52,7 @@ ModelManager::ModelManager() {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
 }
 
-ModelManager::~ModelManager() {
-}
+ModelManager::~ModelManager() = default;
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
