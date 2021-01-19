@@ -273,7 +273,6 @@ TEST_F(StatefulModelInstance, invalidProtoTypes) {
 
 TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     // Prepare model instance and processing spec
-    MockedStatefulModelInstance modelInstance("model", 1);
     uint32_t sequenceControlInput = SEQUENCE_START;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
@@ -306,7 +305,6 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
     for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
         // Prepare model instance and processing spec
-        MockedStatefulModelInstance modelInstance("model", 1);
         uint64_t sequenceId = 42;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
@@ -343,7 +341,6 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
 
 TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     // Prepare model instance and processing spec
-    MockedStatefulModelInstance modelInstance("model", 1);
     uint32_t sequenceControlInput = SEQUENCE_END;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
@@ -379,7 +376,6 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
     for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
         // Prepare model instance and processing spec
-        MockedStatefulModelInstance modelInstance("model", 1);
         uint64_t sequenceId = 33;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
