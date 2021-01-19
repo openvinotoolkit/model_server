@@ -28,7 +28,7 @@
 #include "../executingstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../processing_spec.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;

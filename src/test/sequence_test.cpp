@@ -25,17 +25,13 @@
 
 #include "../ov_utils.hpp"
 #include "../sequence.hpp"
-#include "sequence_test_utils.hpp"
+#include "stateful_test_utils.hpp"
 
-TEST(Sequence, MovedMutexNullified) {
+TEST(Sequence, SequenceDisabled) {
     ovms::Sequence sequence;
-    const std::unique_ptr<std::mutex>& mutexRef = sequence.getMutexRef();
-    ASSERT_FALSE(mutexRef == nullptr);
-    std::unique_ptr<std::mutex> mutex = sequence.moveMutex();
-    // Pointer in Sequence object should be now null
-    ASSERT_TRUE(mutexRef == nullptr);
-    // Local ptr variable contains valid pointer to mutex now
-    ASSERT_FALSE(mutex == nullptr);
+    ASSERT_FALSE(sequence.isTerminated());
+    sequence.setTerminated();
+    ASSERT_TRUE(sequence.isTerminated());
 }
 
 TEST(Sequence, UpdateLastActivityTime) {

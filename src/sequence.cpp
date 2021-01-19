@@ -48,12 +48,16 @@ std::chrono::steady_clock::time_point Sequence::getLastActivityTime() const {
     return lastActivityTime;
 }
 
-const std::unique_ptr<std::mutex>& Sequence::getMutexRef() const {
-    return mutex;
+MutexPtr Sequence::getMutexPtr() {
+    return &mutex;
 }
 
-std::unique_ptr<std::mutex>&& Sequence::moveMutex() {
-    return std::move(mutex);
+bool Sequence::isTerminated() const {
+    return terminated;
+}
+
+void Sequence::setTerminated() {
+    this->terminated = true;
 }
 
 }  // namespace ovms

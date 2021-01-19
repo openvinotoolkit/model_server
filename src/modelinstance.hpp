@@ -38,7 +38,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "processing_spec.hpp"
+#include "sequence_processing_spec.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 

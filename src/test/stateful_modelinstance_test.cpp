@@ -25,9 +25,9 @@
 
 #include "../get_model_metadata_impl.hpp"
 #include "../ov_utils.hpp"
-#include "../processing_spec.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "../statefulmodelinstance.hpp"
-#include "sequence_test_utils.hpp"
+#include "stateful_test_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Return;

@@ -25,6 +25,7 @@
 #include <inference_engine.hpp>
 
 #include "../sequence.hpp"
+#include "../sequence_manager.hpp"
 #include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>

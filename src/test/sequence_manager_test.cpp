@@ -21,14 +21,14 @@
 
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
-#include "sequence_test_utils.hpp"
+#include "stateful_test_utils.hpp"
 
 TEST(SequenceManager, AddSequenceOK) {
     ovms::SequenceManager sequenceManager(120, 24);
-    ASSERT_FALSE(sequenceManager.hasSequence(42));
+    ASSERT_FALSE(sequenceManager.sequenceExists(42));
     auto status = sequenceManager.addSequence(42);
     ASSERT_TRUE(status.ok());
-    ASSERT_TRUE(sequenceManager.hasSequence(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
 }
 
 TEST(SequenceManager, AddSequenceConflict) {
@@ -36,7 +36,7 @@ TEST(SequenceManager, AddSequenceConflict) {
     sequenceManager.addSequence(42);
     auto status = sequenceManager.addSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
-    ASSERT_TRUE(sequenceManager.hasSequence(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
 }
 
 TEST(SequenceManager, RemoveSequenceOK) {
@@ -44,13 +44,148 @@ TEST(SequenceManager, RemoveSequenceOK) {
     sequenceManager.addSequence(42);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status.ok());
-    ASSERT_FALSE(sequenceManager.hasSequence(42));
+    ASSERT_FALSE(sequenceManager.sequenceExists(42));
 }
 
 TEST(SequenceManager, RemoveSequenceNotExists) {
     ovms::SequenceManager sequenceManager(120, 24);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+}
+
+TEST(SequenceManager, HasSequenceOK) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    sequenceManager.addSequence(42);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.hasSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+}
+
+TEST(SequenceManager, HasSequenceNotExist) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.hasSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, HasSequenceTerminated) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    sequenceManager.addSequence(42);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.terminateSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+
+    sequenceMutexPtr = nullptr;
+    status = sequenceManager.hasSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, CreateSequenceOK) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ASSERT_FALSE(sequenceManager.sequenceExists(42));
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.createSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+}
+
+TEST(SequenceManager, CreateSequenceConflict) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    sequenceManager.addSequence(42);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.createSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, TerminateSequenceOK) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    sequenceManager.addSequence(42);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.terminateSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+}
+
+TEST(SequenceManager, TerminateSequenceMissing) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.terminateSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, TerminateSequenceAlreadyTerminated) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    sequenceManager.addSequence(42);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    auto status = sequenceManager.terminateSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+
+    sequenceMutexPtr = nullptr;
+    status = sequenceManager.terminateSequence(42, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, GetSequencePtrNoControlInput) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    ovms::SequenceProcessingSpec spec(ovms::NO_CONTROL_INPUT, 42);
+    auto status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+
+    sequenceManager.addSequence(42);
+    status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+
+    sequenceManager.terminateSequence(42, sequenceMutexPtr);
+
+    sequenceMutexPtr = nullptr;
+    status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, GetSequencePtrSequenceStart) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 42);
+    auto status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+
+    sequenceMutexPtr = nullptr;
+    status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+}
+
+TEST(SequenceManager, GetSequencePtrSequenceEnd) {
+    ovms::SequenceManager sequenceManager(120, 24);
+    ovms::MutexPtr sequenceMutexPtr = nullptr;
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_END, 42);
+    auto status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
+
+    sequenceManager.addSequence(42);
+    status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(sequenceMutexPtr != nullptr);
+
+    sequenceMutexPtr = nullptr;
+    status = sequenceManager.getSequenceMutexPtr(spec, sequenceMutexPtr);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(sequenceMutexPtr == nullptr);
 }
 
 TEST(SequenceManager, UpdateSequenceState) {
@@ -97,17 +232,17 @@ TEST(SequenceManager, RemoveTimedOutSequences) {
     sequenceManager.addSequence(42);
     sequenceManager.addSequence(314);
 
-    ASSERT_TRUE(sequenceManager.hasSequence(42));
-    ASSERT_TRUE(sequenceManager.hasSequence(314));
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(314));
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
-    ASSERT_TRUE(sequenceManager.hasSequence(42));
-    ASSERT_TRUE(sequenceManager.hasSequence(314));
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(314));
 
     sequenceManager.updateSequenceMemoryState(42, newState);
     std::this_thread::sleep_for(std::chrono::seconds(3));
     sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
-    ASSERT_TRUE(sequenceManager.hasSequence(42));
-    ASSERT_FALSE(sequenceManager.hasSequence(314));
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_FALSE(sequenceManager.sequenceExists(314));
 }

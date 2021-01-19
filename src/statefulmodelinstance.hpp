@@ -24,10 +24,6 @@
 
 namespace ovms {
 
-const uint32_t NO_CONTROL_INPUT = 0;
-const uint32_t SEQUENCE_START = 1;
-const uint32_t SEQUENCE_END = 2;
-
 class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
     std::unique_ptr<SequenceManager> sequenceManager;
@@ -46,8 +42,23 @@ public:
         return this->sequenceManager;
     }
 
+    /*
+    Performs pre inference operations:
+        - for SEQUENCE_START control input - reset InferRequest memory state
+        - for SEQUENCE_END control input or for no control input - load sequence memory state into InferRequest
+
+        Always returns StatusCode::OK
+    */
     const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
+    /*
+    Performs pre inference operations:
+        - for SEQUENCE_START or for no control input - save InferRequest memory state in sequence memory state
+        - for SEQUENCE_END control input - reset InferRequest memory state
+        - for all requests - append sequence id to the response
+
+        Always returns StatusCode::OK
+    */
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
@@ -64,6 +75,6 @@ protected:
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
 private:
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec* processingSpec);
+    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);
 };
 }  // namespace ovms

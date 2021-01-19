@@ -70,6 +70,7 @@ enum class StatusCode {
     SEQUENCE_ID_BAD_TYPE,            /*!< Wrong sequence ID type */
     INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Unexpected value of sequence control input */
     SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type*/
+    SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore*/
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */

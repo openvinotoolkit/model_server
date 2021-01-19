@@ -36,26 +36,26 @@ void SequenceManager::setMaxSequenceNumber(uint32_t maxSequenceNumber) {
     this->maxSequenceNumber = maxSequenceNumber;
 }
 
-const std::mutex& SequenceManager::getMutexRef() const {
+std::mutex& SequenceManager::getMutex() {
     return mutex;
 }
 
-bool SequenceManager::hasSequence(uint64_t sequenceId) const {
+bool SequenceManager::sequenceExists(const uint64_t& sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-Status SequenceManager::addSequence(uint64_t sequenceId) {
+Status SequenceManager::addSequence(const uint64_t& sequenceId) {
     if (sequences.count(sequenceId)) {
         spdlog::debug("Sequence with provided ID already exists");
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
         spdlog::debug("Adding new sequence with ID: {}", sequenceId);
-        sequences[sequenceId] = Sequence();
+        sequences[sequenceId];
     }
     return StatusCode::OK;
 }
 
-Status SequenceManager::removeSequence(uint64_t sequenceId) {
+Status SequenceManager::removeSequence(const uint64_t& sequenceId) {
     if (sequences.count(sequenceId)) {
         // TO DO: care for thread safety
         spdlog::debug("Removing sequence with ID: {}", sequenceId);
@@ -77,6 +77,63 @@ Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_
             ++it;
     }
     return StatusCode::OK;
+}
+
+Status SequenceManager::hasSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr) {
+    if (!sequenceExists(sequenceId))
+        return StatusCode::SEQUENCE_MISSING;
+
+    if (sequences.at(sequenceId).isTerminated())
+        return StatusCode::SEQUENCE_TERMINATED;
+
+    sequenceMutexPtr = sequences.at(sequenceId).getMutexPtr();
+
+    if (sequenceMutexPtr == nullptr)
+        return StatusCode::INTERNAL_ERROR;
+
+    return StatusCode::OK;
+}
+
+Status SequenceManager::createSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr) {
+    /* TO DO: Generate unique ID if not provided by the client
+    if (sequenceId == 0) {
+    } 
+    */
+    auto status = addSequence(sequenceId);
+    if (!status.ok())
+        return status;
+
+    sequenceMutexPtr = sequences.at(sequenceId).getMutexPtr();
+    if (sequenceMutexPtr == nullptr)
+        return StatusCode::INTERNAL_ERROR;
+
+    return StatusCode::OK;
+}
+
+Status SequenceManager::terminateSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr) {
+    auto status = hasSequence(sequenceId, sequenceMutexPtr);
+    if (!status.ok())
+        return status;
+
+    sequences.at(sequenceId).setTerminated();
+
+    return StatusCode::OK;
+}
+
+Status SequenceManager::getSequenceMutexPtr(SequenceProcessingSpec& sequenceProcessingSpec, MutexPtr& sequenceMutexPtr) {
+    const uint32_t& sequenceControlInput = sequenceProcessingSpec.getSequenceControlInput();
+    const uint64_t& sequenceId = sequenceProcessingSpec.getSequenceId();
+    Status status;
+
+    if (sequenceControlInput == SEQUENCE_START) {
+        status = createSequence(sequenceId, sequenceMutexPtr);
+    } else if (sequenceControlInput == NO_CONTROL_INPUT) {
+        status = hasSequence(sequenceId, sequenceMutexPtr);
+    } else {  // sequenceControlInput == SEQUENCE_END
+        status = terminateSequence(sequenceId, sequenceMutexPtr);
+    }
+
+    return status;
 }
 
 const sequence_memory_state_t& SequenceManager::getSequenceMemoryState(uint64_t sequenceId) const {

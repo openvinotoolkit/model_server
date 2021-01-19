@@ -16,13 +16,20 @@
 
 #pragma once
 
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 
+#include "sequence_processing_spec.hpp"
 #include "sequence.hpp"
 #include "status.hpp"
 
 namespace ovms {
+
+const uint32_t NO_CONTROL_INPUT = 0;
+const uint32_t SEQUENCE_START = 1;
+const uint32_t SEQUENCE_END = 2;
+
 class SequenceManager {
 private:
     std::unordered_map<uint64_t, Sequence> sequences;
@@ -37,16 +44,33 @@ public:
         maxSequenceNumber(maxSequenceNumber) {}
 
     const uint32_t getTimeout() const;
-    void setTimeout(uint32_t timeout);
-    const uint32_t getMaxSequenceNumber() const;
-    void setMaxSequenceNumber(uint32_t maxSequenceNumber);
-    const std::mutex& getMutexRef() const;
 
-    bool hasSequence(uint64_t sequenceId) const;
-    Status addSequence(uint64_t sequenceId);
-    Status removeSequence(uint64_t sequenceId);
+    void setTimeout(uint32_t timeout);
+
+    const uint32_t getMaxSequenceNumber() const;
+
+    void setMaxSequenceNumber(uint32_t maxSequenceNumber);
+
+    std::mutex& getMutex();
+
+    bool sequenceExists(const uint64_t& sequenceId) const;
+
+    Status removeSequence(const uint64_t& sequenceId);
+
     Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
+
+    Status addSequence(const uint64_t& sequenceId);
+
+    Status hasSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
+
+    Status createSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
+
+    Status terminateSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
+
+    Status getSequenceMutexPtr(SequenceProcessingSpec& sequenceProcessingSpec, MutexPtr& sequenceMutexPtr);
+
     const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
+
     Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
 };
 }  // namespace ovms
