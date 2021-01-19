@@ -316,8 +316,6 @@ public:
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 
-    bool configReloadNeeded(const char* configFilename);
-
 protected:
     /**
      * @brief Reads models from configuration file
@@ -331,6 +329,11 @@ protected:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     void updateConfigurationWithoutConfigFile();
+
+    /**
+     * @brief Reloads configuration file if needed and then updates OVMS configuration.
+     */
+    void updateConfiguration();
 };
 
 }  // namespace ovms

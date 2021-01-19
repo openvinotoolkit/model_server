@@ -458,16 +458,16 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
     pipelineFactory.revalidatePipelines(*this);
 }
 
-bool ModelManager::configReloadNeeded(const char* configFilename) {
-    std::shared_lock lock(configMtx);
+void ModelManager::updateConfiguration() {
     struct stat statTime;
-
-    stat(configFilename, &statTime);
+    std::shared_lock lock(configMtx);
+    
+    stat(configFilename.c_str(), &statTime);
     if (lastConfigChangeTime != statTime.st_ctime) {
         lastConfigChangeTime = statTime.st_ctime;
-        return true;
+        loadConfig(configFilename);
     }
-    return false;
+    updateConfigurationWithoutConfigFile();
 }
 
 void ModelManager::watcher(std::future<void> exit) {
@@ -479,10 +479,8 @@ void ModelManager::watcher(std::future<void> exit) {
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
-        if (configReloadNeeded(configFilename.c_str())) {
-            loadConfig(configFilename);
-        }
-        updateConfigurationWithoutConfigFile();
+        updateConfiguration();
+
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");
