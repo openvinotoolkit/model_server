@@ -132,18 +132,16 @@ Status GetModelStatusImpl::getModelStatus(
     return StatusCode::OK;
 }
 
-Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager){
+Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
     const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
-    for(auto const& model : models)
-    {
+    for (auto const& model : models) {
         std::optional<int64_t> noValueModelVersion;
         tensorflow::serving::GetModelStatusRequest request;
         GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
-        if(status != StatusCode::OK)
-        {
+        if (status != StatusCode::OK) {
             return status;
         }
         modelsStatusesTmp.insert({model.first, response});
@@ -153,19 +151,17 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
     return StatusCode::OK;
 }
 
-Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output){
+Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output) {
     std::string outputTmp;
-    for(auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++)
-    {
+    for (auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++) {
         outputTmp += ("{\n\"" + modelStatus->first + "\" : \n");
         std::string responseStr;
         auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &responseStr);
-        if(status != StatusCode::OK)
-        {
+        if (status != StatusCode::OK) {
             return status;
         }
         outputTmp += (responseStr + "}");
-        if(std::next(modelStatus) != modelsStatuses.end()){
+        if (std::next(modelStatus) != modelsStatuses.end()) {
             outputTmp += (",\n");
         }
     }

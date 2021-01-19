@@ -332,7 +332,7 @@ TEST(ModelService, getAllModelsStatuses_one_model_one_version) {
     manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
     GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
-    
+
     ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 1);
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
@@ -397,10 +397,10 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
     manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
     GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
-    
+
     ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
     EXPECT_EQ(modelsStatusesAfterReload.begin()->second.model_version_status_size(), 2);
-    for(int i = 0; i < modelsStatusesAfterReload.begin()->second.model_version_status_size(); i++){
+    for (int i = 0; i < modelsStatusesAfterReload.begin()->second.model_version_status_size(); i++) {
         auto response = modelsStatusesAfterReload.begin()->second.model_version_status()[i];
         EXPECT_EQ(response.state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
         EXPECT_EQ(response.version(), i + 1);
@@ -475,7 +475,7 @@ TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
     const std::string& modelName1 = "dummy1";
     ModelVersionStatus modelStatus = ModelVersionStatus(modelName1, requestedVersion, ModelVersionState::START);
     addStatusToResponse(&firstResponse, requestedVersion, modelStatus);
-    
+
     tensorflow::serving::GetModelStatusResponse secondResponse;
     requestedVersion = 3;
     const std::string& modelName2 = "dummy2";
@@ -521,7 +521,7 @@ TEST(ModelService, serializeModelsStatuses2Json_one_response_with_two_versions) 
     const std::string& modelName = "dummy";
     ModelVersionStatus modelStatus = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::START);
     addStatusToResponse(&response, requestedVersion, modelStatus);
-    
+
     requestedVersion = 3;
     modelStatus = ModelVersionStatus(modelName, requestedVersion, ModelVersionState::LOADING);
     addStatusToResponse(&response, requestedVersion, modelStatus);
