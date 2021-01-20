@@ -108,7 +108,7 @@ public:
     MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
 
-    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::ProcessingSpec* processingSpecPtr) {
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::ProcessingSpec& processingSpecPtr) {
         return validate(request, processingSpecPtr);
     }
 };
@@ -180,21 +180,21 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_START);
 
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    status = modelInstance->mockValidate(&request, &spec);
+    status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, NO_CONTROL_INPUT);
 
-    status = modelInstance->mockValidate(&request, &spec);
+    status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
 }
 
@@ -204,7 +204,7 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -216,7 +216,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -228,7 +228,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -238,7 +238,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -249,7 +249,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
     input.add_uint32_val(999);
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
@@ -259,13 +259,13 @@ TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint32_val(12);
-    auto status = modelInstance->mockValidate(&request, &spec);
+    auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
 
     request = preparePredictRequest(modelInput);
     input = (*request.mutable_inputs())["sequence_control_input"];
     input.add_uint64_val(1);
-    status = modelInstance->mockValidate(&request, &spec);
+    status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
 }
 

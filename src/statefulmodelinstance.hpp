@@ -54,11 +54,11 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
 
 protected:
-    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec& processingSpecPtr);
 
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec& processingSpecPtr);
 };
 }  // namespace ovms

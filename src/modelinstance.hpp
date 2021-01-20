@@ -225,6 +225,8 @@ protected:
     const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+
 private:
     /**
          * @brief Holds the information about inputs and it's parameters
@@ -495,8 +497,6 @@ public:
     void unsubscribe(PipelineDefinition& pd);
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
-
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
 
