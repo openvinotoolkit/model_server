@@ -83,6 +83,7 @@ public:
     }
 
     void TearDown() override {
+        TestWithTempDir::TearDown();
         modelInput.clear();
     }
 };
@@ -98,7 +99,6 @@ public:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         modelInput.clear();
     }
 };

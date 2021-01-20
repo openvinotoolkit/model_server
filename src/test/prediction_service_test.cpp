@@ -207,7 +207,7 @@ void TestPredict::performPredict(const std::string modelName,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
-    std::shared_ptr<MockModelInstance> modelInstance;
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
@@ -227,7 +227,7 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->mockValidate(&request);
+    ovms::Status validationStatus = (std::dynamic_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);

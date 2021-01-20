@@ -320,7 +320,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
-    std::shared_ptr<MockModelInstance> modelInstance;
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
@@ -340,7 +340,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->mockValidate(&request);
+    ovms::Status validationStatus = (std::dynamic_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     std::cout << validationStatus.string() << std::endl;
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
