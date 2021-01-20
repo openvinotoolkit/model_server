@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <typeinfo>
 #include <utility>
 
 #include <gmock/gmock.h>
@@ -59,14 +60,9 @@ public:
     std::string configFilePath;
     std::string ovmsConfig;
     std::string modelPath;
-    std::string dummyModelName;
-    inputs_info_t modelInput;
-    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
-    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
-        dummyModelName = "dummy";
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
         configFilePath = directoryPath + "/ovms_config.json";
@@ -77,13 +73,32 @@ public:
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(modelStatefulConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-        modelInput = {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}};
+    }
+};
+
+class StatefulModelInstanceInputValidation : public ::testing::Test {
+public:
+    inputs_info_t modelInput;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+
+    void SetUp() override {
+        modelInput = { {DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         modelInput.clear();
+    }
+};
+
+class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
+public:
+    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
+        StatefulModelInstance(name, version) {}
+
+    const Status mockValidate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) {
+        return validate(&request, &processingSpecPtr);
     }
 };
 
@@ -137,128 +152,103 @@ public:
     }
 };
 
-TEST_F(StatefulModelInstanceTempDir, positiveValidate) {
+TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
     ovms::ProcessingSpec spec = ovms::ProcessingSpec();
     auto modelInstance = manager.findModelInstance(dummyModelName);
+    ASSERT_TRUE(typeid(modelInstance) == typeid(StatefulModelInstance));
+}
+
+TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     uint64_t seqId = 1;
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_START);
 
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, NO_CONTROL_INPUT);
 
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_TRUE(status.ok());
 }
 
-TEST_F(StatefulModelInstanceTempDir, missingSeqId) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstanceTempDir, wrongSeqIdEnd) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstanceTempDir, wrongSeqIdNoControl) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, NO_CONTROL_INPUT);
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstanceTempDir, wrongProtoKeywords) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
-TEST_F(StatefulModelInstanceTempDir, badControlInput) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
     input.add_uint32_val(999);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
-TEST_F(StatefulModelInstanceTempDir, invalidProtoTypes) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    ovms::ProcessingSpec spec = ovms::ProcessingSpec();
-    auto modelInstance = manager.findModelInstance(dummyModelName);
+TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance("model", 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint32_val(12);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
 
     request = preparePredictRequest(modelInput);
     input = (*request.mutable_inputs())["sequence_control_input"];
     input.add_uint64_val(1);
-    status = modelInstance->validate(&request, &spec);
+    status = modelInstance->mockValidate(&request, &spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
 }
 
