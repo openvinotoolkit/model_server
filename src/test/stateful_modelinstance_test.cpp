@@ -356,8 +356,8 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
-    auto it = response->mutable_outputs().find("sequence_id");
-    EXPECT_NEQ(it, response->mutable_outputs().end());
+    auto it = response.mutable_outputs()->find("sequence_id");
+    EXPECT_FALSE(it == response.mutable_outputs()->end());
     auto& output = (*response.mutable_outputs())["sequence_id"];
     EXPECT_EQ(output.uint64_val_size(), 1);
     EXPECT_EQ(output.uint64_val(0), sequenceId);
@@ -399,8 +399,8 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
 
         modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
-        auto it = response->mutable_outputs().find("sequence_id");
-        EXPECT_NEQ(it, response->mutable_outputs().end());
+        auto it = response.mutable_outputs()->find("sequence_id");
+        EXPECT_FALSE(it == response.mutable_outputs()->end());
 
         auto& output = (*response.mutable_outputs())["sequence_id"];
         EXPECT_EQ(output.uint64_val_size(), 1);
