@@ -41,6 +41,7 @@ namespace ovms {
 const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
 class IVersionReader;
+class CustomNodeLibraryManager;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -49,7 +50,7 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager() = default;
+    ModelManager();
 
     std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
 
@@ -60,6 +61,8 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
 
     PipelineFactory pipelineFactory;
+
+    std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
 private:
     /**
@@ -72,6 +75,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
+    Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
@@ -142,7 +146,7 @@ public:
      * @brief Destroy the Model Manager object
      * 
      */
-    virtual ~ModelManager() {}
+    virtual ~ModelManager();
 
     /**
      * @brief Gets config filename
@@ -165,6 +169,8 @@ public:
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+
+    const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 
     /**
      * @brief Finds model with specific name
