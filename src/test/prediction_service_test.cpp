@@ -192,13 +192,22 @@ public:
     }
 };
 
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance() :
+        ModelInstance("UNUSED_NAME", 42) {}
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+};
+
 void TestPredict::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::shared_ptr<MockModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
@@ -218,7 +227,7 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->validate(&request);
+    ovms::Status validationStatus = modelInstance->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
