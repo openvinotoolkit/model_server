@@ -1318,3 +1318,118 @@ TEST(SchemaTest, CustomNodeConfigParamsInvalidType) {
     auto result = ovms::validateJsonAgainstSchema(customNodeConfigParamsInvalidTypeParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+static const char* demultiplexerConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "dummy_path",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "dummy_library",
+            "base_path": "dummy_path"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "library_name": "dummy_library",
+                    "type": "custom",
+                    "params": {
+                        "a": "1024",
+                        "b": "512"
+                    },
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ],
+                    "demultiply_count": 10,
+                    "gather_from_node": "dummy"
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST(SchemaTest, DemultiplexerConfigMatchingSchema) {
+    rapidjson::Document demultiplexerConfigMatchingSchemaParsed;
+    demultiplexerConfigMatchingSchemaParsed.Parse(demultiplexerConfig);
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegativeNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": -1"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountNegativeParsed;
+    demultiplexerConfigDemultiplyCountNegativeParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": 0"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsZeroParsed;
+    demultiplexerConfigDemultiplyCountEqualsZeroParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsZeroParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": 1"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsOneParsed;
+    demultiplexerConfigDemultiplyCountEqualsOneParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsOneParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountTypeInvalid) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": \"10\""};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountTypeInvalidParsed;
+    demultiplexerConfigDemultiplyCountTypeInvalidParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountTypeInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
+    const std::string gatherFromNodeToReplace{"\"gather_from_node\": \"dummy\""};
+    const std::string gatherFromNode{"\"gather_from_node\": 10"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(gatherFromNodeToReplace), gatherFromNodeToReplace.size(), gatherFromNode);
+    rapidjson::Document demultiplexerConfigGatherFromNodeTypeInvalidParsed;
+    demultiplexerConfigGatherFromNodeTypeInvalidParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigGatherFromNodeTypeInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
