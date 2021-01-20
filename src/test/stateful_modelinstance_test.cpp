@@ -395,9 +395,25 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         addState(memoryState, "state", shape, newState);
         modelInstance->injectSequence(sequenceId, memoryState);
 
+        // Sanity check for new state
+        const ovms::sequence_memory_state_t& currentSequenceMemoryState = modelInstance->getSequenceManager().getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        EXPECT_TRUE(currentSequenceMemoryState.count("state"));
+        InferenceEngine::Blob::Ptr sanityBlob = currentSequenceMemoryState.at("state");
+        std::vector<float> sanityBlobIrData;
+        sanityBlobIrData.assign((float*)sanityBlob->buffer(), ((float*)sanityBlob->buffer()) + elementsCount);
+        EXPECT_EQ(sanityBlobIrData, newState);
+
         tensorflow::serving::PredictResponse response;
 
         modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
+
+        // Check if sequence memory state is the same as InferRequest memory state
+        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = modelInstance->getSequenceManager().getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        EXPECT_TRUE(updatedSequenceMemoryState.count("state"));
+        InferenceEngine::Blob::Ptr chengedBlob = updatedSequenceMemoryState.at("state");
+        std::vector<float> sequenceBlobIrData;
+        sequenceBlobIrData.assign((float*)chengedBlob->buffer(), ((float*)chengedBlob->buffer()) + elementsCount);
+        EXPECT_EQ(sequenceBlobIrData, defaultState);
 
         auto it = response.mutable_outputs()->find("sequence_id");
         EXPECT_FALSE(it == response.mutable_outputs()->end());
@@ -405,11 +421,6 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         auto& output = (*response.mutable_outputs())["sequence_id"];
         EXPECT_EQ(output.uint64_val_size(), 1);
         EXPECT_EQ(output.uint64_val(0), sequenceId);
-
-        // Check if sequence memory state is the same as InferRequest memory state
-        EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
-        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
-        EXPECT_EQ(currentBlobIrData, defaultState);
     }
 }
 
