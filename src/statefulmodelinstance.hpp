@@ -47,7 +47,7 @@ public:
     const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, ProcessingSpec* processingSpecPtr);
+        InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
     const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
 
