@@ -356,6 +356,8 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
+    auto it = response->mutable_outputs().find("sequence_id");
+    EXPECT_NEQ(it, response->mutable_outputs().end());
     auto& output = (*response.mutable_outputs())["sequence_id"];
     EXPECT_EQ(output.uint64_val_size(), 1);
     EXPECT_EQ(output.uint64_val(0), sequenceId);
@@ -397,11 +399,14 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
 
         modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
+        auto it = response->mutable_outputs().find("sequence_id");
+        EXPECT_NEQ(it, response->mutable_outputs().end());
+
         auto& output = (*response.mutable_outputs())["sequence_id"];
         EXPECT_EQ(output.uint64_val_size(), 1);
         EXPECT_EQ(output.uint64_val(0), sequenceId);
 
-        // Check if InferRequest memory state has been updated to sequence memory state
+        // Check if sequence memory state is the same as InferRequest memory state
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
         currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
         EXPECT_EQ(currentBlobIrData, defaultState);
