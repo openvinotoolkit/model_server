@@ -340,7 +340,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = (std::dynamic_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
+    ovms::Status validationStatus = (std::static_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     std::cout << validationStatus.string() << std::endl;
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
