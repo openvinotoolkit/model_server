@@ -192,6 +192,15 @@ public:
     }
 };
 
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance() :
+        ModelInstance("UNUSED_NAME", 42) {}
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+};
+
 void TestPredict::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
@@ -218,7 +227,7 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->validate(&request, nullptr);
+    ovms::Status validationStatus = (std::static_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
