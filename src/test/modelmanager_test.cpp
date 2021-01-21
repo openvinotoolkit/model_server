@@ -227,13 +227,11 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
         EXPECT_EQ(manager.configFileReloadNeeded(), false);
     };
 
-    for(int i = 0; i < numberOfThreads; i++)
-    {
+    for (int i = 0; i < numberOfThreads; i++) {
         threads.push_back(std::thread(func));
     }
 
-    for(auto& thread : threads)
-    {
+    for (auto& thread : threads) {
         thread.join();
     }
     manager.join();
@@ -261,13 +259,11 @@ TEST(ModelManager, configRelodNeededManyThreads) {
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    for(int i = 0; i < numberOfThreads; i++)
-    {
+    for (int i = 0; i < numberOfThreads; i++) {
         threads.push_back(std::thread(func));
     }
 
-    for(auto& thread : threads)
-    {
+    for (auto& thread : threads) {
         thread.join();
     }
     manager.join();
@@ -311,13 +307,11 @@ TEST(ModelManager, loadConfigManyThreads) {
         EXPECT_EQ(manager.loadConfig(configFile), ovms::StatusCode::OK);
     };
 
-    for(int i = 0; i < numberOfThreads; i++)
-    {
+    for (int i = 0; i < numberOfThreads; i++) {
         threads.push_back(std::thread(func));
     }
 
-    for(auto& thread : threads)
-    {
+    for (auto& thread : threads) {
         thread.join();
     }
     manager.join();

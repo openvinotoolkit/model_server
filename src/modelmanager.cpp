@@ -395,7 +395,7 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
-    std::lock_guard<std::recursive_mutex>loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
@@ -457,7 +457,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 }
 
 void ModelManager::updateConfigurationWithoutConfigFile() {
-    std::lock_guard<std::recursive_mutex>loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
     for (auto& [name, config] : servedModelConfigs) {
         reloadModelWithVersions(config);
@@ -466,7 +466,7 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
 }
 
 bool ModelManager::configFileReloadNeeded() {
-    std::lock_guard<std::recursive_mutex>loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     struct stat statTime;
 
     stat(configFilename.c_str(), &statTime);
