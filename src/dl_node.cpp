@@ -151,6 +151,7 @@ Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo
 }
 
 void DLNode::release(session_key_t sessionId) {
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Release node: {} sessionKey: {}", getName(), sessionId);
     getNodeSession(sessionId).release();
 }
 bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds) {

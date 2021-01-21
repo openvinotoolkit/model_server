@@ -187,7 +187,14 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
 }
 
 Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node) {
-    auto status = requestExecuteRequiredResources();
+    Status status;
+    if (this->nodeStreamIdGuard == nullptr) {
+        status = requestExecuteRequiredResources();
+        if (!status.ok()) {
+            notifyEndQueue.push({node, getSessionKey()});
+            return status;
+        }
+    }
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(waitForStreamIdTimeoutMicroseconds);
     if (!streamIdOpt) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Could not acquire stream Id right away", getName());
