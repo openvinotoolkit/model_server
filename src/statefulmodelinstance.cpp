@@ -47,7 +47,7 @@ const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::ser
     return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
 }
 
-const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec) {
+const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec* processingSpec) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
     Status status;
@@ -70,13 +70,17 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     if ((sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) && sequenceId == 0) {
         return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
     }
-    processingSpec.sequenceControlInput = sequenceControlInput;
-    processingSpec.sequenceId = sequenceId;
+
+    processingSpec = new SequenceProcessingSpec(sequenceControlInput, sequenceId);
+    if (processingSpec == nullptr) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+
     return StatusCode::OK;
 }
 
 const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec) {
-    auto status = validateSpecialKeys(request, processingSpec);
+    auto status = validateSpecialKeys(request, &processingSpec);
     if (!status.ok())
         return status;
 

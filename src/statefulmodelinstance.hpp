@@ -59,6 +59,6 @@ protected:
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
+    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec* processingSpec);
 };
 }  // namespace ovms

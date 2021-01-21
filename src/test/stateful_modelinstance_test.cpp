@@ -174,8 +174,9 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
     uint64_t seqId = 1;
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, seqId);
+
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_START);
@@ -200,7 +201,7 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
 
 TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
@@ -210,7 +211,7 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
@@ -222,7 +223,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, NO_CONTROL_INPUT);
 
@@ -234,7 +235,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
@@ -244,7 +245,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
 
 TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
@@ -255,7 +256,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec = ovms::SequenceProcessingSpec();
+    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint32_val(12);
