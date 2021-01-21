@@ -37,10 +37,11 @@ const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, u
     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
 }
 
-Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
+Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager = new SequenceManager(config.getSequenceTimeout(), config.getMaxSequenceNumber());
-    base.loadModelImpl(config, parameter);
+    sequenceManager.reset();
+    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+    return ModelInstance::loadModelImpl(config, parameter);
 }
 
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
@@ -107,7 +108,7 @@ const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::Infe
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t& sequenceMemoryState = sequenceManager.getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        const sequence_memory_state_t& sequenceMemoryState = sequenceManager->getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
         for (auto&& state : inferRequest.QueryState()) {
             auto stateName = state.GetName();
             if (!sequenceMemoryState.count(stateName))
@@ -128,7 +129,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
         }
     } else {
         auto modelState = inferRequest.QueryState();
-        sequenceManager.updateSequenceMemoryState(sequenceProcessingSpec.sequenceId, modelState);
+        sequenceManager->updateSequenceMemoryState(sequenceProcessingSpec.sequenceId, modelState);
     }
 
     // Include sequence_id in server response

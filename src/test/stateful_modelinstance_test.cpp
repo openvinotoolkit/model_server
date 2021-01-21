@@ -172,6 +172,15 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
 }
 
+TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
+}
+
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
     uint64_t seqId = 1;
