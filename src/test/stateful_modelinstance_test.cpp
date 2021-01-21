@@ -61,6 +61,7 @@ public:
     std::string ovmsConfig;
     std::string modelPath;
     std::string dummyModelName;
+    ovms::model_version_t modelVersion;
     inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
@@ -74,6 +75,7 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
+        modelVersion = 1;
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(modelStatefulConfig);
@@ -172,13 +174,27 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
 }
 
-TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
-    ConstructorEnabledModelManager manager;
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
+TEST_F(StatefulModelInstanceTempDir, loadModel) {
+    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion);
+
+    const ovms::ModelConfig config{
+        dummyModelName,
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        true,      // is stateful
+        false,      // low latency transformation enabled
+        33,         // stateful sequence timeout
+        33,        // steteful sequence max number
+        modelVersion,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    SequenceManager manager = modelInstance.getSequenceManager();
+    EXPECT_TRUE(manager != nullptr);
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
