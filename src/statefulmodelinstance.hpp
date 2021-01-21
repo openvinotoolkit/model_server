@@ -60,5 +60,8 @@ protected:
         const size_t expectedNumberOfInputs) override;
 
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
+
+private:
+    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 };
 }  // namespace ovms

@@ -277,7 +277,7 @@ private:
          *
          * @return status
          */
-    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+    virtual Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Configures batchsize

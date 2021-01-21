@@ -37,6 +37,12 @@ const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, u
     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
 }
 
+Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
+    sequenceManager = new SequenceManager(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+    base.loadModelImpl(config, parameter);
+}
+
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
     auto completeInputsNumber = expectedNumberOfInputs;
