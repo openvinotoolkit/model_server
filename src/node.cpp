@@ -54,6 +54,9 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
         auto& [metadata, inputs] = metadataInputsPair;
         SPDLOG_ERROR("setInputs for metadata2");
         auto status = this->setInputs(dependency, inputs, metadata);  // TODO retcode handle
+        if (!status.ok()) {
+            return status;
+        }
     }
     return StatusCode::OK;  // TODO
 }
