@@ -219,20 +219,14 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::optional<model_version_t> modelVersion;
         if (nodeConfig.HasMember("version")) {
             modelVersion = nodeConfig["version"].GetUint64();
-        } else {
-            modelVersion = std::nullopt;
         }
         std::optional<size_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
             demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
-        } else {
-            demultiplyCount = std::nullopt;
         }
         std::optional<std::string> gatherFromNode;
         if (nodeConfig.HasMember("gather_from_node")) {
             gatherFromNode = nodeConfig["gather_from_node"].GetString();
-        } else {
-            gatherFromNode = std::nullopt;
         }
         NodeKind nodeKind;
         auto status = toNodeKind(nodeKindStr, nodeKind);
