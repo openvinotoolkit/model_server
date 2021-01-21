@@ -177,24 +177,45 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
     ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion);
 
-    const ovms::ModelConfig config{
+    const ovms::ModelConfig config1{
         dummyModelName,
-        modelPath,  // base path
-        "CPU",      // target device
-        "1",        // batchsize
-        1,          // NIREQ
-        true,      // is stateful
-        false,      // low latency transformation enabled
-        33,         // stateful sequence timeout
-        33,        // steteful sequence max number
-        modelVersion,    // version
-        modelPath,  // local path
+        modelPath,     // base path
+        "CPU",         // target device
+        "1",           // batchsize
+        1,             // NIREQ
+        true,          // is stateful
+        false,         // low latency transformation enabled
+        33,            // stateful sequence timeout
+        44,            // steteful sequence max number
+        modelVersion,  // version
+        modelPath,     // local path
     };
-    auto status = modelInstance.loadModel(config);
+    auto status = modelInstance.loadModel(config1);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    SequenceManager manager = modelInstance.getSequenceManager();
-    EXPECT_TRUE(manager != nullptr);
+    EXPECT_TRUE(modelInstance.getSequenceManager().getTimeout() == 33);
+    EXPECT_TRUE(modelInstance.getSequenceManager().getMaxSequenceNumber() == 44);
+    EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == false);
+
+    const ovms::ModelConfig config2{
+        dummyModelName,
+        modelPath,     // base path
+        "CPU",         // target device
+        "1",           // batchsize
+        1,             // NIREQ
+        true,          // is stateful
+        true,          // low latency transformation enabled
+        22,            // stateful sequence timeout
+        11,            // steteful sequence max number
+        modelVersion,  // version
+        modelPath,     // local path
+    };
+    status = modelInstance.reloadModel(config2);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    EXPECT_TRUE(modelInstance.getSequenceManager().getTimeout() == 22);
+    EXPECT_TRUE(modelInstance.getSequenceManager().getMaxSequenceNumber() == 11);
+    EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == true);
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
