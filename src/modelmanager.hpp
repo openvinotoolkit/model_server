@@ -125,7 +125,7 @@ private:
     /**
      * @brief Mutex for protecting concurrent reloading config
      */
-    mutable std::shared_mutex configMtx;
+    mutable std::recursive_mutex configMtx;
 
     /**
      * @brief Time of last config change
@@ -316,7 +316,11 @@ public:
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 
-protected:
+    /**
+     * @brief Check if configuration file reload is needed.
+     */
+    bool configFileReloadNeeded();
+
     /**
      * @brief Reads models from configuration file
      * 
@@ -330,10 +334,6 @@ protected:
      */
     void updateConfigurationWithoutConfigFile();
 
-    /**
-     * @brief Reloads configuration file if needed and then updates OVMS configuration.
-     */
-    void updateConfiguration();
 };
 
 }  // namespace ovms
