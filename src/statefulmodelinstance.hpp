@@ -49,19 +49,20 @@ public:
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
 
-    const Status validate(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr) override;
-
     Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
 
 protected:
+    const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
+
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, ProcessingSpec* processingSpecPtr);
-
 private:
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
+
+    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec* processingSpec);
+
 };
 }  // namespace ovms
