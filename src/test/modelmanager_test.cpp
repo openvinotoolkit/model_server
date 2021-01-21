@@ -318,6 +318,30 @@ TEST(ModelManager, loadConfigManyThreads) {
     modelMock.reset();
 }
 
+TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+
+    createConfigFileWithContent(config_2_models, configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+
+    manager.loadConfig(configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+
+    manager.join();
+    modelMock.reset();
+}
+
 TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     const char* configWithOnlyPipelineDefinitionProvided = R"({
     "pipeline_config_list": 

@@ -482,10 +482,13 @@ void ModelManager::watcher(std::future<void> exit) {
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
+
+        std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
         if (configFileReloadNeeded()) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
+        loadingLock.~lock_guard();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
