@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,17 +17,22 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: openvino-model-server
+  name: {{ template "ovms.fullname" . }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: {{ template "ovms.chart" . }}
+    app: {{ template "ovms.name" . }}
 spec:
   ports:
-    - port: 8080
+    - port: {{ .Values.grpc_port }}
       protocol: TCP
       targetPort: 8080
       name: grpc
-    - port: 8081
+    - port: {{ .Values.rest_port }}
       protocol: TCP
       targetPort: 8081
       name: rest
   selector:
-    app: ovms
+    app: {{ template "ovms.name" . }}
   type: {{ .Values.service_type }}

@@ -18,6 +18,8 @@ replicas: 1
 image_name: "openvino/model_server:latest"
 config_configmap_name: ""
 
+grpc_port: 8080
+rest_port: 8081
 model_name: ""
 model_path: ""
 target_device: "CPU"
@@ -34,3 +36,14 @@ s3_compat_api_endpoint: ""
 
 log_level: INFO
 service_type: "LoadBalancer"
+resources: {}
+  #  limits:
+  #    cpu: 8.0
+  #    memory: 512Mi
+  #    gpu.intel.com/i915: 1
+security_context: {}
+  #  runAsUser: 5000
+  #  runAsGroup: 5000
+models_host_path: ""
+models_volume_claim: ""
+
