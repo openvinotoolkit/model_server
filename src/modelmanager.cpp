@@ -416,6 +416,8 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
@@ -448,6 +450,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     status = loadCustomNodeLibrariesConfig(configJson);
     status = loadPipelinesConfig(configJson);
     tryReloadGatedModelConfigs(gatedModelConfigs);
+
+    struct stat statTime;
+    stat(configFilename.c_str(), &statTime);
+    lastConfigChangeTime = statTime.st_ctime;
     return StatusCode::OK;
 }
 
@@ -473,6 +479,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 }
 
 void ModelManager::updateConfigurationWithoutConfigFile() {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
     for (auto& [name, config] : servedModelConfigs) {
         reloadModelWithVersions(config);
@@ -480,21 +487,30 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
     pipelineFactory.revalidatePipelines(*this);
 }
 
+bool ModelManager::configFileReloadNeeded() {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    struct stat statTime;
+
+    stat(configFilename.c_str(), &statTime);
+    if (lastConfigChangeTime != statTime.st_ctime) {
+        return true;
+    }
+    return false;
+}
+
 void ModelManager::watcher(std::future<void> exit) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started config watcher thread");
-    int64_t lastTime;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastTime = statTime.st_ctime;
+
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
-        stat(configFilename.c_str(), &statTime);
-        if (lastTime != statTime.st_ctime) {
-            lastTime = statTime.st_ctime;
+
+        std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+        if (configFileReloadNeeded()) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
+
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");

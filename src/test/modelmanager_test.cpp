@@ -210,6 +210,138 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     modelMock.reset();
 }
 
+TEST(ModelManager, configRelodNotNeededManyThreads) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    int numberOfThreads = 10;
+    std::vector<std::thread> threads;
+    std::function<void()> func = [&manager]() {
+        EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    };
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        threads.push_back(std::thread(func));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManager, configRelodNeededManyThreads) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    int numberOfThreads = 10;
+    std::vector<std::thread> threads;
+    std::function<void()> func = [&manager]() {
+        EXPECT_EQ(manager.configFileReloadNeeded(), true);
+    };
+
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    createConfigFileWithContent(config_2_models, configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        threads.push_back(std::thread(func));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManager, configReloadNeededChange) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+
+    createConfigFileWithContent(config_2_models, configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManager, loadConfigManyThreads) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    int numberOfThreads = 10;
+    std::vector<std::thread> threads;
+    std::function<void()> func = [&manager, configFile]() {
+        EXPECT_EQ(manager.loadConfig(configFile), ovms::StatusCode::OK);
+    };
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        threads.push_back(std::thread(func));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
+    std::string configFile = "/tmp/config.json";
+
+    modelMock = std::make_shared<MockModel>();
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+
+    createConfigFileWithContent(config_2_models, configFile);
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+
+    createConfigFileWithContent(config_2_models, configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+
+    manager.loadConfig(configFile);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+
+    manager.join();
+    modelMock.reset();
+}
+
 TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     const char* configWithOnlyPipelineDefinitionProvided = R"({
     "pipeline_config_list": 
@@ -332,6 +464,7 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
+    ASSERT_EQ(manager.configFileReloadNeeded(), true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });

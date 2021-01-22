@@ -126,6 +126,16 @@ private:
      */
     uint watcherIntervalSec = 1;
 
+    /**
+     * @brief Mutex for protecting concurrent reloading config
+     */
+    mutable std::recursive_mutex configMtx;
+
+    /**
+     * @brief Time of last config change
+     */
+    int64_t lastConfigChangeTime;
+
 public:
     /**
      * @brief Gets the instance of ModelManager
@@ -312,7 +322,11 @@ public:
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 
-protected:
+    /**
+     * @brief Check if configuration file reload is needed.
+     */
+    bool configFileReloadNeeded();
+
     /**
      * @brief Reads models from configuration file
      * 
