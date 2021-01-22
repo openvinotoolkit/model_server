@@ -17,8 +17,8 @@
 
 #include <inference_engine.hpp>
 
-#include "node_library.hpp"
 #include "custom_node_interface.hpp"
+#include "node_library.hpp"
 
 namespace ovms {
 
@@ -28,7 +28,8 @@ class CustomNodeOutputAllocator : public InferenceEngine::IAllocator {
 
 public:
     CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary) :
-        tensor(tensor), nodeLibrary(nodeLibrary) {}
+        tensor(tensor),
+        nodeLibrary(nodeLibrary) {}
 
     void Release() noexcept override { delete this; }
 
