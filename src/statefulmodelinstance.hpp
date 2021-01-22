@@ -42,9 +42,8 @@ public:
         sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
     }
 
-    SequenceManager& getSequenceManager() {
-        assert(this->sequenceManager);
-        return *(this->sequenceManager);
+    const std::unique_ptr<SequenceManager>& getSequenceManager() const {
+        return this->sequenceManager;
     }
 
     const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);

@@ -19,12 +19,19 @@
 
 namespace ovms {
 
-struct SequenceProcessingSpec {
-    const uint32_t sequenceControlInput;
-    const uint64_t sequenceId;
+class SequenceProcessingSpec {
+    uint32_t sequenceControlInput;
+    uint64_t sequenceId;
+
+public:
+    SequenceProcessingSpec() = default;
     SequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) :
         sequenceControlInput(sequenceControlInput),
         sequenceId(sequenceId) {}
+    const uint32_t& getSequenceControlInput() const { return sequenceControlInput; }
+    void setSequenceControlInput(uint32_t sequenceControlInput) { sequenceControlInput = sequenceControlInput; }
+    const uint64_t& getSequenceId() const { return sequenceId; }
+    void setSequenceId(uint64_t sequenceId) { sequenceId = sequenceId; }
 };
 
 // For now stateless ModelInstance does not need this class and it's not necessary for common execution path

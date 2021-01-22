@@ -121,8 +121,8 @@ public:
         StatefulModelInstance(name, version) {}
 
     void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-        getSequenceManager().addSequence(sequenceId);
-        getSequenceManager().updateSequenceMemoryState(sequenceId, state);
+        getSequenceManager()->addSequence(sequenceId);
+        getSequenceManager()->updateSequenceMemoryState(sequenceId, state);
     }
 };
 
@@ -193,8 +193,8 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     auto status = modelInstance.loadModel(config1);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_TRUE(modelInstance.getSequenceManager().getTimeout() == 33);
-    EXPECT_TRUE(modelInstance.getSequenceManager().getMaxSequenceNumber() == 44);
+    EXPECT_TRUE(modelInstance.getSequenceManager()->getTimeout() == 33);
+    EXPECT_TRUE(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 44);
     EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == false);
 
     const ovms::ModelConfig config2{
@@ -213,8 +213,8 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     status = modelInstance.reloadModel(config2);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_TRUE(modelInstance.getSequenceManager().getTimeout() == 22);
-    EXPECT_TRUE(modelInstance.getSequenceManager().getMaxSequenceNumber() == 11);
+    EXPECT_TRUE(modelInstance.getSequenceManager()->getTimeout() == 22);
+    EXPECT_TRUE(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 11);
     EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == true);
 }
 
@@ -450,7 +450,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         modelInstance->injectSequence(sequenceId, memoryState);
 
         // Sanity check for new state
-        const ovms::sequence_memory_state_t& currentSequenceMemoryState = modelInstance->getSequenceManager().getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        const ovms::sequence_memory_state_t& currentSequenceMemoryState = modelInstance->getSequenceManager()->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
         EXPECT_TRUE(currentSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr sanityBlob = currentSequenceMemoryState.at("state");
         std::vector<float> sanityBlobIrData;
@@ -462,7 +462,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
         // Check if sequence memory state is the same as InferRequest memory state
-        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = modelInstance->getSequenceManager().getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = modelInstance->getSequenceManager()->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
         EXPECT_TRUE(updatedSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr chengedBlob = updatedSequenceMemoryState.at("state");
         std::vector<float> sequenceBlobIrData;

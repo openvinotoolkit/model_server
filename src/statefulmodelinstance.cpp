@@ -39,7 +39,6 @@ const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, u
 
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager.reset();
     sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
     return ModelInstance::loadModelImpl(config, parameter);
 }
@@ -101,14 +100,14 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
 }
 
 const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
-    if (sequenceProcessingSpec.sequenceControlInput == SEQUENCE_START) {
+    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
         for (auto&& state : inferRequest.QueryState()) {
             state.Reset();
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t& sequenceMemoryState = sequenceManager->getSequenceMemoryState(sequenceProcessingSpec.sequenceId);
+        const sequence_memory_state_t& sequenceMemoryState = sequenceManager->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
         for (auto&& state : inferRequest.QueryState()) {
             auto stateName = state.GetName();
             if (!sequenceMemoryState.count(stateName))
@@ -122,19 +121,19 @@ const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::Infe
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
     InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
-    if (sequenceProcessingSpec.sequenceControlInput == SEQUENCE_END) {
+    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
         for (auto&& state : inferRequest.QueryState()) {
             state.Reset();
         }
     } else {
         auto modelState = inferRequest.QueryState();
-        sequenceManager->updateSequenceMemoryState(sequenceProcessingSpec.sequenceId, modelState);
+        sequenceManager->updateSequenceMemoryState(sequenceProcessingSpec.getSequenceId(), modelState);
     }
 
     // Include sequence_id in server response
     auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
-    tensorProto.add_uint64_val(sequenceProcessingSpec.sequenceId);
+    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
 
     return StatusCode::OK;
 }
