@@ -197,7 +197,6 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 44);
     EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == false);
 
-
     const ovms::ModelConfig config2{
         dummyModelName,
         modelPath,     // base path
@@ -217,7 +216,6 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout() == 22);
     EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 11);
     EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == true);
-
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
