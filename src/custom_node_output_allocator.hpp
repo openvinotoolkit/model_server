@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <ie_iextension.h>
+#include <inference_engine.hpp>
 
 #include "node_library.hpp"
 #include "custom_node_interface.hpp"
@@ -42,7 +42,8 @@ public:
         return (void*)tensor.data;
     }
 
-    bool free(void* handle) noexcept override {
+    virtual bool free(void* handle) noexcept override {
+        //TODO
         return nodeLibrary.releaseBuffer(&tensor);
     }
 };
