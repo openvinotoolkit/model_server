@@ -30,7 +30,7 @@ const uint32_t SEQUENCE_END = 2;
 
 class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
-    SequenceManager sequenceManager;
+    std::unique_ptr<SequenceManager> sequenceManager;
     bool performLowLatencyTransformation;
 
 public:
@@ -38,10 +38,12 @@ public:
          * @brief A default constructor
          */
     StatefulModelInstance(const std::string& name, model_version_t version) :
-        ModelInstance(name, version) {}
+        ModelInstance(name, version) {
+        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+    }
 
-    SequenceManager& getSequenceManager() {
-        return sequenceManager;
+    const std::unique_ptr<SequenceManager>& getSequenceManager() const {
+        return this->sequenceManager;
     }
 
     const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
@@ -59,6 +61,9 @@ protected:
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs) override;
 
+    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
+
+private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec* processingSpec);
 };
 }  // namespace ovms

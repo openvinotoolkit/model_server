@@ -77,6 +77,13 @@ class PipelineDefinition;
 class ModelInstance {
 protected:
     /**
+         * @brief Performs model loading
+         *
+         * @return status
+         */
+    virtual Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
          * @brief Inference Engine core object
          */
     std::unique_ptr<InferenceEngine::Core> engine;
@@ -273,13 +280,6 @@ private:
          * @param config
          */
     void loadOutputTensors(const ModelConfig& config);
-
-    /**
-         * @brief Performs model loading
-         *
-         * @return status
-         */
-    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Configures batchsize
