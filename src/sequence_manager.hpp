@@ -20,8 +20,8 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "sequence_processing_spec.hpp"
 #include "sequence.hpp"
+#include "sequence_processing_spec.hpp"
 #include "status.hpp"
 
 namespace ovms {

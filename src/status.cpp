@@ -191,7 +191,7 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
 
-        // Sequence management
+    // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},

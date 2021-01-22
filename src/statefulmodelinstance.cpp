@@ -108,11 +108,11 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         return status;
 
     MutexPtr sequenceMutexPtr = nullptr;
-    std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager.getMutex());
-    status = sequenceManager.getSequenceMutexPtr(sequenceProcessingSpec, sequenceMutexPtr);
-    if (!status.ok()) 
+    std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager->getMutex());
+    status = sequenceManager->getSequenceMutexPtr(sequenceProcessingSpec, sequenceMutexPtr);
+    if (!status.ok())
         return status;
-    
+
     std::unique_lock<std::mutex> sequenceLock(*sequenceMutexPtr);
     sequenceManagerLock.unlock();
 
@@ -167,7 +167,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceLock.unlock();
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         sequenceManagerLock.lock();
-        status = sequenceManager.removeSequence(sequenceProcessingSpec.getSequenceId());
+        status = sequenceManager->removeSequence(sequenceProcessingSpec.getSequenceId());
         if (!status.ok())
             return status;
     }
