@@ -43,8 +43,8 @@ public:
         return (void*)tensor.data;
     }
 
-    virtual bool free(void* handle) noexcept override {
-        //TODO
+    bool free(void* handle) noexcept override {
+        // TODO
         return nodeLibrary.releaseBuffer(&tensor);
     }
 };
