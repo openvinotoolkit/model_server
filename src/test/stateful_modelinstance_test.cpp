@@ -195,7 +195,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
 
     EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout(), 33);
     EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber(), 44);
-    EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed(),false);
+    EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed(), false);
 
     const ovms::ModelConfig config2{
         dummyModelName,
