@@ -12,22 +12,23 @@ spec:
   grpc_port: 8080
   image_name: openvino/model_server:latest
   log_level: INFO
-  model_name: ""
-  model_path: ""
+  model_name: "resnet"
+  model_path: "gs://ovms-public-eu/resnet50-binary"
   models_host_path: ""
   models_volume_claim: ""
   nireq: ""
-  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}'
+  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"1"}'
   replicas: 1
   resources:
     limits:
-      cpu: 1
+      cpu: 4
       memory: 250Mi
   rest_port: 8081
   s3_compat_api_endpoint: ""
   security_context: {}
   service_type: LoadBalancer
   target_device: CPU
+  https_proxy: ""
 
   
   
