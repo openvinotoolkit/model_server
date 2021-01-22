@@ -193,9 +193,10 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     auto status = modelInstance.loadModel(config1);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_TRUE(modelInstance.getSequenceManager()->getTimeout() == 33);
-    EXPECT_TRUE(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 44);
-    EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == false);
+    EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout() == 33);
+    EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 44);
+    EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == false);
+
 
     const ovms::ModelConfig config2{
         dummyModelName,
@@ -213,9 +214,10 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     status = modelInstance.reloadModel(config2);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_TRUE(modelInstance.getSequenceManager()->getTimeout() == 22);
-    EXPECT_TRUE(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 11);
-    EXPECT_TRUE(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == true);
+    EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout() == 22);
+    EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber() == 11);
+    EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed() == true);
+
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
