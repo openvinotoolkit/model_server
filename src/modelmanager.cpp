@@ -488,7 +488,6 @@ void ModelManager::watcher(std::future<void> exit) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
-        loadingLock.~lock_guard();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
