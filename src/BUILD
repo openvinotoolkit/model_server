@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020,2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ cc_library(
     name = "ovms_lib",
     linkstatic = 1,
     srcs = [
+        "aliases.hpp",
+        "blobmap.hpp",
         "config.cpp",
         "config.hpp",
         "custom_node_interface.hpp",
@@ -30,11 +32,15 @@ cc_library(
         "deserialization.hpp",
         "dl_node.cpp",
         "dl_node.hpp",
+        "dlnodesession.cpp",
+        "dlnodesession.hpp",
         "entry_node.cpp",
         "entry_node.hpp",
         "executingstreamidguard.hpp",
         "exit_node.cpp",
         "exit_node.hpp",
+        "exitnodesession.cpp",
+        "exitnodesession.hpp",
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
@@ -60,12 +66,21 @@ cc_library(
         "modelinstance.hpp",
         "modelinstanceunloadguard.cpp",
         "modelinstanceunloadguard.hpp",
+        "modelversion.hpp",
         "modelversionstatus.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "node.cpp",
         "node.hpp",
+        "nodeinfo.hpp",
         "node_library.hpp",
+        "nodesession.cpp",
+        "nodesession.hpp",
+        "nodesessionresult.hpp",
+        "nodeinputhandler.cpp",
+        "nodeinputhandler.hpp",
+        "nodeoutputhandler.cpp",
+        "nodeoutputhandler.hpp",
         "nodesessionmetadata.hpp",
         "nodesessionmetadata.cpp",
         "nodestreamidguard.hpp",
@@ -79,6 +94,7 @@ cc_library(
         "pipelinedefinitionstatus.hpp",
         "pipelinedefinitionunloadguard.cpp",
         "pipelinedefinitionunloadguard.hpp",
+        "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
         "prediction_service.cpp",

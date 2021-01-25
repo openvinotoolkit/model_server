@@ -19,8 +19,12 @@
 #include <set>
 #include <thread>
 
+#include "dl_node.hpp"
+#include "entry_node.hpp"
+#include "exit_node.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"
+#include "pipeline.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 
@@ -438,7 +442,7 @@ public:
         return StatusCode::OK;
     }
 
-    Status validateConnection(const NodeInfo& dependencyNodeInfo, const InputPairs& mapping) {
+    Status validateConnection(const NodeInfo& dependencyNodeInfo, const Aliases& mapping) {
         // At this point dependency node can only be either DL model node or entry node.
         // Take care when adding new node types.
         std::unique_ptr<ModelInstanceUnloadGuard> dependencyModelUnloadGuard;

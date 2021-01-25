@@ -25,6 +25,7 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"
+#include "pipelinedefinition.hpp"
 
 namespace ovms {
 

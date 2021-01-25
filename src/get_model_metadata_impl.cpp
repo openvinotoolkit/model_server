@@ -17,6 +17,8 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "pipelinedefinition.hpp"
+
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
 

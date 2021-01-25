@@ -15,25 +15,15 @@
 //*****************************************************************************
 #pragma once
 
-#include <set>
-#include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <vector>
+
+#include "blobmap.hpp"
+#include "nodesessionmetadata.hpp"
 
 namespace ovms {
 
-using session_id_t = uint64_t;
-using session_key_t = std::string;
+using SessionResult = std::pair<NodeSessionMetadata, BlobMap>;
+using SessionResults = std::unordered_map<session_key_t, std::pair<NodeSessionMetadata, BlobMap>>;
 
-class NodeSessionMetadata {
-    std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
-
-public:
-    std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
-    std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
-    NodeSessionMetadata getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
-    session_id_t getSubsessionSize(const std::string& subsessionName) const;
-};
 }  // namespace ovms

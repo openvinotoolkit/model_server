@@ -1,0 +1,48 @@
+//*****************************************************************************
+// Copyright 2021 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "nodeinputhandler.hpp"
+
+#include "logging.hpp"
+
+namespace ovms {
+
+const BlobMap& NodeInputHandler::getInputBlobs() const {
+    return this->inputBlobs;
+}
+
+NodeInputHandler::NodeInputHandler(uint32_t inputsMissingCount) :
+    expectedDependencies(inputsMissingCount) {
+    SPDLOG_ERROR("Creating new inputHandler with expecting count: {}", inputsMissingCount);
+}
+
+void NodeInputHandler::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& ptr) {
+    if (inputBlobs.find(inputName) != inputBlobs.end()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set the same input: {} twice for the NodeInputHandler.", inputName);
+        throw std::logic_error("Tried to set the same input twice for the NodeInputHandler");
+    }
+    inputBlobs.emplace(inputName, ptr);  // TODO error check
+}
+void NodeInputHandler::clearInputs() {
+    inputBlobs.clear();
+}
+bool NodeInputHandler::isReady() {
+    return expectedDependencies == 0;
+}
+void NodeInputHandler::notifyFinishedDependency() {
+    SPDLOG_ERROR("DECREASE from:{} to {}", expectedDependencies, expectedDependencies - 1);
+    --expectedDependencies;
+}
+}  // namespace ovms

@@ -21,11 +21,15 @@
 #include <thread>
 #include <utility>
 
+#include <spdlog/spdlog.h>
+
 namespace ovms {
 
 template <typename T>
 class ThreadSafeQueue {
 public:
+    ThreadSafeQueue() {}
+    ~ThreadSafeQueue() {}
     void push(const T& element) {
         std::unique_lock<std::mutex> lock(mtx);
         queue.push(std::move(element));

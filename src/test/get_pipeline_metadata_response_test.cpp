@@ -23,6 +23,7 @@
 #include <rapidjson/document.h>
 
 #include "../get_model_metadata_impl.hpp"
+#include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
