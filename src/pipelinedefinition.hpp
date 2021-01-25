@@ -59,17 +59,23 @@ struct NodeInfo {
     std::string modelName;
     std::optional<model_version_t> modelVersion;
     std::unordered_map<std::string, std::string> outputNameAliases;
+    std::optional<size_t> demultiplyCount;
+    std::optional<std::string> gatherFromNode;
 
     NodeInfo(NodeKind kind,
         const std::string& nodeName,
         const std::string& modelName = "",
         std::optional<model_version_t> modelVersion = std::nullopt,
-        std::unordered_map<std::string, std::string> outputNameAliases = {}) :
+        std::unordered_map<std::string, std::string> outputNameAliases = {},
+        std::optional<size_t> demultiplyCount = std::nullopt,
+        std::optional<std::string> gatherFromNode = std::nullopt) :
         kind(kind),
         nodeName(nodeName),
         modelName(modelName),
         modelVersion(modelVersion),
-        outputNameAliases(outputNameAliases) {}
+        outputNameAliases(outputNameAliases),
+        demultiplyCount(demultiplyCount),
+        gatherFromNode(gatherFromNode) {}
 };
 
 class PipelineDefinition {

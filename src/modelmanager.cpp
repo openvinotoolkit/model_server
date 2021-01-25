@@ -219,8 +219,14 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::optional<model_version_t> modelVersion;
         if (nodeConfig.HasMember("version")) {
             modelVersion = nodeConfig["version"].GetUint64();
-        } else {
-            modelVersion = std::nullopt;
+        }
+        std::optional<size_t> demultiplyCount;
+        if (nodeConfig.HasMember("demultiply_count")) {
+            demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
+        }
+        std::optional<std::string> gatherFromNode;
+        if (nodeConfig.HasMember("gather_from_node")) {
+            gatherFromNode = nodeConfig["gather_from_node"].GetString();
         }
         NodeKind nodeKind;
         auto status = toNodeKind(nodeKindStr, nodeKind);
@@ -230,7 +236,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         }
         SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
-        info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias}));
+        info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias, demultiplyCount, gatherFromNode}));
         auto nodeInputItr = nodeConfig.FindMember("inputs");
         processNodeInputs(nodeName, nodeInputItr, connections);
     }
