@@ -87,7 +87,6 @@ Status SequenceManager::hasSequence(const uint64_t& sequenceId, MutexPtr& sequen
         return StatusCode::SEQUENCE_TERMINATED;
 
     sequenceMutexPtr = sequences.at(sequenceId).getMutexPtr();
-
     if (sequenceMutexPtr == nullptr)
         return StatusCode::INTERNAL_ERROR;
 
