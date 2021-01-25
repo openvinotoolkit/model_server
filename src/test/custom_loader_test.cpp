@@ -34,8 +34,8 @@
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../processing_spec.hpp"
 #include "../schema.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 

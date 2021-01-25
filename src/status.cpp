@@ -55,6 +55,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
     {StatusCode::SEQUENCE_ID_BAD_TYPE, "Could not find sequence id in expected tensor proto field uint64_val"},
     {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, "Could not find sequence control input in expected tensor proto field uint32_val"},
+    {StatusCode::SEQUENCE_TERMINATED, "Sequence last request is being processed and it's not available anymore"},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
@@ -189,6 +190,15 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
+
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::INVALID_ARGUMENT},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
