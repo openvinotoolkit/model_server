@@ -20,19 +20,15 @@
 
 using namespace ovms;
 
-class NodeLibraryCheckingReleaseCalled : public NodeLibrary {
-    static bool releaseBufferCalled;
+class NodeLibraryCheckingReleaseCalled {
 
 public:
+    static bool releaseBufferCalled;
     ~NodeLibraryCheckingReleaseCalled();
     static int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
     static int releaseBuffer(struct CustomNodeTensor* output);
     static int releaseTensors(struct CustomNodeTensor* outputs);
 };
-
-NodeLibraryCheckingReleaseCalled::~NodeLibraryCheckingReleaseCalled() {
-    EXPECT_TRUE(releaseBufferCalled);
-}
 
 int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 1;
@@ -49,61 +45,34 @@ int NodeLibraryCheckingReleaseCalled::releaseTensors(struct CustomNodeTensor* ou
 
 bool NodeLibraryCheckingReleaseCalled::releaseBufferCalled = false;
 
-class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAllocator {
-    bool freeCalled = false;
+TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
+    const unsigned int elementsCount = 10;
 
-public:
-    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary) :
-        CustomNodeOutputAllocator(tensor, nodeLibrary) {
-    }
+    const InferenceEngine::TensorDesc desc{
+        InferenceEngine::Precision::FP32,
+        {elementsCount},
+        InferenceEngine::Layout::C};
 
-    ~CustomNodeOutputAllocatorCheckingFreeCalled() {
-        EXPECT_TRUE(freeCalled);
-    }
+    std::vector<float> data(elementsCount);
 
-    bool free(void* handle) noexcept override {
-        bool tmp = CustomNodeOutputAllocator::free(handle);
-        freeCalled = true;
-        return tmp;
-    }
-};
+    CustomNodeTensor tensor{
+        "name",
+        reinterpret_cast<unsigned char*>(data.data()),
+        sizeof(float) * elementsCount,
+        (int*)&elementsCount,
+        1,
+        0};
 
-TEST(CustomNodeOutputAllocator, RemoveBlob) {
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::C};
-    std::vector<int> dims{10};
-    const InferenceEngine::TensorDesc desc{precision, {10}, layout};
-    std::vector<float> data(dims[0]);
-    CustomNodeTensor tensor{"name", reinterpret_cast<unsigned char*>(data.data()), static_cast<int>(dims[0]), &dims[0], 1, static_cast<int>(precision.size())};
-    NodeLibraryCheckingReleaseCalled library{NodeLibraryCheckingReleaseCalled::execute, NodeLibraryCheckingReleaseCalled::releaseBuffer, NodeLibraryCheckingReleaseCalled::releaseTensors};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library);
+    NodeLibrary library{
+        NodeLibraryCheckingReleaseCalled::execute,
+        NodeLibraryCheckingReleaseCalled::releaseBuffer,
+        NodeLibraryCheckingReleaseCalled::releaseTensors};
+
+    auto customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
     blob->allocate();
-    blob->deallocate();
-}
-
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
-    return 1;
-}
-
-int releaseBuffer(struct CustomNodeTensor* output) {
-    return 2;
-}
-
-int releaseTensors(struct CustomNodeTensor* outputs) {
-    return 3;
-}
-
-TEST(CustomNodeOutputAllocator, CheckIfBlobReturnsCorrectPointer) {
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::C};
-    std::vector<int> dims{10};
-    const InferenceEngine::TensorDesc desc{precision, {10}, layout};
-    std::vector<float> data(dims[0]);
-    CustomNodeTensor tensor{"name", reinterpret_cast<unsigned char*>(data.data()), static_cast<int>(dims[0]), &dims[0], 1, static_cast<int>(precision.size())};
-    NodeLibrary library{execute, releaseBuffer, releaseTensors};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
-    blob->allocate();
+    EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     EXPECT_EQ(static_cast<unsigned char*>(blob->buffer()), tensor.data);
+    blob->deallocate();
+    EXPECT_TRUE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
 }
