@@ -39,6 +39,7 @@ pipeline {
                     ]
                 }
             }
+/*
         stage('functional tests part1') {
             parallel {
                 stage('functional tests bin') {
@@ -67,6 +68,7 @@ pipeline {
                 }
             }
         }
+*/
         stage('functional tests ams') {
             steps {
                 sh './tests/scripts/functional-tests-ams.sh'
