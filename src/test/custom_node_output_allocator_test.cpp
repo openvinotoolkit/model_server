@@ -44,6 +44,25 @@ int NodeLibraryCheckingReleaseCalled::releaseTensors(struct CustomNodeTensor* ou
 
 bool NodeLibraryCheckingReleaseCalled::releaseBufferCalled = false;
 
+class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAllocator {
+public:
+    bool freeCalled = false;
+
+    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary) :
+        CustomNodeOutputAllocator(tensor, nodeLibrary) {
+    }
+
+    ~CustomNodeOutputAllocatorCheckingFreeCalled() {
+        EXPECT_TRUE(freeCalled);
+    }
+
+    bool free(void* handle) noexcept override {
+        bool tmp = CustomNodeOutputAllocator::free(handle);
+        freeCalled = true;
+        return tmp;
+    }
+};
+
 TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
     const unsigned int elementsCount = 10;
 
@@ -67,11 +86,13 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
         NodeLibraryCheckingReleaseCalled::releaseBuffer,
         NodeLibraryCheckingReleaseCalled::releaseTensors};
 
-    auto customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
+    auto customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
     blob->allocate();
+    EXPECT_FALSE(customNodeOutputAllocator->freeCalled);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     EXPECT_EQ(static_cast<unsigned char*>(blob->buffer()), tensor.data);
     blob->deallocate();
+    EXPECT_TRUE(customNodeOutputAllocator->freeCalled);
     EXPECT_TRUE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
 }
