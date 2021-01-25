@@ -32,6 +32,12 @@
 
 using namespace InferenceEngine;
 
+const uint32_t NO_CONTROL_INPUT = 0;
+const uint32_t SEQUENCE_START = 1;
+const uint32_t SEQUENCE_END = 2;
+const std::string SEQUENCE_ID_INPUT = "sequence_id";
+const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
+
 class MockIVariableState : public IVariableState {
 public:
     MOCK_METHOD(StatusCode, GetName, (char* name, size_t len, ResponseDesc* resp), (const, noexcept, override));
@@ -75,6 +81,30 @@ public:
         return StatusCode::OK;
     }
 };
+
+static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequence_id) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
+    input.add_uint64_val(sequence_id);
+}
+
+static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequence_control) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
+    input.add_uint32_val(sequence_control);
+}
+
+static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& response, uint64_t seqId) {
+    // Check response
+    auto it = response.mutable_outputs()->find("sequence_id");
+    if (it == response.mutable_outputs()->end())
+        return false;
+    auto& output = (*response.mutable_outputs())["sequence_id"];
+    if (output.uint64_val_size() != 1)
+        return false;
+    if (output.uint64_val(0) != seqId)
+            return false;
+
+    return true;
+}
 
 static void addState(ovms::model_memory_state_t& states, std::string name, std::vector<size_t>& shape, std::vector<float>& values) {
     const Precision precision{Precision::FP32};

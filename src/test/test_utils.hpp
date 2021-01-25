@@ -70,12 +70,6 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     sum_model_location,  // local path
 };
 
-const uint32_t NO_CONTROL_INPUT = 0;
-const uint32_t SEQUENCE_START = 1;
-const uint32_t SEQUENCE_END = 2;
-const std::string SEQUENCE_ID_INPUT = "sequence_id";
-const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
-
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
@@ -111,16 +105,6 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
         *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(dtype), '1');
     }
     return request;
-}
-
-static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequence_id) {
-    auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
-    input.add_uint64_val(sequence_id);
-}
-
-static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequence_control) {
-    auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
-    input.add_uint32_val(sequence_control);
 }
 
 void checkDummyResponse(const std::string outputName,
