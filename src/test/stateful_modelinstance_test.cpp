@@ -174,7 +174,7 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
 }
 
-TEST_F(StatefulModelInstanceTempDir, statefulInferIdNotProvided) {
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     createConfigFileWithContent(ovmsConfig, configFilePath);
@@ -189,7 +189,57 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferIdNotProvided) {
     setRequestSequenceControl(&request, SEQUENCE_END);
 
     // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_MISSING);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_MISSING);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceIdNotProvided) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, SEQUENCE_END);
+
+    // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceIdNotProvided2) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, 99);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferIdAlreadyExists) {
@@ -228,8 +278,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
 
     // Check response
-    auto it = response.mutable_outputs()->find("sequence_id");
-    EXPECT_TRUE(CheckSequenceIdResponse(response,seqId))
+    EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
@@ -484,7 +533,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
-    EXPECT_TRUE(CheckSequenceIdResponse(response, seqId))
+    EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
@@ -538,7 +587,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         std::vector<float> sequenceBlobIrData;
         sequenceBlobIrData.assign((float*)chengedBlob->buffer(), ((float*)chengedBlob->buffer()) + elementsCount);
         EXPECT_EQ(sequenceBlobIrData, defaultState);
-        EXPECT_TRUE(CheckSequenceIdResponse(response, seqId))
+        EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
     }
 }
 

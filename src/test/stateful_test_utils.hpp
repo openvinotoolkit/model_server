@@ -26,6 +26,10 @@
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 #include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -82,6 +86,8 @@ public:
     }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequence_id) {
     auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
     input.add_uint64_val(sequence_id);
@@ -115,6 +121,8 @@ static void addState(ovms::model_memory_state_t& states, std::string name, std::
     std::shared_ptr<IVariableState> ivarPtr = std::make_shared<MockIVariableStateWithData>(name, stateBlob);
     states.push_back(VariableState(ivarPtr));
 }
+
+#pragma GCC diagnostic pop
 
 class MockIInferRequestStateful : public MockIInferRequest {
 public:
