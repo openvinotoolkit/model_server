@@ -174,6 +174,47 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
 }
 
+TEST_F(StatefulModelInstanceTempDir, statefulInfer) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+    uint64_t seqId = 1;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, SEQUENCE_START);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
+
+    // Check response
+    auto it = response.mutable_outputs()->find("sequence_id");
+    EXPECT_FALSE(it == response.mutable_outputs()->end());
+    auto& output = (*response.mutable_outputs())["sequence_id"];
+    EXPECT_EQ(output.uint64_val_size(), 1);
+    EXPECT_EQ(output.uint64_val(0), seqId);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+
+    tensorflow::serving::PredictResponse response2;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response2, unload_guard), ovms::StatusCode::OK);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, SEQUENCE_END);
+
+    tensorflow::serving::PredictResponse response3;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard), ovms::StatusCode::OK);
+}
+
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
     ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion);
 
