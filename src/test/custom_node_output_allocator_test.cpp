@@ -21,7 +21,6 @@
 using namespace ovms;
 
 class NodeLibraryCheckingReleaseCalled {
-
 public:
     static bool releaseBufferCalled;
     ~NodeLibraryCheckingReleaseCalled();
