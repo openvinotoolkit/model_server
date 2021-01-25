@@ -107,7 +107,7 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
     if (output.uint64_val_size() != 1)
         return false;
     if (output.uint64_val(0) != seqId)
-            return false;
+        return false;
 
     return true;
 }
