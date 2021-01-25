@@ -1,4 +1,4 @@
-FROM openvino/model_server:2021.1-gpu
+FROM openvino/model_server:2021.2.1-gpu
 USER root
 ARG https_proxy
 

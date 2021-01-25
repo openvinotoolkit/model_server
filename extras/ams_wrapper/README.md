@@ -238,7 +238,7 @@ for [OVMS](../../docs/performance_tuning.md) and [OpenVINO plugins](https://docs
 ## Building docker image
 
 It is also possible to build the image on centos base using the command below. 
-`make docker_build_ams` - centos base image with OVMS v2021.1
+`make docker_build_ams` - centos base image with OVMS v2021.2
 
 
 ## Testing
