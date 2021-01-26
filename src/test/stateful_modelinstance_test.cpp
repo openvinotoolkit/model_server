@@ -167,20 +167,6 @@ public:
     }
 };
 
-class MockSequenceManager : class SequenceManager {
-public:
-    uint64_t getSequencesCount()
-    {
-        return sequences.
-    }
-}
-
-uint64_t GetModelInstanceSequencesCount(const ovms::StatefulModelInstance& modelInstance)
-{
-    auto sequenceManager = modelInstanc.getSequenceManager();
-    return std::static_pointer_cast<MockSequenceManager>(sequenceManager).size();
-}
-
 void StartStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
@@ -269,8 +255,9 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleInferences) {
     uint64_t seqId = 1;
 
     RunStatefulPredicts(modelInstance, modelInput, 100, seqId, nullptr, nullptr);
+    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
-    ASSERT_EQ(GetModelInstanceSequencesCount(std::static_pointer_cast<StatefulModelInstance>(modelInstance)), 0);
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
@@ -309,15 +296,19 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
                 }));
     }
 
-    ASSERT_EQ(GetModelInstanceSequencesCount(std::static_pointer_cast<StatefulModelInstance>(modelInstance)), startingSequenceId);
-
     // sleep to allow all threads to initialize
     std::this_thread::sleep_for(std::chrono::seconds(3));
+    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
+
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), startingSequenceId);
+
     for (auto& promise : releaseWaitAfterSequenceStarted1) {
         promise.set_value();
     }
 
-    ASSERT_EQ(GetModelInstanceSequencesCount(std::static_pointer_cast<StatefulModelInstance>(modelInstance)), startingSequenceId/2);
+    // sleep to allow half threads to work
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), startingSequenceId / 2);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished1) {
         promise.set_value();
@@ -327,7 +318,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         thread.join();
     }
 
-    ASSERT_EQ(GetModelInstanceSequencesCount(std::static_pointer_cast<StatefulModelInstance>(modelInstance)), 0);
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {

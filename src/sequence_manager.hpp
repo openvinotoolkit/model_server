@@ -45,6 +45,10 @@ public:
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber) {}
 
+    uint64_t getSequencesCount() {
+        return sequences.size();
+    }
+
     const uint32_t getTimeout() const;
 
     void setTimeout(uint32_t timeout);
