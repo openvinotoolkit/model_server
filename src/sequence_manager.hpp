@@ -32,10 +32,12 @@ const uint32_t SEQUENCE_END = 2;
 
 class SequenceManager {
 private:
-    std::unordered_map<uint64_t, Sequence> sequences;
     uint32_t timeout;
     uint32_t maxSequenceNumber;
     std::mutex mutex;
+
+protected:
+    std::unordered_map<uint64_t, Sequence> sequences;
 
 public:
     SequenceManager() = default;
