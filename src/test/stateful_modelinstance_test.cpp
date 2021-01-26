@@ -34,7 +34,7 @@ using testing::Return;
 
 namespace {
 
-    static const char* modelStatefulConfig = R"(
+static const char* modelStatefulConfig = R"(
 {
     "model_config_list": [
         {
@@ -54,133 +54,130 @@ namespace {
     ]
 })";
 
-    constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
-    class StatefulModelInstanceTempDir : public TestWithTempDir {
-    public:
-        std::string configFilePath;
-        std::string ovmsConfig;
-        std::string modelPath;
-        std::string dummyModelName;
-        ovms::model_version_t modelVersion;
-        inputs_info_t modelInput;
-        std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
-        std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
+class StatefulModelInstanceTempDir : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+    ovms::model_version_t modelVersion;
+    inputs_info_t modelInput;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
 
-        void SetUpConfig(const std::string& configContent) {
-            ovmsConfig = configContent;
-            const std::string modelPathToReplace{ "/ovms/src/test/dummy" };
-            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
-            configFilePath = directoryPath + "/ovms_config.json";
-            dummyModelName = "dummy";
-        }
-        void SetUp() override {
-            TestWithTempDir::SetUp();
-            modelVersion = 1;
-            // Prepare manager
-            modelPath = directoryPath + "/dummy/";
-            SetUpConfig(modelStatefulConfig);
-            std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-            modelInput = { {DUMMY_MODEL_INPUT_NAME,
-                std::tuple<ovms::shape_t, tensorflow::DataType>{ {1, 10}, tensorflow::DataType::DT_FLOAT}} };
-        }
-
-        void TearDown() override {
-            TestWithTempDir::TearDown();
-            modelInput.clear();
-        }
-    };
-
-    class StatefulModelInstanceInputValidation : public ::testing::Test {
-    public:
-        inputs_info_t modelInput;
-        std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
-        std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
-
-        void SetUp() override {
-            modelInput = {};
-        }
-
-        void TearDown() override {
-            modelInput.clear();
-        }
-    };
-
-    class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
-    public:
-        MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-            StatefulModelInstance(name, version) {}
-
-        const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
-            return validate(request, processingSpec);
-        }
-    };
-
-    class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
-    public:
-        MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-            StatefulModelInstance(name, version) {}
-
-        void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-            getSequenceManager()->addSequence(sequenceId);
-            getSequenceManager()->updateSequenceMemoryState(sequenceId, state);
-        }
-    };
-
-    class StatefulModelInstanceTest : public ::testing::Test {
-    public:
-        std::shared_ptr<MockedStatefulModelInstance> modelInstance;
-        std::vector<size_t> shape;
-        Blob::Ptr defaultBlob;
-        Blob::Ptr currentBlob;
-        Blob::Ptr newBlob;
-
-        std::vector<float> defaultState;
-        std::vector<float> currentState;
-        std::vector<float> newState;
-
-        size_t elementsCount;
-
-        void SetUp() override {
-            modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1);
-            // Prepare states blob desc
-            shape = std::vector<size_t>{ 1, 10 };
-            elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-            const Precision precision{ Precision::FP32 };
-            const Layout layout{ Layout::NC };
-            const TensorDesc desc{ precision, shape, layout };
-
-            // Prepare default state blob
-            defaultState = std::vector<float>(elementsCount);
-            std::iota(defaultState.begin(), defaultState.end(), 0);
-            defaultBlob = make_shared_blob<float>(desc, defaultState.data());
-
-            // Prepare new state blob
-            currentState = std::vector<float>(elementsCount);
-            std::iota(currentState.begin(), currentState.end(), 10);
-            currentBlob = make_shared_blob<float>(desc, currentState.data());
-
-            newState = std::vector<float>(elementsCount);
-            std::iota(newState.begin(), newState.end(), 10);
-            newBlob = make_shared_blob<float>(desc, newState.data());
-        }
-    };
-
-void RunStatefulPredicts(std::shared_ptr<ModelInstance>& modelinstance, int numberOfNoControlRequests, uint64_t seqID) {
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-
-    std::vector < tensorflow::serving::PredictRequest> requests;
-    std::vector<tensorflow::serving::PredictResponse> responses;
-    for (int i = 0, i < numberOfNoControlRequests + 2, i++)
-    {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-        requests.push_back(request)
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        configFilePath = directoryPath + "/ovms_config.json";
+        dummyModelName = "dummy";
+    }
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelVersion = 1;
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        SetUpConfig(modelStatefulConfig);
+        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        modelInput = {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}};
     }
 
+    void TearDown() override {
+        TestWithTempDir::TearDown();
+        modelInput.clear();
+    }
+};
+
+class StatefulModelInstanceInputValidation : public ::testing::Test {
+public:
+    inputs_info_t modelInput;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+
+    void SetUp() override {
+        modelInput = {};
+    }
+
+    void TearDown() override {
+        modelInput.clear();
+    }
+};
+
+class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
+public:
+    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
+        StatefulModelInstance(name, version) {}
+
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
+        return validate(request, processingSpec);
+    }
+};
+
+class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
+public:
+    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
+        StatefulModelInstance(name, version) {}
+
+    void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
+        getSequenceManager()->addSequence(sequenceId);
+        getSequenceManager()->updateSequenceMemoryState(sequenceId, state);
+    }
+};
+
+class StatefulModelInstanceTest : public ::testing::Test {
+public:
+    std::shared_ptr<MockedStatefulModelInstance> modelInstance;
+    std::vector<size_t> shape;
+    Blob::Ptr defaultBlob;
+    Blob::Ptr currentBlob;
+    Blob::Ptr newBlob;
+
+    std::vector<float> defaultState;
+    std::vector<float> currentState;
+    std::vector<float> newState;
+
+    size_t elementsCount;
+
+    void SetUp() override {
+        modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1);
+        // Prepare states blob desc
+        shape = std::vector<size_t>{1, 10};
+        elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+        const Precision precision{Precision::FP32};
+        const Layout layout{Layout::NC};
+        const TensorDesc desc{precision, shape, layout};
+
+        // Prepare default state blob
+        defaultState = std::vector<float>(elementsCount);
+        std::iota(defaultState.begin(), defaultState.end(), 0);
+        defaultBlob = make_shared_blob<float>(desc, defaultState.data());
+
+        // Prepare new state blob
+        currentState = std::vector<float>(elementsCount);
+        std::iota(currentState.begin(), currentState.end(), 10);
+        currentBlob = make_shared_blob<float>(desc, currentState.data());
+
+        newState = std::vector<float>(elementsCount);
+        std::iota(newState.begin(), newState.end(), 10);
+        newBlob = make_shared_blob<float>(desc, newState.data());
+    }
+};
+
+void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+
+    std::vector<tensorflow::serving::PredictRequest> requests;
     std::vector<tensorflow::serving::PredictResponse> responses;
-    for (int i = 0, i < numberOfNoControlRequests + 2, i++)
-    {
+    for (int i = 0; i < numberOfNoControlRequests + 2; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        requests.push_back(request);
+    }
+
+    for (int i = 0; i < numberOfNoControlRequests + 2; i++) {
         tensorflow::serving::PredictResponse response;
-        responses.push_back(response)
+        responses.push_back(response);
     }
 
     tensorflow::serving::PredictRequest request = requests[0];
@@ -195,7 +192,6 @@ void RunStatefulPredicts(std::shared_ptr<ModelInstance>& modelinstance, int numb
 
     for (int i = 1; i < numberOfNoControlRequests; i++) {
         tensorflow::serving::PredictRequest request = requests[i];
-        request = preparePredictRequest(modelInput);
         setRequestSequenceId(&request, seqId);
         setRequestSequenceControl(&request, NO_CONTROL_INPUT);
 
@@ -206,12 +202,11 @@ void RunStatefulPredicts(std::shared_ptr<ModelInstance>& modelinstance, int numb
         EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
     }
 
-    tensorflow::serving::PredictRequest request = requests[numberOfNoControlRequests + 1];
-    request = preparePredictRequest(modelInput);
+    request = requests[numberOfNoControlRequests + 1];
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
-    tensorflow::serving::PredictResponse response = responses[numberOfNoControlRequests + 1];
+    response = responses[numberOfNoControlRequests + 1];
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
     // Check response
@@ -237,7 +232,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleInferences) {
 
     uint64_t seqId = 1;
 
-    RunStatefulPredicts(modelinstance, 100, seqID);
+    RunStatefulPredicts(modelInstance, modelInput, 100, seqId);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
