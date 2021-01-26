@@ -16,6 +16,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <thread>
 #include <typeinfo>
 #include <utility>
 
@@ -165,31 +167,52 @@ public:
     }
 };
 
-void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId) {
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-
-    std::vector<tensorflow::serving::PredictRequest> requests;
-    std::vector<tensorflow::serving::PredictResponse> responses;
-    for (int i = 0; i < numberOfNoControlRequests + 2; i++) {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-        requests.push_back(request);
-    }
-
-    for (int i = 0; i < numberOfNoControlRequests + 2; i++) {
-        tensorflow::serving::PredictResponse response;
-        responses.push_back(response);
-    }
-
-    tensorflow::serving::PredictRequest request = requests[0];
+void StartStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId) {
+    tensorflow::serving::PredictRequest request;
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_START);
 
-    tensorflow::serving::PredictResponse response = responses[0];
+    tensorflow::serving::PredictResponse response;
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
     // Check response
     EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
+}
 
+void EndStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId) {
+    tensorflow::serving::PredictRequest request;
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, SEQUENCE_END);
+
+    tensorflow::serving::PredictResponse response;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
+    // Check response
+    EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
+}
+
+void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
+    std::unique_ptr<std::future<void>> waitAfterSequenceStarted,
+    std::unique_ptr<std::future<void>> waitBeforeSequenceFinished) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+
+    std::vector<tensorflow::serving::PredictRequest> requests;
+    std::vector<tensorflow::serving::PredictResponse> responses;
+    for (int i = 0; i < numberOfNoControlRequests; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        requests.push_back(request);
+    }
+
+    for (int i = 0; i < numberOfNoControlRequests; i++) {
+        tensorflow::serving::PredictResponse response;
+        responses.push_back(response);
+    }
+
+    StartStatefulPredict(modelInstance, modelInput, seqId);
+    if (waitAfterSequenceStarted) {
+        std::cout << "Waiting after StartStatefulPredict" << std::endl;
+        waitAfterSequenceStarted->get();
+    }
     for (int i = 1; i < numberOfNoControlRequests; i++) {
         tensorflow::serving::PredictRequest request = requests[i];
         setRequestSequenceId(&request, seqId);
@@ -202,15 +225,12 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
         EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
     }
 
-    request = requests[numberOfNoControlRequests + 1];
-    setRequestSequenceId(&request, seqId);
-    setRequestSequenceControl(&request, SEQUENCE_END);
+    if (waitBeforeSequenceFinished) {
+        std::cout << "Waiting before EndStatefulPredict" << std::endl;
+        waitBeforeSequenceFinished->get();
+    }
 
-    response = responses[numberOfNoControlRequests + 1];
-    // Do the inference
-    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
-    // Check response
-    EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
+    EndStatefulPredict(modelInstance, modelInput, seqId);
 }
 
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
@@ -232,7 +252,53 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleInferences) {
 
     uint64_t seqId = 1;
 
-    RunStatefulPredicts(modelInstance, modelInput, 100, seqId);
+    RunStatefulPredicts(modelInstance, modelInput, 100, seqId, nullptr, nullptr);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+
+    uint64_t startingSequenceId = 1;
+    uint16_t numberOFThreads = 100;
+
+    std::vector<std::promise<void>> releaseWaitAfterSequenceStarted1(numberOFThreads), releaseWaitBeforeSequenceFinished1(numberOFThreads);
+    std::vector<std::thread> inferThreads;
+
+    for (auto i = 0u; i < numberOfThreads/2; ++i) {
+        startingSequenceId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, &releaseWaitBeforeGetModelInstanceBs1, i]() {
+            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted1[i].get_future()))),
+                nullptr);
+        });
+        inferThreads.emplace_back(
+            std::thread(
+                [this, &releaseWaitBeforePerformInferenceBs2, i]() {
+            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId++,
+                nullptr,
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished1[i].get_future())));
+        });
+
+    // sleep to allow all threads to initialize
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    for (auto& promise : releaseWaitAfterSequenceStarted1) {
+        promise.set_value();
+    }
+
+    for (auto& promise : releaseWaitBeforeSequenceFinished1) {
+        promise.set_value();
+    }
+
+    for (auto& thread : inferThreads) {
+        thread.join();
+    }
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
