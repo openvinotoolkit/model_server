@@ -168,10 +168,11 @@ public:
 };
 
 void StartStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId) {
-    tensorflow::serving::PredictRequest request;
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_START);
 
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     tensorflow::serving::PredictResponse response;
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
@@ -180,10 +181,11 @@ void StartStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstan
 }
 
 void EndStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId) {
-    tensorflow::serving::PredictRequest request;
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, SEQUENCE_END);
 
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     tensorflow::serving::PredictResponse response;
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
@@ -264,27 +266,32 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
     uint64_t startingSequenceId = 1;
-    uint16_t numberOFThreads = 100;
+    uint16_t numberOfThreads = 100;
 
-    std::vector<std::promise<void>> releaseWaitAfterSequenceStarted1(numberOFThreads), releaseWaitBeforeSequenceFinished1(numberOFThreads);
+    std::vector<std::promise<void>> releaseWaitAfterSequenceStarted1(numberOfThreads), releaseWaitBeforeSequenceFinished1(numberOfThreads);
     std::vector<std::thread> inferThreads;
 
-    for (auto i = 0u; i < numberOfThreads/2; ++i) {
+    for (auto i = 0u; i < numberOfThreads / 2; ++i) {
         startingSequenceId++;
+
         inferThreads.emplace_back(
             std::thread(
-                [this, &releaseWaitBeforeGetModelInstanceBs1, i]() {
-            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted1[i].get_future()))),
-                nullptr);
-        });
+                [this, &releaseWaitAfterSequenceStarted1, i, startingSequenceId, modelInstance]() {
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted1[i].get_future())),
+                        nullptr);
+                }));
+
+        startingSequenceId++;
+
         inferThreads.emplace_back(
             std::thread(
-                [this, &releaseWaitBeforePerformInferenceBs2, i]() {
-            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId++,
-                nullptr,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished1[i].get_future())));
-        });
+                [this, &releaseWaitBeforeSequenceFinished1, i, startingSequenceId, modelInstance]() {
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        nullptr,
+                        std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished1[i].get_future())));
+                }));
+    }
 
     // sleep to allow all threads to initialize
     std::this_thread::sleep_for(std::chrono::seconds(3));
