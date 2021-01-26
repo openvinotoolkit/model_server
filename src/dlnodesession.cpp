@@ -29,14 +29,14 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
-    NodeSession(metadata, nodeName, inputsCount),
+DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    NodeSession(metadata, nodeName, inputsCount, shardsCount),
     modelManager(manager),
     modelName(modelName),
     modelVersion(modelVersion) {}
 
-DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
-    NodeSession(std::move(metadata), nodeName, inputsCount),
+DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    NodeSession(std::move(metadata), nodeName, inputsCount, shardsCount),
     modelManager(manager),
     modelName(modelName),
     modelVersion(modelVersion) {}
@@ -60,6 +60,7 @@ InferenceEngine::InferRequest& DLNodeSession::getInferRequest(const uint microse
     }
     return inferRequestsQueue.getInferRequest(streamIdOpt.value());
 }
+
 Status DLNodeSession::requestExecuteRequiredResources() {
     Status status = modelManager.getModelInstance(
         modelName,
@@ -219,6 +220,7 @@ Status DLNodeSession::getRealInputName(const std::string& alias, std::string* re
     *result = this->model->getInputsInfo().at(alias)->getName();
     return StatusCode::OK;
 }
+
 Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& inferRequest) {
     Status status = StatusCode::OK;
     try {
