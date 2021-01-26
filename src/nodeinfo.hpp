@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
+#include "node_library.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -38,14 +39,17 @@ class Pipeline;
 
 using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, Aliases>>;
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+using parameters_t = std::unordered_map<std::string, std::string>;
 
 enum class NodeKind {
     ENTRY,
     DL,
+    CUSTOM,
     EXIT
 };
 
 const std::string DL_NODE_CONFIG_TYPE = "DL model";
+const std::string CUSTOM_NODE_CONFIG_TYPE = "custom";
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind);
 
@@ -57,6 +61,8 @@ struct NodeInfo {
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
     std::optional<std::string> gatherFromNode;
+    NodeLibrary nodeLibrary;
+    parameters_t parameters;
 
     NodeInfo(NodeKind kind,
         const std::string& nodeName,
@@ -64,13 +70,17 @@ struct NodeInfo {
         std::optional<model_version_t> modelVersion = std::nullopt,
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
-        std::optional<std::string> gatherFromNode = std::nullopt) :
+        std::optional<std::string> gatherFromNode = std::nullopt,
+        const NodeLibrary& nodeLibrary = {},
+        const parameters_t& parameters = {}) :
         kind(kind),
         nodeName(nodeName),
         modelName(modelName),
         modelVersion(modelVersion),
         outputNameAliases(outputNameAliases),
         demultiplyCount(demultiplyCount),
-        gatherFromNode(gatherFromNode) {}
+        gatherFromNode(gatherFromNode),
+        nodeLibrary(nodeLibrary),
+        parameters(parameters) {}
 };
 }  // namespace ovms

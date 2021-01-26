@@ -28,7 +28,7 @@ class CustomNodeLibraryManager {
 
 public:
     Status loadLibrary(const std::string& name, const std::string& basePath);
-    NodeLibrary getLibrary(const std::string& name) const;
+    Status getLibrary(const std::string& name, NodeLibrary& library) const;
 };
 
 }  // namespace ovms

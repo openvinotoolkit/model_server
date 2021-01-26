@@ -41,6 +41,7 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "node_library.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
@@ -209,7 +210,26 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         nodeName = nodeConfig["name"].GetString();
 
         std::string modelName;
-        modelName = nodeConfig["model_name"].GetString();
+        if (nodeConfig.HasMember("model_name")) {
+            modelName = nodeConfig["model_name"].GetString();
+        }
+
+        NodeLibrary nodeLibrary;
+        if (nodeConfig.HasMember("library_name")) {
+            std::string libraryName = nodeConfig["library_name"].GetString();
+            auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, nodeLibrary);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
+                return;
+            }
+        }
+
+        parameters_t parameters;
+        if (nodeConfig.HasMember("params")) {
+            for (const auto& param : nodeConfig["params"].GetObject()) {
+                parameters.emplace(param.name.GetString(), param.value.GetString());
+            }
+        }
 
         const std::string nodeKindStr = nodeConfig["type"].GetString();
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
@@ -239,7 +259,16 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         }
         SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
-        info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias, demultiplyCount, gatherFromNode}));
+        info.emplace_back(std::move(NodeInfo{
+            nodeKind,
+            nodeName,
+            modelName,
+            modelVersion,
+            nodeOutputNameAlias,
+            demultiplyCount,
+            gatherFromNode,
+            nodeLibrary,
+            parameters}));
         auto nodeInputItr = nodeConfig.FindMember("inputs");
         processNodeInputs(nodeName, nodeInputItr, connections);
     }

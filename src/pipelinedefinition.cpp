@@ -35,6 +35,10 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
         nodeKind = NodeKind::DL;
         return StatusCode::OK;
     }
+    if (str == CUSTOM_NODE_CONFIG_TYPE) {
+        nodeKind = NodeKind::CUSTOM;
+        return StatusCode::OK;
+    }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unsupported node type: {}", str);
     return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
 }
@@ -170,6 +174,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             break;
         }
         default:
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Requested pipeline {} contains unknown node kind", getName());
             throw std::invalid_argument("unknown node kind");
         }
     }
