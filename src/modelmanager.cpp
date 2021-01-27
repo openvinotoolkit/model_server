@@ -192,6 +192,29 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     }
 }
 
+Status processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
+    info.modelName = nodeConfig["model_name"].GetString();
+    if (nodeConfig.HasMember("version")) {
+        info.modelVersion = nodeConfig["version"].GetUint64();
+    }
+    return StatusCode::OK;
+}
+
+Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
+    std::string libraryName = nodeConfig["library_name"].GetString();
+    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
+        return status;
+    }
+    if (nodeConfig.HasMember("params")) {
+        for (const auto& param : nodeConfig["params"].GetObject()) {
+            info.parameters.emplace(param.name.GetString(), param.value.GetString());
+        }
+    }
+    return StatusCode::OK;
+}
+
 void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
@@ -209,40 +232,38 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
 
-        std::string modelName;
-        if (nodeConfig.HasMember("model_name")) {
-            modelName = nodeConfig["model_name"].GetString();
+        const std::string nodeKindStr = nodeConfig["type"].GetString();
+        NodeKind nodeKind;
+        auto status = toNodeKind(nodeKindStr, nodeKind);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {}", nodeKindStr);
+            return;
         }
 
-        NodeLibrary nodeLibrary;
-        if (nodeConfig.HasMember("library_name")) {
-            std::string libraryName = nodeConfig["library_name"].GetString();
-            auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, nodeLibrary);
+        DLNodeInfo dlNodeInfo;
+        CustomNodeInfo customNodeInfo;
+        if (nodeKind == NodeKind::DL) {
+            status = processDLNodeConfig(nodeConfig, dlNodeInfo);
             if (!status.ok()) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
                 return;
             }
-        }
-
-        parameters_t parameters;
-        if (nodeConfig.HasMember("params")) {
-            for (const auto& param : nodeConfig["params"].GetObject()) {
-                parameters.emplace(param.name.GetString(), param.value.GetString());
+        } else if (nodeKind == NodeKind::CUSTOM) {
+            status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
+            if (!status.ok()) {
+                return;
             }
+        } else {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Pipeline {} contains unknown node kind", pipelineName);
+            throw std::invalid_argument("unknown node kind");
         }
 
-        const std::string nodeKindStr = nodeConfig["type"].GetString();
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
             return;
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
-        processNodeOutputs(nodeOutputsItr, nodeName, modelName, nodeOutputNameAlias);
-        std::optional<model_version_t> modelVersion;
-        if (nodeConfig.HasMember("version")) {
-            modelVersion = nodeConfig["version"].GetUint64();
-        }
+        processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
         std::optional<size_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
             demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
@@ -251,24 +272,18 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         if (nodeConfig.HasMember("gather_from_node")) {
             gatherFromNode = nodeConfig["gather_from_node"].GetString();
         }
-        NodeKind nodeKind;
-        auto status = toNodeKind(nodeKindStr, nodeKind);
-        if (!status.ok()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {}", nodeKindStr);
-            return;
-        }
         SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
-            nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
-        info.emplace_back(std::move(NodeInfo{
+            nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
+        info.emplace_back(
             nodeKind,
             nodeName,
-            modelName,
-            modelVersion,
+            dlNodeInfo.modelName,
+            dlNodeInfo.modelVersion,
             nodeOutputNameAlias,
             demultiplyCount,
             gatherFromNode,
-            nodeLibrary,
-            parameters}));
+            customNodeInfo.library,
+            customNodeInfo.parameters);
         auto nodeInputItr = nodeConfig.FindMember("inputs");
         processNodeInputs(nodeName, nodeInputItr, connections);
     }

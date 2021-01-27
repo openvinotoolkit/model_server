@@ -53,6 +53,16 @@ const std::string CUSTOM_NODE_CONFIG_TYPE = "custom";
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind);
 
+struct DLNodeInfo {
+    std::string modelName;
+    std::optional<model_version_t> modelVersion;
+};
+
+struct CustomNodeInfo {
+    NodeLibrary library;
+    parameters_t parameters;
+};
+
 struct NodeInfo {
     NodeKind kind;
     std::string nodeName;
@@ -61,7 +71,7 @@ struct NodeInfo {
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
     std::optional<std::string> gatherFromNode;
-    NodeLibrary nodeLibrary;
+    NodeLibrary library;
     parameters_t parameters;
 
     NodeInfo(NodeKind kind,
@@ -71,7 +81,7 @@ struct NodeInfo {
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
         std::optional<std::string> gatherFromNode = std::nullopt,
-        const NodeLibrary& nodeLibrary = {},
+        const NodeLibrary& library = {},
         const parameters_t& parameters = {}) :
         kind(kind),
         nodeName(nodeName),
@@ -80,7 +90,7 @@ struct NodeInfo {
         outputNameAliases(outputNameAliases),
         demultiplyCount(demultiplyCount),
         gatherFromNode(gatherFromNode),
-        nodeLibrary(nodeLibrary),
+        library(library),
         parameters(parameters) {}
 };
 }  // namespace ovms
