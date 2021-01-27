@@ -23,17 +23,18 @@ using namespace ovms;
 
 TEST(NodeLibraryManagerTest, NewManagerExpectMissingLibrary) {
     CustomNodeLibraryManager manager;
-    auto library = manager.getLibrary("random_name");
-    EXPECT_EQ(library.execute, nullptr);
-    EXPECT_EQ(library.releaseBuffer, nullptr);
-    EXPECT_EQ(library.releaseTensors, nullptr);
+    NodeLibrary library;
+    auto status = manager.getLibrary("random_name", library);
+    EXPECT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
 }
 
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     CustomNodeLibraryManager manager;
+    NodeLibrary library;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
-    auto library = manager.getLibrary("random_name");
+    status = manager.getLibrary("random_name", library);
+    ASSERT_EQ(status, StatusCode::OK);
     ASSERT_NE(library.execute, nullptr);
     ASSERT_NE(library.releaseBuffer, nullptr);
     ASSERT_NE(library.releaseTensors, nullptr);
@@ -95,9 +96,11 @@ TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
     createConfigFileWithContent(config, fileToReload);
     ConstructorEnabledModelManager manager;
+    NodeLibrary library;
     auto status = manager.startFromFile(fileToReload);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    auto library = manager.getCustomNodeLibraryManager().getLibrary("lib1");
+    ASSERT_EQ(status, StatusCode::OK);
+    status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
+    ASSERT_EQ(status, StatusCode::OK);
     ASSERT_NE(library.execute, nullptr);
     ASSERT_NE(library.releaseBuffer, nullptr);
     ASSERT_NE(library.releaseTensors, nullptr);
@@ -115,9 +118,11 @@ TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
     createConfigFileWithContent(config, fileToReload);
     ConstructorEnabledModelManager manager;
+    NodeLibrary library;
     auto status = manager.startFromFile(fileToReload);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    auto library = manager.getCustomNodeLibraryManager().getLibrary("lib1");
+    ASSERT_EQ(status, StatusCode::OK);
+    status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
+    ASSERT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
     EXPECT_EQ(library.execute, nullptr);
     EXPECT_EQ(library.releaseBuffer, nullptr);
     EXPECT_EQ(library.releaseTensors, nullptr);
@@ -140,10 +145,11 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     // Start with configBefore
     createConfigFileWithContent(configBefore, fileToReload);
     ConstructorEnabledModelManager manager;
+    NodeLibrary lib1Before, lib2Before;
     auto status = manager.startFromFile(fileToReload);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    auto lib1Before = manager.getCustomNodeLibraryManager().getLibrary("lib1");
-    auto lib2Before = manager.getCustomNodeLibraryManager().getLibrary("lib2");
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Before), StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Before), StatusCode::NODE_LIBRARY_MISSING);
 
     // Expect lib1 to be loaded but lib2 not
     EXPECT_NE(lib1Before.execute, nullptr);
@@ -154,11 +160,12 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     EXPECT_EQ(lib2Before.releaseTensors, nullptr);
 
     // Reload with configAfter
+    NodeLibrary lib1After, lib2After;
     createConfigFileWithContent(configAfter, fileToReload);
     status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    auto lib1After = manager.getCustomNodeLibraryManager().getLibrary("lib1");
-    auto lib2After = manager.getCustomNodeLibraryManager().getLibrary("lib2");
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1After), StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2After), StatusCode::OK);
 
     // Expect lib1 not to change and lib2 to be created after reload.
     EXPECT_EQ(lib1Before.execute, lib1After.execute);
@@ -169,11 +176,12 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     EXPECT_NE(lib2After.releaseTensors, nullptr);
 
     // Reload with initial config (remove lib2 entry)
+    NodeLibrary lib1Entry, lib2Entry;
     createConfigFileWithContent(configBefore, fileToReload);
     status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    auto lib1Entry = manager.getCustomNodeLibraryManager().getLibrary("lib1");
-    auto lib2Entry = manager.getCustomNodeLibraryManager().getLibrary("lib2");
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Entry), StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Entry), StatusCode::OK);
 
     // Expect lib1 not to change and lib2 to still be loaded
     EXPECT_EQ(lib1After.execute, lib1Entry.execute);

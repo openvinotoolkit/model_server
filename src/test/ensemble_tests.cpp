@@ -131,7 +131,6 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-    SPDLOG_ERROR("JERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -188,7 +187,6 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-    SPDLOG_DEBUG("HERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -245,7 +243,6 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
     pipeline.execute();
-    SPDLOG_ERROR("JERE");
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
