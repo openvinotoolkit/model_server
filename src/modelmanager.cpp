@@ -192,12 +192,11 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     }
 }
 
-Status processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
+void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
     info.modelName = nodeConfig["model_name"].GetString();
     if (nodeConfig.HasMember("version")) {
         info.modelVersion = nodeConfig["version"].GetUint64();
     }
-    return StatusCode::OK;
 }
 
 Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
@@ -236,24 +235,21 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         NodeKind nodeKind;
         auto status = toNodeKind(nodeKindStr, nodeKind);
         if (!status.ok()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {}", nodeKindStr);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {} for pipeline: {}", nodeKindStr, pipelineName);
             return;
         }
 
         DLNodeInfo dlNodeInfo;
         CustomNodeInfo customNodeInfo;
         if (nodeKind == NodeKind::DL) {
-            status = processDLNodeConfig(nodeConfig, dlNodeInfo);
-            if (!status.ok()) {
-                return;
-            }
+            processDLNodeConfig(nodeConfig, dlNodeInfo);
         } else if (nodeKind == NodeKind::CUSTOM) {
             status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
             if (!status.ok()) {
                 return;
             }
         } else {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Pipeline {} contains unknown node kind", pipelineName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline {} contains unknown node kind", pipelineName);
             throw std::invalid_argument("unknown node kind");
         }
 
@@ -272,7 +268,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         if (nodeConfig.HasMember("gather_from_node")) {
             gatherFromNode = nodeConfig["gather_from_node"].GetString();
         }
-        SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
         info.emplace_back(
             nodeKind,
