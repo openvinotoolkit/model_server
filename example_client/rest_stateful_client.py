@@ -42,24 +42,9 @@ def calculate_utterance_error(referenceArray, resultArray):
             axis=None))
     return root_mean_err
 
-def create_request(img, request_format):
-    signature = "serving_default"
-    if request_format == "row_name":
-        instances = []
-        for i in range(0, img.shape[0], 1):
-            instances.append({args['input_name']: img[i].tolist()})
-        data_obj = {"signature_name": signature, "instances": instances}
-    elif request_format == "row_noname":
-        data_obj = {"signature_name": signature, 'instances': img.tolist()}
-    elif request_format == "column_name":
-        data_obj = {"signature_name": signature,
-                    'inputs': {args['input_name']: img.tolist()}}
-    elif request_format == "column_noname":
-        data_obj = {"signature_name": signature, 'inputs':  img.tolist()}
-    else:
-        print("invalid request format defined")
-        exit(1)
-    data_json = json.dumps(data_obj)
+def create_request(inputs):
+    #TODO Add data
+    data_json = json.dumps(inputs)
     return data_json
 
 
