@@ -36,9 +36,6 @@
 
 using namespace InferenceEngine;
 
-const uint32_t NO_CONTROL_INPUT = 0;
-const uint32_t SEQUENCE_START = 1;
-const uint32_t SEQUENCE_END = 2;
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
@@ -88,14 +85,14 @@ public:
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequence_id) {
+static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequenceId) {
     auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
-    input.add_uint64_val(sequence_id);
+    input.add_uint64_val(sequenceId);
 }
 
-static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequence_control) {
+static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequenceControl) {
     auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
-    input.add_uint32_val(sequence_control);
+    input.add_uint32_val(sequenceControl);
 }
 
 static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& response, uint64_t seqId) {
