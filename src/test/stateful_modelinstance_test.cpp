@@ -250,33 +250,35 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
     uint64_t startingSequenceId = 0;
-    uint16_t numberOfThreads = 40;
+    uint16_t numberOfThreadsWaitingOnStart = 20;
+    uint16_t numberOfThreadsWaitingOnEnd = 20;
 
-    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreads), releaseWaitAfterSequenceStarted(numberOfThreads), releaseWaitBeforeSequenceFinished(numberOfThreads);
+    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
 
-    for (auto i = 0u; i < numberOfThreads / 2; ++i) {
+    for (auto i = 0u; i < numberOfThreadsWaitingOnStart; ++i) {
         startingSequenceId++;
 
         inferThreads.emplace_back(
             std::thread(
                 [this, &releaseWaitBeforeSequenceStarted, &releaseWaitAfterSequenceStarted, i, startingSequenceId, modelInstance]() {
-                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                        std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i].get_future())),
-                        std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted[i].get_future())),
-                        nullptr);
-                }));
+            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i].get_future())),
+                std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted[i].get_future())),
+                nullptr);
+        }));
+    }
 
+    for (auto i = 0u; i < numberOfThreadsWaitingOnEnd; ++i) {
         startingSequenceId++;
-
         inferThreads.emplace_back(
             std::thread(
                 [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreads]() {
-                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                        std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i + numberOfThreads / 2].get_future())),
-                        nullptr,
-                        std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished[i].get_future())));
-                }));
+            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i].get_future())),
+                nullptr,
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished[i].get_future())));
+        }));
     }
 
     // sleep to allow all threads to initialize
@@ -287,7 +289,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
 
     auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), startingSequenceId);
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd + numberOfThreadsWaitingOnStart);
 
     for (auto& promise : releaseWaitAfterSequenceStarted) {
         promise.set_value();
@@ -295,7 +297,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
 
     // sleep to allow half threads to work
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), startingSequenceId / 2);
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished) {
         promise.set_value();
