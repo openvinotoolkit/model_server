@@ -541,10 +541,10 @@ bool ModelManager::configFileReloadNeeded() {
     struct stat statTime;
 
     stat(configFilename.c_str(), &statTime);
-    if (lastConfigChangeTime != statTime.st_ctime) {
-        return true;
+    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+        return false;
     }
-    return false;
+    return true;
 }
 
 void ModelManager::watcher(std::future<void> exit) {
