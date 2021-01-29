@@ -2079,7 +2079,7 @@ TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAva
     EXPECT_TRUE(status.ok()) << status.string();
 }
 
-TEST_F(EnsembleFlowTest, DISABLED_RetirePipelineDefinitionExecuteShouldFail) {
+TEST_F(EnsembleFlowTest, RetirePipelineDefinitionExecuteShouldFail) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
