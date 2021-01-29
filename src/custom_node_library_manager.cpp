@@ -21,21 +21,22 @@
 
 #include "filesystem.hpp"
 #include "logging.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
 Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std::string& basePath) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
-
     if (FileSystem::isPathEscaped(basePath)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", basePath);
         return StatusCode::PATH_INVALID;
     }
 
     if (libraries.count(name) == 1) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom node library name: {} is already loaded", name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
 
     void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
     char* error = dlerror();
@@ -74,12 +75,13 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     return StatusCode::OK;
 }
 
-NodeLibrary CustomNodeLibraryManager::getLibrary(const std::string& name) const {
+Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary& library) const {
     auto it = libraries.find(name);
     if (it == libraries.end()) {
-        return {};
+        return StatusCode::NODE_LIBRARY_MISSING;
     } else {
-        return it->second;
+        library = it->second;
+        return StatusCode::OK;
     }
 }
 
