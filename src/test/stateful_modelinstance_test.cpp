@@ -181,9 +181,9 @@ void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance
 }
 
 void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
-    std::unique_ptr<std::future<void>> waitBeforeSequenceStarted,
-    std::unique_ptr<std::future<void>> waitAfterSequenceStarted,
-    std::unique_ptr<std::future<void>> waitBeforeSequenceFinished) {
+    std::future<void>* waitBeforeSequenceStarted,
+    std::future<void>* waitAfterSequenceStarted,
+    std::future<void>* waitBeforeSequenceFinished) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
 
     if (waitBeforeSequenceStarted) {
@@ -262,11 +262,13 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         inferThreads.emplace_back(
             std::thread(
                 [this, &releaseWaitBeforeSequenceStarted, &releaseWaitAfterSequenceStarted, i, startingSequenceId, modelInstance]() {
-            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i].get_future())),
-                std::move(std::make_unique<std::future<void>>(releaseWaitAfterSequenceStarted[i].get_future())),
-                nullptr);
-        }));
+                    std::future<void> fut1 = releaseWaitBeforeSequenceStarted[i].get_future();
+                    std::future<void> fut2 = releaseWaitAfterSequenceStarted[i].get_future();
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        &fut1,
+                        &fut2,
+                        nullptr);
+                }));
     }
 
     for (auto i = 0u; i < numberOfThreadsWaitingOnEnd; ++i) {
@@ -274,11 +276,13 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         inferThreads.emplace_back(
             std::thread(
                 [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreadsWaitingOnStart]() {
-            RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[numberOfThreadsWaitingOnStart + i].get_future())),
-                nullptr,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished[i].get_future())));
-        }));
+                    std::future<void> fut1 = releaseWaitBeforeSequenceStarted[numberOfThreadsWaitingOnStart + i].get_future();
+                    std::future<void> fut2 = releaseWaitBeforeSequenceFinished[i].get_future();
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        &fut1,
+                        nullptr,
+                        &fut2);
+                }));
     }
 
     // sleep to allow all threads to initialize
