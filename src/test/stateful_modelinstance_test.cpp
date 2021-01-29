@@ -253,7 +253,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     uint16_t numberOfThreadsWaitingOnStart = 20;
     uint16_t numberOfThreadsWaitingOnEnd = 20;
 
-    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
+    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart + numberOfThreadsWaitingOnEnd), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
 
     for (auto i = 0u; i < numberOfThreadsWaitingOnStart; ++i) {
@@ -273,9 +273,9 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         startingSequenceId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreads]() {
+                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreadsWaitingOnStart]() {
             RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[i].get_future())),
+                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceStarted[numberOfThreadsWaitingOnStart + i].get_future())),
                 nullptr,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforeSequenceFinished[i].get_future())));
         }));
