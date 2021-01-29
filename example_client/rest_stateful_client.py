@@ -44,7 +44,7 @@ def calculate_utterance_error(referenceArray, resultArray):
 
 def create_request(inputs):
     #TODO Add data
-    data_json = json.dumps(inputs)
+    data_json = json.dumps(inputs.tolist())
     return data_json
 
 
