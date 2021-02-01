@@ -44,7 +44,9 @@ def calculate_utterance_error(referenceArray, resultArray):
 
 
 def create_request(inputs):
-    data_json = json.dumps(inputs)
+    signature = "serving_default"
+    data_obj = {"signature_name": signature,'inputs': inputs}
+    data_json = json.dumps(data_obj)
     return data_json
 
 
@@ -353,14 +355,14 @@ def main():
 
             # Add sequence start
             if x == 0:
-                inputs['sequence_control_input'] = str(SEQUENCE_START)
+                inputs['sequence_control_input'] = [int(SEQUENCE_START)]
 
             # Set sequence id
-            inputs['sequence_id'] = str(sequence_id)
+            inputs['sequence_id'] = [int(sequence_id)]
 
             # Add sequence end
             if x == sequence_size + cw_l + cw_r - 1:
-                inputs['sequence_control_input'] = str(SEQUENCE_END)
+                inputs['sequence_control_input'] = [int(SEQUENCE_END)]
 
             #prepare request
             data_json = create_request(inputs)
