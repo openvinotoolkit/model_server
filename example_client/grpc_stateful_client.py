@@ -161,8 +161,8 @@ def prepare_processing_data(args):
     if len(reference_files) != len(output_names):
         print(
             "ERROR: Number of output ark files {} must be equal to the number of output names {}".format(
-                len(input_files),
-                len(input_names)))
+                len(reference_files),
+                len(output_names)))
         exit(1)
 
     # Consolidate input

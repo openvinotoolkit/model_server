@@ -1,5 +1,5 @@
-2021-01-28 12:32:38.889865: W tensorflow/stream_executor/platform/default/dso_loader.cc:59] Could not load dynamic library 'libcudart.so.10.1'; dlerror: libcudart.so.10.1: cannot open shared object file: No such file or directory
-2021-01-28 12:32:38.889894: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-02-01 11:24:55.279329: W tensorflow/stream_executor/platform/default/dso_loader.cc:59] Could not load dynamic library 'libcudart.so.10.1'; dlerror: libcudart.so.10.1: cannot open shared object file: No such file or directory
+2021-02-01 11:24:55.279353: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
 ### Starting rest_stateful_client.py client ###
 Context window left width cw_l: 0
 Context window right width cw_r: 0
@@ -15,10 +15,63 @@ Adding output name affinetransform/Fused_Add_
 	Sequence size: 250
 	Sequence id: 1
 Traceback (most recent call last):
-  File "rest_stateful_client.py", line 424, in <module>
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 159, in _new_conn
+    conn = connection.create_connection(
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 84, in create_connection
+    raise err
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 74, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 665, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 387, in _make_request
+    conn.request(method, url, **httplib_request_kw)
+  File "/usr/lib/python3.8/http/client.py", line 1255, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/usr/lib/python3.8/http/client.py", line 1301, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.8/http/client.py", line 1250, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.8/http/client.py", line 1010, in _send_output
+    self.send(msg)
+  File "/usr/lib/python3.8/http/client.py", line 950, in send
+    self.connect()
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 187, in connect
+    conn = self._new_conn()
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 171, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x7f378998a160>: Failed to establish a new connection: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 439, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 719, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 436, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', port=8333): Max retries exceeded with url: /tmp/models/rm_lstm4f:predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f378998a160>: Failed to establish a new connection: [Errno 111] Connection refused'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "rest_stateful_client.py", line 428, in <module>
     main()
-  File "rest_stateful_client.py", line 340, in main
-    data_json = create_request(inputs)
-  File "rest_stateful_client.py", line 47, in create_request
-    data_json = json.dumps(inputs.tolist())
-AttributeError: 'dict' object has no attribute 'tolist'
+  File "rest_stateful_client.py", line 348, in main
+    result = requests.post("{}:{}/tmp/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+  File "/usr/lib/python3/dist-packages/requests/api.py", line 116, in post
+    return request('post', url, data=data, json=json, **kwargs)
+  File "/usr/lib/python3/dist-packages/requests/api.py", line 60, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 533, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 646, in send
+    r = adapter.send(request, **kwargs)
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 516, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', port=8333): Max retries exceeded with url: /tmp/models/rm_lstm4f:predict (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f378998a160>: Failed to establish a new connection: [Errno 111] Connection refused'))

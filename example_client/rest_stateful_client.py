@@ -42,9 +42,9 @@ def calculate_utterance_error(referenceArray, resultArray):
             axis=None))
     return root_mean_err
 
+
 def create_request(inputs):
-    #TODO Add data
-    data_json = json.dumps(inputs.tolist())
+    data_json = json.dumps(inputs)
     return data_json
 
 
@@ -121,12 +121,35 @@ def parse_arguments():
         required=False,
         default=1,
         help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
-    parser.add_argument('--model_version', help='Model version to be used. Default: LATEST',
-                        type=int, dest='model_version')
-    parser.add_argument('--client_cert', required=False, default=None, help='Specify mTLS client certificate file. Default: None.')
-    parser.add_argument('--client_key', required=False, default=None, help='Specify mTLS client key file. Default: None.')
-    parser.add_argument('--ignore_server_verification', required=False, action='store_true', help='Skip TLS host verification. Do not use in production. Default: False.')
-    parser.add_argument('--server_cert', required=False, default=None, help='Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store.')
+    parser.add_argument(
+        '--model_version',
+         help='Model version to be used. Default: LATEST',
+        type=int, dest='model_version')
+    parser.add_argument(
+        '--client_cert',
+        required=False,
+        default=None,
+        help='Specify mTLS client certificate file. Default: None.')
+    parser.add_argument(
+        '--client_key',
+        required=False,
+        default=None,
+        help='Specify mTLS client key file. Default: None.')
+    parser.add_argument(
+        '--ignore_server_verification',
+        required=False,
+        action='store_true',
+        help='Skip TLS host verification. Do not use in production. Default: False.')
+    parser.add_argument(
+        '--server_cert',
+        required=False,
+        default=None,
+        help='Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store.')
+    parser.add_argument(
+        '--rest_url',
+        required=False,
+        default='http://localhost',
+        help='Specify url to REST API service. default: http://localhost')
     print('### Starting rest_stateful_client.py client ###')
 
     args = vars(parser.parse_args())
@@ -172,8 +195,8 @@ def prepare_processing_data(args):
     if len(reference_files) != len(output_names):
         print(
             "ERROR: Number of output ark files {} must be equal to the number of output names {}".format(
-                len(input_files),
-                len(input_names)))
+                len(reference_files),
+                len(output_names)))
         exit(1)
 
     # Consolidate input
@@ -264,6 +287,9 @@ def main():
     print('Starting sequence_id: {}'.format(sequence_id))
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
+    version = ""
+    if args.get('model_version') is not None:
+        version = "/versions/{}".format(args.get('model_version'))
 
     sequence_size_map, input_names, output_names, input_data, reference_scores = prepare_processing_data(
         args)
@@ -323,18 +349,18 @@ def main():
             for input_name in input_names:
                 input_sub_data = input_data[input_name]
                 tensor_data = input_sub_data[sequence_name][input_index]
-                inputs[input_name] = tensor_data
+                inputs[input_name] = tensor_data.tolist()
 
             # Add sequence start
             if x == 0:
-                inputs['sequence_control_input'] = { SEQUENCE_START }
+                inputs['sequence_control_input'] = str(SEQUENCE_START)
 
             # Set sequence id
-            inputs['sequence_id'] = { sequence_id }
+            inputs['sequence_id'] = str(sequence_id)
 
             # Add sequence end
             if x == sequence_size + cw_l + cw_r - 1:
-                inputs['sequence_control_input'] = { SEQUENCE_END }
+                inputs['sequence_control_input'] = str(SEQUENCE_END)
 
             #prepare request
             data_json = create_request(inputs)
