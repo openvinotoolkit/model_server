@@ -28,17 +28,37 @@ public:
         std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint16_t> demultiplyCount) :
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias) {
         this->demultiplexCount = demultiplexCount;
+        // TODO createSession to have source session for fetchResults()
     }
+    void setFetchResult(InferenceEngine::Blob::Ptr& blobToReturn) {
+        this->blobToReturn = blobToReturn;
+    }
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
+    const auto sessionKey = sessionMetadata.getSessionKey();
+    BlobMap blobs{{std::string("a"), blobToReturn}};
+    std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
+    nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
+    return StatusCode::OK;
+
+    }
+private:
+    InferenceEngine::Blob::Ptr blobToReturn;
 };
 
 TEST(DemultiplexerNode, CheckDemultipliedBlobs) {
-    const std::vector<std::string> inputNames{"a", "b", "c"};
-    const std::vector<size_t> shape{3, 4};
+    const std::vector<std::string> inputNames{"a"};
+    const std::vector<size_t> shape{1, 2, 12};
     const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
-    std::vector<float> blobData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67, 0, 8};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::CHW};
+    const uint16_t demultiplyCount = 2;
+    std::vector<float> blobData1{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67, 0, 8};
+    std::vector<float> blobData2{4, 42, 35, -2, 13, 2, -1, 0.9, -0.3, 4.67, 100, 80};
+    std::vector<float> blobDataNonDemultiplexed(12 * demultiplyCount);
+    std::copy(blobData1.begin(), blobData1.end(), blobDataNonDemultiplexed.begin());
+    std::copy(blobData2.begin(), blobData2.end(), blobDataNonDemultiplexed.begin() + blobData1.size());
     const InferenceEngine::TensorDesc desc{precision, shape, layout};
-    InferenceEngine::Blob::Ptr inputBlob = InferenceEngine::make_shared_blob<float>(desc, blobData.data());
-    const size_t demultiplyCount = 3;
-    //DemultiplexerDLNodeTest("node", "model", std::nullopt);
+    InferenceEngine::Blob::Ptr inputBlob = InferenceEngine::make_shared_blob<float>(desc, blobDataNonDemultiplexed.data());
+    //DemultiplexerDLNodeTest("node", "model", demultiplyCount);
+    //DemultiplexerDLNode.setFetchResult(inputBlob);
 }
