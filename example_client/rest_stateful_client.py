@@ -384,9 +384,6 @@ def main():
             if not validate_output(result_dict, output_names):
                 print(
                     "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
-                # request.inputs['sequence_control_input'].CopyFrom(
-                #     make_tensor_proto(SEQUENCE_END, dtype="uint32"))
-                # result = stub.Predict(request, 10.0)
                 exit(1)
 
             # Unique sequence_id provided by OVMS
