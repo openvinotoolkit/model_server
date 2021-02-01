@@ -32,6 +32,7 @@ namespace ovms {
 class ModelManager;
 
 class DLNode : public Node {
+protected:
     std::string modelName;
     std::optional<model_version_t> modelVersion;
     ModelManager& modelManager;
@@ -85,7 +86,8 @@ private:
     Status executeInference(PipelineEventQueue& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
     bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
 
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata) override;
+protected:
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
 };
 
 }  // namespace ovms

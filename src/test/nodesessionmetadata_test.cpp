@@ -112,7 +112,6 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     ASSERT_THAT(hash, HasSubstr("request_2"));
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
-
     auto metaCollapsedOnExtract1st = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st"});
     auto hashCollapsed = metaCollapsedOnExtract1st.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_2"));
@@ -209,4 +208,119 @@ TEST_F(NodeSessionMetadataTest, GetSubsessionSizeShouldThrowWhenNonExistingSubse
     NodeSessionMetadata meta;
     auto subsessionMeta = meta.generateSubsessions("request", 5)[0];
     EXPECT_THROW(subsessionMeta.getSubsessionSize("nonExisting"), std::logic_error);
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardIdNoSubsession) {
+    NodeSessionMetadata meta;
+    EXPECT_EQ(meta.getShardId(), 0);
+}
+TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevel) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize = 13;
+    const std::string subsessionName = "subsession";
+    auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
+    ASSERT_EQ(subsessions.size(), subsessionSize);
+    for (size_t i = 0; i < subsessions.size(); ++i) {
+        EXPECT_EQ(subsessions[i].getShardId(), 0);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevelCollapsing) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize = 13;
+    const std::string subsessionName = "subsession";
+    auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
+    ASSERT_EQ(subsessions.size(), subsessionSize);
+    for (size_t i = 0; i < subsessions.size(); ++i) {
+        EXPECT_EQ(subsessions[i].getShardId({subsessionName}), i);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevels) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1st = 13;
+    uint subsessionSize2nd = 9;
+    const std::string subsessionName1st = "subsession";
+    const std::string subsessionName2nd = "subsession2";
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
+    auto subsessionsLevel2 = subsessionsLevel1[4].generateSubsessions(subsessionName2nd, subsessionSize2nd);
+    for (size_t i = 0; i < subsessionsLevel2.size(); ++i) {
+        EXPECT_EQ(subsessionsLevel2[i].getShardId(), 0);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1st = 13;
+    uint subsessionSize2nd = 9;
+    const std::string subsessionName1st = "subsession";
+    const std::string subsessionName2nd = "subsession2";
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
+    auto subsessionsLevel2 = subsessionsLevel1[4].generateSubsessions(subsessionName2nd, subsessionSize2nd);
+    for (size_t i = 0; i < subsessionsLevel2.size(); ++i) {
+        EXPECT_EQ(subsessionsLevel2[i].getShardId({subsessionName2nd}), i);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1NotInOrderShouldThrow) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1st = 13;
+    uint subsessionSize2nd = 9;
+    const std::string subsessionName1st = "subsession";
+    const std::string subsessionName2nd = "subsession2";
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
+    auto subsessionsLevel2 = subsessionsLevel1[4].generateSubsessions(subsessionName2nd, subsessionSize2nd);
+    for (size_t i = 0; i < subsessionsLevel2.size(); ++i) {
+        EXPECT_THROW(subsessionsLevel2[i].getShardId({subsessionName1st}), std::logic_error);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse2) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1st = 13;
+    uint subsessionSize2nd = 9;
+    const std::string subsessionName1st = "subsession";
+    const std::string subsessionName2nd = "subsession2";
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
+    const int subsessionLev1Index = 4;
+    auto subsessionsLevel2 = subsessionsLevel1[subsessionLev1Index].generateSubsessions(subsessionName2nd, subsessionSize2nd);
+    for (size_t i = 0; i < subsessionsLevel2.size(); ++i) {
+        EXPECT_EQ(subsessionsLevel2[i].getShardId({subsessionName2nd, subsessionName1st}), subsessionLev1Index * subsessionSize2nd + i);
+    }
+}
+TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse3ShouldThrow) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1st = 13;
+    uint subsessionSize2nd = 9;
+    const std::string subsessionName1st = "subsession";
+    const std::string subsessionName2nd = "subsession2";
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
+    const int subsessionLev1Index = 4;
+    auto subsessionsLevel2 = subsessionsLevel1[subsessionLev1Index].generateSubsessions(subsessionName2nd, subsessionSize2nd);
+    for (size_t i = 0; i < subsessionsLevel2.size(); ++i) {
+        EXPECT_THROW(subsessionsLevel2[i].getShardId({subsessionName2nd, subsessionName1st, std::string("NON_EXISTING_LEVEL")}), std::logic_error);
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1 = 13;
+    uint subsessionSize2 = 9;
+    uint subsessionSize3 = 7;
+    uint subsessionSize4 = 5;
+    const std::string subsessionName1 = "subsession1";
+    const std::string subsessionName2 = "subsession2";
+    const std::string subsessionName3 = "subsession3";
+    const std::string subsessionName4 = "subsession4";
+    const int subsessionLev1Index = 4;
+    const int subsessionLev2Index = 6;
+    const int subsessionLev3Index = 3;
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1, subsessionSize1);
+    auto subsessionsLevel2 = subsessionsLevel1[subsessionLev1Index].generateSubsessions(subsessionName2, subsessionSize2);
+    auto subsessionsLevel3 = subsessionsLevel2[subsessionLev2Index].generateSubsessions(subsessionName3, subsessionSize3);
+    auto subsessionsLevel4 = subsessionsLevel3[subsessionLev3Index].generateSubsessions(subsessionName4, subsessionSize4);
+    for (size_t i = 0; i < subsessionsLevel4.size(); ++i) {
+        EXPECT_EQ(subsessionsLevel4[i].getShardId({subsessionName2, subsessionName3, subsessionName4}),
+            i + subsessionSize4 * (subsessionLev3Index + subsessionSize3 * (subsessionLev2Index)));
+    }
 }

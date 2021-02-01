@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "nodesession.hpp"
 
+#include "gathernodeinputhandler.hpp"
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
@@ -26,18 +27,26 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-void NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr) {
-    inputHandler->setInput(inputName, blobPtr);
+void NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) {
+    inputHandler->setInput(inputName, blobPtr, shardId);
 }
 
-NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount) :
+std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, session_id_t shardsCount) {
+    if (shardsCount == 1) {
+        return std::make_unique<NodeInputHandler>(inputsCount);
+    } else {
+        return std::make_unique<GatherNodeInputHandler>(inputsCount, shardsCount);
+    }
+}
+
+NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
-    inputHandler(std::make_unique<NodeInputHandler>(inputsCount)),
+    inputHandler(createNodeInputHandler(inputsCount, shardsCount)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount) :
+NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),
@@ -45,11 +54,19 @@ NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
 bool NodeSession::isReady() const {
-    bool isReady = inputHandler->isReady();  // TODO gather input handler will influence result
+    bool isReady = inputHandler->isReady();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} session: {} isReady: {}", getName(), getSessionKey(), isReady);
     return isReady;
 }
-void NodeSession::notifyFinishedDependency() {
-    this->inputHandler->notifyFinishedDependency();
+
+Status NodeSession::notifyFinishedDependency() {
+    return this->inputHandler->notifyFinishedDependency();
+}
+
+ReleaseSessionGuard::ReleaseSessionGuard(NodeSession& nodeSession) :
+    nodeSession(nodeSession) {}
+
+ReleaseSessionGuard::~ReleaseSessionGuard() {
+    nodeSession.release();
 }
 }  // namespace ovms

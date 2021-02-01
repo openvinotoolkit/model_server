@@ -24,41 +24,16 @@
 
 namespace ovms {
 
+Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc);
+
 template <typename T>
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {
     auto& description = sourceBlob->getTensorDesc();
-
-    try {
-        switch (description.getPrecision()) {
-        case InferenceEngine::Precision::FP32:
-            destinationBlob = InferenceEngine::make_shared_blob<float>(description);
-            break;
-        case InferenceEngine::Precision::U8:
-            destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(description);
-            break;
-        case InferenceEngine::Precision::I8:
-            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(description);
-            break;
-        case InferenceEngine::Precision::I16:
-            destinationBlob = InferenceEngine::make_shared_blob<int16_t>(description);
-            break;
-        case InferenceEngine::Precision::I32:
-            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(description);
-            break;
-        default: {
-            SPDLOG_ERROR("Blob clone failed, unsupported precision");
-            return StatusCode::INVALID_PRECISION;
-        }
-        }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
-        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
-        return StatusCode::OV_CLONE_BLOB_ERROR;
-    } catch (std::logic_error& e) {
-        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
-        return StatusCode::OV_CLONE_BLOB_ERROR;
+    auto status = createSharedBlob(destinationBlob, description);
+    if (!status.ok()) {
+        return status;
     }
 
-    destinationBlob->allocate();
     if (destinationBlob->byteSize() != sourceBlob->byteSize()) {
         destinationBlob = nullptr;
         return StatusCode::OV_CLONE_BLOB_ERROR;

@@ -59,6 +59,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
 }
 
 Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+    ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for blob results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
     auto ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
@@ -108,8 +109,6 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared", getName(), sessionKey, output_name);
         }
     }
-    // After results are fetched, model and inference request are not needed anymore
-    this->getNodeSession(sessionKey).release();
     return StatusCode::OK;
 }
 
@@ -150,7 +149,6 @@ Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo
         SPDLOG_DEBUG("Node: {}] Invalid shape - {}", getName(), details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
-
     return StatusCode::OK;
 }
 
@@ -162,8 +160,8 @@ bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds)
     return getNodeSession(sessionKey).tryDisarm(microseconds);
 }
 
-std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata& metadata) {
-    return std::make_unique<DLNodeSession>(metadata, getName(), previous.size(),
+std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) {
+    return std::make_unique<DLNodeSession>(metadata, getName(), previous.size(), shardsCount,
         this->modelManager, this->modelName, this->modelVersion.value_or(0));
 }
 

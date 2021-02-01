@@ -46,8 +46,8 @@ class DLNodeSession : public NodeSession {
     const model_version_t modelVersion;
 
 public:
-    DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
-    DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
+    DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
+    DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
     virtual ~DLNodeSession();
 
     InferenceEngine::InferRequest& getInferRequest(const uint microseconds);

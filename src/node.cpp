@@ -16,6 +16,7 @@
 #include "node.hpp"
 
 #include <algorithm>
+#include <set>
 #include <sstream>
 
 #include "logging.hpp"
@@ -49,7 +50,7 @@ void Node::printNodeConnections(const std::string& nodeName, const std::string& 
 }
 
 Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
-    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} setInputs from node: {}", getName(), dependency.getName());
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} set inputs from node: {}", getName(), dependency.getName());
     for (auto& [sessionKey, metadataInputsPair] : sessionResults) {
         auto& [metadata, inputs] = metadataInputsPair;
         auto status = this->setInputs(dependency, inputs, metadata);
@@ -64,6 +65,7 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
     // mapping for dependency - keeps mapping between dependency output name and this node input name
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
     NodeSession& nodeSession = getNodeSession(metadata);
+    const session_id_t shardId = metadata.getShardId(gatherFrom.value_or(std::set<std::string>()));
     // assign all input blobs from inputs that are required by this node for future inference
     for (const auto& pair : mapping_for_dependency) {
         const auto& dependency_output_name = pair.first;
@@ -72,55 +74,20 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
         // possibly incorrectly constructed pipeline - required input missing from previous node
         auto it = inputs.find(dependency_output_name);
         if (it == inputs.end()) {
-            SPDLOG_LOGGER_WARN(dag_executor_logger, "Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
+            SPDLOG_LOGGER_WARN(dag_executor_logger, "node: {} error setting required input from node: {} dependency is missing output name: {}",
                 getName(),
                 dependency.getName(),
                 dependency_output_name);
             return StatusCode::INVALID_MISSING_INPUT;
         }
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node::setInputs: setting required input for (Node name {}) from (Node name {}), input name: {}, dependency output name: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} setting required input from node: {}, input name: {}, dependency output name: {}",
             getName(),
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
-        this->inputBlobs[current_node_input_name] = it->second;
-        nodeSession.setInput(current_node_input_name, it->second);
+        nodeSession.setInput(current_node_input_name, it->second, shardId);
     }
-    nodeSession.notifyFinishedDependency();  // TODO gatherer need to change this mechanism
-    finishedDependenciesCount++;
-    return StatusCode::OK;
-}
-
-Status Node::setInputs(const Node& dependency, BlobMap& inputs) {
-    SPDLOG_ERROR("setInputs for metadata4");
-    // mapping for dependency - keeps mapping between dependency output name and this node input name
-    const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
-
-    // assign all input blobs from inputs that are required by this node for future inference
-    for (const auto& pair : mapping_for_dependency) {
-        const auto& dependency_output_name = pair.first;
-        const auto& current_node_input_name = pair.second;
-
-        // possibly incorrectly constructed pipeline - required input missing from previous node
-        auto it = inputs.find(dependency_output_name);
-        if (it == inputs.end()) {
-            SPDLOG_WARN("Node::setInputs: error setting required input for (Node name {}) from (Node name {}): dependency is missing output name {}",
-                getName(),
-                dependency.getName(),
-                dependency_output_name);
-            return StatusCode::INVALID_MISSING_INPUT;
-        }
-        SPDLOG_DEBUG("Node::setInputs: setting required input for (Node name {}) from (Node name {}), input name: {}, dependency output name: {}",
-            getName(),
-            dependency.getName(),
-            current_node_input_name,
-            dependency_output_name);
-        this->inputBlobs[current_node_input_name] = it->second;
-        NodeSessionMetadata metadata;
-        getNodeSession(metadata).setInput(current_node_input_name, it->second);
-    }
-    finishedDependenciesCount++;
-    return StatusCode::OK;
+    return nodeSession.notifyFinishedDependency();
 }
 
 NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
@@ -133,24 +100,41 @@ NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
 }
 
 NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
-    auto it = nodeSessions.find(metadata.getSessionKey());
+    session_key_t sessionKey;
+    if (gatherFrom) {
+        sessionKey = metadata.getSessionKey(gatherFrom.value());
+    } else {
+        sessionKey = metadata.getSessionKey();
+    }
+    auto it = nodeSessions.find(sessionKey);
     if (it != nodeSessions.end()) {
         return *(*it).second;
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         metadata.getSessionKey(), getName());
-    auto emplacePair = nodeSessions.emplace(metadata.getSessionKey(), createNodeSession(metadata));
-    return *(*(emplacePair.first)).second;
+    NodeSessionMetadata newSessionMetadata;
+    uint16_t shardsCount = 1;
+    if (gatherFrom) {
+        for (auto& nodeName : gatherFrom.value()) {
+            shardsCount *= metadata.getSubsessionSize(nodeName);
+        }
+        newSessionMetadata = metadata.getCollapsedSessionMetadata(gatherFrom.value());
+    } else {
+        newSessionMetadata = metadata;
+    }
+    std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, shardsCount);
+    auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));
+    return *(emplacePair.first->second);
 }
 
-std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata) {
-    return std::make_unique<NodeSession>(metadata, getName(), previous.size());
+std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) {
+    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), shardsCount);
 }
 
 std::vector<session_key_t> Node::getReadySessions() const {
     std::vector<session_key_t> readySessions;
     for (auto& [sessionKey, nodeSession] : nodeSessions) {
-        SPDLOG_ERROR("Checking readiness of node: {} session: {}", getName(), nodeSession->getSessionKey());
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Checking readiness of node: {} session: {}", getName(), nodeSession->getSessionKey());
         if (nodeSession->isReady()) {
             readySessions.emplace_back(sessionKey);
         }

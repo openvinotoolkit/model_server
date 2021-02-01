@@ -41,6 +41,8 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     for (auto& meta : metas) {
         meta.details = this->details;
         meta.details.insert({nodeName, {counter, subsessionSize}});
+        meta.sessionsLevels = this->sessionsLevels;
+        meta.sessionsLevels.push_back(nodeName);
         ++counter;
     }
     return std::move(metas);
@@ -87,6 +89,7 @@ NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::
             })) {
         throw std::logic_error("Tried to collapse nonexisting subsession");
     }
+
     NodeSessionMetadata newMeta;
     std::copy_if(
         std::begin(details),
@@ -94,6 +97,13 @@ NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::
         std::inserter(newMeta.details, newMeta.details.begin()),
         [&ignoredNodeNames](auto& keyValuePair) {
             return ignoredNodeNames.find(keyValuePair.first) == ignoredNodeNames.end();
+        });
+    std::copy_if(
+        std::begin(sessionsLevels),
+        std::end(sessionsLevels),
+        std::back_inserter(newMeta.sessionsLevels),
+        [&ignoredNodeNames](auto& sessionName) {
+            return ignoredNodeNames.find(sessionName) == ignoredNodeNames.end();
         });
     return std::move(newMeta);
 }
@@ -105,5 +115,32 @@ session_id_t NodeSessionMetadata::getSubsessionSize(const std::string& subsessio
         throw std::logic_error("Tried to take non existing subsession size");
     }
     return std::get<1>(it->second);
+}
+
+session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collapsedNames) const {
+    if (collapsedNames.size() == 0) {
+        return 0;
+    }
+    if (collapsedNames.size() > sessionsLevels.size()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse more subsession levels than exists");
+        throw std::logic_error("Tried to collapse more subsession levels than exists");
+    }
+    for (size_t i = sessionsLevels.size() - 1; i > 0; --i) {
+        if (collapsedNames.find(sessionsLevels[i]) == collapsedNames.end()) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first", sessionsLevels[i]);
+            throw std::logic_error("Cannot collapse sessions not in LIFO order");
+        }
+    }
+    session_id_t multiplyFactor = 1;
+    session_id_t shardId = 0;
+    for (size_t i = 0; i < collapsedNames.size(); ++i) {
+        const auto& subsessionDetails = details.at(*(sessionsLevels.rbegin() + i));
+        const auto& [id, sessionSize] = subsessionDetails;
+        shardId += multiplyFactor * id;
+        multiplyFactor *= sessionSize;
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "getShardId calculation step shardId: {}, multiplyFactor: {}, subsessionId: {}, sessionSize: {}",
+            shardId, multiplyFactor, id, sessionSize);
+    }
+    return shardId;
 }
 }  // namespace ovms
