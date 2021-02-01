@@ -454,9 +454,7 @@ TEST(ModelService, serializeModelsStatuses2Json_with_two_responses) {
    }
   }
  ]
-}
 },
-{
 "dummy2" : 
 {
  "model_version_status": [

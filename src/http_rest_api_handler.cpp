@@ -30,6 +30,7 @@
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
+#include "config.hpp"
 
 #define DEBUG
 #include "timer.hpp"
@@ -321,6 +322,41 @@ Status HttpRestApiHandler::processModelStatusRequest(
     status = GetModelStatusImpl::serializeResponse2Json(&grpc_response, response);
     if (!status.ok()) {
         return status;
+    }
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) {
+    SPDLOG_INFO("ModelControlApi flow triggered.");
+    Status status;
+    auto& config = ovms::Config::instance();
+    auto& manager = ModelManager::getInstance();
+    bool isConfigFileReloadNeeded = manager.configFileReloadNeeded();
+    if(isConfigFileReloadNeeded)
+    {
+        status = manager.loadConfig(config.configPath());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    if (!status.ok()) {
+        return status;
+    }
+
+
+    std::string jsonString;
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonString);
+        if (!status.ok()) {
+        return status;
+    }
+    response = jsonString;
+
+    if(!isConfigFileReloadNeeded)
+    {
+        return StatusCode::OK_RELOAD_NOT_NEEDED;
     }
     return StatusCode::OK;
 }

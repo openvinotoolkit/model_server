@@ -154,18 +154,21 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
 
 Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output) {
     std::string outputTmp;
+    outputTmp += "{\n";
     for (auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++) {
-        outputTmp += ("{\n\"" + modelStatus->first + "\" : \n");
+        outputTmp += ("\"" + modelStatus->first + "\" : \n");
         std::string responseStr;
         auto status = GetModelStatusImpl::serializeResponse2Json(&modelStatus->second, &responseStr);
         if (status != StatusCode::OK) {
             return status;
         }
-        outputTmp += (responseStr + "}");
+        responseStr.pop_back();
+        outputTmp += responseStr;
         if (std::next(modelStatus) != modelsStatuses.end()) {
             outputTmp += (",\n");
         }
     }
+    outputTmp += "\n}";
     output = outputTmp;
 
     return StatusCode::OK;

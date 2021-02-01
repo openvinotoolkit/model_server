@@ -273,6 +273,7 @@ cc_test(
         "test/unit_tests.cpp",
         "test/schema_test.cpp",
         "test/environment.hpp",
+        "test/http_rest_api_handler_test.cpp",
     ],
     data = [
         "test/dummy/1/dummy.xml",
