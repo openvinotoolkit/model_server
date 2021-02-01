@@ -139,7 +139,7 @@ TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
-TEST_F(PredictValidation, DISABLED_RequestNotEnoughShapeDimensions) {
+TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
     auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
     input.mutable_tensor_shape()->clear_dim();
 
