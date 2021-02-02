@@ -54,28 +54,8 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(blobResults, inferRequest, model, nodeSession.getSessionKey());
-    if (demultiplexCount) {
-        auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-        auto& [session, blob] = *blobMap.begin();
-        std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
-        auto tensorDesc = blob->getTensorDesc();
-        auto newDims = tensorDesc.getDims();
-        newDims.erase(newDims.begin() + 1);
-        const InferenceEngine::TensorDesc dividedBlobDesc(
-            tensorDesc.getPrecision(),
-            newDims,
-            InferenceEngine::Layout::ANY);
-        const auto step = blob->byteSize() / demultiplexCount.value();
-        for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
-            InferenceEngine::Blob::Ptr dividedBlob;
-            auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-            if (!status.ok()) {
-                return status;
-            }
-            memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-            nodeSessionOutputs.emplace(metadata.getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
-        }
-        nodeSessionOutputs.erase(metadata.getSessionKey());
+    if (status == StatusCode::OK && demultiplexCount) {
+        status = postprocessOutputs(nodeSessionOutputs);
     }
     return status;
 }
@@ -185,6 +165,31 @@ bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds)
 std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) {
     return std::make_unique<DLNodeSession>(metadata, getName(), previous.size(), shardsCount,
         this->modelManager, this->modelName, this->modelVersion.value_or(0));
+}
+
+Status DLNode::postprocessOutputs(SessionResults& nodeSessionOutputs) {
+    auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
+    auto& [session, blob] = *blobMap.begin();
+    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
+    auto tensorDesc = blob->getTensorDesc();
+    auto newDims = tensorDesc.getDims();
+    newDims.erase(newDims.begin() + 1);
+    const InferenceEngine::TensorDesc dividedBlobDesc(
+        tensorDesc.getPrecision(),
+        newDims,
+        InferenceEngine::Layout::ANY);
+    const auto step = blob->byteSize() / demultiplexCount.value();
+    for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+        InferenceEngine::Blob::Ptr dividedBlob;
+        auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+        if (!status.ok()) {
+            return status;
+        }
+        memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+        nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+    }
+    nodeSessionOutputs.erase(metadata.getSessionKey());
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

@@ -52,7 +52,7 @@ public:
         modelVersion(modelVersion),
         modelManager(modelManager),
         nodeOutputNameAlias(nodeOutputNameAlias),
-       demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt) {
+        demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt) {
     }
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
@@ -91,6 +91,7 @@ private:
 
 protected:
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
+    Status postprocessOutputs(SessionResults& nodeSessionOutputs);
 };
 
 }  // namespace ovms

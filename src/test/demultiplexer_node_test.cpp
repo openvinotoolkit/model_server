@@ -19,6 +19,7 @@
 #include "../node.hpp"
 #include "../dl_node.hpp"
 #include "test_utils.hpp"
+#include "../logging.hpp"
 
 using namespace ovms;
 
@@ -42,6 +43,7 @@ public:
     BlobMap blobs{{std::string("a"), blobToReturn}};
     std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
     nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
+    postprocessOutputs(nodeSessionOutputs);
     return StatusCode::OK;
 
     }
