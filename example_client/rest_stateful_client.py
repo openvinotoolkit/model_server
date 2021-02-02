@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import grpc
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray, expand_dims
 import classes
@@ -25,6 +24,8 @@ from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
+import json
+import requests
 
 
 def print_debug(msg):
@@ -42,21 +43,28 @@ def calculate_utterance_error(referenceArray, resultArray):
     return root_mean_err
 
 
+def create_request(inputs):
+    signature = "serving_default"
+    data_obj = {"signature_name": signature,'inputs': inputs}
+    data_json = json.dumps(data_obj)
+    return data_json
+
+
 def parse_arguments():
     # Example commands:
     # RM_LSTM4F
-    # grpc_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
-    #     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
+    # rest_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
+    #     --rest_address http://localhost --rest_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
     #     --model_name rm_lstm4f --debug
 
     # ASPIRE_TDNN
-    # grpc_stateful_client.py --input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
+    # rest_stateful_client.py --input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
     #     --score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark
-    #     --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine
+    #     --rest_address http://localhost --rest_port 9000 --input_name input,ivector --output_name Final_affine
     #     --model_name aspire_tdnn --cw_l 17 --cw_r 12 --debug
 
     parser = argparse.ArgumentParser(
-        description='Sends requests via TFS gRPC API using data in stateful model ark input file. '
+        description='Sends requests via rest API using data in stateful model ark input file. '
         'It displays performance statistics and average rms errors comparing results with reference scores.'
         'Optionally you can enable debug mode to print additional information about inputs and outputs and detailed accuracy numbers.')
     parser.add_argument(
@@ -70,15 +78,15 @@ def parse_arguments():
         default='rm_lstm4f/test_score_1_10.ark',
         help='Path to reference scores ark file')
     parser.add_argument(
-        '--grpc_address',
+        '--rest_address',
         required=False,
         default='localhost',
-        help='Specify url to grpc service. default:localhost')
+        help='Specify url to rest service. default:http://localhost')
     parser.add_argument(
-        '--grpc_port',
+        '--rest_port',
         required=False,
-        default=9000,
-        help='Specify port to grpc service. default: 9000')
+        default=5555,
+        help='Specify port to rest service. default: 5555')
     parser.add_argument(
         '--input_name',
         required=False,
@@ -115,8 +123,36 @@ def parse_arguments():
         required=False,
         default=1,
         help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
-
-    print('### Starting grpc_stateful_client.py client ###')
+    parser.add_argument(
+        '--model_version',
+         help='Model version to be used. Default: LATEST',
+        type=int, dest='model_version')
+    parser.add_argument(
+        '--client_cert',
+        required=False,
+        default=None,
+        help='Specify mTLS client certificate file. Default: None.')
+    parser.add_argument(
+        '--client_key',
+        required=False,
+        default=None,
+        help='Specify mTLS client key file. Default: None.')
+    parser.add_argument(
+        '--ignore_server_verification',
+        required=False,
+        action='store_true',
+        help='Skip TLS host verification. Do not use in production. Default: False.')
+    parser.add_argument(
+        '--server_cert',
+        required=False,
+        default=None,
+        help='Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store.')
+    parser.add_argument(
+        '--rest_url',
+        required=False,
+        default='http://localhost',
+        help='Specify url to REST API service. default: http://localhost')
+    print('### Starting rest_stateful_client.py client ###')
 
     args = vars(parser.parse_args())
     return args
@@ -206,19 +242,19 @@ def prepare_processing_data(args):
     return sequence_size_map, input_names, output_names, input_data, reference_scores
 
 
-def validate_output(result, output_names):
+def validate_output(result_dict, output_names):
     # Validate model output
     for output_name in output_names:
-        if output_name not in result.outputs:
+        if output_name not in result_dict:
             print("ERROR: Invalid output name", output_name)
             print("Available outputs:")
-            for o in result.outputs:
+            for o in result_dict:
                 print(o)
             return False
-    if 'sequence_id' not in result.outputs:
+    if 'sequence_id' not in result_dict:
         print("ERROR: Missing sequence_id in model output")
         print("Available outputs:")
-        for o in result.outputs:
+        for o in result_dict:
             print(o)
         return False
     return True
@@ -228,12 +264,19 @@ def main():
     args = parse_arguments()
     global debug_mode
     debug_mode = int(args.get('debug'))
+    certs = None
+    verify_server = None
+    if args.get('client_cert') is not None or args.get('client_key') is not None:
+      if args.get('client_cert') is not None and args.get('client_key') is not None and args.get('rest_url').startswith("https"):
+        certs = (args.get('client_cert'), args.get('client_key'))
+        if args.get('server_cert') is not None:
+          verify_server = args.get('server_cert')
+        if args.get('ignore_server_verification') is True:
+          verify_server = False
+      else:
+        print("Error: in order to use mTLS, you need to provide both --client_cert and --client_key. In addition, your --rest_url flag has to begin with 'https://'.")
+        exit(1)
 
-    channel = grpc.insecure_channel(
-        "{}:{}".format(
-            args['grpc_address'],
-            args['grpc_port']))
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     processing_times = np.zeros((0), int)
     cw_l = int(args.get('cw_l'))
     cw_r = int(args.get('cw_r'))
@@ -246,6 +289,9 @@ def main():
     print('Starting sequence_id: {}'.format(sequence_id))
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
+    version = ""
+    if args.get('model_version') is not None:
+        version = "/versions/{}".format(args.get('model_version'))
 
     sequence_size_map, input_names, output_names, input_data, reference_scores = prepare_processing_data(
         args)
@@ -284,9 +330,8 @@ def main():
 
         for x in range(0, sequence_size + cw_l + cw_r):
             print_debug('\tExecution: {}\n'.format(x))
-            request = predict_pb2.PredictRequest()
-            request.model_spec.name = args.get('model_name')
-
+            data_obj = {}
+            inputs = dict()
             # Set input data index
             input_index = x
             # Input for context window
@@ -306,39 +351,44 @@ def main():
             for input_name in input_names:
                 input_sub_data = input_data[input_name]
                 tensor_data = input_sub_data[sequence_name][input_index]
-                request.inputs[input_name].CopyFrom(
-                    make_tensor_proto(tensor_data, shape=tensor_data.shape))
+                inputs[input_name] = tensor_data.tolist()
 
             # Add sequence start
             if x == 0:
-                request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_START, dtype="uint32"))
+                inputs['sequence_control_input'] = [int(SEQUENCE_START)]
 
             # Set sequence id
-            request.inputs['sequence_id'].CopyFrom(
-                make_tensor_proto(sequence_id, dtype="uint64"))
+            inputs['sequence_id'] = [int(sequence_id)]
 
             # Add sequence end
             if x == sequence_size + cw_l + cw_r - 1:
-                request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+                inputs['sequence_control_input'] = [int(SEQUENCE_END)]
+
+            #prepare request
+            data_json = create_request(inputs)
 
             start_time = datetime.datetime.now()
             # result includes a dictionary with all model outputs
-            result = stub.Predict(request, 10.0)
+            result = requests.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
             end_time = datetime.datetime.now()
 
-            if not validate_output(result, output_names):
+            try:
+                result_dict = json.loads(result.text)
+            except ValueError:
+                print("The server response is not json format: {}",format(result.text))
+                exit(1)
+            if "error" in result_dict:
+                print('Server returned error: {}'.format(result_dict))
+                exit(1)
+
+            if not validate_output(result_dict, output_names):
                 print(
                     "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
-                request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
-                result = stub.Predict(request, 10.0)
                 exit(1)
 
             # Unique sequence_id provided by OVMS
             if get_sequence_id:
-                sequence_id = np.uint64(result.outputs['sequence_id'])
+                sequence_id = np.uint64(result_dict['sequence_id'])
                 get_sequence_id = False
 
             duration = (end_time - start_time).total_seconds() * 1000
@@ -354,7 +404,7 @@ def main():
                     score_data = reference_scores[output_name][sequence_name][score_index]
 
                     # Parse output
-                    results_array = make_ndarray(result.outputs[output_name])
+                    results_array = make_ndarray(result_dict[output_name])
 
                     # Calculate error
                     avg_rms_error = calculate_utterance_error(
@@ -384,6 +434,7 @@ def main():
                 sequence_id,
                 sequence_name,
                 seq_avg_rms_error_sum))
+
         global_avg_rms_error_sum += seq_avg_rms_error_sum
         # END input name loop
 
@@ -392,7 +443,7 @@ def main():
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
     print_statistics(processing_times, sequence_size / 1000)
-    print('### Finished grpc_stateful_client.py client processing ###')
+    print('### Finished rest_stateful_client.py client processing ###')
 
 
 if __name__ == "__main__":
