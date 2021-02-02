@@ -422,7 +422,7 @@ def main():
                     'Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
                         x, avg_rms_error_sum, round(
                             np.average(duration), 2), round(
-                            1000 * sequence_size / np.average(duration), 2)))
+                            sequence_size / np.average(duration), 2)))
                 # END output names loop
 
             score_index += 1
@@ -442,7 +442,7 @@ def main():
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
-    print_statistics(processing_times, sequence_size)
+    print_statistics(processing_times, sequence_size / 1000)
     print('### Finished rest_stateful_client.py client processing ###')
 
 
