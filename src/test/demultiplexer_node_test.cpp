@@ -16,10 +16,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../node.hpp"
 #include "../dl_node.hpp"
-#include "test_utils.hpp"
 #include "../logging.hpp"
+#include "../node.hpp"
+#include "test_utils.hpp"
 
 using namespace ovms;
 
@@ -38,15 +38,15 @@ public:
     }
     using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
-    const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
-    const auto sessionKey = sessionMetadata.getSessionKey();
-    BlobMap blobs{{std::string("a"), blobToReturn}};
-    std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
-    nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
-    postprocessOutputs(nodeSessionOutputs);
-    return StatusCode::OK;
-
+        const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
+        const auto sessionKey = sessionMetadata.getSessionKey();
+        BlobMap blobs{{std::string("a"), blobToReturn}};
+        std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
+        nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
+        postprocessOutputs(nodeSessionOutputs);
+        return StatusCode::OK;
     }
+
 private:
     InferenceEngine::Blob::Ptr blobToReturn;
 };
@@ -79,4 +79,3 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     // TODO check for output shapes
     // TODO check for output numbers
 }
-
