@@ -131,7 +131,6 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-    SPDLOG_ERROR("JERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -188,7 +187,6 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(output_node));
 
     pipeline.execute();
-    SPDLOG_DEBUG("HERE");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -245,7 +243,6 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
     pipeline.execute();
-    SPDLOG_ERROR("JERE");
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
@@ -595,6 +592,7 @@ public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
     ovms::Status fetchResults(NodeSession& nodeSession, SessionResults&) override {
+        // no release is called as in dl_node.cpp when on error path
         return StatusCode::UNKNOWN_ERROR;
     }
 };
@@ -608,16 +606,46 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
     auto input_node = std::make_unique<EntryNode>(&request);
-    auto model_node = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     Pipeline pipeline(*input_node, *output_node);
 
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
-    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+    pipeline.connect(*input_node, *failInFetchNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*failInFetchNode, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
-    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(failInFetchNode));
+    pipeline.push(std::move(output_node));
+
+    auto status = pipeline.execute();
+    EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
+}
+
+TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode) {
+    // input   dummy(fail in fetch)    output
+    //  O------->O------->O
+    // input   dummy    output
+    //  O------->O------->O
+    ConstructorEnabledModelManager managerWithDummyModel;
+    config.setNireq(1);
+    managerWithDummyModel.reloadModelWithVersions(config);
+    // Configure pipeline
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto modelNode = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
+
+    Pipeline pipeline(*input_node, *output_node);
+
+    pipeline.connect(*input_node, *failInFetchNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*input_node, *modelNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*failInFetchNode, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+    pipeline.connect(*modelNode, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName + "_NOT_IMPORTANT"}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(failInFetchNode));
+    pipeline.push(std::move(modelNode));
     pipeline.push(std::move(output_node));
 
     auto status = pipeline.execute();
@@ -2082,7 +2110,7 @@ TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAva
     EXPECT_TRUE(status.ok()) << status.string();
 }
 
-TEST_F(EnsembleFlowTest, DISABLED_RetirePipelineDefinitionExecuteShouldFail) {
+TEST_F(EnsembleFlowTest, RetirePipelineDefinitionExecuteShouldFail) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 

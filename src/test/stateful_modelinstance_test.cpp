@@ -16,6 +16,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <thread>
 #include <typeinfo>
 #include <utility>
 
@@ -165,6 +167,55 @@ public:
     }
 };
 
+void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, uint32_t sequenceControl) {
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, sequenceControl);
+
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    tensorflow::serving::PredictResponse response;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
+    // Check response
+    EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
+}
+
+void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
+    std::future<void>* waitBeforeSequenceStarted,
+    std::future<void>* waitAfterSequenceStarted,
+    std::future<void>* waitBeforeSequenceFinished) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+
+    if (waitBeforeSequenceStarted) {
+        std::cout << "Waiting before StartStatefulPredict" << std::endl;
+        waitBeforeSequenceStarted->get();
+    }
+
+    RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_START);
+    if (waitAfterSequenceStarted) {
+        std::cout << "Waiting after StartStatefulPredict" << std::endl;
+        waitAfterSequenceStarted->get();
+    }
+    for (int i = 1; i < numberOfNoControlRequests; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        setRequestSequenceId(&request, seqId);
+        setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
+
+        tensorflow::serving::PredictResponse response;
+        // Do the inference
+        ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
+        // Check response
+        EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
+    }
+
+    if (waitBeforeSequenceFinished) {
+        std::cout << "Waiting before EndStatefulPredict" << std::endl;
+        waitBeforeSequenceFinished->get();
+    }
+
+    RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
+}
+
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
@@ -172,6 +223,222 @@ TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
     ASSERT_TRUE(typeid(*modelInstance) == typeid(ovms::StatefulModelInstance));
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleInferences) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+
+    uint64_t seqId = 1;
+
+    RunStatefulPredicts(modelInstance, modelInput, 100, seqId, nullptr, nullptr, nullptr);
+    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
+
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+
+    uint64_t startingSequenceId = 0;
+    uint16_t numberOfThreadsWaitingOnStart = 20;
+    uint16_t numberOfThreadsWaitingOnEnd = 20;
+
+    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart + numberOfThreadsWaitingOnEnd), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
+    std::vector<std::thread> inferThreads;
+
+    for (auto i = 0u; i < numberOfThreadsWaitingOnStart; ++i) {
+        startingSequenceId++;
+
+        inferThreads.emplace_back(
+            std::thread(
+                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitAfterSequenceStarted, i, startingSequenceId, modelInstance]() {
+                    std::future<void> fut1 = releaseWaitBeforeSequenceStarted[i].get_future();
+                    std::future<void> fut2 = releaseWaitAfterSequenceStarted[i].get_future();
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        &fut1,
+                        &fut2,
+                        nullptr);
+                }));
+    }
+
+    for (auto i = 0u; i < numberOfThreadsWaitingOnEnd; ++i) {
+        startingSequenceId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreadsWaitingOnStart]() {
+                    std::future<void> fut1 = releaseWaitBeforeSequenceStarted[numberOfThreadsWaitingOnStart + i].get_future();
+                    std::future<void> fut2 = releaseWaitBeforeSequenceFinished[i].get_future();
+                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                        &fut1,
+                        nullptr,
+                        &fut2);
+                }));
+    }
+
+    // sleep to allow all threads to initialize
+    for (auto& promise : releaseWaitBeforeSequenceStarted) {
+        promise.set_value();
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
+
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd + numberOfThreadsWaitingOnStart);
+
+    for (auto& promise : releaseWaitAfterSequenceStarted) {
+        promise.set_value();
+    }
+
+    // sleep to allow half threads to work
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
+
+    for (auto& promise : releaseWaitBeforeSequenceFinished) {
+        promise.set_value();
+    }
+
+    for (auto& thread : inferThreads) {
+        thread.join();
+    }
+
+    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+    uint64_t seqId = 1;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_MISSING);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_MISSING);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceIdNotProvided) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceIdNotProvided2) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
+
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceControl(&request, 99);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferIdAlreadyExists) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse response;
+    uint64_t seqId = 1;
+
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance->infer(&request, &response, unload_guard), ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    tensorflow::serving::PredictResponse firstResponse;
+    uint64_t seqId = 1;
+
+    tensorflow::serving::PredictRequest firstRequest = preparePredictRequest(modelInput);
+    setRequestSequenceId(&firstRequest, seqId);
+    setRequestSequenceControl(&firstRequest, ovms::SEQUENCE_START);
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&firstRequest, &firstResponse, unload_guard), ovms::StatusCode::OK);
+
+    // Check response
+    EXPECT_TRUE(CheckSequenceIdResponse(firstResponse, seqId));
+
+    tensorflow::serving::PredictRequest intermediateRequest = preparePredictRequest(modelInput);
+    setRequestSequenceId(&intermediateRequest, seqId);
+    setRequestSequenceControl(&intermediateRequest, ovms::NO_CONTROL_INPUT);
+
+    tensorflow::serving::PredictResponse intermediateResponse;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&intermediateRequest, &intermediateResponse, unload_guard), ovms::StatusCode::OK);
+    // Check response
+    EXPECT_TRUE(CheckSequenceIdResponse(intermediateResponse, seqId));
+
+    tensorflow::serving::PredictRequest lastRequest = preparePredictRequest(modelInput);
+    setRequestSequenceId(&lastRequest, seqId);
+    setRequestSequenceControl(&lastRequest, ovms::SEQUENCE_END);
+
+    tensorflow::serving::PredictResponse lastResponse;
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&lastRequest, &lastResponse, unload_guard), ovms::StatusCode::OK);
+    // Check response
+    EXPECT_TRUE(CheckSequenceIdResponse(lastResponse, seqId));
 }
 
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
@@ -221,25 +488,25 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
     uint64_t seqId = 1;
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, seqId);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, seqId);
 
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
-    setRequestSequenceControl(&request, SEQUENCE_START);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_START);
 
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
-    setRequestSequenceControl(&request, SEQUENCE_END);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
 
     status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
 
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
-    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+    setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
 
     status = modelInstance->mockValidate(&request, spec);
     ASSERT_TRUE(status.ok());
@@ -247,9 +514,9 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
 
 TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    setRequestSequenceControl(&request, SEQUENCE_END);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
 
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
@@ -257,9 +524,9 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    setRequestSequenceControl(&request, SEQUENCE_END);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
@@ -269,9 +536,9 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    setRequestSequenceControl(&request, NO_CONTROL_INPUT);
+    setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
@@ -281,7 +548,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 
 TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
     input.add_uint64_val(12);
@@ -291,7 +558,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
 
 TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
@@ -302,7 +569,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
-    ovms::SequenceProcessingSpec spec(SEQUENCE_START, 1);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_id"];
     input.add_uint32_val(12);
@@ -318,7 +585,7 @@ TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
 
 TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     // Prepare model instance and processing spec
-    uint32_t sequenceControlInput = SEQUENCE_START;
+    uint32_t sequenceControlInput = ovms::SEQUENCE_START;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
@@ -348,7 +615,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
-    for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_END}) {
+    for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_END}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 42;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
@@ -386,7 +653,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
 
 TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     // Prepare model instance and processing spec
-    uint32_t sequenceControlInput = SEQUENCE_END;
+    uint32_t sequenceControlInput = ovms::SEQUENCE_END;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
@@ -410,11 +677,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
 
-    auto it = response.mutable_outputs()->find("sequence_id");
-    EXPECT_FALSE(it == response.mutable_outputs()->end());
-    auto& output = (*response.mutable_outputs())["sequence_id"];
-    EXPECT_EQ(output.uint64_val_size(), 1);
-    EXPECT_EQ(output.uint64_val(0), sequenceId);
+    EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
@@ -423,7 +686,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
-    for (uint32_t sequenceControlInput : {NO_CONTROL_INPUT, SEQUENCE_START}) {
+    for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_START}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 33;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
@@ -468,13 +731,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         std::vector<float> sequenceBlobIrData;
         sequenceBlobIrData.assign((float*)chengedBlob->buffer(), ((float*)chengedBlob->buffer()) + elementsCount);
         EXPECT_EQ(sequenceBlobIrData, defaultState);
-
-        auto it = response.mutable_outputs()->find("sequence_id");
-        EXPECT_FALSE(it == response.mutable_outputs()->end());
-
-        auto& output = (*response.mutable_outputs())["sequence_id"];
-        EXPECT_EQ(output.uint64_val_size(), 1);
-        EXPECT_EQ(output.uint64_val(0), sequenceId);
+        EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
     }
 }
 

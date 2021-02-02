@@ -20,17 +20,17 @@
 #include "nodeinputhandler.hpp"
 
 namespace ovms {
-ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount) :
-    NodeSession(metadata, nodeName, inputsCount) {}
+ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
+    NodeSession(metadata, nodeName, inputsCount, shardsCount) {}
 
-ExitNodeSession::ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount) :
-    NodeSession(std::move(metadata), nodeName, inputsCount) {}
+ExitNodeSession::ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
+    NodeSession(std::move(metadata), nodeName, inputsCount, shardsCount) {}
 
 ExitNodeSession::~ExitNodeSession() = default;
 
 void ExitNodeSession::release() {}
 
 const BlobMap& ExitNodeSession::getInputBlobs() const {
-    return this->inputHandler->getInputBlobs();
+    return this->inputHandler->getInputs();
 }
 }  // namespace ovms

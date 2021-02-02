@@ -430,7 +430,7 @@ def main():
 
         seq_avg_rms_error_sum = mean_avg_rms_error_sum / (sequence_size)
         print(
-            "\tSequence id {}, sequence name {} - average rms error: {:.10f}\n".format(
+            "\tSequence id: {} ; Sequence name: {} ; Average RMS Error: {:.10f}\n".format(
                 sequence_id,
                 sequence_name,
                 seq_avg_rms_error_sum))

@@ -22,6 +22,7 @@
 #include <inference_engine.hpp>
 
 #include "nodesessionmetadata.hpp"
+#include "status.hpp"
 
 namespace ovms {
 struct NodeInputHandler;
@@ -37,16 +38,24 @@ protected:
     std::unique_ptr<NodeOutputHandler> outputHandler;
 
 public:
-    NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount);
-    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount);
+    NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
+    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
-    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr&);
+    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr&, session_id_t shardId);
     const NodeSessionMetadata& getNodeSessionMetadata() const;
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;
     virtual void release() {}
     virtual bool tryDisarm(uint microseconds) { return true; }
-    void notifyFinishedDependency();
+    Status notifyFinishedDependency();
+};
+
+class ReleaseSessionGuard {
+    NodeSession& nodeSession;
+
+public:
+    ReleaseSessionGuard(NodeSession& nodeSession);
+    ~ReleaseSessionGuard();
 };
 }  // namespace ovms

@@ -17,25 +17,8 @@
 
 #include <string>
 
-#include <inference_engine.hpp>
-
-#include "blobmap.hpp"
-#include "nodesession.hpp"
-#include "nodesessionmetadata.hpp"
-#include "status.hpp"
-
 namespace ovms {
 
-class Node;
-class TensorInfo;
-
-class ExitNodeSession : public NodeSession {
-public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
-    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
-    virtual ~ExitNodeSession();
-
-    const BlobMap& getInputBlobs() const;
-    void release() override;
-};
+using session_id_t = uint32_t;
+using session_key_t = std::string;
 }  // namespace ovms

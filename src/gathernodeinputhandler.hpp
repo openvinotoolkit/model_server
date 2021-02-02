@@ -15,27 +15,26 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
 #include <inference_engine.hpp>
 
-#include "blobmap.hpp"
-#include "nodesession.hpp"
-#include "nodesessionmetadata.hpp"
-#include "status.hpp"
+#include "nodeinputhandler.hpp"
+#include "session_id.hpp"
 
 namespace ovms {
 
-class Node;
-class TensorInfo;
+using shard_map_t = std::unordered_map<session_id_t, InferenceEngine::Blob::Ptr>;
 
-class ExitNodeSession : public NodeSession {
+class GatherNodeInputHandler : public NodeInputHandler {
+    std::unordered_map<std::string, shard_map_t> shardsStorage;
+
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
-    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount);
-    virtual ~ExitNodeSession();
-
-    const BlobMap& getInputBlobs() const;
-    void release() override;
+    GatherNodeInputHandler(uint32_t inputsMissingCount, session_id_t shardsCount);
+    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
+    Status notifyFinishedDependency() override;
 };
 }  // namespace ovms

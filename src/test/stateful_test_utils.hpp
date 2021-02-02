@@ -26,11 +26,18 @@
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 #include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
 using namespace InferenceEngine;
+
+const std::string SEQUENCE_ID_INPUT = "sequence_id";
+const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
 class MockIVariableState : public IVariableState {
 public:
@@ -76,6 +83,32 @@ public:
     }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequenceId) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
+    input.add_uint64_val(sequenceId);
+}
+
+static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequenceControl) {
+    auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
+    input.add_uint32_val(sequenceControl);
+}
+
+static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& response, uint64_t seqId) {
+    // Check response
+    auto it = response.mutable_outputs()->find("sequence_id");
+    if (it == response.mutable_outputs()->end())
+        return false;
+    auto& output = (*response.mutable_outputs())["sequence_id"];
+    if (output.uint64_val_size() != 1)
+        return false;
+    if (output.uint64_val(0) != seqId)
+        return false;
+
+    return true;
+}
+
 static void addState(ovms::model_memory_state_t& states, std::string name, std::vector<size_t>& shape, std::vector<float>& values) {
     const Precision precision{Precision::FP32};
     const Layout layout{Layout::NC};
@@ -85,6 +118,8 @@ static void addState(ovms::model_memory_state_t& states, std::string name, std::
     std::shared_ptr<IVariableState> ivarPtr = std::make_shared<MockIVariableStateWithData>(name, stateBlob);
     states.push_back(VariableState(ivarPtr));
 }
+
+#pragma GCC diagnostic pop
 
 class MockIInferRequestStateful : public MockIInferRequest {
 public:
