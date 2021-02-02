@@ -17,6 +17,7 @@
 
 #include <map>
 #include <utility>
+#include <vector>
 
 #include <inference_engine.hpp>
 
