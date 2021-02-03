@@ -246,7 +246,7 @@ $ aws s3 rb s3://models-repository
 ## Helm options references
 
 | Parameter        | Description           | Prerequisites  | Default |
-| ------------- |:-------------:| -----:| -----:|
+| ------------- |-------------|-------------|-------------|
 | replicas      | number of k8s pod replicas to deploy  |  | 1 |
 | image_name      | change to use different docker image with OVMS   |  | openvino/model_server:latest |
 | config_configmap_name | Starts OVMS using the config file stored in the ConfigMap |    Create the ConfigMap including config.json file | - |
