@@ -749,10 +749,23 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+
+    if (config.isStateful() && config.isDynamicParameterEnabled()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());
+        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL;
+    }
     auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
-    if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
-        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+    if (model->isAnyVersionSubscribed()) {
+        if (config.isDynamicParameterEnabled())
+        {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+            return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
+        if (config.isStateful())
+        {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
+            return StatusCode::REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL;
+        }
     }
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());
