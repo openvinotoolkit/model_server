@@ -56,7 +56,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(blobResults, inferRequest, model, nodeSession.getSessionKey());
     if (status == StatusCode::OK && demultiplexCount) {
-        status = postprocessOutputs(nodeSessionOutputs);
+        status = demultiplyOutputs(nodeSessionOutputs);
     }
     return status;
 }
@@ -168,7 +168,7 @@ std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata
         this->modelManager, this->modelName, this->modelVersion.value_or(0));
 }
 
-Status DLNode::postprocessOutputs(SessionResults& nodeSessionOutputs) {
+Status DLNode::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     auto& [session, blob] = *blobMap.begin();
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));

@@ -23,6 +23,8 @@
 
 using namespace ovms;
 
+using testing::ElementsAre;
+
 class DemultiplexerDLNode : public DLNode {
 public:
     DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint32_t> demultiplyCount, const NodeSessionMetadata& meta) :
@@ -43,8 +45,7 @@ public:
         BlobMap blobs{{std::string("a"), blobToReturn}};
         std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
-        postprocessOutputs(nodeSessionOutputs);
-        return StatusCode::OK;
+        return demultiplyOutputs(nodeSessionOutputs);
     }
 
 private:
@@ -75,7 +76,12 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_EQ(sessionResults.size(), 2);
-    // TODO check for each output metadata key
-    // TODO check for output shapes
-    // TODO check for output numbers
+    auto& sessionResult1 = sessionResults["node_0"];
+    auto& sessionResult2 = sessionResults["node_1"];
+    EXPECT_EQ(sessionResult1.first.getSessionKey(), "node_0");
+    EXPECT_EQ(sessionResult2.first.getSessionKey(), "node_1");
+    EXPECT_THAT(sessionResult1.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData1.size()));
+    EXPECT_THAT(sessionResult2.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData2.size()));
+    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), blobData1.size() * sizeof(float)), 0);
+    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult2.second.begin()->second->cbuffer()), blobData2.data(), blobData2.size() * sizeof(float)), 0);
 }

@@ -91,7 +91,7 @@ private:
 
 protected:
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
-    Status postprocessOutputs(SessionResults& nodeSessionOutputs);
+    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 };
 
 }  // namespace ovms
