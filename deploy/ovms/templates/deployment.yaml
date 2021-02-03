@@ -53,7 +53,7 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
-        {{- if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy }}
+        {{- if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy .Values.aws_secret_access_key }}
         env:
         {{- end }}
         {{- if .Values.http_proxy }}
@@ -90,6 +90,13 @@ spec:
         {{- if .Values.s3_compat_api_endpoint }}
         - name: S3_ENDPOINT
           value: {{ .Values.s3_compat_api_endpoint }}
+        {{- end }}
+        {{- if .Values.aws_secret_access_key }}
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "ovms.fullname" . }}-azure-secret
+              key: connection_string
         {{- end }}
         args: [
         {{- if .Values.config_configmap_name }}

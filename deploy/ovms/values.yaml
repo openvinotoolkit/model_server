@@ -33,6 +33,7 @@ aws_access_key_id: ""
 aws_secret_access_key: ""
 aws_region: ""
 s3_compat_api_endpoint: ""
+azure_storage_connection_string: ""
 log_level: INFO
 service_type: "LoadBalancer"
 # alternatively set to NodePort or ClusterIP

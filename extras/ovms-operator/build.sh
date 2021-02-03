@@ -6,4 +6,7 @@ make install
 make deploy IMG=$IMG
 # kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 
+# create bundle
+make bundle
+
 

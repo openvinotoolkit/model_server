@@ -17,7 +17,7 @@
 replicas: 1
 image_name: "openvino/model_server:latest"
 config_configmap_name: ""
-
+config_path: ""
 grpc_port: 8080
 rest_port: 8081
 model_name: ""
@@ -33,7 +33,7 @@ aws_access_key_id: ""
 aws_secret_access_key: ""
 aws_region: ""
 s3_compat_api_endpoint: ""
-
+azure_storage_connection_string: ""
 log_level: INFO
 service_type: "LoadBalancer"
 resources: {}
@@ -46,4 +46,5 @@ security_context: {}
   #  runAsGroup: 5000
 models_host_path: ""
 models_volume_claim: ""
+
 
