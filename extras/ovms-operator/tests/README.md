@@ -25,8 +25,9 @@ cd community-operators/upstream-community-operators/ovms-operator/0.1.0
 # edit manifests/ovms-operator.clusterserviceversion.yaml and set image: to point to the test operator image
 
 podman build -t $IMG_BUNDLE .
+podman push $IMG_BUNDLE
 opm index add --bundles $IMG_BUNDLE --from-index quay.io/operatorhubio/catalog:latest --tag $IMG_CATALOG
-
+podman push $IMG_CATALOG
 ```
 
 ## Setting up test k8s cluster
@@ -41,6 +42,9 @@ kubectl get pod --all-namespaces
 echo "cluster installed"
 ```
 ## Deployment of the OVMS operator
+Prerequisites:
+- [operator-sdk](https://github.com/operator-framework/operator-sdk)
+
 ```bash
 echo "installing olm"
 operator-sdk olm install
@@ -62,6 +66,7 @@ kubectl get clusterserviceversion --all-namespaces
 
 ## Testing the operator usage
 ```bash
+kubectl create ns ovms
 kubectl apply -f sample1.yaml
 kubectl apply -f sample2.yaml
 ```
