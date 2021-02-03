@@ -15,11 +15,10 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
-#include "../modelmanager.hpp"
-#include "../http_rest_api_handler.hpp"
 #include "../config.hpp"
+#include "../http_rest_api_handler.hpp"
 #include "../logging.hpp"
-
+#include "../modelmanager.hpp"
 #include "test_utils.hpp"
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"

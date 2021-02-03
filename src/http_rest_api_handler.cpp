@@ -23,6 +23,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "config.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
@@ -30,7 +31,6 @@
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
-#include "config.hpp"
 
 #define DEBUG
 #include "timer.hpp"
@@ -332,8 +332,7 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
     auto& config = ovms::Config::instance();
     auto& manager = ModelManager::getInstance();
     bool isConfigFileReloadNeeded = manager.configFileReloadNeeded();
-    if(isConfigFileReloadNeeded)
-    {
+    if (isConfigFileReloadNeeded) {
         status = manager.loadConfig(config.configPath());
         if (!status.ok()) {
             return status;
@@ -346,16 +345,14 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
         return status;
     }
 
-
     std::string jsonString;
     status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonString);
-        if (!status.ok()) {
+    if (!status.ok()) {
         return status;
     }
     response = jsonString;
 
-    if(!isConfigFileReloadNeeded)
-    {
+    if (!isConfigFileReloadNeeded) {
         return StatusCode::OK_RELOAD_NOT_NEEDED;
     }
     return StatusCode::OK;
