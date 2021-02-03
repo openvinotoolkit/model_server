@@ -556,6 +556,8 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
+    input.set_dtype(tensorflow::DataType::DT_UINT64);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint64_val(12);
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
@@ -567,6 +569,8 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
+    input.set_dtype(tensorflow::DataType::DT_UINT32);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint32_val(999);
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
@@ -577,12 +581,16 @@ TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_id"];
+    input.set_dtype(tensorflow::DataType::DT_UINT32);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint32_val(12);
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
 
     request = preparePredictRequest(modelInput);
     input = (*request.mutable_inputs())["sequence_control_input"];
+    input.set_dtype(tensorflow::DataType::DT_UINT64);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint64_val(1);
     status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);

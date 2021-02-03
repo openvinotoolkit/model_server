@@ -222,7 +222,7 @@ TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_RowOrder_Noname) {
 
 TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_EmptyTensorContentError) {
     output1->mutable_tensor_content()->clear();
-    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::ROW), StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::ROW), StatusCode::REST_SERIALIZE_NO_DATA);
 }
 
 TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_InvalidTensorContentSizeError) {
