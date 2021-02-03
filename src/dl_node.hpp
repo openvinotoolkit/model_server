@@ -41,23 +41,20 @@ protected:
     std::shared_ptr<ModelInstance> model;
     std::unique_ptr<NodeStreamIdGuard> nodeStreamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
-    std::optional<uint32_t> demultiplexCount;
 
 public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
         std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}, uint32_t demultiplyCount = 0) :
-        Node(nodeName),
+        Node(nodeName, demultiplyCount),
         modelName(modelName),
         modelVersion(modelVersion),
         modelManager(modelManager),
-        nodeOutputNameAlias(nodeOutputNameAlias),
-        demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt) {
+        nodeOutputNameAlias(nodeOutputNameAlias) {
     }
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
-    using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 private:
@@ -91,7 +88,6 @@ private:
 
 protected:
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
-    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 };
 
 }  // namespace ovms

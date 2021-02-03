@@ -51,11 +51,11 @@ protected:
 
     // TODO make fields below const after integration of PipelineDefinition with Demultiplexer/Gather
     std::optional<std::set<std::string>> gatherFrom;
-    std::optional<uint16_t> demultiplexCount;
+    std::optional<uint32_t> demultiplexCount;
     // end TODO
 
 public:
-    Node(const std::string& nodeName);
+    Node(const std::string& nodeName, uint32_t demultiplyCount = 0);
 
     virtual ~Node() = default;
 
@@ -95,6 +95,7 @@ protected:
     NodeSession& getNodeSession(const NodeSessionMetadata& metadata);
     NodeSession& getNodeSession(const session_key_t& sessionKey) const;
     virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount);
+    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 };
 
 }  // namespace ovms

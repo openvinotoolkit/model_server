@@ -18,16 +18,20 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <vector>
 
 #include "logging.hpp"
 #include "nodesession.hpp"
+#include "ov_utils.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-Node::Node(const std::string& nodeName) :
-    nodeName(nodeName) {
+Node::Node(const std::string& nodeName, uint32_t demultiplyCount) :
+    nodeName(nodeName),
+    demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt) {
 }
+
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
     auto it = nodeSessions.find(sessionId);
     auto& nodeSession = it->second;
@@ -35,7 +39,9 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         return StatusCode::UNKNOWN_ERROR;
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
-    // TODO outputhandler->postprocessResults
+    if (status == StatusCode::OK && demultiplexCount) {
+        status = demultiplyOutputs(nodeSessionOutputs);
+    }
     nodeSessions.erase(sessionId);
     return status;
 }
@@ -140,6 +146,31 @@ std::vector<session_key_t> Node::getReadySessions() const {
         }
     }
     return std::move(readySessions);
+}
+
+Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
+    auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
+    auto& [session, blob] = *blobMap.begin();
+    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
+    auto tensorDesc = blob->getTensorDesc();
+    auto newDims = tensorDesc.getDims();
+    newDims.erase(newDims.begin() + 1);
+    const InferenceEngine::TensorDesc dividedBlobDesc(
+        tensorDesc.getPrecision(),
+        newDims,
+        InferenceEngine::Layout::ANY);
+    const auto step = blob->byteSize() / demultiplexCount.value();
+    for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+        InferenceEngine::Blob::Ptr dividedBlob;
+        auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+        if (!status.ok()) {
+            return status;
+        }
+        memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+        nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+    }
+    nodeSessionOutputs.erase(metadata.getSessionKey());
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

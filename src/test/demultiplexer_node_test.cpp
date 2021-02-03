@@ -35,21 +35,21 @@ public:
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
-    void setFetchResult(InferenceEngine::Blob::Ptr& blobToReturn) {
-        this->blobToReturn = blobToReturn;
+    void setFetchResult(InferenceEngine::Blob::Ptr& intermediateResultBlob) {
+        this->intermediateResultBlob = intermediateResultBlob;
     }
     using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
-        BlobMap blobs{{std::string("a"), blobToReturn}};
-        std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, blobs};
+        BlobMap blobs{{std::string("a"), intermediateResultBlob}};
+        std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, std::move(blobs)};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
-        return demultiplyOutputs(nodeSessionOutputs);
+        return StatusCode::OK;
     }
 
 private:
-    InferenceEngine::Blob::Ptr blobToReturn;
+    InferenceEngine::Blob::Ptr intermediateResultBlob;
 };
 
 TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
@@ -64,22 +64,24 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     std::vector<float> blobDataNonDemultiplexed(blobData1.size() * demultiplyCount);
     std::copy(blobData1.begin(), blobData1.end(), blobDataNonDemultiplexed.begin());
     std::copy(blobData2.begin(), blobData2.end(), blobDataNonDemultiplexed.begin() + blobData1.size());
-    InferenceEngine::Blob::Ptr inputBlob = InferenceEngine::make_shared_blob<float>(desc, blobDataNonDemultiplexed.data());
+    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobDataNonDemultiplexed.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
-    DemultiplexerDLNode demultiplexerNode("node", "model", 1, manager, std::unordered_map<std::string, std::string>{{"a", "a"}}, demultiplyCount, meta);
-    demultiplexerNode.setFetchResult(inputBlob);
+    std::string demultiplexerNodeName("node");
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);
+    demultiplexerNode.setFetchResult(intermediateResultBlob);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_EQ(sessionResults.size(), 2);
-    auto& sessionResult1 = sessionResults["node_0"];
-    auto& sessionResult2 = sessionResults["node_1"];
-    EXPECT_EQ(sessionResult1.first.getSessionKey(), "node_0");
-    EXPECT_EQ(sessionResult2.first.getSessionKey(), "node_1");
+    auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);
+    auto& sessionResult1 = sessionResults[demultiplexedMetadata[0].getSessionKey()];
+    auto& sessionResult2 = sessionResults[demultiplexedMetadata[1].getSessionKey()];
+    EXPECT_EQ(sessionResult1.first.getSessionKey(), demultiplexedMetadata[0].getSessionKey());
+    EXPECT_EQ(sessionResult2.first.getSessionKey(), demultiplexedMetadata[1].getSessionKey());
     EXPECT_THAT(sessionResult1.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData1.size()));
     EXPECT_THAT(sessionResult2.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData2.size()));
     EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), blobData1.size() * sizeof(float)), 0);
