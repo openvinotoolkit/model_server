@@ -51,11 +51,11 @@ protected:
 
     // TODO make fields below const after integration of PipelineDefinition with Demultiplexer/Gather
     std::optional<std::set<std::string>> gatherFrom;
-    std::optional<uint16_t> demultiplexCount;
+    std::optional<uint32_t> demultiplexCount;
     // end TODO
 
 public:
-    Node(const std::string& nodeName);
+    Node(const std::string& nodeName, uint32_t demultiplyCount = 0);
 
     virtual ~Node() = default;
 
@@ -66,6 +66,7 @@ public:
 
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
+    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 
 public:
     Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);

@@ -45,8 +45,8 @@ protected:
 public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
-        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}) :
-        Node(nodeName),
+        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}, uint32_t demultiplyCount = 0) :
+        Node(nodeName, demultiplyCount),
         modelName(modelName),
         modelVersion(modelVersion),
         modelManager(modelManager),

@@ -54,7 +54,6 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(blobResults, inferRequest, model, nodeSession.getSessionKey());
-    // TODO outputhandler demultiplex
     return status;
 }
 
