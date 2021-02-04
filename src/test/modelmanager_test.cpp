@@ -488,10 +488,10 @@ TEST(ModelManager, ConfigReloadingStatefulDynamic) {
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config;
     config.setStateful(true);
-    config.setBatchingMode(AUTO);
+    config.setBatchingMode(ovms::Mode::AUTO);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 
-    config.setBatchingMode(FIXED);
+    config.setBatchingMode(ovms::Mode::FIXED);
     config.setShapes({{"A", {ovms::Mode::AUTO, {1, 3, 224, 224}}}});
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 
@@ -506,11 +506,11 @@ TEST(ModelManager, ConfigReloadingNonStateful) {
     config.setMaxSequenceNumber(5);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
 
-    config.setMaxSequenceNumber(DEFAULT_MAX_SEQUENCE_NUMBER);
-    config.getSequenceTimeout(33);
+    config.setMaxSequenceNumber(ovms::DEFAULT_MAX_SEQUENCE_NUMBER);
+    config.setSequenceTimeout(33);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 
-    config.getSequenceTimeout(DEFAULT_SEQUENCE_TIMEOUT_SECONDS);
+    config.setSequenceTimeout(ovms::DEFAULT_SEQUENCE_TIMEOUT_SECONDS);
     config.setLowLatencyTransformation(true);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 
