@@ -57,8 +57,6 @@ TEST(ModelControlApi, nonExistingConfigFile) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto status = handler.processModelControlApiRequest(response);
 
-    SPDLOG_INFO(response);
-
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
@@ -169,7 +167,7 @@ TEST(ModelControlApi, reloadNotNeeded) {
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     manager.loadConfig(configFile);
     auto status = handler.processModelControlApiRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 }
 
 TEST(ModelControlApi, reloadNotNeededManyThreads) {
@@ -190,7 +188,7 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
     std::function<void()> func = [&handler]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string response;
-        EXPECT_EQ(handler.processModelControlApiRequest(response), ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+        EXPECT_EQ(handler.processModelControlApiRequest(response), ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {

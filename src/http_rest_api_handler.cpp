@@ -356,7 +356,7 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
     response = jsonString;
 
     if (!isConfigFileReloadNeeded) {
-        return StatusCode::OK_RELOAD_NOT_NEEDED;
+        return StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED;
     }
     return StatusCode::OK;
 }
