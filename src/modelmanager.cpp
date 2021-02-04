@@ -757,14 +757,16 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (!config.isStateful()) {
         if (config.getMaxSequenceNumber() != DEFAULT_MAX_SEQUENCE_NUMBER) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting max sequence number parameter for non stateful model {}.", config.getName());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         if (config.getSequenceTimeout() != DEFAULT_SEQUENCE_TIMEOUT_SECONDS) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting sequencetimeout parameter for non stateful model {}.", config.getName());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         if (config.isLowLatencyTransformationUsed() != false) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested low latency transformation parameter for non stateful model {}.", config.getName());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
-        return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
     }
     auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
     if (model->isAnyVersionSubscribed()) {
