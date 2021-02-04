@@ -78,13 +78,13 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_EQ(sessionResults.size(), demultiplyCount);
     auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);
-    ASSERT_EQ(demultiplexedMetadata, demultiplyCount);
+    ASSERT_EQ(demultiplexedMetadata.size(), demultiplyCount);
     auto& sessionResult1 = sessionResults[demultiplexedMetadata[0].getSessionKey()];
     auto& sessionResult2 = sessionResults[demultiplexedMetadata[1].getSessionKey()];
     EXPECT_EQ(sessionResult1.first.getSessionKey(), demultiplexedMetadata[0].getSessionKey());
     EXPECT_EQ(sessionResult2.first.getSessionKey(), demultiplexedMetadata[1].getSessionKey());
     EXPECT_THAT(sessionResult1.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData1.size()));
     EXPECT_THAT(sessionResult2.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData2.size()));
-    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), blobData1.size() * sizeof(float)), 0);
-    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult2.second.begin()->second->cbuffer()), blobData2.data(), blobData2.size() * sizeof(float)), 0);
+    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), sessionResult1.second.begin()->second->byteSize()), 0);
+    EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult2.second.begin()->second->cbuffer()), blobData2.data(), sessionResult2.second.begin()->second->byteSize()), 0);
 }
