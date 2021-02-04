@@ -541,6 +541,9 @@ bool ModelManager::configFileReloadNeeded() {
     struct stat statTime;
 
     stat(configFilename.c_str(), &statTime);
+    SPDLOG_INFO(configFilename.c_str());
+    SPDLOG_INFO(lastConfigChangeTime);
+    SPDLOG_INFO(statTime.st_ctime);
     if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
         return false;
     }

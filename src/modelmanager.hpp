@@ -127,16 +127,16 @@ private:
     uint watcherIntervalSec = 1;
 
     /**
-     * @brief Mutex for protecting concurrent reloading config
-     */
-    mutable std::recursive_mutex configMtx;
-
-    /**
      * @brief Time of last config change
      */
     int64_t lastConfigChangeTime;
 
 public:
+    /**
+     * @brief Mutex for protecting concurrent reloading config
+     */
+    mutable std::recursive_mutex configMtx;
+
     /**
      * @brief Gets the instance of ModelManager
      */

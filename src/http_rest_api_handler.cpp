@@ -20,6 +20,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <mutex>
 
 #include <spdlog/spdlog.h>
 
@@ -331,6 +332,7 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
     Status status;
     auto& config = ovms::Config::instance();
     auto& manager = ModelManager::getInstance();
+
     bool isConfigFileReloadNeeded = manager.configFileReloadNeeded();
     if (isConfigFileReloadNeeded) {
         status = manager.loadConfig(config.configPath());
@@ -338,6 +340,7 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
             return status;
         }
     }
+    manager.updateConfigurationWithoutConfigFile();
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
