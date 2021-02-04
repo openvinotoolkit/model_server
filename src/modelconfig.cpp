@@ -42,6 +42,22 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_DEBUG("ModelConfig {} reload required due to name mismatch", this->name);
         return true;
     }
+    if (this->stateful != rhs.stateful) {
+        SPDLOG_DEBUG("ModelConfig {} reload required due to stateful type mismatch", this->name);
+        return true;
+    }
+    if (this->sequenceTimeout != rhs.sequenceTimeout) {
+        SPDLOG_DEBUG("ModelConfig {} reload required due to sequenceTimeout mismatch", this->name);
+        return true;
+    }
+    if (this->maxSequenceNumber != rhs.maxSequenceNumber) {
+        SPDLOG_DEBUG("ModelConfig {} reload required due to maxSequenceNumber mismatch", this->name);
+        return true;
+    }
+    if (this->lowLatencyTransformation != rhs.lowLatencyTransformation) {
+        SPDLOG_DEBUG("ModelConfig {} reload required due to lowLatencyTransformation mismatch", this->name);
+        return true;
+    }
     if (this->basePath != rhs.basePath) {
         SPDLOG_DEBUG("ModelConfig {} reload required due to original base path mismatch", this->name);
         return true;

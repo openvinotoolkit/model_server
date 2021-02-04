@@ -484,6 +484,40 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
 }
 
+TEST(ModelManager, ConfigReloadingStatefulDynamic) {
+    ConstructorEnabledModelManager manager;
+    ovms::ModelConfig config;
+    config.setStateful(true);
+    config.setBatchingMode(AUTO);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+
+    config.setBatchingMode(FIXED);
+    config.setShapes({ {"A", {ovms::Mode::AUTO, {1, 3, 224, 224}}} });
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+
+    config.setShapes({ {"A", {ovms::Mode::FIXED, {1, 3, 224, 224}}} });
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+}
+
+TEST(ModelManager, ConfigReloadingNonStateful) {
+    ConstructorEnabledModelManager manager;
+    ovms::ModelConfig config;
+    config.setStateful(false);
+    config.setMaxSequenceNumber(5);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
+
+    config.setMaxSequenceNumber(DEFAULT_MAX_SEQUENCE_NUMBER);
+    config.getSequenceTimeout(33);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+
+    config.getSequenceTimeout(DEFAULT_SEQUENCE_TIMEOUT_SECONDS);
+    config.setLowLatencyTransformation(true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+    
+    config.setLowLatencyTransformation(false);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+}
+
 class DummyModelDirectoryStructure {
 private:
     std::string modelSourcePath;

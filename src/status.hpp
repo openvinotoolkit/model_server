@@ -64,6 +64,7 @@ enum class StatusCode {
     INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
     REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, /*!< Dynamic shape and dynamic batch size not supported for stateful models */
     REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
+    INVALID_NON_STATEFUL_MODEL_PARAMETER, /*!< Stateful model config parameter used for non stateful model */
 
     // Sequence management
     SEQUENCE_MISSING,                /*!< Sequence with provided ID does not exist */
