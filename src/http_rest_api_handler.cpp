@@ -16,11 +16,11 @@
 #include "http_rest_api_handler.hpp"
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <mutex>
 
 #include <spdlog/spdlog.h>
 

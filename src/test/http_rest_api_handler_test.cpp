@@ -46,14 +46,14 @@ TEST(ModelControlApi, nonExistingConfigFile) {
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-    
+
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
     std::filesystem::remove("/tmp/ovms_config_file.json");
     createConfigFileWithContent(config_1);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto status = handler.processModelControlApiRequest(response);
 
@@ -69,7 +69,7 @@ TEST(ModelControlApi, positive) {
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-    
+
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
@@ -91,7 +91,7 @@ TEST(ModelControlApi, positive) {
   }
  ]
 }
-})";    
+})";
     auto status = handler.processModelControlApiRequest(response);
 
     EXPECT_EQ(expectedJson, response);
@@ -105,7 +105,6 @@ static const char* empty_config = R"(
     ]
 })";
 
-
 TEST(ModelControlApi, configChange) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
@@ -115,7 +114,7 @@ TEST(ModelControlApi, configChange) {
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-    
+
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
@@ -124,7 +123,7 @@ TEST(ModelControlApi, configChange) {
     createConfigFileWithContent(empty_config);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_1 = R"({})";    
+    const char* expectedJson_1 = R"({})";
 
     auto status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_1, response);
@@ -148,7 +147,7 @@ TEST(ModelControlApi, configChange) {
   }
  ]
 }
-})";    
+})";
     status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
