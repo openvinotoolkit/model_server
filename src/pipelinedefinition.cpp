@@ -19,6 +19,7 @@
 #include <set>
 #include <thread>
 
+#include "custom_node.hpp"
 #include "dl_node.hpp"
 #include "entry_node.hpp"
 #include "exit_node.hpp"
@@ -161,11 +162,19 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             break;
         }
         case NodeKind::DL:
-            nodes.insert(std::make_pair(info.nodeName, std::move(std::make_unique<DLNode>(info.nodeName,
+            nodes.insert(std::make_pair(info.nodeName, std::make_unique<DLNode>(
+                                                           info.nodeName,
                                                            info.modelName,
                                                            info.modelVersion,
                                                            manager,
-                                                           info.outputNameAliases))));
+                                                           info.outputNameAliases)));
+            break;
+        case NodeKind::CUSTOM:
+            nodes.insert(std::make_pair(info.nodeName, std::make_unique<CustomNode>(
+                                                           info.nodeName,
+                                                           info.library,
+                                                           info.parameters,
+                                                           info.outputNameAliases)));
             break;
         case NodeKind::EXIT: {
             auto node = std::make_unique<ExitNode>(response);
@@ -504,6 +513,12 @@ public:
             }
 
             prepareRemainingUnconnectedDependantModelInputsSet();
+        }
+
+        if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
+            if (!dependantNodeInfo.library.isValid()) {
+                return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
+            }
         }
 
         if (connections.count(dependantNodeInfo.nodeName) > 0) {
