@@ -150,30 +150,31 @@ std::vector<session_key_t> Node::getReadySessions() const {
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    auto& [session, blob] = *blobMap.begin();
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
-    auto tensorDesc = blob->getTensorDesc();
-    auto newDims = tensorDesc.getDims();
-    if (newDims.size() <= 1) {
-        return StatusCode::UNKNOWN_ERROR;
-    }
-    newDims.erase(newDims.begin() + 1);
-    const InferenceEngine::TensorDesc dividedBlobDesc(
-        tensorDesc.getPrecision(),
-        newDims,
-        InferenceEngine::Layout::ANY);
-    const auto step = blob->byteSize() / demultiplexCount.value();
-    for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
-        InferenceEngine::Blob::Ptr dividedBlob;
-        auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-        if (!status.ok()) {
-            return status;
-        }
-        if (dividedBlob->byteSize() != step) {
+    for (auto& [blobName, blob] : blobMap) {
+        auto tensorDesc = blob->getTensorDesc();
+        auto newDims = tensorDesc.getDims();
+        if (newDims.size() <= 1) {
             return StatusCode::UNKNOWN_ERROR;
         }
-        memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-        nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+        newDims.erase(newDims.begin() + 1);
+        const InferenceEngine::TensorDesc dividedBlobDesc(
+            tensorDesc.getPrecision(),
+            newDims,
+            InferenceEngine::Layout::ANY);
+        const auto step = blob->byteSize() / demultiplexCount.value();
+        for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+            InferenceEngine::Blob::Ptr dividedBlob;
+            auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+            if (!status.ok()) {
+                return status;
+            }
+            if (dividedBlob->byteSize() != step) {
+                return StatusCode::UNKNOWN_ERROR;
+            }
+            memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+        }
     }
     nodeSessionOutputs.erase(metadata.getSessionKey());
     return StatusCode::OK;
