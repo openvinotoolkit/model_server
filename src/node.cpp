@@ -39,7 +39,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         return StatusCode::UNKNOWN_ERROR;
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
-    if (status == StatusCode::OK && demultiplexCount) {
+    if (status.ok() && demultiplexCount) {
         status = demultiplyOutputs(nodeSessionOutputs);
     }
     nodeSessions.erase(sessionId);
@@ -154,6 +154,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
     auto tensorDesc = blob->getTensorDesc();
     auto newDims = tensorDesc.getDims();
+    if (newDims.size() <= 1) {
+        return StatusCode::UNKNOWN_ERROR;
+    }
     newDims.erase(newDims.begin() + 1);
     const InferenceEngine::TensorDesc dividedBlobDesc(
         tensorDesc.getPrecision(),
@@ -165,6 +168,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
         if (!status.ok()) {
             return status;
+        }
+        if (dividedBlob->byteSize() != step) {
+            return StatusCode::UNKNOWN_ERROR;
         }
         memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
         nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});

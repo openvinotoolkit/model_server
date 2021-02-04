@@ -66,6 +66,7 @@ public:
 
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
+    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 
 public:
     Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);
@@ -95,7 +96,6 @@ protected:
     NodeSession& getNodeSession(const NodeSessionMetadata& metadata);
     NodeSession& getNodeSession(const session_key_t& sessionKey) const;
     virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount);
-    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 };
 
 }  // namespace ovms

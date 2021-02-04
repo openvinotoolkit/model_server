@@ -76,8 +76,9 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     // perform test
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::OK);
-    ASSERT_EQ(sessionResults.size(), 2);
+    ASSERT_EQ(sessionResults.size(), demultiplyCount);
     auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);
+    ASSERT_EQ(demultiplexedMetadata, demultiplyCount);
     auto& sessionResult1 = sessionResults[demultiplexedMetadata[0].getSessionKey()];
     auto& sessionResult2 = sessionResults[demultiplexedMetadata[1].getSessionKey()];
     EXPECT_EQ(sessionResult1.first.getSessionKey(), demultiplexedMetadata[0].getSessionKey());
