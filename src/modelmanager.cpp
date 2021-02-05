@@ -410,11 +410,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
-        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
             continue;
         }
+
+        const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
             continue;

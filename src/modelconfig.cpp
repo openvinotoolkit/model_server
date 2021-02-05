@@ -436,13 +436,34 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         this->setStateful(v["stateful"].GetBool());
 
     if (v.HasMember("low_latency_transformation"))
+    {
+        if (!v.HasMember("stateful"))
+        {
+            SPDLOG_ERROR("Requested low latency transformation parameter for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
+    }
 
     if (v.HasMember("sequence_timeout_seconds"))
+    {
+        if (!v.HasMember("stateful"))
+        {
+            SPDLOG_ERROR("Requested setting sequencetimeout parameter for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
         this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());
+    }
 
     if (v.HasMember("max_sequence_number"))
+    {
+        if (!v.HasMember("stateful"))
+        {
+            SPDLOG_ERROR("Requested setting max sequence number parameter for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
+    }
 
     if (v.HasMember("model_version_policy")) {
         rapidjson::StringBuffer buffer;
