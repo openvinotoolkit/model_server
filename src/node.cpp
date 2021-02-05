@@ -27,9 +27,10 @@
 
 namespace ovms {
 
-Node::Node(const std::string& nodeName, uint32_t demultiplyCount) :
+Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::string> gatherFromNode) :
     nodeName(nodeName),
-    demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt) {
+    demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt),
+    gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {

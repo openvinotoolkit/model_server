@@ -33,8 +33,8 @@ class ExitNode : public Node {
     tensorflow::serving::PredictResponse* response;
 
 public:
-    ExitNode(tensorflow::serving::PredictResponse* response) :
-        Node(EXIT_NODE_NAME),
+    ExitNode(tensorflow::serving::PredictResponse* response, std::set<std::string> gatherFromNode = {}) :
+        Node(EXIT_NODE_NAME, 0, gatherFromNode),
         response(response) {
     }
 

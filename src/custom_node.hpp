@@ -40,7 +40,8 @@ public:
         const std::string& nodeName,
         const NodeLibrary& library,
         const parameters_t& parameters,
-        const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {});
+        const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
+        uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {});
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
