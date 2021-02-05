@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <memory>
+#include <set>
 #include <string>
 
 #pragma GCC diagnostic push
