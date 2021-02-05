@@ -99,8 +99,12 @@ spec:
               key: connection_string
         {{- end }}
         args: [
-        {{- if .Values.config_configmap_name }}
+        {{- if or .Values.config_configmap_name .Values.config_path}}
+          {{- if .Values.config_path}}
+               "--config_path", "{{ .Values.config_path }}",
+          {{- else }}
                "--config_path", "/config/config.json",
+        {{- end }}
         {{- else }}
                "--model_path", "{{ .Values.model_path }}",
                "--model_name", "{{ .Values.model_name }}",

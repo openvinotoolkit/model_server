@@ -18,6 +18,8 @@ replicas: 1
 image_name: "openvino/model_server:latest"
 config_configmap_name: ""
 # configmap name holding the content of ovms configuration file. Excluding with model_name and model_path
+config_path: ""
+# to be used when ovms config is not included in the configmap but is mounted on the container via models_host_path or models_volume_claim param
 grpc_port: 8080
 rest_port: 8081
 model_name: ""

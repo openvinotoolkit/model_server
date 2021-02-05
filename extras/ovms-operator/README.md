@@ -8,7 +8,13 @@ kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
 ## Operator deployment
-Deploy the operator using the steps covered in [OperatorHub](https://operatorhub.io)
+Deploy the operator using the steps covered in [OperatorHub](https://operatorhub.io) (TBD)
+Alternatively you are are not using OLM component, run commands:
+```bash
+export IMG=quay.io/openvino/ovms-operator:0.1.0
+make install
+make deploy IMG=$IMG
+```
  
 ## Using the cluster
 OpenVINO Model Server can be consumed as a `Service` with the name matching the `Ovms` record.

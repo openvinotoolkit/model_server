@@ -27,12 +27,9 @@ You can download the model from the link provided above and upload it to GCS:
 ```shell script
 $ gsutil cp -r 1 gs://model-repository/1
 ```
+The models repository can be also distributed on the cluster nodes in the local path or it could be stored on the Kubernetes persistent volume.
+Below are described supported storage options:
 
-## Bucket Permissions
-
-Make sure to set bucket permissions so the server can access the model repository. If the bucket 
-is public or Model Server is run on the same Google Cloud Platform (GCP) or Amazon Web Services (AWS) account as the storage bucket, then no additional changes 
-are needed and you can proceed to _Deploy the Model Server_ section.
 
 ### GCS
 
@@ -47,22 +44,28 @@ https://cloud.google.com/docs/authentication/getting-started#creating_a_service_
 
 * When deploying Model Server, provide the model path to GCS bucket and name for the secret created above. Make sure to provide `gcp_creds_secret_name` when deploying:
 ```shell script
-$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
+$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
 ```
 
 ### S3
 
 For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below)
 ```shell script
-$ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
+$ helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
 
 In case you would like to use custom S3 service with compatible API (e.g. MinIO), you need to also provide endpoint 
 to that service. Please provide it by supplying `s3_compat_api_endpoint`:
 ```shell script
-$ helm install ovms ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
+$ helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
 ```
 
+### Azure Storage
+Use OVMS with models stored on azure blob storage by providing `azure_storage_connection_string` parameter. Model path should follow `az` scheme like below:
+```shell script
+$ helm install ovms-app ovms --set model_name=resnet,model_path=az://bucket/model_path,azure_storage_connection_string="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
+```
+ 
 ### Local Node Storage
 Beside the cloud storage, models could be stored locally on the kubernetes nodes filesystem.
 Use the parameter `models_host_path` with the local path on the nodes. It will be mounted in the OVMS container as `/models` folder.
@@ -82,7 +85,7 @@ In the helm set the parameter `models_volume_claim` with the name of the `Persis
 
 Note that parameter `models_volume_claim` is excluding with `models_host_path`. Only one of them should be set.
 
-### Assigning resource specs
+## Assigning Resource Specs
 
 You can restrict assigned cluster resources to the OVMS container but setting the parameter `resources`.
 Be default, there are no restrictions but it could be used to reduce the CPU and memory like in the snippet example from the values.yaml file:
@@ -100,7 +103,7 @@ resources:
     gpu.intel.com/i915: 1
 ```
 
-### Security context
+## Security Context
 
 OVMS, by default, starts with the security context of `ovms` account which has pid 5000 and gid 5000. In some cases it can prevent accessing models
 stored on the file system with restricted access.
@@ -114,18 +117,18 @@ security_context:
 ``` 
 The configuration could be also adjusted like allowed according to [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) 
 
-### Service type
+## Service Type
 The heml chart creates the Kubernetes `service` as part of the OVMS deployment. Depending on the cluster infrastructure you can adjust
 the [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 In the cloud environment you might set `LoadBalancer` type to expose the service externally. `NodePort` could expose a static port
 of the node IP address. `ClusterIP` would keep the OVMS service internal to the cluster applications.  
 
     
-## Deploy Model Server
+## Deploy OpenVINO Model Server with a Single Model
 
 Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](ovms/values.yaml).
 ```shell script
-$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
+$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
 Use _kubectl_ to see status and wait until the Model Server pod is running:
@@ -138,11 +141,11 @@ ovms-5fd8d6b845-w87jl   1/1     Running   0          27s
 By default, Model Server is deployed with 1 instance. If you would like to scale up additional replicas, override the value in values.yaml file or by passing _--set_ flag to _helm install_:
 
 ```shell script
-$ helm install ovms ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
+$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
 
 
-## Deploy Model Server with a Configuration File
+## Deploy OpenVINO Model Server with Multiple Models Defined in a Configuration File
 
 To serve multiple models you can run Model Server with a configuration file as described here:
 https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#configfile
@@ -156,18 +159,18 @@ To deploy with config file stored in the Kubernetes ConfigMap:
 
 * deploy Model Server with parameter `config_configmap_name` (without `model_name` and `model_path`):
 
-      $ helm install ovms ovms --set config_configmap_name=ovms-config
+      $ helm install ovms-app ovms --set config_configmap_name=ovms-config
 
 To deploy with config file stored on the Kubernetes Persistent Volume :
 * Store the config file on node local path set with `models_host_path` or on the persistent volume claim set with 
 `models_claim_name`. It will be mounted along with the models in the folder `/models`.
 * Deploy Model Server with parameter `config_path` pointing to the location of the config file visible in the OVMS container ie starting from 
 `/models/...`
-      $ helm install ovms ovms --set config_path=/models/config.json
+      $ helm install ovms-app ovms --set config_path=/models/config.json
 
 ## Using Model Server
 
-Now that the server is running you can send HTTP or gRPC requests to perform inferencing. 
+Now that the server is running you can send HTTP or gRPC requests to perform inference. 
 By default, the service is exposed with a LoadBalancer service type. Use the following command to find the 
 external IP for the server:
 ```shell script
@@ -224,33 +227,22 @@ Overall accuracy= 90.0
 Once you've finished using the server you should use helm to uninstall the chart:
 ```shell script
 $ helm ls
-NAME	NAMESPACE	REVISION	UPDATED                                 	STATUS  	CHART     	APP VERSION
-ovms	default  	1       	2020-09-23 14:40:07.292360971 +0200 CEST	deployed	ovms-2.0.0
+NAME  	  NAMESPACE	REVISION	UPDATED                                 	STATUS  	CHART     	APP VERSION
+ovms-app  default  	1       	2020-09-23 14:40:07.292360971 +0200 CEST	deployed	ovms-3.0.0
 
 $ helm uninstall ovms
 release "ovms" uninstalled
 ```
 
-You may also want to delete the GCS bucket you created to hold the model repository:
 
-GCS:
-```shell script
-$ gsutil rm -r gs://model-repository
-```
-
-S3:
-```shell script
-$ aws s3 rb s3://models-repository
-```
-
-## Helm options references
+## Helm Options References
 
 | Parameter        | Description           | Prerequisites  | Default |
 | ------------- |-------------|-------------|-------------|
 | replicas      | number of k8s pod replicas to deploy  |  | 1 |
 | image_name      | change to use different docker image with OVMS   |  | openvino/model_server:latest |
 | config_configmap_name | Starts OVMS using the config file stored in the ConfigMap |    Create the ConfigMap including config.json file | - |
-| config_path | Starts OVMS using the config file mounted from the node local path or the k8s persistent volumen | Use it together with models_host_path or models_claim_name and place the config file in configured storage path | - |
+| config_path | Starts OVMS using the config file mounted from the node local path or the k8s persistent volume | Use it together with models_host_path or models_claim_name and place the config file in configured storage path | - |
 | grpc_port      | service port for gRPC interface |  | 8080 |
 | grpc_port      | service port for REST API interface |  | 8081 |
 | model_name      | model name, start OVMS with a single model, excluding with config_configmap_name and config_path parameter |  | - |
@@ -263,8 +255,8 @@ $ aws s3 rb s3://models-repository
 | aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |  | - |
 | aws_region      | S3 storage secret key, use it with S3 storage for models |  | - |
 | aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |  | - |
-| s3_compat_api_endpoint      | S3 compatibility api endpoint, use it with minio storage for models |  | - |
-| azure_storage_connection_string   | S3 compatibility api endpoint, use it with minio storage for models |  | - |
+| s3_compat_api_endpoint      | S3 compatibility api endpoint, use it with Minio storage for models |  | - |
+| azure_storage_connection_string   | S3 compatibility api endpoint, use it with Minio storage for models |  | - |
 | log_level      | OVMS log level, one of ERROR,INFO,DEBUG|  |  INFO |
 | service_type      | k8s service type |  | LoadBalancer |
 | resources      | compute resource limits |  | All CPU and memory on the node |
