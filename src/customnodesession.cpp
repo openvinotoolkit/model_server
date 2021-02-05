@@ -97,7 +97,6 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         auto result = this->createBlob(&outputTensors[i], resultBlob, library);
         if (!result.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to blob", getName(), getSessionKey(), outputTensors[i].name);
-            // Cleanup whatever is possible
             library.releaseBuffer(&outputTensors[i]);
             if (status.ok()) {
                 status = result;
@@ -125,7 +124,6 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
 Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library) {
     InferenceEngine::TensorDesc desc;
 
-    // precision
     InferenceEngine::Precision precision = toInferenceEnginePrecision(tensor->precision);
     if (precision == InferenceEngine::Precision::UNSPECIFIED) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node",
@@ -135,7 +133,6 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
     }
     desc.setPrecision(precision);
 
-    // shape
     if (tensor->dims == nullptr || tensor->dimsLength == 0) {
         std::string error;
         if (tensor->dims == nullptr) {
@@ -152,7 +149,6 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
     InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsLength);
     desc.setDims(shape);
 
-    // data
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
     size_t expectedDataLength = expectedElementsCount *= precision.size();
     if (tensor->data == nullptr || tensor->dataLength != expectedDataLength) {
