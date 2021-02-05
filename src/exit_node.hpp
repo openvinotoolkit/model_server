@@ -55,7 +55,7 @@ public:
     }
 
     Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

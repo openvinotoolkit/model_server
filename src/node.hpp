@@ -93,7 +93,7 @@ public:
 protected:
     NodeSession& getNodeSession(const NodeSessionMetadata& metadata);
     NodeSession& getNodeSession(const session_key_t& sessionKey) const;
-    virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount);
+    virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails);
 };
 
 }  // namespace ovms

@@ -89,7 +89,7 @@ private:
     bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
 
 protected:
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

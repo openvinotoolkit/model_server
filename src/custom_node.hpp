@@ -54,7 +54,7 @@ public:
         return nodeOutputNameAlias.count(alias) == 1 ? nodeOutputNameAlias.at(alias) : alias;
     }
 
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) override;
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

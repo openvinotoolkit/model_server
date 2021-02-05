@@ -22,6 +22,7 @@
 using namespace ovms;
 
 using testing::_;
+using testing::ElementsAre;
 using testing::HasSubstr;
 using testing::Not;
 using testing::Return;
@@ -112,11 +113,35 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     ASSERT_THAT(hash, HasSubstr("request_2"));
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
-    auto metaCollapsedOnExtract1st = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st"});
+    NodeSessionMetadata metaCollapsedOnExtract1st;
+    CollapsingDetails collapsingDetails;
+    std::tie(metaCollapsedOnExtract1st, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract2nd"});
     auto hashCollapsed = metaCollapsedOnExtract1st.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_2"));
-    ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract1st_0")));
-    ASSERT_THAT(hashCollapsed, HasSubstr("extract2nd_2"));
+    ASSERT_THAT(hashCollapsed, HasSubstr("extract1st_0"));
+    ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract2nd_2")));
+    ASSERT_EQ(collapsingDetails.collapsedSessionNames.size(), 1);
+    ASSERT_EQ(collapsingDetails.collapsedSessionSizes.size(), 1);
+    ASSERT_EQ(collapsingDetails.collapsedSessionNames[0], "extract2nd");
+    ASSERT_EQ(collapsingDetails.collapsedSessionSizes[0], thirdLevelDemultiplexSize);
+}
+
+TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThrow) {
+    const uint firstLevelDemultiplexSize = 3;
+    const uint secondLevelDemultiplexSize = 2;
+    const uint thirdLevelDemultiplexSize = 4;
+    NodeSessionMetadata meta;
+    auto demultiplexedMetaLev3 = meta
+                                     .generateSubsessions("request", firstLevelDemultiplexSize)[2]
+                                     .generateSubsessions("extract1st", secondLevelDemultiplexSize)[0]
+                                     .generateSubsessions("extract2nd", thirdLevelDemultiplexSize)[2];
+    auto hash = demultiplexedMetaLev3.getSessionKey();
+    ASSERT_THAT(hash, HasSubstr("request_2"));
+    ASSERT_THAT(hash, HasSubstr("extract1st_0"));
+    ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
+    NodeSessionMetadata metaCollapsedOnExtract1st;
+    CollapsingDetails collapsingDetails;
+    EXPECT_THROW(demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st"}), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
@@ -133,11 +158,20 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
     ASSERT_THAT(hash, HasSubstr("extract1st_32"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_512"));
 
-    auto metaCollapsed = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st", "extract2nd"});
+    NodeSessionMetadata metaCollapsed;
+    CollapsingDetails collapsingDetails;
+    std::tie(metaCollapsed, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st", "extract2nd"});
+    // TODO test for details
     auto hashCollapsed = metaCollapsed.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_12"));
     ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract1st")));
     ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract2nd")));
+    ASSERT_EQ(collapsingDetails.collapsedSessionNames.size(), 2);
+    ASSERT_EQ(collapsingDetails.collapsedSessionSizes.size(), 2);
+    EXPECT_THAT(collapsingDetails.collapsedSessionNames,
+        ElementsAre("extract1st", "extract2nd"));
+    EXPECT_THAT(collapsingDetails.collapsedSessionSizes,
+        ElementsAre(secondLevelDemultiplexSize, thirdLevelDemultiplexSize));
 }
 
 TEST_F(NodeSessionMetadataTest, CollapsingNonExistingSubsessionShouldThrow) {

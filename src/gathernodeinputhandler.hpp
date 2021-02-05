@@ -29,12 +29,15 @@ namespace ovms {
 
 using shard_map_t = std::unordered_map<session_id_t, InferenceEngine::Blob::Ptr>;
 
+class CollapsingDetails;
+
 class GatherNodeInputHandler : public NodeInputHandler {
     std::unordered_map<std::string, shard_map_t> shardsStorage;
+    std::unique_ptr<CollapsingDetails> collapsingDetails;
 
 public:
-    GatherNodeInputHandler(uint32_t inputsMissingCount, session_id_t shardsCount);
-    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
+    GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapsingDetails& collapsingDetails);
+    Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
 };
 }  // namespace ovms

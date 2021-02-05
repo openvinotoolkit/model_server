@@ -136,6 +136,7 @@ cc_library(
         "status.cpp",
         "status.hpp",
         "stringutils.hpp",
+        "tensorinfo.cpp",
         "tensorinfo.hpp",
         "threadsafequeue.hpp",
         "timer.hpp",

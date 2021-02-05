@@ -76,7 +76,11 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
     return ss.str();
 }
 
-NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
+std::pair<NodeSessionMetadata, CollapsingDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
+    if (ignoredNodeNames.size() == 0) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession with emtpy set");
+        throw std::logic_error("Tried to collapse sessions with empty set");
+    }
     if (std::any_of(
             ignoredNodeNames.begin(),
             ignoredNodeNames.end(),
@@ -89,6 +93,12 @@ NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::
             })) {
         throw std::logic_error("Tried to collapse nonexisting subsession");
     }
+    for (size_t i = sessionsLevels.size() - 1; i > sessionsLevels.size() - 1 - ignoredNodeNames.size(); --i) {
+        if (ignoredNodeNames.find(sessionsLevels[i]) == ignoredNodeNames.end()) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first", sessionsLevels[i]);
+            throw std::logic_error("Cannot collapse sessions not in LIFO order");
+        }
+    }
 
     NodeSessionMetadata newMeta;
     std::copy_if(
@@ -98,14 +108,16 @@ NodeSessionMetadata NodeSessionMetadata::getCollapsedSessionMetadata(const std::
         [&ignoredNodeNames](auto& keyValuePair) {
             return ignoredNodeNames.find(keyValuePair.first) == ignoredNodeNames.end();
         });
-    std::copy_if(
-        std::begin(sessionsLevels),
-        std::end(sessionsLevels),
-        std::back_inserter(newMeta.sessionsLevels),
-        [&ignoredNodeNames](auto& sessionName) {
-            return ignoredNodeNames.find(sessionName) == ignoredNodeNames.end();
-        });
-    return std::move(newMeta);
+    CollapsingDetails collapsingDetails;
+    for (auto& sessionLevel : sessionsLevels) {
+        if (ignoredNodeNames.find(sessionLevel) != ignoredNodeNames.end()) {
+            collapsingDetails.collapsedSessionNames.emplace_back(sessionLevel);
+            collapsingDetails.collapsedSessionSizes.emplace_back(getSubsessionSize(sessionLevel));
+        } else {
+            newMeta.sessionsLevels.emplace_back(sessionLevel);
+        }
+    }
+    return {newMeta, std::move(collapsingDetails)};
 }
 
 session_id_t NodeSessionMetadata::getSubsessionSize(const std::string& subsessionName) const {
