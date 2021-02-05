@@ -28,7 +28,7 @@ A few key features:
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 
-**Note:** OVMS has been tested on CentOS* and Ubuntu*. Publically released docker images are based on CentOS.
+**Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
 
 
 ## Run OpenVINO Model Server
@@ -78,7 +78,7 @@ Learn more about tests in the [developer guide](docs/developer_guide.md)
 
 * All contributed code must be compatible with the [Apache 2](https://www.apache.org/licenses/LICENSE-2.0) license.
 
-* All changes needs to have pass linter, unit and functional tests.
+* All changes have to have pass style, unit and functional tests.
 
 * All new features need to be covered by tests.
 

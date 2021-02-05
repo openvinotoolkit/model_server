@@ -16,16 +16,19 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--output_dir OUTPUT_DIR] [--batch_size BATCH_SIZE]
                          [--width WIDTH] [--height HEIGHT]
                          [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
+                         [--model_name MODEL_NAME] [--tls]
+                         [--server_cert SERVER_CERT]
+                         [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
 Demo for face detection requests via TFS gRPC API.analyses input images and
 saves with with detected faces.it relies on model face_detection...
 
-optional arguments:
+Arguments:
   -h, --help            show this help message and exit
   --input_images_dir INPUT_IMAGES_DIR
                         Directory with input images
   --output_dir OUTPUT_DIR
-                        Directory for staring images with detection results
+                        Directory for storing images with detection results
   --batch_size BATCH_SIZE
                         how many images should be grouped in one batch
   --width WIDTH         how the input image width should be resized in pixels
@@ -34,6 +37,15 @@ optional arguments:
                         Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
                         Specify port to grpc service. default: 9000
+  --model_name MODEL_NAME
+                        Specify the model name
+  --tls                 use TLS communication with gRPC endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
 ```
 
 ## Usage example
