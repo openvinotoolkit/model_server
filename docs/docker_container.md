@@ -248,7 +248,7 @@ Example command with blob storage az://<container_name>/<model_path> :
 docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
---model_path az://bucket/model_path --model_name as_model --port 9001
+--model_path az://container/model_path --model_name az_model --port 9001
 ```
 
 Example command with file storage azfs://<share>/<model_path> :
@@ -257,7 +257,7 @@ Example command with file storage azfs://<share>/<model_path> :
 docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
---model_path azfs://share/model_path --model_name as_model --port 9001
+--model_path azfs://share/model_path --model_name az_model --port 9001
 ```
 Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run command for proxy cloud storage connection.
 
