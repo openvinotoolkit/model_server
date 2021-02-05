@@ -500,7 +500,7 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParams) {
                 "config": {
                     "name": "alpha",
                     "base_path": "/tmp/models/dummy1",
-                    "low_latency_transformation": true,
+                    "low_latency_transformation": true
                 }
             }
         ]
@@ -530,7 +530,7 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsTransformation) {
                     "name": "alpha",
                     "base_path": "/tmp/models/dummy1",
                     "stateful": false,
-                    "low_latency_transformation": true,
+                    "low_latency_transformation": true
                 }
             }
         ]
@@ -560,7 +560,7 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsSequenceTime) {
                     "name": "alpha",
                     "base_path": "/tmp/models/dummy1",
                     "stateful": false,
-                    "sequence_timeout_seconds": 120,
+                    "sequence_timeout_seconds": 120
                 }
             }
         ]
@@ -590,7 +590,7 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsSeqNumber) {
                     "name": "alpha",
                     "stateful": false,
                     "base_path": "/tmp/models/dummy1",
-                    "max_sequence_number": 1000,
+                    "max_sequence_number": 1000
                 }
             }
         ]
@@ -619,7 +619,7 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsSeqNumber2) {
                 "config": {
                     "name": "alpha",
                     "base_path": "/tmp/models/dummy1",
-                    "max_sequence_number": 1,
+                    "max_sequence_number": 1
                 }
             }
         ]
