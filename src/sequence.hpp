@@ -31,10 +31,10 @@ namespace ovms {
 
 using sequence_memory_state_t = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
 using model_memory_state_t = std::vector<InferenceEngine::VariableState>;
-using MutexPtr = std::mutex*;
 
 class Sequence {
 private:
+    uint64_t sequenceId;
     sequence_memory_state_t memoryState;
     std::chrono::steady_clock::time_point lastActivityTime;
     std::mutex mutex;
@@ -43,13 +43,14 @@ private:
     void updateLastActivityTime();
 
 public:
-    Sequence() :
+    Sequence(uint64_t sequenceId) :
+        sequenceId(sequenceId),
         terminated(false) { updateLastActivityTime(); }
     const sequence_memory_state_t& getMemoryState() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
     std::chrono::steady_clock::time_point getLastActivityTime() const;
-    MutexPtr getMutexPtr();
+    std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();
 };

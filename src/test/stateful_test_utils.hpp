@@ -137,3 +137,21 @@ public:
         return InferenceEngine::StatusCode::OUT_OF_BOUNDS;
     }
 };
+
+class MockedSequenceManager : public ovms::SequenceManager {
+public:
+    MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
+        ovms::SequenceManager(timeout, maxSequenceNumber) {}
+
+    ovms::Status mockHasSequence(const uint64_t& sequenceId) {
+        return ovms::SequenceManager::hasSequence(sequenceId);
+    }
+
+    ovms::Status mockCreateSequence(const uint64_t& sequenceId) {
+        return ovms::SequenceManager::createSequence(sequenceId);
+    }
+
+    ovms::Status mockTerminateSequence(const uint64_t& sequenceId) {
+        return ovms::SequenceManager::terminateSequence(sequenceId);
+    }
+};

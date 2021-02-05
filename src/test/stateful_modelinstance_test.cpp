@@ -119,12 +119,17 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
+    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60);
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
 
+    const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
+        return this->mockedSequenceManager;
+    }
+
     void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-        getSequenceManager()->addSequence(sequenceId);
-        getSequenceManager()->updateSequenceMemoryState(sequenceId, state);
+        getMockedSequenceManager()->mockCreateSequence(sequenceId);
+        getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
     }
 };
 
@@ -250,8 +255,8 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     auto modelInstance = manager.findModelInstance(dummyModelName);
 
     uint64_t startingSequenceId = 0;
-    uint16_t numberOfThreadsWaitingOnStart = 20;
-    uint16_t numberOfThreadsWaitingOnEnd = 20;
+    uint16_t numberOfThreadsWaitingOnStart = 30;
+    uint16_t numberOfThreadsWaitingOnEnd = 30;
 
     std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart + numberOfThreadsWaitingOnEnd), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
@@ -606,7 +611,8 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     EXPECT_EQ(currentBlobIrData, currentState);
 
     // Perform preprocessing (load state from sequence to infer request)
-    modelInstance->preInferenceProcessing(inferRequest, sequenceProcessingSpec);
+    ovms::Sequence sequence(sequenceId);
+    modelInstance->preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
@@ -642,7 +648,8 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
         modelInstance->injectSequence(sequenceId, memoryState);
 
         // Perform preprocessing (load state from sequence to infer request)
-        modelInstance->preInferenceProcessing(inferRequest, sequenceProcessingSpec);
+        ovms::Sequence& sequence = modelInstance->getMockedSequenceManager()->getSequence(sequenceId);
+        modelInstance->preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
 
         // Check if InferRequest memory state has been updated to sequence memory state
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
@@ -674,8 +681,8 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     EXPECT_EQ(currentBlobIrData, currentState);
 
     tensorflow::serving::PredictResponse response;
-
-    modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
+    ovms::Sequence sequence(sequenceId);
+    modelInstance->postInferenceProcessing(&response, inferRequest, sequence, sequenceProcessingSpec);
 
     EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
 
@@ -711,9 +718,9 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         ovms::model_memory_state_t memoryState;
         addState(memoryState, "state", shape, newState);
         modelInstance->injectSequence(sequenceId, memoryState);
-
+        ovms::Sequence& sequence = modelInstance->getMockedSequenceManager()->getSequence(sequenceId);
         // Sanity check for new state
-        const ovms::sequence_memory_state_t& currentSequenceMemoryState = modelInstance->getSequenceManager()->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
+        const ovms::sequence_memory_state_t& currentSequenceMemoryState = sequence.getMemoryState();
         EXPECT_TRUE(currentSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr sanityBlob = currentSequenceMemoryState.at("state");
         std::vector<float> sanityBlobIrData;
@@ -721,11 +728,10 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_EQ(sanityBlobIrData, newState);
 
         tensorflow::serving::PredictResponse response;
-
-        modelInstance->postInferenceProcessing(&response, inferRequest, sequenceProcessingSpec);
+        modelInstance->postInferenceProcessing(&response, inferRequest, sequence, sequenceProcessingSpec);
 
         // Check if sequence memory state is the same as InferRequest memory state
-        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = modelInstance->getSequenceManager()->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
+        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = sequence.getMemoryState();
         EXPECT_TRUE(updatedSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr chengedBlob = updatedSequenceMemoryState.at("state");
         std::vector<float> sequenceBlobIrData;

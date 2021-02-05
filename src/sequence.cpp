@@ -48,8 +48,8 @@ std::chrono::steady_clock::time_point Sequence::getLastActivityTime() const {
     return lastActivityTime;
 }
 
-MutexPtr Sequence::getMutexPtr() {
-    return &mutex;
+std::mutex& Sequence::getMutex() {
+    return mutex;
 }
 
 bool Sequence::isTerminated() const {
