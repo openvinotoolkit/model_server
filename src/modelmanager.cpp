@@ -430,9 +430,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
-        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL) {
-            newModelConfigs.emplace(modelName, std::move(modelConfig));
-        } else {
+        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = this->servedModelConfigs.find(modelName);
             if (it == this->servedModelConfigs.end()) {
@@ -441,6 +439,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
+        } else {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
