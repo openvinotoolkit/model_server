@@ -2640,7 +2640,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersForModelUsedInPipeline) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    createConfigFileWithContent(dummyWithStatefulModelType, fileToReload);
+    createConfigFileWithContent(pipelineOneDynamicParamDummyConfig, fileToReload);
     status = manager.loadConfig(fileToReload);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
@@ -2716,7 +2716,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
 
-TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
+TEST_F(EnsembleFlowTest, EnablingStatefulParamteresForModelUsedInPipeline) {
     /*
         This test modifies config.json to enable stateful model used in pipeline.
         In the same time, we remove pipeline from config file.
@@ -2732,7 +2732,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    createConfigFileWithContent(dummyWithDynamicParamConfig, fileToReload);
+    createConfigFileWithContent(dummyWithStatefulModelType, fileToReload);
     status = manager.loadConfig(fileToReload);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
