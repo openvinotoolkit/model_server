@@ -63,7 +63,7 @@ enum class StatusCode {
     MODEL_VERSION_NOT_LOADED_YET,                   /*!< Model with requested version is not loaded yet */
     INVALID_NIREQ,                                  /*!< Invalid NIREQ requested */
     REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, /*!< Dynamic shape and dynamic batch size not supported for stateful models */
-    REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL,  /*!< Stateful model cannot be subscribed to pipeline */
+    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL,  /*!< Stateful model cannot be subscribed to pipeline */
     INVALID_NON_STATEFUL_MODEL_PARAMETER,           /*!< Stateful model config parameter used for non stateful model */
 
     // Sequence management

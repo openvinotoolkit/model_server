@@ -429,7 +429,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
-        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL) {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
         } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
@@ -776,7 +776,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         }
         if (config.isStateful()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
-            return StatusCode::REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL;
+            return StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL;
         }
     }
 
