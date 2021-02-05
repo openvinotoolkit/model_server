@@ -48,7 +48,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is subscribed to pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size not supported for stateful models"},
-    {StatusCode::REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL, "Stateful model cannot be subscribed to pipeline"},
+    {StatusCode::REQUESTED_SUBSCRIBED_MODEL_AND_STATEFUL_MODEL, "Stateful model cannot be used in pipeline"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
 
     // Sequence management
