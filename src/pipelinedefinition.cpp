@@ -152,11 +152,13 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     ExitNode* exit = nullptr;
     std::set<std::string> gatherFrom;
     for (const auto& info : nodeInfos) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
-            getName(), info.nodeName, info.modelName);
         if (info.demultiplyCount) {
             gatherFrom.insert(info.nodeName);
         }
+    }
+    for (const auto& info : nodeInfos) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
+            getName(), info.nodeName, info.modelName);
         if (info.gatherFromNode) {
             gatherFrom.erase(info.nodeName);
         }
