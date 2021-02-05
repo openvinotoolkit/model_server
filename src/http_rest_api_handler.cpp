@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
