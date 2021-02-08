@@ -149,6 +149,8 @@ public:
         const std::optional<std::string_view>& model_version_label,
         std::string* response);
 
+    Status processModelControlApiRequest(std::string& response);
+
 private:
     const std::regex sanityRegex;
     const std::regex predictionRegex;

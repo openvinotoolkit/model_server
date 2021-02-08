@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -23,6 +25,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "config.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
@@ -321,6 +324,40 @@ Status HttpRestApiHandler::processModelStatusRequest(
     status = GetModelStatusImpl::serializeResponse2Json(&grpc_response, response);
     if (!status.ok()) {
         return status;
+    }
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) {
+    SPDLOG_INFO("ModelControlApi flow triggered.");
+    Status status;
+    auto& config = ovms::Config::instance();
+    auto& manager = ModelManager::getInstance();
+
+    bool isConfigFileReloadNeeded = manager.configFileReloadNeeded();
+    if (isConfigFileReloadNeeded) {
+        status = manager.loadConfig(config.configPath());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    manager.updateConfigurationWithoutConfigFile();
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    if (!status.ok()) {
+        return status;
+    }
+
+    std::string jsonString;
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonString);
+    if (!status.ok()) {
+        return status;
+    }
+    response = jsonString;
+
+    if (!isConfigFileReloadNeeded) {
+        return StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED;
     }
     return StatusCode::OK;
 }

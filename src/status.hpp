@@ -210,6 +210,9 @@ enum class StatusCode {
     NODE_LIBRARY_INVALID_SHAPE,
     NODE_LIBRARY_INVALID_CONTENT_SIZE,
 
+    // Model control API
+    OK_CONFIG_FILE_RELOAD_NOT_NEEDED, /*!< Operation succeeded but no config reload was needed */
+
     STATUS_CODE_END
 };
 
