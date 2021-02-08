@@ -449,7 +449,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         if (!v["sequence_timeout_seconds"].IsUint()) {
-            SPDLOG_ERROR("Sequence timeout parameter was set above unsigned int value {}.", v["name"].GetString());
+            SPDLOG_ERROR("Sequence timeout parameter was set above unsigned int value for model {}.", v["name"].GetString());
             return StatusCode::INVALID_SEQUENCE_TIMEOUT;
         }
 
@@ -462,7 +462,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         if (!v["max_sequence_number"].IsUint()) {
-            SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value {}.", v["name"].GetString());
+            SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value for model {}.", v["name"].GetString());
             return StatusCode::INVALID_MAX_SEQUENCE_NUMBER;
         }
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());

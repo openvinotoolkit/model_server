@@ -755,7 +755,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL;
     }
     if (!config.isStateful()) {
-        if (config.isLowLatencyTransformationUsed() != false) {
+        if (config.isLowLatencyTransformationUsed()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested low latency transformation parameter for non stateful model {}.", config.getName());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }

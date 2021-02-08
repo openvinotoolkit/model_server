@@ -492,7 +492,7 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
     EXPECT_EQ(modelConfig.getShapes().size(), 0);
 }
 
-std::string config_low_latency = R"#(
+static std::string config_low_latency_no_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -506,7 +506,7 @@ std::string config_low_latency = R"#(
 }
 )#";
 
-std::string config_low_latency_stateful = R"#(
+static std::string config_low_latency_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -521,7 +521,7 @@ std::string config_low_latency_stateful = R"#(
 }
 )#";
 
-std::string config_timeout_stateful = R"#(
+static std::string config_sequence_timeout_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -536,7 +536,7 @@ std::string config_timeout_stateful = R"#(
 }
 )#";
 
-std::string config_max_sequence_number_stateful = R"#(
+static std::string config_max_sequence_number_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -551,7 +551,7 @@ std::string config_max_sequence_number_stateful = R"#(
 }
 )#";
 
-std::string config_max_sequence_number = R"#(
+static std::string config_max_sequence_number = R"#(
         {
         "model_config_list": [
             {
@@ -565,7 +565,7 @@ std::string config_max_sequence_number = R"#(
     }
     )#";
 
-std::string config_stateful_should_pass = R"#(
+static std::string config_stateful_should_pass = R"#(
     {
     "model_config_list": [
         {
@@ -582,7 +582,7 @@ std::string config_stateful_should_pass = R"#(
 }
 )#";
 
-std::string config_low_invalid_max_seq = R"#(
+static std::string config_low_invalid_max_seq = R"#(
     {
     "model_config_list": [
         {
@@ -599,7 +599,7 @@ std::string config_low_invalid_max_seq = R"#(
 }
 )#";
 
-std::string config_low_invalid_seq_timeout = R"#(
+static std::string config_low_invalid_seq_timeout = R"#(
     {
     "model_config_list": [
         {
@@ -645,11 +645,11 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
 }
 
 std::vector<std::pair<std::string, ovms::StatusCode>> configs = {
-    {config_low_latency, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_low_latency_no_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_max_sequence_number, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_max_sequence_number_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_timeout_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_low_latency_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_max_sequence_number_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_sequence_timeout_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_low_latency_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_low_invalid_max_seq, ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
     {config_low_invalid_seq_timeout, ovms::StatusCode::INVALID_SEQUENCE_TIMEOUT},
     {config_stateful_should_pass, ovms::StatusCode::OK}};
