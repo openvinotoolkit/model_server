@@ -126,8 +126,7 @@ public:
     DLNodeWithGetInputsExposed(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
         std::unordered_map<std::string, std::string> nodeOutputNameAlias, const std::optional<std::set<std::string>>& gatherFrom) :
-        DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias) {
-        this->gatherFrom = gatherFrom;
+        DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, 0, gatherFrom.value()) {
     }
     const auto& getInputsFromInputHandler(session_key_t sessionId) const {
         DLNodeSessionWithGetInputsExposed& dlnodesessionWithGetInputsExposed = static_cast<DLNodeSessionWithGetInputsExposed&>(*nodeSessions.at(sessionId));
