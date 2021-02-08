@@ -28,9 +28,9 @@ public:
     SequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) :
         sequenceControlInput(sequenceControlInput),
         sequenceId(sequenceId) {}
-    const uint32_t& getSequenceControlInput() const { return sequenceControlInput; }
+    const uint32_t getSequenceControlInput() const { return sequenceControlInput; }
     void setSequenceControlInput(uint32_t sequenceControlInput) { this->sequenceControlInput = sequenceControlInput; }
-    const uint64_t& getSequenceId() const { return sequenceId; }
+    const uint64_t getSequenceId() const { return sequenceId; }
     void setSequenceId(uint64_t sequenceId) { this->sequenceId = sequenceId; }
 };
 }  // namespace ovms

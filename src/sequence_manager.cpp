@@ -16,7 +16,7 @@
 
 #include "sequence_manager.hpp"
 
-#include <spdlog/spdlog.h>
+#include "logging.hpp"
 
 namespace ovms {
 
@@ -40,7 +40,7 @@ std::mutex& SequenceManager::getMutex() {
     return mutex;
 }
 
-bool SequenceManager::sequenceExists(const uint64_t& sequenceId) const {
+bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
@@ -56,7 +56,7 @@ Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_
     return StatusCode::OK;
 }
 
-Status SequenceManager::hasSequence(const uint64_t& sequenceId) {
+Status SequenceManager::hasSequence(const uint64_t sequenceId) {
     if (!sequenceExists(sequenceId))
         return StatusCode::SEQUENCE_MISSING;
 
@@ -66,22 +66,22 @@ Status SequenceManager::hasSequence(const uint64_t& sequenceId) {
     return StatusCode::OK;
 }
 
-Status SequenceManager::createSequence(const uint64_t& sequenceId) {
-    /* TO DO: Generate unique ID if not provided by the client
+Status SequenceManager::createSequence(const uint64_t sequenceId) {
+    /* TODO: Generate unique ID if not provided by the client
     if (sequenceId == 0) {
     } 
     */
     if (sequenceExists(sequenceId)) {
-        spdlog::debug("Sequence with provided ID already exists");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence with provided ID already exists");
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
-        spdlog::debug("Adding new sequence with ID: {}", sequenceId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Adding new sequence with ID: {}", sequenceId);
         sequences.emplace(sequenceId, sequenceId);
     }
     return StatusCode::OK;
 }
 
-Status SequenceManager::terminateSequence(const uint64_t& sequenceId) {
+Status SequenceManager::terminateSequence(const uint64_t sequenceId) {
     auto status = hasSequence(sequenceId);
     if (!status.ok())
         return status;
@@ -90,24 +90,24 @@ Status SequenceManager::terminateSequence(const uint64_t& sequenceId) {
     return StatusCode::OK;
 }
 
-Sequence& SequenceManager::getSequence(const uint64_t& sequenceId) {
+Sequence& SequenceManager::getSequence(const uint64_t sequenceId) {
     return sequences.at(sequenceId);
 }
 
-Status SequenceManager::removeSequence(const uint64_t& sequenceId) {
+Status SequenceManager::removeSequence(const uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
-        spdlog::debug("Removing sequence with ID: {}", sequenceId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing sequence with ID: {}", sequenceId);
         sequences.erase(sequenceId);
     } else {
-        spdlog::debug("Sequence with provided ID does not exists");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence with provided ID does not exists");
         return StatusCode::SEQUENCE_MISSING;
     }
     return StatusCode::OK;
 }
 
 Status SequenceManager::processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec) {
-    const uint32_t& sequenceControlInput = sequenceProcessingSpec.getSequenceControlInput();
-    const uint64_t& sequenceId = sequenceProcessingSpec.getSequenceId();
+    const uint32_t sequenceControlInput = sequenceProcessingSpec.getSequenceControlInput();
+    const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
     Status status;
 
     if (sequenceControlInput == SEQUENCE_START) {

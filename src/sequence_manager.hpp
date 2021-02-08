@@ -39,11 +39,11 @@ private:
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
 
-    Status hasSequence(const uint64_t& sequenceId);
+    Status hasSequence(const uint64_t sequenceId);
 
-    Status createSequence(const uint64_t& sequenceId);
+    Status createSequence(const uint64_t sequenceId);
 
-    Status terminateSequence(const uint64_t& sequenceId);
+    Status terminateSequence(const uint64_t sequenceId);
 
 public:
     SequenceManager() = default;
@@ -65,11 +65,11 @@ public:
 
     std::mutex& getMutex();
 
-    bool sequenceExists(const uint64_t& sequenceId) const;
+    bool sequenceExists(const uint64_t sequenceId) const;
 
-    Sequence& getSequence(const uint64_t& sequenceId);
+    Sequence& getSequence(const uint64_t sequenceId);
 
-    Status removeSequence(const uint64_t& sequenceId);
+    Status removeSequence(const uint64_t sequenceId);
 
     Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
 

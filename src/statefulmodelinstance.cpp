@@ -111,7 +111,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     status = sequenceManager->processRequestedSpec(sequenceProcessingSpec);
     if (!status.ok())
         return status;
-    const uint64_t& sequenceId = sequenceProcessingSpec.getSequenceId();
+    const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
     if (!sequenceManager->sequenceExists(sequenceId))
         return StatusCode::INTERNAL_ERROR;
     Sequence& sequence = sequenceManager->getSequence(sequenceId);

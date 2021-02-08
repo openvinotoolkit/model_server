@@ -25,7 +25,7 @@ void Sequence::updateLastActivityTime() {
     lastActivityTime = std::chrono::steady_clock::now();
 }
 
-const uint64_t& Sequence::getId() const {
+const uint64_t Sequence::getId() const {
     return sequenceId;
 }
 
