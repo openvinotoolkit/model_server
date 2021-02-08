@@ -49,7 +49,7 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
+    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     /*
     Performs pre inference operations:
@@ -60,7 +60,7 @@ public:
         Always returns StatusCode::OK
     */
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec);
+        InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

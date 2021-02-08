@@ -39,6 +39,12 @@ private:
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
 
+    Status hasSequence(const uint64_t sequenceId);
+
+    Status createSequence(const uint64_t sequenceId);
+
+    Status terminateSequence(const uint64_t sequenceId);
+
 public:
     SequenceManager() = default;
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
@@ -59,24 +65,14 @@ public:
 
     std::mutex& getMutex();
 
-    bool sequenceExists(const uint64_t& sequenceId) const;
+    bool sequenceExists(const uint64_t sequenceId) const;
 
-    Status removeSequence(const uint64_t& sequenceId);
+    Sequence& getSequence(const uint64_t sequenceId);
+
+    Status removeSequence(const uint64_t sequenceId);
 
     Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
 
-    Status addSequence(const uint64_t& sequenceId);
-
-    Status hasSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
-
-    Status createSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
-
-    Status terminateSequence(const uint64_t& sequenceId, MutexPtr& sequenceMutexPtr);
-
-    Status getSequenceMutexPtr(SequenceProcessingSpec& sequenceProcessingSpec, MutexPtr& sequenceMutexPtr);
-
-    const sequence_memory_state_t& getSequenceMemoryState(uint64_t sequenceId) const;
-
-    Status updateSequenceMemoryState(uint64_t sequenceId, model_memory_state_t& newState);
+    Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };
 }  // namespace ovms

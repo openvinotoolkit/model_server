@@ -107,13 +107,16 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     if (!status.ok())
         return status;
 
-    MutexPtr sequenceMutexPtr = nullptr;
     std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager->getMutex());
-    status = sequenceManager->getSequenceMutexPtr(sequenceProcessingSpec, sequenceMutexPtr);
+    status = sequenceManager->processRequestedSpec(sequenceProcessingSpec);
     if (!status.ok())
         return status;
+    const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
+    if (!sequenceManager->sequenceExists(sequenceId))
+        return StatusCode::INTERNAL_ERROR;
+    Sequence& sequence = sequenceManager->getSequence(sequenceId);
 
-    std::unique_lock<std::mutex> sequenceLock(*sequenceMutexPtr);
+    std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
@@ -125,7 +128,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("preprocess");
-    status = preInferenceProcessing(inferRequest, sequenceProcessingSpec);
+    status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("preprocess");
     if (!status.ok())
         return status;
@@ -157,7 +160,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     timer.start("postprocess");
-    status = postInferenceProcessing(responseProto, inferRequest, sequenceProcessingSpec);
+    status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("postprocess");
     if (!status.ok())
         return status;
@@ -167,7 +170,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceLock.unlock();
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         sequenceManagerLock.lock();
-        status = sequenceManager->removeSequence(sequenceProcessingSpec.getSequenceId());
+        status = sequenceManager->removeSequence(sequenceId);
         if (!status.ok())
             return status;
     }
@@ -175,7 +178,8 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
+const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence,
+    SequenceProcessingSpec& sequenceProcessingSpec) {
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
         for (auto&& state : inferRequest.QueryState()) {
@@ -183,7 +187,7 @@ const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::Infe
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t& sequenceMemoryState = sequenceManager->getSequenceMemoryState(sequenceProcessingSpec.getSequenceId());
+        const sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
         for (auto&& state : inferRequest.QueryState()) {
             auto stateName = state.GetName();
             if (!sequenceMemoryState.count(stateName))
@@ -195,7 +199,7 @@ const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::Infe
 }
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    InferenceEngine::InferRequest& inferRequest, SequenceProcessingSpec& sequenceProcessingSpec) {
+    InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
@@ -204,7 +208,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
         }
     } else {
         auto modelState = inferRequest.QueryState();
-        sequenceManager->updateSequenceMemoryState(sequenceProcessingSpec.getSequenceId(), modelState);
+        sequence.updateMemoryState(modelState);
     }
 
     // Include sequence_id in server response

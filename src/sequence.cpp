@@ -25,6 +25,10 @@ void Sequence::updateLastActivityTime() {
     lastActivityTime = std::chrono::steady_clock::now();
 }
 
+const uint64_t Sequence::getId() const {
+    return sequenceId;
+}
+
 const sequence_memory_state_t& Sequence::getMemoryState() const {
     return memoryState;
 }
@@ -48,8 +52,8 @@ std::chrono::steady_clock::time_point Sequence::getLastActivityTime() const {
     return lastActivityTime;
 }
 
-MutexPtr Sequence::getMutexPtr() {
-    return &mutex;
+std::mutex& Sequence::getMutex() {
+    return mutex;
 }
 
 bool Sequence::isTerminated() const {

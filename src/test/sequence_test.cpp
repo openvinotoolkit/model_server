@@ -28,7 +28,8 @@
 #include "stateful_test_utils.hpp"
 
 TEST(Sequence, SequenceDisabled) {
-    ovms::Sequence sequence;
+    uint64_t sequenceId = 3;
+    ovms::Sequence sequence(sequenceId);
     ASSERT_FALSE(sequence.isTerminated());
     sequence.setTerminated();
     ASSERT_TRUE(sequence.isTerminated());
@@ -44,7 +45,8 @@ TEST(Sequence, UpdateLastActivityTime) {
     std::iota(state1.begin(), state1.end(), 0);
     addState(newState, "state1", shape1, state1);
 
-    ovms::Sequence sequence;
+    uint64_t sequenceId = 3;
+    ovms::Sequence sequence(sequenceId);
     sequence.updateMemoryState(newState);
     auto time1 = sequence.getLastActivityTime();
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -69,7 +71,8 @@ TEST(Sequence, UpdateSequenceState) {
     std::iota(state2.begin(), state2.end(), 10);
     addState(newState, "state2", shape2, state2);
 
-    ovms::Sequence sequence;
+    uint64_t sequenceId = 3;
+    ovms::Sequence sequence(sequenceId);
     sequence.updateMemoryState(newState);
 
     const ovms::sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
