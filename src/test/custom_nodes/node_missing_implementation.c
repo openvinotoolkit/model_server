@@ -14,16 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../../custom_node_interface.hpp"
+#include "../../custom_node_interface.h"
 
-extern "C" int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 1;
 }
 
-extern "C" int releaseBuffer(struct CustomNodeTensor* output) {
-    return 2;
-}
+// Missing implementation
+// int releaseBuffer(struct CustomNodeTensor* output) {
+//     return 2;
+// }
 
-extern "C" int releaseTensors(struct CustomNodeTensor* outputs) {
+int releaseTensors(struct CustomNodeTensor* outputs) {
     return 3;
 }

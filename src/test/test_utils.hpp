@@ -74,6 +74,7 @@ constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
+constexpr const float DUMMY_ADDITION_VALUE = 1.0;
 
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";

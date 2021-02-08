@@ -15,19 +15,40 @@
 //*****************************************************************************
 #pragma once
 
+#include <stdint.h>
+
+typedef enum {
+    UNSPECIFIED,
+    FP32,
+    FP16,
+    U8,
+    I8,
+    I16,
+    U16,
+    I32
+} CustomNodeTensorPrecision;
+
 struct CustomNodeTensor {
     const char* name;
-    unsigned char* data;
-    int dataLength;
-    int* dims;
-    int dimsLength;
-    int precision;
+    uint8_t* data;
+    uint64_t dataLength;
+    uint64_t* dims;
+    uint64_t dimsLength;
+    CustomNodeTensorPrecision precision;
 };
 
 struct CustomNodeParam {
     const char *key, *value;
 };
 
-extern "C" int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-extern "C" int releaseBuffer(struct CustomNodeTensor* output);
-extern "C" int releaseTensors(struct CustomNodeTensor* outputs);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
+int releaseBuffer(struct CustomNodeTensor* output);
+int releaseTensors(struct CustomNodeTensor* outputs);
+
+#ifdef __cplusplus
+}
+#endif

@@ -22,10 +22,14 @@ cc_library(
         "blobmap.hpp",
         "config.cpp",
         "config.hpp",
-        "custom_node_interface.hpp",
+        "custom_node.cpp",
+        "custom_node.hpp",
+        "custom_node_interface.h",
         "custom_node_library_manager.cpp",
         "custom_node_library_manager.hpp",
         "custom_node_output_allocator.hpp",
+        "customnodesession.cpp",
+        "customnodesession.hpp",
         "customloaderconfig.hpp",
 	    "customloaders.hpp",
 	    "customloaders.cpp",
@@ -76,6 +80,7 @@ cc_library(
         "node.cpp",
         "node.hpp",
         "nodeinfo.hpp",
+        "node_library.cpp",
         "node_library.hpp",
         "nodesession.cpp",
         "nodesession.hpp",
@@ -184,8 +189,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_mock.so",
     srcs = [
-	"test/custom_nodes/node_mock.cpp",
-	"custom_node_interface.hpp",
+	"test/custom_nodes/node_mock.c",
+	"custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -193,8 +198,17 @@ cc_binary(
 cc_binary(
     name = "lib_node_missing_implementation.so",
     srcs = [
-	"test/custom_nodes/node_missing_implementation.cpp",
-	"custom_node_interface.hpp",
+	"test/custom_nodes/node_missing_implementation.c",
+	"custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
+    name = "lib_node_add_sub.so",
+    srcs = [
+	"test/custom_nodes/node_add_sub.c",
+	"custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -225,6 +239,7 @@ cc_test(
     srcs = [
         "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
+        "test/ensemble_flow_custom_node_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
         "test/ensemble_config_change_stress.cpp",
@@ -292,6 +307,7 @@ cc_test(
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
+        "//src:lib_node_add_sub.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
