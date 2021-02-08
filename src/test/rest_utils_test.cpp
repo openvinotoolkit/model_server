@@ -61,6 +61,37 @@ protected:
     }
 };
 
+class RestUtilsValTest : public ::testing::Test {
+protected:
+    tensorflow::serving::PredictResponse proto;
+    std::string json;
+    tensorflow::TensorProto *tensor_content_output, *single_uint64_val, *two_uint32_vals;
+
+    void SetUp() override {
+        tensor_content_output = &((*proto.mutable_outputs())["tensor_content_output"]);
+        single_uint64_val = &((*proto.mutable_outputs())["single_uint64_val"]);
+        two_uint32_vals = &((*proto.mutable_outputs())["two_uint32_vals"]);
+
+        tensor_content_output->set_dtype(tensorflow::DataType::DT_FLOAT);
+        single_uint64_val->set_dtype(tensorflow::DataType::DT_UINT64);
+        two_uint32_vals->set_dtype(tensorflow::DataType::DT_UINT32);
+
+        float data[8] = {5.0f, 10.0f, -3.0f, 2.5f,
+            9.0f, 55.5f, -0.5f, -1.5f};
+        tensor_content_output->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data), 8 * sizeof(float));
+        tensor_content_output->mutable_tensor_shape()->add_dim()->set_size(2);
+        tensor_content_output->mutable_tensor_shape()->add_dim()->set_size(1);
+        tensor_content_output->mutable_tensor_shape()->add_dim()->set_size(4);
+
+        single_uint64_val->mutable_tensor_shape()->add_dim()->set_size(1);
+        single_uint64_val->add_uint64_val(5000000000);
+
+        two_uint32_vals->mutable_tensor_shape()->add_dim()->set_size(2);
+        two_uint32_vals->add_uint32_val(4000000000);
+        two_uint32_vals->add_uint32_val(1);
+    }
+};
+
 TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_CannotConvertUnknownOrder) {
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::UNKNOWN), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
 }
@@ -405,4 +436,124 @@ TEST_F(RestUtilsPrecisionTest, MakeJsonFromPredictResponse_Uint64) {
         ]
     ]
 })");
+}
+
+TEST_F(RestUtilsValTest, MakeJsonFromPredictResponse_ColumnOrder_ContainSingleUint64Val) {
+    proto.mutable_outputs()->erase("two_uint32_vals");
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+
+    bool is_in_first_order = json == R"({
+    "outputs": {
+        "tensor_content_output": [
+            [
+                [
+                    5.0,
+                    10.0,
+                    -3.0,
+                    2.5
+                ]
+            ],
+            [
+                [
+                    9.0,
+                    55.5,
+                    -0.5,
+                    -1.5
+                ]
+            ]
+        ],
+        "single_uint64_val": [
+            5000000000
+        ]
+    }
+})";
+
+    bool is_in_second_order = json == R"({
+    "outputs": {
+        "single_uint64_val": [
+            5000000000
+        ],
+        "tensor_content_output": [
+            [
+                [
+                    5.0,
+                    10.0,
+                    -3.0,
+                    2.5
+                ]
+            ],
+            [
+                [
+                    9.0,
+                    55.5,
+                    -0.5,
+                    -1.5
+                ]
+            ]
+        ]
+    }
+})";
+
+    EXPECT_TRUE(is_in_first_order || is_in_second_order);
+}
+
+TEST_F(RestUtilsValTest, MakeJsonFromPredictResponse_ColumnOrder_ContainTwoUint32Vals) {
+    proto.mutable_outputs()->erase("single_uint64_val");
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+
+    bool is_in_first_order = json == R"({
+    "outputs": {
+        "tensor_content_output": [
+            [
+                [
+                    5.0,
+                    10.0,
+                    -3.0,
+                    2.5
+                ]
+            ],
+            [
+                [
+                    9.0,
+                    55.5,
+                    -0.5,
+                    -1.5
+                ]
+            ]
+        ],
+        "two_uint32_vals": [
+            4000000000,
+            1
+        ]
+    }
+})";
+
+    bool is_in_second_order = json == R"({
+    "outputs": {
+        "two_uint32_vals": [
+            4000000000,
+            1
+        ],
+        "tensor_content_output": [
+            [
+                [
+                    5.0,
+                    10.0,
+                    -3.0,
+                    2.5
+                ]
+            ],
+            [
+                [
+                    9.0,
+                    55.5,
+                    -0.5,
+                    -1.5
+                ]
+            ]
+        ]
+    }
+})";
+
+    EXPECT_TRUE(is_in_first_order || is_in_second_order);
 }
