@@ -49,13 +49,11 @@ protected:
     // Input/Output name mapping and list of required inputs from previous nodes
     std::unordered_map<std::string, Aliases> blobNamesMapping;
 
-    // TODO make fields below const after integration of PipelineDefinition with Demultiplexer/Gather
-    std::optional<std::set<std::string>> gatherFrom;
-    std::optional<uint32_t> demultiplexCount;
-    // end TODO
+    const std::optional<uint32_t> demultiplexCount;
+    const std::optional<std::set<std::string>> gatherFrom;
 
 public:
-    Node(const std::string& nodeName, uint32_t demultiplyCount = 0);
+    Node(const std::string& nodeName, uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {});
 
     virtual ~Node() = default;
 
