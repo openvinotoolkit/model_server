@@ -49,8 +49,15 @@ protected:
     // Input/Output name mapping and list of required inputs from previous nodes
     std::unordered_map<std::string, Aliases> blobNamesMapping;
 
+<<<<<<< HEAD
     const std::optional<uint32_t> demultiplexCount;
     const std::optional<std::set<std::string>> gatherFrom;
+=======
+    // TODO make fields below const after integration of PipelineDefinition with Demultiplexer/Gather
+    std::optional<uint32_t> demultiplexCount;
+    std::optional<std::set<std::string>> gatherFrom;
+    // end TODO
+>>>>>>> 3e848c0ee2b7d94795ad3c0dd865950c70c82a3c
 
 public:
     Node(const std::string& nodeName, uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {});

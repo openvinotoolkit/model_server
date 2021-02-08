@@ -178,6 +178,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                                            manager,
                                                            info.outputNameAliases,
                                                            info.demultiplyCount ? info.demultiplyCount.value() : 0,
+<<<<<<< HEAD
                                                            info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
             break;
         case NodeKind::CUSTOM:
@@ -188,6 +189,12 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                                            info.outputNameAliases,
                                                            info.demultiplyCount ? info.demultiplyCount.value() : 0,
                                                            info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
+=======
+                                                           info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{}))));
+            break;
+        case NodeKind::CUSTOM:
+            // TODO
+>>>>>>> 3e848c0ee2b7d94795ad3c0dd865950c70c82a3c
             break;
         case NodeKind::EXIT: {
             break;
