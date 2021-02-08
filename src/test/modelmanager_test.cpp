@@ -500,14 +500,6 @@ TEST(ModelManager, ConfigReloadingNonStateful) {
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config;
     config.setStateful(false);
-    config.setMaxSequenceNumber(5);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
-
-    config.setMaxSequenceNumber(ovms::DEFAULT_MAX_SEQUENCE_NUMBER);
-    config.setSequenceTimeout(33);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
-
-    config.setSequenceTimeout(ovms::DEFAULT_SEQUENCE_TIMEOUT_SECONDS);
     config.setLowLatencyTransformation(true);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
 }

@@ -639,3 +639,35 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsSeqNumber2) {
 
     ASSERT_EQ(status, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
 }
+
+TEST(ModelConfig, ConfigParseNodeWithStatefulParamsPositive) {
+    std::string config = R"#(
+        {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "alpha",
+                    "base_path": "/tmp/models/dummy1",
+                    "stateful": true,
+                    "max_sequence_number": 1
+                    "sequence_timeout_seconds": 120
+                    "low_latency_transformation": false
+                }
+            }
+        ]
+    }
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+}

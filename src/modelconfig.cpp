@@ -44,7 +44,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         return true;
     }
     if (this->stateful != rhs.stateful) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful type mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful flag mismatch", this->name);
         return true;
     }
     if (this->sequenceTimeout != rhs.sequenceTimeout) {
@@ -437,7 +437,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("low_latency_transformation")) {
         if (!this->isStateful()) {
-            SPDLOG_ERROR("Requested low latency transformation parameter for non stateful model {}.", v["name"].GetString());
+            SPDLOG_ERROR("Low latency transformation parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
@@ -445,7 +445,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("sequence_timeout_seconds")) {
         if (!this->isStateful()) {
-            SPDLOG_ERROR("Requested setting sequencetimeout parameter for non stateful model {}.", v["name"].GetString());
+            SPDLOG_ERROR("Sequencetimeout parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());
@@ -453,7 +453,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("max_sequence_number")) {
         if (!this->isStateful()) {
-            SPDLOG_ERROR("Requested setting max sequence number parameter for non stateful model {}.", v["name"].GetString());
+            SPDLOG_ERROR("Max sequence number parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
