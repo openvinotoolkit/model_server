@@ -47,6 +47,7 @@ public:
         sequenceId(sequenceId),
         terminated(false) { updateLastActivityTime(); }
     const sequence_memory_state_t& getMemoryState() const;
+    const uint64_t& getId() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
     std::chrono::steady_clock::time_point getLastActivityTime() const;
