@@ -649,8 +649,8 @@ TEST(ModelConfig, ConfigParseNodeWithStatefulParamsPositive) {
                     "name": "alpha",
                     "base_path": "/tmp/models/dummy1",
                     "stateful": true,
-                    "max_sequence_number": 1
-                    "sequence_timeout_seconds": 120
+                    "max_sequence_number": 1,
+                    "sequence_timeout_seconds": 120,
                     "low_latency_transformation": false
                 }
             }
