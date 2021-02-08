@@ -151,17 +151,17 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
     EntryNode* entry = nullptr;
     ExitNode* exit = nullptr;
-    std::set<std::string> gatherFrom;
+    std::set<std::string> demultipliers;
     for (const auto& info : nodeInfos) {
         if (info.demultiplyCount) {
-            gatherFrom.insert(info.nodeName);
+            demultipliers.insert(info.nodeName);
         }
     }
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         if (info.gatherFromNode) {
-            gatherFrom.erase(info.nodeName);
+            demultipliers.erase(info.nodeName);
         }
         switch (info.kind) {
         case NodeKind::ENTRY: {
@@ -199,7 +199,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
     const auto& it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [](const NodeInfo& info) { return info.kind == NodeKind::EXIT; });
     if (it != nodeInfos.end()) {
-        auto node = std::make_unique<ExitNode>(response, gatherFrom);
+        auto node = std::make_unique<ExitNode>(response, demultipliers);
         exit = node.get();
         nodes.insert(std::make_pair(it->nodeName, std::move(node)));
     }
