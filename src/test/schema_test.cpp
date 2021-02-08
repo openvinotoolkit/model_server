@@ -752,7 +752,7 @@ TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
 
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigSeqNegative);
-    auto result = ovms::validateJsonAgainstSchema(modelConfigNireqNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -772,7 +772,7 @@ TEST(SchemaTest, ModelConfigTimeoutNegative) {
 
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
-    auto result = ovms::validateJsonAgainstSchema(modelConfigNireqNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 

@@ -497,7 +497,7 @@ std::string config_low_latency = R"#(
     "model_config_list": [
         {
             "config": {
-                "name": "alpha",
+                "name": "config_low_latency",
                 "base_path": "/tmp/models/dummy1",
                 "low_latency_transformation": true
             }
@@ -511,7 +511,7 @@ std::string config_low_latency_stateful = R"#(
     "model_config_list": [
         {
             "config": {
-                "name": "alpha",
+                "name": "config_low_latency_stateful",
                 "base_path": "/tmp/models/dummy1",
                 "stateful": false,
                 "low_latency_transformation": true
@@ -526,7 +526,7 @@ std::string config_timeout_stateful = R"#(
     "model_config_list": [
         {
             "config": {
-                "name": "alpha",
+                "name": "config_timeout_stateful",
                 "base_path": "/tmp/models/dummy1",
                 "stateful": false,
                 "sequence_timeout_seconds": 120
@@ -541,7 +541,7 @@ std::string config_max_sequence_number_stateful = R"#(
     "model_config_list": [
         {
             "config": {
-                "name": "alpha",
+                "name": "config_max_sequence_number_stateful",
                 "stateful": false,
                 "base_path": "/tmp/models/dummy1",
                 "max_sequence_number": 1000
@@ -556,7 +556,7 @@ std::string config_max_sequence_number = R"#(
         "model_config_list": [
             {
                 "config": {
-                    "name": "alpha",
+                    "name": "config_max_sequence_number",
                     "base_path": "/tmp/models/dummy1",
                     "max_sequence_number": 1
                 }
@@ -565,61 +565,96 @@ std::string config_max_sequence_number = R"#(
     }
     )#";
 
-TEST(ModelConfig, ParseModelSetWithStatefulTrueShouldPass) {
-    std::string config = R"#(
+std::string config_stateful_should_pass = R"#(
+    {
+    "model_config_list": [
         {
-        "model_config_list": [
-            {
-                "config": {
-                    "name": "alpha",
-                    "base_path": "/tmp/models/dummy1",
-                    "stateful": true,
-                    "max_sequence_number": 1,
-                    "sequence_timeout_seconds": 120,
-                    "low_latency_transformation": false
-                }
+            "config": {
+                "name": "config_stateful_should_pass",
+                "base_path": "/tmp/models/dummy1",
+                "stateful": true,
+                "max_sequence_number": 1,
+                "sequence_timeout_seconds": 120,
+                "low_latency_transformation": true
             }
-        ]
+        }
+    ]
+}
+)#";
+
+std::string config_low_invalid_max_seq = R"#(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "config_low_invalid_max_seq",
+                "base_path": "/tmp/models/dummy1",
+                "stateful": true,
+                "max_sequence_number": 5294967295,
+                "sequence_timeout_seconds": 120,
+                "low_latency_transformation": true
+            }
+        }
+    ]
+}
+)#";
+
+std::string config_low_invalid_seq_timeout = R"#(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "config_low_invalid_seq_timeout",
+                "base_path": "/tmp/models/dummy1",
+                "stateful": true,
+                "max_sequence_number": 1,
+                "sequence_timeout_seconds": 5294967295,
+                "low_latency_transformation": true
+            }
+        }
+    ]
+}
+)#";
+
+class ModelConfigParseModel : public ::testing::TestWithParam<std::pair<std::string, ovms::StatusCode>> {
+};
+
+TEST_P(ModelConfigParseModel, SetWithStateful) {
+    std::pair<std::string, ovms::StatusCode> testPair = GetParam();
+    std::string config = testPair.first;
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    std::cout << "Testing config named: " << configs[0]["config"]["name"].GetString() << std::endl;
+
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, testPair.second);
+    if (testPair.second == ovms::StatusCode::OK) {
+        ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), true);
+        ASSERT_EQ(modelConfig.isStateful(), true);
+        ASSERT_EQ(modelConfig.getMaxSequenceNumber(), 1);
+        ASSERT_EQ(modelConfig.getSequenceTimeout(), 120);
     }
-    )#";
-
-    rapidjson::Document configJson;
-    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
-
-    const auto modelConfigList = configJson.FindMember("model_config_list");
-    ASSERT_NE(modelConfigList, configJson.MemberEnd());
-    const auto& configs = modelConfigList->value.GetArray();
-    ASSERT_EQ(configs.Size(), 1);
-    ovms::ModelConfig modelConfig;
-    auto status = modelConfig.parseNode(configs[0]["config"]);
-
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), true);
-    ASSERT_EQ(modelConfig.isStateful(), true);
-    ASSERT_EQ(modelConfig.getMaxSequenceNumber(), 1);
-    ASSERT_EQ(modelConfig.getSequenceTimeout(), 120);
 }
 
-
-TEST_P(ModelConfigParseModel, SetWithStatefulFalse) {
-    std::string config = GetParam()
-    rapidjson::Document configJson;
-    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
-
-    const auto modelConfigList = configJson.FindMember("model_config_list");
-    ASSERT_NE(modelConfigList, configJson.MemberEnd());
-    const auto& configs = modelConfigList->value.GetArray();
-    ASSERT_EQ(configs.Size(), 1);
-    ovms::ModelConfig modelConfig;
-    auto status = modelConfig.parseNode(configs[0]["config"]);
-
-    ASSERT_EQ(status, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
-}
+std::vector<std::pair<std::string, ovms::StatusCode>> configs = {
+    {config_low_latency, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_max_sequence_number, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_max_sequence_number_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_timeout_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_low_latency_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_low_invalid_max_seq, ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
+    {config_low_invalid_seq_timeout, ovms::StatusCode::INVALID_SEQUENCE_TIMEOUT},
+    {config_stateful_should_pass, ovms::StatusCode::OK}};
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
     ModelConfigParseModel,
-    ::testing::ValuesIn(config_low_latency, config_max_sequence_number, config_max_sequence_number_stateful, config_timeout_stateful, config_low_latency_stateful),
-    ::testing::PrintToStringParamName());
+    ::testing::ValuesIn(configs));

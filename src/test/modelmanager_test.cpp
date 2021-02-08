@@ -486,8 +486,8 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
 
 TEST(ModelManager, ConfigReloadingStatefulDynamic) {
     ConstructorEnabledModelManager manager;
-    auto modelConfig = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
     config.setStateful(true);
     config.setBatchingMode(ovms::Mode::AUTO);
@@ -500,11 +500,9 @@ TEST(ModelManager, ConfigReloadingStatefulDynamic) {
 
 TEST(ModelManager, ConfigReloadingNonStateful) {
     ConstructorEnabledModelManager manager;
-    auto modelConfig = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
 
-    ConstructorEnabledModelManager manager;
-    ovms::ModelConfig config;
     config.setStateful(false);
     config.setLowLatencyTransformation(true);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
