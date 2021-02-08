@@ -47,7 +47,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
-    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size not supported for stateful models"},
+    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
     {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
 

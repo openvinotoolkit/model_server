@@ -445,7 +445,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("sequence_timeout_seconds")) {
         if (!this->isStateful()) {
-            SPDLOG_ERROR("Sequencetimeout parameter was set for non stateful model {}.", v["name"].GetString());
+            SPDLOG_ERROR("Sequence timeout parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());

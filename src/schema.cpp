@@ -88,13 +88,15 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"type": "boolean"
 						},
 						"sequence_timeout_seconds": {
-							"type": "integer"
+							"type": "integer",
+							"minimum": 0
 						},
 						"low_latency_transformation": {
 							"type": "boolean"
 						},
 						"max_sequence_number": {
-							"type": "integer"
+							"type": "integer",
+							"minimum": 0
 						},
 						"custom_loader_options": {
 							"type": "object",
