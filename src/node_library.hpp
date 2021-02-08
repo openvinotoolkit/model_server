@@ -15,9 +15,14 @@
 //*****************************************************************************
 #pragma once
 
-#include "custom_node_interface.hpp"
+#include <inference_engine.hpp>
+
+#include "custom_node_interface.h"  // NOLINT
 
 namespace ovms {
+
+CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision precision);
+InferenceEngine::Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
 
 typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int);
 typedef int (*release_fn)(struct CustomNodeTensor*);
@@ -26,6 +31,10 @@ struct NodeLibrary {
     execute_fn execute = nullptr;
     release_fn releaseBuffer = nullptr;
     release_fn releaseTensors = nullptr;
+
+    bool isValid() const {
+        return execute != nullptr && releaseBuffer != nullptr && releaseTensors != nullptr;
+    }
 };
 
 }  // namespace ovms

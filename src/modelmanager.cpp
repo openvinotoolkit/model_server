@@ -204,7 +204,6 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
     if (!status.ok()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
-        return status;
     }
     if (nodeConfig.HasMember("params")) {
         for (const auto& param : nodeConfig["params"].GetObject()) {

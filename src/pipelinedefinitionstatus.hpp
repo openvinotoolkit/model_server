@@ -84,7 +84,13 @@ public:
         std::visit([](const auto state) { state->print(); }, currentState);
     }
     PipelineDefinitionStateCode getStateCode() const {
-        return std::visit([](const auto state) { return state->getStateCode(); }, currentState);
+        while (true) {
+            try {
+                return std::visit([](const auto state) { return state->getStateCode(); }, currentState);
+            } catch (const std::bad_variant_access&) {
+                continue;
+            }
+        }
     }
 
 private:

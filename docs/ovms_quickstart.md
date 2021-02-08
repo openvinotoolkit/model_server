@@ -1,6 +1,6 @@
 # OpenVINO&trade; Model Server Quickstart
 
-The OpenVINO Model Server requires a trained model in Intermediate Representation (IR) format on which it performs inference. Options to download appropriate models include:
+The OpenVINO Model Server requires a trained model in Intermediate Representation (IR) or ONNX format on which it performs inference. Options to download appropriate models include:
  
 - Downloading models from the [Open Model Zoo](https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/)
 - Using the [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) to convert models to the IR format from formats like TensorFlow*, ONNX*, Caffe*, MXNet* or Kaldi*.
