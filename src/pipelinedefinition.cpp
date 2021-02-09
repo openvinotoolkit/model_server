@@ -151,9 +151,18 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
     EntryNode* entry = nullptr;
     ExitNode* exit = nullptr;
+    std::set<std::string> demultipliers;
+    for (const auto& info : nodeInfos) {
+        if (info.demultiplyCount) {
+            demultipliers.insert(info.nodeName);
+        }
+    }
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
+        if (info.gatherFromNode) {
+            demultipliers.erase(info.nodeName);
+        }
         switch (info.kind) {
         case NodeKind::ENTRY: {
             auto node = std::make_unique<EntryNode>(request);
@@ -167,25 +176,32 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                                            info.modelName,
                                                            info.modelVersion,
                                                            manager,
-                                                           info.outputNameAliases)));
+                                                           info.outputNameAliases,
+                                                           info.demultiplyCount.value_or(0),
+                                                           info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
             break;
         case NodeKind::CUSTOM:
             nodes.insert(std::make_pair(info.nodeName, std::make_unique<CustomNode>(
                                                            info.nodeName,
                                                            info.library,
                                                            info.parameters,
-                                                           info.outputNameAliases)));
+                                                           info.outputNameAliases,
+                                                           info.demultiplyCount.value_or(0),
+                                                           info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response);
-            exit = node.get();
-            nodes.insert(std::make_pair(info.nodeName, std::move(node)));
             break;
         }
         default:
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Requested pipeline {} contains unknown node kind", getName());
             throw std::invalid_argument("unknown node kind");
         }
+    }
+    const auto& it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [](const NodeInfo& info) { return info.kind == NodeKind::EXIT; });
+    if (it != nodeInfos.end()) {
+        auto node = std::make_unique<ExitNode>(response, demultipliers);
+        exit = node.get();
+        nodes.insert(std::make_pair(it->nodeName, std::move(node)));
     }
     for (const auto& kv : connections) {
         const auto& dependantNode = nodes.at(kv.first);

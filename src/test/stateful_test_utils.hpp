@@ -87,11 +87,15 @@ public:
 #pragma GCC diagnostic ignored "-Wunused-function"
 static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequenceId) {
     auto& input = (*request->mutable_inputs())[SEQUENCE_ID_INPUT];
+    input.set_dtype(tensorflow::DataType::DT_UINT64);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint64_val(sequenceId);
 }
 
 static void setRequestSequenceControl(tensorflow::serving::PredictRequest* request, uint32_t sequenceControl) {
     auto& input = (*request->mutable_inputs())[SEQUENCE_CONTROL_INPUT];
+    input.set_dtype(tensorflow::DataType::DT_UINT32);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint32_val(sequenceControl);
 }
 

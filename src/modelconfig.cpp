@@ -513,6 +513,13 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         setBatchSize(0);
     }
 
+    SPDLOG_DEBUG("stateful: {}", isStateful());
+    if (isStateful()) {
+        SPDLOG_DEBUG("sequence_timeout_seconds: {}", getSequenceTimeout());
+        SPDLOG_DEBUG("max_sequence_number: {}", getMaxSequenceNumber());
+        SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
+    }
+
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {
         if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
