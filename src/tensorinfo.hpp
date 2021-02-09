@@ -209,6 +209,6 @@ public:
 
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
-    std::string getPrintableString() const;
+    static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
 };
 }  // namespace ovms

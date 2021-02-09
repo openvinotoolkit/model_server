@@ -241,7 +241,7 @@ std::string TensorInfo::getStringFromLayout(InferenceEngine::Layout layout) {
         return "CHW";
     case InferenceEngine::Layout::HW:
         return "HW";
-    case InferenceEngine::Layout::HW:
+    case InferenceEngine::Layout::HWC:
         return "HWC";
     case InferenceEngine::Layout::NC:
         return "NC";
@@ -300,11 +300,11 @@ std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
     return info;
 }
 
-std::string TensorInfo::getPrintableString() const {
+std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& desc) {
     std::stringstream ss;
-    ss << "shape: " << shapeToString(shape)
-       << " precision: " << getPrecisionAsString(precision)
-       << " layout: " << getStringFromLayout(layout);
+    ss << "shape: " << shapeToString(desc.getDims())
+       << " precision: " << getPrecisionAsString(desc.getPrecision())
+       << " layout: " << getStringFromLayout(desc.getLayout());
     return ss.str();
 }
 }  // namespace ovms

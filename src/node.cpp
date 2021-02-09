@@ -184,7 +184,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
         }
     }
     nodeSessionOutputs.erase(metadata.getSessionKey());

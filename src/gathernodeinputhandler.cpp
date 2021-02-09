@@ -47,8 +47,8 @@ Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceE
         if (firstShardTensor->getTensorDesc() != ptr->getTensorDesc()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Shard: {} tensor description differ. First shard desc: {}, current shard desc: {}",
                 shardId,
-                TensorInfo("firstShard", firstShardTensor->getTensorDesc()).getPrintableString(),
-                TensorInfo("currentShard", ptr->getTensorDesc()).getPrintableString());
+                TensorInfo::tensorDescToString(firstShardTensor->getTensorDesc()),
+                TensorInfo::tensorDescToString(ptr->getTensorDesc()));
             return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
         }
         auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);
@@ -89,7 +89,8 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             auto shardTensorDesc = blob->getTensorDesc();
             if (shardTensorDesc != firstShardTensorDesc) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate blob: {} shards in gather node. First shard has different tensor description: {} than current shard: {}",
-                    inputName, TensorInfo(inputName, firstShardTensorDesc).getPrintableString(), TensorInfo(inputName, shardTensorDesc).getPrintableString());
+                    inputName,
+                    TensorInfo::tensorDescToString(shardTensorDesc));
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
             const auto memstep = blob->byteSize();
