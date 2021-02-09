@@ -45,7 +45,10 @@ Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceE
     } else {
         auto firstShardTensor = inputsShardsIt->second.begin()->second;
         if (firstShardTensor->getTensorDesc() != ptr->getTensorDesc()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Shard dimensions differ");  // TODO  improve error msg
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Shard: {} tensor description differ. First shard desc: {}, current shard desc: {}",
+                shardId,
+                TensorInfo("firstShard", firstShardTensor->getTensorDesc()).getPrintableString(),
+                TensorInfo("currentShard", ptr->getTensorDesc()).getPrintableString());
             return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
         }
         auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);

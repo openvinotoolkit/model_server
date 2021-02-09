@@ -161,7 +161,6 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
     NodeSessionMetadata metaCollapsed;
     CollapsingDetails collapsingDetails;
     std::tie(metaCollapsed, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st", "extract2nd"});
-    // TODO test for details
     auto hashCollapsed = metaCollapsed.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_12"));
     ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract1st")));

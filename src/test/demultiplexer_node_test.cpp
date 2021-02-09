@@ -108,7 +108,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
-    ASSERT_EQ(status.getCode(), StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY);
+    ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY);
 }
 
 TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutput) {
@@ -130,6 +130,6 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
-    ASSERT_EQ(status.getCode(), StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY);
+    ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY);
 }
 // TODO check for multiple output if those were demultiplied

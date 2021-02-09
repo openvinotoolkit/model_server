@@ -68,7 +68,7 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
             EXPECT_FALSE(gInputHandler.isReady());
             gInputHandler.setInput(inputNames[i], inputBlobs[i], j);
             // each input comming from different node so we call notify each time
-            ASSERT_TRUE(gInputHandler.notifyFinishedDependency().ok());
+            ASSERT_EQ(gInputHandler.notifyFinishedDependency(), StatusCode::OK);
         }
     }
     EXPECT_TRUE(gInputHandler.isReady());
@@ -123,7 +123,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
             status = gInputHandler.setInput(inputName,
                 blob,
                 shardId);
-            ASSERT_EQ(status.getCode(), StatusCode::OK) << status.string();
+            ASSERT_EQ(status, StatusCode::OK) << status.string();
             gInputHandler.notifyFinishedDependency();
         }
     }
@@ -155,19 +155,14 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
         status = gInputHandler.setInput(inputNames, inputBlobs[j], j);
         // each input comming from different node so we call notify each time
         if (!status.ok()) {
-            SPDLOG_ERROR("ER");
-            EXPECT_EQ(status.getCode(), StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
+            EXPECT_EQ(status, StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
             break;
         }
         status = gInputHandler.notifyFinishedDependency();
-        EXPECT_EQ(status.getCode(), StatusCode::OK) << status.string();
+        EXPECT_EQ(status, StatusCode::OK) << status.string();
     }
     // The second notify should fail since the shard dimension should be different
-    EXPECT_FALSE(status.ok());
-    if (!status.ok()) {
-        SPDLOG_ERROR("ER");
-        EXPECT_EQ(status.getCode(), StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
-    }
+    EXPECT_EQ(status, StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
 }
 
 class GatherNodeTest : public TestWithTempDir {};
@@ -233,7 +228,7 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     const std::string fileToReload = directoryPath + "/ovms_config_file.json";
     createConfigFileWithContent(configDummy1BsDummy2Bs, fileToReload);
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status.getCode(), StatusCode::OK) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
     const std::string node1Name = "node1";
     DLNode oneDummyNode1{node1Name, "dummy", 1, manager, {}};
     const std::string demultiplexerNodeName{"nodeDummy"};
@@ -276,5 +271,3 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultBlobData.begin() + nodeRawResults1.size());
     EXPECT_EQ(memcmp((char*)((const void*)gatheredBlob->cbuffer()), resultBlobData.data(), resultBlobData.size() * sizeof(float)), 0);
 }
-
-// TODO test for node gathering from multiple levels (as exit node)
