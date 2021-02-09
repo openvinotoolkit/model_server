@@ -10,25 +10,26 @@ inference requests to the running server.
 
 ## Installing Helm
 
-Please refer to: https://helm.sh/docs/intro/install for Helm installation.
+Please refer to [Helm installation guide](https://helm.sh/docs/intro/install).
 
 ## Model Repository
 
 If you already have a model repository you may use that with this helm chart. If you don't, you can use any model
-from https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/.
+from [OpenVINO Model Zoo](https://download.01.org/opencv/2021/openvinotoolkit/2021.2/open_model_zoo/models_bin/).
 
 Model Server requires a repository of models to execute inference requests. For example, you can 
 use a Google Cloud Storage (GCS) bucket:
 ```shell script
-$ gsutil mb gs://model-repository
+gsutil mb gs://model-repository
 ```
 
 You can download the model from the link provided above and upload it to GCS:
 ```shell script
-$ gsutil cp -r 1 gs://model-repository/1
+gsutil cp -r 1 gs://model-repository/1
 ```
 The models repository can be also distributed on the cluster nodes in the local path or it could be stored on the Kubernetes persistent volume.
-Below are described supported storage options:
+
+The supported storage options are described below:
 
 
 ### GCS
@@ -36,34 +37,33 @@ Below are described supported storage options:
 Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environment variable. Please follow the steps below:
 
 * Generate Google service account JSON file with permissions: _Storage Legacy Bucket Reader_, _Storage Legacy Object Reader_, _Storage Object Viewer_. Name a file for example: _gcp-creds.json_ 
-(you can follow these instructions to create a Service Account and download JSON: 
-https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account)
+(you can follow these instructions to [create a Service Account](https://cloud.google.com/docs/authentication/getting-started#creating_a_service_account) and download JSON)
 * Create a Kubernetes secret from this JSON file:
 
       $ kubectl create secret generic gcpcreds --from-file gcp-creds.json
 
 * When deploying Model Server, provide the model path to GCS bucket and name for the secret created above. Make sure to provide `gcp_creds_secret_name` when deploying:
 ```shell script
-$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
+helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
 ```
 
 ### S3
 
 For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below)
 ```shell script
-$ helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
+helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
 
 In case you would like to use custom S3 service with compatible API (e.g. MinIO), you need to also provide endpoint 
 to that service. Please provide it by supplying `s3_compat_api_endpoint`:
 ```shell script
-$ helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
+helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
 ```
 
 ### Azure Storage
 Use OVMS with models stored on azure blob storage by providing `azure_storage_connection_string` parameter. Model path should follow `az` scheme like below:
 ```shell script
-$ helm install ovms-app ovms --set model_name=resnet,model_path=az://bucket/model_path,azure_storage_connection_string="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
+helm install ovms-app ovms --set model_name=resnet,model_path=az://bucket/model_path,azure_storage_connection_string="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 ```
  
 ### Local Node Storage
@@ -83,12 +83,12 @@ That opens a possibility of storing the using the models for OVMS on all Kuberne
 
 In the helm set the parameter `models_volume_claim` with the name of the `PersistentVolumeClaim` record with the models. While set, it will be mounted as `/models` folder inside the OVMS container.
 
-Note that parameter `models_volume_claim` is excluding with `models_host_path`. Only one of them should be set.
+Note that parameter `models_volume_claim` is mutually exclusive with `models_host_path`. Only one of them should be set.
 
 ## Assigning Resource Specs
 
 You can restrict assigned cluster resources to the OVMS container but setting the parameter `resources`.
-Be default, there are no restrictions but it could be used to reduce the CPU and memory like in the snippet example from the values.yaml file:
+By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the values.yaml file:
 ```yaml
 resources:
   limits:
@@ -105,20 +105,20 @@ resources:
 
 ## Security Context
 
-OVMS, by default, starts with the security context of `ovms` account which has pid 5000 and gid 5000. In some cases it can prevent accessing models
+OVMS, by default, starts with the security context of `ovms` account which has pid 5000 and gid 5000. In some cases it can prevent importing models
 stored on the file system with restricted access.
 It might require adjusting the security context of OVMS service. It can be changed using a parameter `security_context`.
 
-Example of the values is below:
+An example of the values is presented below:
 ```yaml
 security_context:
   runAsUser: 5000
   runAsGroup: 5000
 ``` 
-The configuration could be also adjusted like allowed according to [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) 
+The security configuration could be also adjusted further with all options specified in [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) 
 
 ## Service Type
-The heml chart creates the Kubernetes `service` as part of the OVMS deployment. Depending on the cluster infrastructure you can adjust
+The helm chart creates the Kubernetes `service` as part of the OVMS deployment. Depending on the cluster infrastructure you can adjust
 the [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 In the cloud environment you might set `LoadBalancer` type to expose the service externally. `NodePort` could expose a static port
 of the node IP address. `ClusterIP` would keep the OVMS service internal to the cluster applications.  
@@ -128,20 +128,20 @@ of the node IP address. `ClusterIP` would keep the OVMS service internal to the 
 
 Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](ovms/values.yaml).
 ```shell script
-$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
+helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
 Use _kubectl_ to see status and wait until the Model Server pod is running:
 ```shell script
-$ kubectl get pods
+kubectl get pods
 NAME                    READY   STATUS    RESTARTS   AGE
-ovms-5fd8d6b845-w87jl   1/1     Running   0          27s
+ovms-app-5fd8d6b845-w87jl   1/1     Running   0          27s
 ```
 
 By default, Model Server is deployed with 1 instance. If you would like to scale up additional replicas, override the value in values.yaml file or by passing _--set_ flag to _helm install_:
 
 ```shell script
-$ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
+helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,replicas=3
 ```
 
 
@@ -154,34 +154,35 @@ Follow the above documentation to create a configuration file named _config.json
 
 To deploy with config file stored in the Kubernetes ConfigMap:
 * create a ConfigMap resource from this file with a chosen name (here _ovms-config_):
-      
-      $ kubectl create configmap ovms-config --from-file config.json
-
+```shell script     
+kubectl create configmap ovms-config --from-file config.json
+```
 * deploy Model Server with parameter `config_configmap_name` (without `model_name` and `model_path`):
-
-      $ helm install ovms-app ovms --set config_configmap_name=ovms-config
-
+```shell script
+helm install ovms-app ovms --set config_configmap_name=ovms-config
+```
 To deploy with config file stored on the Kubernetes Persistent Volume :
 * Store the config file on node local path set with `models_host_path` or on the persistent volume claim set with 
 `models_claim_name`. It will be mounted along with the models in the folder `/models`.
 * Deploy Model Server with parameter `config_path` pointing to the location of the config file visible in the OVMS container ie starting from 
 `/models/...`
-      $ helm install ovms-app ovms --set config_path=/models/config.json
-
+```shell script
+helm install ovms-app ovms --set config_path=/models/config.json
+```
 ## Using Model Server
 
 Now that the server is running you can send HTTP or gRPC requests to perform inference. 
 By default, the service is exposed with a LoadBalancer service type. Use the following command to find the 
 external IP for the server:
 ```shell script
-$ kubectl get svc
+kubectl get svc
 NAME                    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                         AGE
-openvino-model-server   LoadBalancer   10.121.14.253   1.2.3.4         8080:30043/TCP,8081:32606/TCP   59m
+ovms-app   LoadBalancer   10.121.14.253   1.2.3.4         8080:30043/TCP,8081:32606/TCP   59m
 ```
 
 The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
 
-Follow the instructions here: https://github.com/openvinotoolkit/model_server/tree/master/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files 
+Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
 $ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
@@ -230,8 +231,8 @@ $ helm ls
 NAME  	  NAMESPACE	REVISION	UPDATED                                 	STATUS  	CHART     	APP VERSION
 ovms-app  default  	1       	2020-09-23 14:40:07.292360971 +0200 CEST	deployed	ovms-3.0.0
 
-$ helm uninstall ovms
-release "ovms" uninstalled
+$ helm uninstall ovms-app
+release "ovms-app" uninstalled
 ```
 
 
