@@ -256,8 +256,8 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     oneDummyNodeSessionResults1.insert({subsessions[0].getSessionKey(), {subsessions[0], dummy1Result}});
     oneDummyNodeSessionResults2.insert({subsessions[1].getSessionKey(), {subsessions[1], dummy2Result}});
     // actual test steps
-    ASSERT_TRUE(gather2DummyNode.setInputs(oneDummyNode1, oneDummyNodeSessionResults1).ok());
-    ASSERT_TRUE(gather2DummyNode.setInputs(oneDummyNode1, oneDummyNodeSessionResults2).ok());
+    ASSERT_EQ(gather2DummyNode.setInputs(oneDummyNode1, oneDummyNodeSessionResults1), StatusCode::OK);
+    ASSERT_EQ(gather2DummyNode.setInputs(oneDummyNode1, oneDummyNodeSessionResults2), StatusCode::OK);
     auto readySessions = gather2DummyNode.getReadySessions();
     ASSERT_EQ(readySessions.size(), 1);
     const auto& inputs = gather2DummyNode.getInputsFromInputHandler(subsessions[0].getSessionKey({demultiplexerNodeName}));
