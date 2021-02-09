@@ -294,7 +294,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     for (auto& promise : releaseWaitBeforeSequenceStarted) {
         promise.set_value();
     }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
@@ -305,7 +305,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     }
 
     // sleep to allow half threads to work
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished) {
@@ -556,6 +556,8 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
+    input.set_dtype(tensorflow::DataType::DT_UINT64);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint64_val(12);
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
@@ -567,6 +569,8 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequence_control_input"];
+    input.set_dtype(tensorflow::DataType::DT_UINT32);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint32_val(999);
     auto status = modelInstance->mockValidate(&request, spec);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
@@ -575,17 +579,24 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
-    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request.mutable_inputs())["sequence_id"];
-    input.add_uint32_val(12);
-    auto status = modelInstance->mockValidate(&request, spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
-
-    request = preparePredictRequest(modelInput);
-    input = (*request.mutable_inputs())["sequence_control_input"];
-    input.add_uint64_val(1);
-    status = modelInstance->mockValidate(&request, spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+    {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        auto& input = (*request.mutable_inputs())["sequence_id"];
+        input.set_dtype(tensorflow::DataType::DT_UINT32);
+        input.mutable_tensor_shape()->add_dim()->set_size(1);
+        input.add_uint32_val(12);
+        auto status = modelInstance->mockValidate(&request, spec);
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
+    }
+    {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        auto& input = (*request.mutable_inputs())["sequence_control_input"];
+        input.set_dtype(tensorflow::DataType::DT_UINT64);
+        input.mutable_tensor_shape()->add_dim()->set_size(1);
+        input.add_uint64_val(1);
+        auto status = modelInstance->mockValidate(&request, spec);
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+    }
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
@@ -738,6 +749,134 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         sequenceBlobIrData.assign((float*)chengedBlob->buffer(), ((float*)chengedBlob->buffer()) + elementsCount);
         EXPECT_EQ(sequenceBlobIrData, defaultState);
         EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
+    }
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceId_OK) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT64);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.add_uint64_val(5000000000);
+    uint64_t sequenceId = 0;
+    EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::OK);
+    EXPECT_EQ(sequenceId, 5000000000);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceId_NoTensorShape) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT64);
+    proto.add_uint64_val(5000000000);
+    uint64_t sequenceId = 0;
+    EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE);
+    EXPECT_EQ(sequenceId, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceId_WrongTensorShapeDims) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT64);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.add_uint64_val(5000000000);
+    uint64_t sequenceId = 0;
+    EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    EXPECT_EQ(sequenceId, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceId_WrongTensorShape) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT64);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.add_uint64_val(5000000000);
+    uint64_t sequenceId = 0;
+    EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(sequenceId, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceId_WrongValField) {
+    {
+        // Data stored in the wrong val field
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_UINT64);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.add_uint32_val(1);
+        uint64_t sequenceId = 0;
+        EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
+        EXPECT_EQ(sequenceId, 0);
+    }
+    {
+        // Good val field, but too many values
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_UINT64);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.add_uint64_val(1);
+        proto.add_uint64_val(2);
+        uint64_t sequenceId = 0;
+        EXPECT_EQ(modelInstance->extractSequenceId(proto, sequenceId), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
+        EXPECT_EQ(sequenceId, 0);
+    }
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_OK) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT32);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.add_uint32_val(1);
+    uint32_t sequenceControlInput = 0;
+    EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::OK);
+    EXPECT_EQ(sequenceControlInput, 1);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_NoTensorShape) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT32);
+    proto.add_uint32_val(1);
+    uint32_t sequenceControlInput = 0;
+    EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE);
+    EXPECT_EQ(sequenceControlInput, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_WrongTensorShapeDims) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT32);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.add_uint32_val(1);
+    uint32_t sequenceControlInput = 0;
+    EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    EXPECT_EQ(sequenceControlInput, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_WrongTensorShape) {
+    tensorflow::TensorProto proto;
+    proto.set_dtype(tensorflow::DataType::DT_UINT32);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.add_uint32_val(1);
+    uint32_t sequenceControlInput = 0;
+    EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(sequenceControlInput, 0);
+}
+
+TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_WrongValField) {
+    {
+        // Data stored in the wrong val field
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_UINT32);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.add_uint64_val(1);
+        uint32_t sequenceControlInput = 0;
+        EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+        EXPECT_EQ(sequenceControlInput, 0);
+    }
+    {
+        // Good val field, but too many values
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_UINT32);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.add_uint32_val(1);
+        proto.add_uint32_val(2);
+        uint32_t sequenceControlInput = 0;
+        EXPECT_EQ(modelInstance->extractSequenceControlInput(proto, sequenceControlInput), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+        EXPECT_EQ(sequenceControlInput, 0);
     }
 }
 
