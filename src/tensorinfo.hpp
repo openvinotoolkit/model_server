@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <inference_engine.hpp>
 
@@ -26,7 +27,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
-#include "modelconfig.hpp"
+#include "shapeinfo.hpp"
 
 namespace ovms {
 

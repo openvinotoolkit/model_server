@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
+#include "modelversion.hpp"
 #include "node_library.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"

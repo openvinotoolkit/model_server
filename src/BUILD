@@ -118,6 +118,7 @@ cc_library(
         "s3filesystem.cpp",
         "s3filesystem.hpp",
         "session_id.hpp",
+        "shapeinfo.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
         "azurestorage.hpp",
