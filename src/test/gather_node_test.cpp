@@ -105,7 +105,6 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     }
 
     const size_t numberOfShards = std::accumulate(demultiplyCounts.begin(), demultiplyCounts.end(), 1, std::multiplies<size_t>());
-    SPDLOG_ERROR("NumbOfShards:{}", numberOfShards);
     const size_t numberOfElementsInGatheredBlob = elementCountPerShard * numberOfShards;
     std::vector<float> blobsData(numberOfElementsInGatheredBlob);
     std::iota(blobsData.begin(), blobsData.end(), 0.1);
@@ -118,7 +117,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
             auto index = i * demultiplyCounts[1] + j;
             InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, blobsData.data() + index * elementCountPerShard);
             ASSERT_FALSE(gInputHandler.isReady());
-            SPDLOG_ERROR("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
+            SPDLOG_DEBUG("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
             auto shardId = metadatas[i][j].getShardId({demultiplexerNodeNames[0], demultiplexerNodeNames[1]});
             status = gInputHandler.setInput(inputName,
                 blob,
