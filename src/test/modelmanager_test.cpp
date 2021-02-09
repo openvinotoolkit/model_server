@@ -484,6 +484,30 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
 }
 
+TEST(ModelManager, ConfigReloadingStatefulDynamic) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+
+    config.setStateful(true);
+    config.setBatchingMode(ovms::Mode::AUTO);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+
+    config.setBatchingMode(ovms::Mode::FIXED);
+    config.setShapes({{"A", {ovms::Mode::AUTO, {1, 3, 224, 224}}}});
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+}
+
+TEST(ModelManager, ConfigReloadingNonStateful) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+
+    config.setStateful(false);
+    config.setLowLatencyTransformation(true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
+}
+
 class DummyModelDirectoryStructure {
 private:
     std::string modelSourcePath;

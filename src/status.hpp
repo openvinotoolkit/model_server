@@ -56,12 +56,17 @@ enum class StatusCode {
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
 
     // Model management
-    MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
-    MODEL_NAME_MISSING,               /*!< Model with requested name is not found */
-    MODEL_VERSION_MISSING,            /*!< Model with requested version is not found */
-    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
-    INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
+    MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
+    MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
+    MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
+    REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
+    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
+    INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
+    INVALID_SEQUENCE_TIMEOUT,                          /*!< Sequence timeout parameter too high */
+    INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
 
     // Sequence management
     SEQUENCE_MISSING,                /*!< Sequence with provided ID does not exist */

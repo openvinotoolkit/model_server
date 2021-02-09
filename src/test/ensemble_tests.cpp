@@ -2668,6 +2668,26 @@ static const char* dummyWithDynamicParamConfig = R"(
     ]
 })";
 
+static const char* dummyWithStatefulModelType = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "stateful": true,
+                "low_latency_transformation": true,
+                "sequence_timeout_seconds": 120,
+                "max_sequence_number": 1000,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ]
+})";
+
 TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     /*
         This test modifies config.json to enable dynamic parameters for model used in pipeline.
@@ -2693,6 +2713,34 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     auto instance = manager.findModelInstance("dummy");
     ASSERT_NE(instance, nullptr);
     ASSERT_TRUE(instance->getModelConfig().isDynamicParameterEnabled());
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+}
+
+TEST_F(EnsembleFlowTest, EnablingStatefulParamteresForModelUsedInPipeline) {
+    /*
+        This test modifies config.json to enable stateful model used in pipeline.
+        In the same time, we remove pipeline from config file.
+        Test ensures such change is valid and model will be reloaded and stateful model will be loaded.
+        Test ensures pipeline gets retired.
+    */
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+
+    createConfigFileWithContent(dummyWithStatefulModelType, fileToReload);
+    status = manager.loadConfig(fileToReload);
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::RETIRED);
+
+    auto instance = manager.findModelInstance("dummy");
+    ASSERT_NE(instance, nullptr);
+    ASSERT_TRUE(instance->getModelConfig().isStateful());
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
 

@@ -409,11 +409,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
-        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
             continue;
         }
+
+        const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
             continue;
@@ -428,9 +429,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
-        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
-            newModelConfigs.emplace(modelName, std::move(modelConfig));
-        } else {
+        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = this->servedModelConfigs.find(modelName);
             if (it == this->servedModelConfigs.end()) {
@@ -439,6 +438,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
+        } else {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
@@ -748,10 +749,27 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+
+    if (config.isStateful() && config.isDynamicParameterEnabled()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());
+        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL;
+    }
+    if (!config.isStateful()) {
+        if (config.isLowLatencyTransformationUsed()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested low latency transformation parameter for non stateful model {}.", config.getName());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
+    }
     auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
-    if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
-        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+    if (model->isAnyVersionSubscribed()) {
+        if (config.isDynamicParameterEnabled()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+            return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
+        if (config.isStateful()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
+            return StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
     }
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());

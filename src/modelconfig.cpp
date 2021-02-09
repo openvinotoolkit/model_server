@@ -24,6 +24,7 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "logging.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -39,52 +40,68 @@ ShapeInfo::operator std::string() const {
 
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to name mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);
+        return true;
+    }
+    if (this->stateful != rhs.stateful) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful flag mismatch", this->name);
+        return true;
+    }
+    if (this->sequenceTimeout != rhs.sequenceTimeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to sequenceTimeout mismatch", this->name);
+        return true;
+    }
+    if (this->maxSequenceNumber != rhs.maxSequenceNumber) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to maxSequenceNumber mismatch", this->name);
+        return true;
+    }
+    if (this->lowLatencyTransformation != rhs.lowLatencyTransformation) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to lowLatencyTransformation mismatch", this->name);
         return true;
     }
     if (this->basePath != rhs.basePath) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to original base path mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to original base path mismatch", this->name);
         return true;
     }
     if (this->targetDevice != rhs.targetDevice) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to target device mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to target device mismatch", this->name);
         return true;
     }
     if (this->batchingMode != rhs.batchingMode) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to batching mode mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
     if (this->batchSize != rhs.batchSize) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to batch size mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
     if (this->nireq != rhs.nireq) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to nireq mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to nireq mismatch", this->name);
         return true;
     }
     if (this->pluginConfig != rhs.pluginConfig) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to plugin config mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
     if (this->layout != rhs.layout) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to no named layout mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to no named layout mismatch", this->name);
         return true;
     }
     if (this->layouts != rhs.layouts) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to named layout mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
     if (!isShapeConfigurationEqual(rhs)) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to shape configuration mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
-        SPDLOG_DEBUG("ModelConfig {} reload required due to custom loader config mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;
     }
     if (this->customLoaderOptionsConfigMap.size() > 0 && rhs.customLoaderOptionsConfigMap.size() > 0) {
         if (!(this->customLoaderOptionsConfigMap == rhs.customLoaderOptionsConfigMap)) {
-            SPDLOG_DEBUG("ModelConfig {} reload required due to custom loader config mismatch", this->name);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
             return true;
         }
     }
@@ -418,14 +435,38 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("stateful"))
         this->setStateful(v["stateful"].GetBool());
 
-    if (v.HasMember("low_latency_transformation"))
+    if (v.HasMember("low_latency_transformation")) {
+        if (!this->isStateful()) {
+            SPDLOG_ERROR("Low latency transformation parameter was set for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
+    }
 
-    if (v.HasMember("sequence_timeout_seconds"))
+    if (v.HasMember("sequence_timeout_seconds")) {
+        if (!this->isStateful()) {
+            SPDLOG_ERROR("Sequence timeout parameter was set for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
+        if (!v["sequence_timeout_seconds"].IsUint()) {
+            SPDLOG_ERROR("Sequence timeout parameter was set above unsigned int value for model {}.", v["name"].GetString());
+            return StatusCode::INVALID_SEQUENCE_TIMEOUT;
+        }
+
         this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());
+    }
 
-    if (v.HasMember("max_sequence_number"))
+    if (v.HasMember("max_sequence_number")) {
+        if (!this->isStateful()) {
+            SPDLOG_ERROR("Max sequence number parameter was set for non stateful model {}.", v["name"].GetString());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
+        if (!v["max_sequence_number"].IsUint()) {
+            SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value for model {}.", v["name"].GetString());
+            return StatusCode::INVALID_MAX_SEQUENCE_NUMBER;
+        }
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
+    }
 
     if (v.HasMember("model_version_policy")) {
         rapidjson::StringBuffer buffer;

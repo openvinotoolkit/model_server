@@ -736,6 +736,46 @@ TEST(SchemaTest, ModelConfigNireqNegative) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
+TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
+    const char* modelConfigSeqNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "max_sequence_number": -1
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigSeqNegativeDoc;
+    modelConfigSeqNegativeDoc.Parse(modelConfigSeqNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelConfigTimeoutNegative) {
+    const char* modelConfigTimeoutNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "sequence_timeout_seconds": -1
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigSeqNegativeDoc;
+    modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
 TEST(SchemaTest, CustomNodeLibraryConfigMatchingSchema) {
     const char* customNodeLibraryConfig = R"(
     {
