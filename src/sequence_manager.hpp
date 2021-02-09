@@ -35,6 +35,10 @@ private:
     uint32_t timeout;
     uint32_t maxSequenceNumber;
     std::mutex mutex;
+    /**
+     * Time interval between each sequences timeout check
+     */
+    uint sequenceWatcherIntervalSec;
 
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
@@ -49,7 +53,12 @@ public:
     SequenceManager() = default;
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         timeout(timeout),
-        maxSequenceNumber(maxSequenceNumber) {}
+        maxSequenceNumber(maxSequenceNumber),
+        sequenceWatcherIntervalSec(timeout/2){
+        startWatcher();
+    }
+
+    ~SequenceManager();
 
     uint64_t getSequencesCount() {
         return sequences.size();
@@ -71,8 +80,35 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
+    Status removeTimedOutSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
+
+    /**
+     * @brief Starts sequence monitoring as new thread
+     *
+     */
+    void startWatcher();
+
+    /**
+     * @brief Gracefully finish the monitoring thread
+     */
+    void join();
+
+    /**
+     * @brief A thread object used for monitoring changes in sequences
+     */
+    std::thread monitor;
+
+    /**
+     * @brief An exit signal to notify watcher thread to exit
+     */
+    std::promise<void> exit;
+
+    /**
+    * @brief Watcher thread for monitor changes in config
+    */
+    void watcher(std::future<void> exit);
+
 };
 }  // namespace ovms

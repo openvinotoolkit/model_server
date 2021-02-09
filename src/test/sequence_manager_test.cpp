@@ -156,13 +156,13 @@ TEST(SequenceManager, RemoveTimedOutSequences) {
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
+    sequenceManager.removeTimedOutSequences();
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
 
     sequenceManager.getSequence(42).updateMemoryState(newState);
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
+    sequenceManager.removeTimedOutSequences();
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
 }

@@ -20,6 +20,8 @@
 
 namespace ovms {
 
+static bool sequenceWatcherStarted = false;
+
 const uint32_t SequenceManager::getTimeout() const {
     return timeout;
 }
@@ -44,7 +46,9 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime) {
+Status SequenceManager::removeTimedOutSequences() {
+    std::unique_lock<std::mutex> sequenceManagerLock(mutex);
+    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now()
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         auto& sequence = it->second;
         auto timeDiff = currentTime - sequence.getLastActivityTime();
@@ -53,6 +57,7 @@ Status SequenceManager::removeTimedOutSequences(std::chrono::steady_clock::time_
         else
             ++it;
     }
+    sequenceManagerLock.unlock();
     return StatusCode::OK;
 }
 
@@ -119,4 +124,42 @@ Status SequenceManager::processRequestedSpec(SequenceProcessingSpec& sequencePro
     }
     return status;
 }
+
+void SequenceManager::startWatcher() {
+    if ((!sequenceWatcherStarted) && (sequenceWatcherIntervalSec > 0)) {
+        std::future<void> exitSignal = exit.get_future();
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        sequenceWatcherStarted = true;
+        monitor = std::move(t);
+    }
+}
+
+void SequenceManager::join() {
+    if (sequenceWatcherStarted) {
+        exit.set_value();
+        if (monitor.joinable()) {
+            monitor.join();
+            sequenceWatcherStarted = false;
+        }
+    }
+}
+
+void SequenceManager::watcher(std::future<void> exit) {
+    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Started sequence watcher thread");
+
+    while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle begin");
+
+        removeTimedOutSequences();
+
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle end");
+    }
+    SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Exited sequence watcher thread");
+}
+
+void SequenceManager::~SequenceManager() {
+    join();
+}
+
 }  // namespace ovms
