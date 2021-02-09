@@ -64,4 +64,12 @@ void Sequence::setTerminated() {
     this->terminated = true;
 }
 
+bool Sequence::isTimedout() const {
+    return timedout;
+}
+
+void Sequence::setTimedout() {
+    this->timedout = true;
+}
+
 }  // namespace ovms

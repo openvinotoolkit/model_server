@@ -81,6 +81,8 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
+    Status checkForTimedOutSequences();
+
     Status removeTimedOutSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
@@ -107,7 +109,7 @@ public:
     std::promise<void> exit;
 
     /**
-    * @brief Watcher thread for monitor changes in config
+    * @brief Watcher thread for monitor changes in sequences
     */
     void watcher(std::future<void> exit);
 };

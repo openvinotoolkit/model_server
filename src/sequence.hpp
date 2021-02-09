@@ -47,7 +47,7 @@ public:
     Sequence(uint64_t sequenceId) :
         sequenceId(sequenceId),
         terminated(false),
-        timedout(false){ updateLastActivityTime(); }
+        timedout(false) { updateLastActivityTime(); }
     const sequence_memory_state_t& getMemoryState() const;
     const uint64_t getId() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped

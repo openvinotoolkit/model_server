@@ -48,35 +48,32 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
 
 Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
-        auto& sequence = it->second;
-        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-        if (sequence.isTimedout()) {
-            sequenceLock.unlock();
+        Sequence& seqRef = getSequence(it->second.getId());
+        std::unique_lock<std::mutex> sequenceLock(seqRef.getMutex());
+        if (seqRef.isTimedout()) {
             it = sequences.erase(it);
-        }
-        else
+            sequenceLock.unlock();
+        } else
             ++it;
     }
+    return StatusCode::OK;
 }
 
-Status SequenceManager::checkTimedOutSequences() {
+Status SequenceManager::checkForTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
     std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
-        auto& sequence = it->second;
-        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-        if (sequence.isTerminated())
+        Sequence& seqRef = getSequence(it->second.getId());
+        std::unique_lock<std::mutex> sequenceLock(seqRef.getMutex());
+        if (seqRef.isTerminated())
             ++it;
-        else
-        {
-            auto timeDiff = currentTime - sequence.getLastActivityTime();
+        else {
+            auto timeDiff = currentTime - seqRef.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                sequence.setTimedout();
+                seqRef.setTimedout();
                 sequenceLock.unlock();
-            }
-            else
+            } else
                 ++it;
         }
     }
@@ -176,7 +173,7 @@ void SequenceManager::watcher(std::future<void> exit) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle begin");
 
-        checkTimedOutSequences();
+        checkForTimedOutSequences();
         removeTimedOutSequences();
 
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle end");
