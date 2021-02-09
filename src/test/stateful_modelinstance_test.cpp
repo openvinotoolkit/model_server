@@ -294,7 +294,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     for (auto& promise : releaseWaitBeforeSequenceStarted) {
         promise.set_value();
     }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
@@ -305,7 +305,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     }
 
     // sleep to allow half threads to work
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished) {
@@ -579,21 +579,24 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
     std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
-    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
-    auto& input = (*request.mutable_inputs())["sequence_id"];
-    input.set_dtype(tensorflow::DataType::DT_UINT32);
-    input.mutable_tensor_shape()->add_dim()->set_size(1);
-    input.add_uint32_val(12);
-    auto status = modelInstance->mockValidate(&request, spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
-
-    request = preparePredictRequest(modelInput);
-    input = (*request.mutable_inputs())["sequence_control_input"];
-    input.set_dtype(tensorflow::DataType::DT_UINT64);
-    input.mutable_tensor_shape()->add_dim()->set_size(1);
-    input.add_uint64_val(1);
-    status = modelInstance->mockValidate(&request, spec);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+    {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        auto& input = (*request.mutable_inputs())["sequence_id"];
+        input.set_dtype(tensorflow::DataType::DT_UINT32);
+        input.mutable_tensor_shape()->add_dim()->set_size(1);
+        input.add_uint32_val(12);
+        auto status = modelInstance->mockValidate(&request, spec);
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
+    }
+    {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        auto& input = (*request.mutable_inputs())["sequence_control_input"];
+        input.set_dtype(tensorflow::DataType::DT_UINT64);
+        input.mutable_tensor_shape()->add_dim()->set_size(1);
+        input.add_uint64_val(1);
+        auto status = modelInstance->mockValidate(&request, spec);
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
+    }
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
