@@ -48,7 +48,7 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
 
 Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now()
+    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         auto& sequence = it->second;
         auto timeDiff = currentTime - sequence.getLastActivityTime();
@@ -128,7 +128,7 @@ Status SequenceManager::processRequestedSpec(SequenceProcessingSpec& sequencePro
 void SequenceManager::startWatcher() {
     if ((!sequenceWatcherStarted) && (sequenceWatcherIntervalSec > 0)) {
         std::future<void> exitSignal = exit.get_future();
-        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        std::thread t(std::thread(&SequenceManager::watcher, this, std::move(exitSignal)));
         sequenceWatcherStarted = true;
         monitor = std::move(t);
     }
@@ -155,10 +155,10 @@ void SequenceManager::watcher(std::future<void> exit) {
 
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle end");
     }
-    SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Exited sequence watcher thread");
+    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Exited sequence watcher thread");
 }
 
-void SequenceManager::~SequenceManager() {
+SequenceManager::~SequenceManager() {
     join();
 }
 

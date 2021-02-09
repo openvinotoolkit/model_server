@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <future>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -54,7 +55,7 @@ public:
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber),
-        sequenceWatcherIntervalSec(timeout/2){
+        sequenceWatcherIntervalSec(timeout / 2) {
         startWatcher();
     }
 
@@ -109,6 +110,5 @@ public:
     * @brief Watcher thread for monitor changes in config
     */
     void watcher(std::future<void> exit);
-
 };
 }  // namespace ovms
