@@ -76,7 +76,7 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
     return ss.str();
 }
 
-std::pair<NodeSessionMetadata, CollapsingDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
+std::pair<NodeSessionMetadata, CollapseDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
     if (ignoredNodeNames.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession with emtpy set");
         throw std::logic_error("Tried to collapse sessions with empty set");
@@ -108,7 +108,7 @@ std::pair<NodeSessionMetadata, CollapsingDetails> NodeSessionMetadata::getCollap
         [&ignoredNodeNames](auto& keyValuePair) {
             return ignoredNodeNames.find(keyValuePair.first) == ignoredNodeNames.end();
         });
-    CollapsingDetails collapsingDetails;
+    CollapseDetails collapsingDetails;
     for (auto& sessionLevel : sessionsLevels) {
         if (ignoredNodeNames.find(sessionLevel) != ignoredNodeNames.end()) {
             collapsingDetails.collapsedSessionNames.emplace_back(sessionLevel);

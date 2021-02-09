@@ -24,9 +24,9 @@
 
 namespace ovms {
 
-GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapsingDetails& collapsingDetails) :
+GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails) :
     NodeInputHandler(inputsMissingCount),
-    collapsingDetails(std::make_unique<CollapsingDetails>(collapsingDetails)) {
+    collapsingDetails(std::make_unique<CollapseDetails>(collapsingDetails)) {
     remainingDependencies = std::accumulate(
         collapsingDetails.collapsedSessionSizes.begin(),
         collapsingDetails.collapsedSessionSizes.end(),

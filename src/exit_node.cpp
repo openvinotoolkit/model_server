@@ -102,7 +102,7 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
     return StatusCode::OK;
 }
 
-std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) {
+std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
     return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
 }
 }  // namespace ovms

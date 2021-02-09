@@ -30,7 +30,7 @@ public:
     DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint32_t> demultiplyCount, const NodeSessionMetadata& meta) :
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, demultiplyCount.value_or(0)) {
         // createSession to have source session for fetchResults()
-        CollapsingDetails collapsingDetails;
+        CollapseDetails collapsingDetails;
         std::unique_ptr<NodeSession> nodeSession = createNodeSession(meta, collapsingDetails);
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);

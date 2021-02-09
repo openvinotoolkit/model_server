@@ -146,7 +146,7 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     std::vector<InferenceEngine::TensorDesc> descs{{precision, shapes[0], layout}, {precision, shapes[1], layout}};
     std::vector<InferenceEngine::Blob::Ptr> inputBlobs{InferenceEngine::make_shared_blob<float>(descs[0], blobsData.data()), InferenceEngine::make_shared_blob<float>(descs[1], blobsData.data())};
     const session_id_t shardsCount = 2;  // subsessionSize/demultiplyCount
-    CollapsingDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
+    CollapseDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
     GatherNodeInputHandler gInputHandler(inputNames.size(), collapsingDetails);
     Status status;
     for (session_id_t j = 0; j < shardsCount; ++j) {
@@ -193,9 +193,9 @@ static const char* configDummy1BsDummy2Bs = R"(
 
 class DLNodeSessionWithGetInputsExposed : public DLNodeSession {
 public:
-    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
         DLNodeSession(metadata, nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
-    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
         DLNodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
 
     const auto& getInputs() const {
@@ -214,7 +214,7 @@ public:
         DLNodeSessionWithGetInputsExposed& dlnodesessionWithGetInputsExposed = static_cast<DLNodeSessionWithGetInputsExposed&>(*nodeSessions.at(sessionId));
         return dlnodesessionWithGetInputsExposed.getInputs();
     }
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) override {
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override {
         return std::make_unique<DLNodeSessionWithGetInputsExposed>(metadata, getName(), previous.size(), collapsingDetails,
             this->modelManager, this->modelName, this->modelVersion.value_or(0));
     }

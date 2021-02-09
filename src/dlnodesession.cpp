@@ -29,13 +29,13 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
     NodeSession(metadata, nodeName, inputsCount, collapsingDetails),
     modelManager(manager),
     modelName(modelName),
     modelVersion(modelVersion) {}
 
-DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
     NodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails),
     modelManager(manager),
     modelName(modelName),

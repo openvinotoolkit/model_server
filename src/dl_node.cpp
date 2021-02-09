@@ -159,7 +159,7 @@ bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds)
     return getNodeSession(sessionKey).tryDisarm(microseconds);
 }
 
-std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) {
+std::unique_ptr<NodeSession> DLNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
     return std::make_unique<DLNodeSession>(metadata, getName(), previous.size(), collapsingDetails,
         this->modelManager, this->modelName, this->modelVersion.value_or(0));
 }

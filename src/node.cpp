@@ -125,7 +125,7 @@ NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         metadata.getSessionKey(), getName());
     NodeSessionMetadata newSessionMetadata;
-    CollapsingDetails collapsingDetails;
+    CollapseDetails collapsingDetails;
     if (gatherFrom) {
         std::tie(newSessionMetadata, collapsingDetails) = metadata.getCollapsedSessionMetadata(gatherFrom.value());
     } else {
@@ -136,7 +136,7 @@ NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
     return *(emplacePair.first->second);
 }
 
-std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapsingDetails& collapsingDetails) {
+std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
     return std::make_unique<NodeSession>(metadata, getName(), previous.size(), collapsingDetails);
 }
 

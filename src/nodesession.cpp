@@ -31,7 +31,7 @@ Status NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob
     return inputHandler->setInput(inputName, blobPtr, shardId);
 }
 
-std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapsingDetails& collapsingDetails) {
+std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {
     if (collapsingDetails.collapsedSessionNames.size() == 0) {
         return std::make_unique<NodeInputHandler>(inputsCount);
     } else {
@@ -39,14 +39,14 @@ std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, c
     }
 }
 
-NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails) :
+NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails) :
+NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),

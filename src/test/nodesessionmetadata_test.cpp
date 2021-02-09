@@ -114,7 +114,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
     NodeSessionMetadata metaCollapsedOnExtract1st;
-    CollapsingDetails collapsingDetails;
+    CollapseDetails collapsingDetails;
     std::tie(metaCollapsedOnExtract1st, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract2nd"});
     auto hashCollapsed = metaCollapsedOnExtract1st.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_2"));
@@ -140,7 +140,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThro
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
     NodeSessionMetadata metaCollapsedOnExtract1st;
-    CollapsingDetails collapsingDetails;
+    CollapseDetails collapsingDetails;
     EXPECT_THROW(demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st"}), std::logic_error);
 }
 
@@ -159,7 +159,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
     ASSERT_THAT(hash, HasSubstr("extract2nd_512"));
 
     NodeSessionMetadata metaCollapsed;
-    CollapsingDetails collapsingDetails;
+    CollapseDetails collapsingDetails;
     std::tie(metaCollapsed, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st", "extract2nd"});
     auto hashCollapsed = metaCollapsed.getSessionKey();
     ASSERT_THAT(hashCollapsed, HasSubstr("request_12"));

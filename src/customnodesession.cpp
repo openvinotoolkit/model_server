@@ -28,10 +28,10 @@
 
 namespace ovms {
 
-CustomNodeSession::CustomNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails) :
+CustomNodeSession::CustomNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {}
 
-CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapsingDetails& collapsingDetails) :
+CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     NodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails) {}
 
 CustomNodeSession::~CustomNodeSession() = default;
