@@ -51,13 +51,35 @@ Status SequenceManager::removeTimedOutSequences() {
     std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         auto& sequence = it->second;
-        auto timeDiff = currentTime - sequence.getLastActivityTime();
-        if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout)
+        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
+        if (sequence.isTimedout()) {
+            sequenceLock.unlock();
             it = sequences.erase(it);
+        }
         else
             ++it;
     }
-    sequenceManagerLock.unlock();
+}
+
+Status SequenceManager::checkTimedOutSequences() {
+    std::unique_lock<std::mutex> sequenceManagerLock(mutex);
+    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+    for (auto it = sequences.cbegin(); it != sequences.cend();) {
+        auto& sequence = it->second;
+        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
+        if (sequence.isTerminated())
+            ++it;
+        else
+        {
+            auto timeDiff = currentTime - sequence.getLastActivityTime();
+            if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
+                sequence.setTimedout();
+                sequenceLock.unlock();
+            }
+            else
+                ++it;
+        }
+    }
     return StatusCode::OK;
 }
 
@@ -67,6 +89,9 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
 
     if (getSequence(sequenceId).isTerminated())
         return StatusCode::SEQUENCE_TERMINATED;
+
+    if (getSequence(sequenceId).isTimedout())
+        return StatusCode::SEQUENCE_TIMEDOUT;
 
     return StatusCode::OK;
 }
@@ -151,6 +176,7 @@ void SequenceManager::watcher(std::future<void> exit) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle begin");
 
+        checkTimedOutSequences();
         removeTimedOutSequences();
 
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle end");

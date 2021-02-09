@@ -39,13 +39,15 @@ private:
     std::chrono::steady_clock::time_point lastActivityTime;
     std::mutex mutex;
     bool terminated;
+    bool timedout;
 
     void updateLastActivityTime();
 
 public:
     Sequence(uint64_t sequenceId) :
         sequenceId(sequenceId),
-        terminated(false) { updateLastActivityTime(); }
+        terminated(false),
+        timedout(false){ updateLastActivityTime(); }
     const sequence_memory_state_t& getMemoryState() const;
     const uint64_t getId() const;
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
@@ -54,6 +56,8 @@ public:
     std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();
+    bool isTimedout() const;
+    void setTimedout();
 };
 
 }  // namespace ovms
