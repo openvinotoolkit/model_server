@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -45,8 +46,9 @@ protected:
 public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
-        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}, uint32_t demultiplyCount = 0) :
-        Node(nodeName, demultiplyCount),
+        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {},
+        uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {}) :
+        Node(nodeName, demultiplyCount, gatherFromNode),
         modelName(modelName),
         modelVersion(modelVersion),
         modelManager(modelManager),

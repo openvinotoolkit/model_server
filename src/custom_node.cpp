@@ -28,8 +28,10 @@ CustomNode::CustomNode(
     const std::string& nodeName,
     const NodeLibrary& library,
     const parameters_t& parameters,
-    const std::unordered_map<std::string, std::string>& nodeOutputNameAlias) :
-    Node(nodeName),
+    const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
+    uint32_t demultiplyCount,
+    std::set<std::string> gatherFromNode) :
+    Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias) {
