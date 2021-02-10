@@ -71,7 +71,7 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
 
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), config.getName());
     return ModelInstance::loadModelImpl(config, parameter);
 }
 

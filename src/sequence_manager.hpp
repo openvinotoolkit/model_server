@@ -35,6 +35,7 @@ class SequenceManager {
 private:
     uint32_t timeout;
     uint32_t maxSequenceNumber;
+    std::string modelName;
     std::mutex mutex;
     /**
      * Time interval between each sequences timeout check
@@ -52,11 +53,21 @@ protected:
 
 public:
     SequenceManager() = default;
-    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName) :
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber),
-        sequenceWatcherIntervalSec(timeout / 2) {
-        startWatcher();
+        modelName(modelName),
+        sequenceWatcherIntervalSec(timeout/2) {
+            startWatcher();
+    }
+
+    SequenceManager(const SequenceManager& source)
+    {
+        this->modelName = source.modelName;
+        this->timeout = source.timeout;
+        this->maxSequenceNumber = source.maxSequenceNumber;
+        this->sequenceWatcherIntervalSec = source.sequenceWatcherIntervalSec;
+        // Add new mutex here?
     }
 
     ~SequenceManager();

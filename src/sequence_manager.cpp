@@ -53,7 +53,7 @@ Status SequenceManager::removeTimedOutSequences() {
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         Sequence& sequence = getSequence(it->second.getId());
         if (sequence.isTimedOut()) {
-            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing timeouted sequence - Id: {}", sequence.getId());
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Removing timeouted sequence - Id: {}", modelName, sequence.getId());
             it = sequences.erase(it);
         } else {
             ++it;
@@ -71,7 +71,7 @@ Status SequenceManager::checkForTimedOutSequences() {
         if (!sequence.isTerminated()) {
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence set for timeout - Id: {}", sequence.getId());
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} sequence set for timeout - Id: {}", modelName, sequence.getId());
                 sequence.setTimedOut();
                 sequenceLock.unlock();
             }
@@ -168,18 +168,18 @@ void SequenceManager::join() {
 }
 
 void SequenceManager::watcher(std::future<void> exit) {
-    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Started sequence watcher thread with interval {} seconds", sequenceWatcherIntervalSec);
+    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Model {} Started sequence watcher thread with interval {} seconds", modelName, sequenceWatcherIntervalSec);
 
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle begin");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence watcher thread check cycle begin", modelName);
 
         checkForTimedOutSequences();
         removeTimedOutSequences();
 
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread check cycle end");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence watcher thread check cycle end", modelName);
     }
-    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Exited sequence watcher thread");
+    SPDLOG_LOGGER_INFO(sequence_manager_logger, "Model {} Exited sequence watcher thread", modelName);
 }
 
 SequenceManager::~SequenceManager() {

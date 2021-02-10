@@ -35,7 +35,7 @@ public:
          */
     StatefulModelInstance(const std::string& name, model_version_t version) :
         ModelInstance(name, version) {
-        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), name);
     }
 
     const std::unique_ptr<SequenceManager>& getSequenceManager() const {

@@ -119,7 +119,7 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
-    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60);
+    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy");
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
 
