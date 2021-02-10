@@ -690,7 +690,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         }
     }
     if (isDemultiplexer && isMultipleBatchSize) {
-        return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE; 
+        return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
     }
     return StatusCode::OK;
 }
