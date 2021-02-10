@@ -294,6 +294,8 @@ public:
             return InferenceEngine::Layout::CHW;
         if (layout == "HW")
             return InferenceEngine::Layout::HW;
+        if (layout == "HWC")
+            return InferenceEngine::Layout::HWC;
         if (layout == "NC")
             return InferenceEngine::Layout::NC;
         if (layout == "CN")
@@ -338,6 +340,8 @@ public:
             return "CHW";
         case InferenceEngine::Layout::HW:
             return "HW";
+        case InferenceEngine::Layout::HWC:
+            return "HWC";
         case InferenceEngine::Layout::NC:
             return "NC";
         case InferenceEngine::Layout::CN:
