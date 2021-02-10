@@ -41,6 +41,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
     if (status.ok() && demultiplexCount) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
         status = demultiplyOutputs(nodeSessionOutputs);
     }
     nodeSessions.erase(sessionId);

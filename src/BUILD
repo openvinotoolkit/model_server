@@ -216,6 +216,15 @@ cc_binary(
 )
 
 cc_binary(
+    name = "lib_node_perform_different_operations.so",
+    srcs = [
+        "test/custom_nodes/node_perform_different_operations.cpp",
+        "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -311,6 +320,7 @@ cc_test(
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
         "//src:lib_node_add_sub.so",
+        "//src:lib_node_perform_different_operations.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
