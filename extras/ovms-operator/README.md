@@ -20,8 +20,12 @@ make deploy IMG=$IMG
 OpenVINO Model Server can be consumed as a `Service` with the name matching the `Ovms` record.
 ```bash
 kubectl get pods
+NAME                           READY   STATUS    RESTARTS   AGE
+ovms-sample-586f6f76df-dpps4   1/1     Running   0          8h
 
 kubectl get services
+NAME          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
 ```
 
 ## Before you start using the operator
