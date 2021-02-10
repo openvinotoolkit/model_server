@@ -57,7 +57,7 @@ public:
     bool isTerminated() const;
     void setTerminated();
     bool isTimedout() const;
-    void setTimedout();
+    void setTimedOut();
 };
 
 }  // namespace ovms
