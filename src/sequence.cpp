@@ -64,12 +64,12 @@ void Sequence::setTerminated() {
     this->terminated = true;
 }
 
-bool Sequence::isTimedout() const {
-    return timedout;
+bool Sequence::isTimedOut() const {
+    return timedOut;
 }
 
-void Sequence::setTimedout() {
-    this->timedout = true;
+void Sequence::setTimedOut() {
+    this->timedOut = true;
 }
 
 }  // namespace ovms

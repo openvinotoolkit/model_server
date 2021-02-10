@@ -52,7 +52,7 @@ Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         Sequence& sequence = getSequence(it->second.getId());
-        if (sequence.isTimedout()) {
+        if (sequence.isTimedOut()) {
             SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing timeouted sequence - Id: {}", sequence.getId());
             it = sequences.erase(it);
         } else {
@@ -72,7 +72,7 @@ Status SequenceManager::checkForTimedOutSequences() {
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
                 SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence set for timeout - Id: {}", sequence.getId());
-                sequence.setTimedout();
+                sequence.setTimedOut();
                 sequenceLock.unlock();
             }
         }
@@ -88,7 +88,7 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
     if (getSequence(sequenceId).isTerminated())
         return StatusCode::SEQUENCE_TERMINATED;
 
-    if (getSequence(sequenceId).isTimedout())
+    if (getSequence(sequenceId).isTimedOut())
         return StatusCode::SEQUENCE_TIMEDOUT;
 
     return StatusCode::OK;
