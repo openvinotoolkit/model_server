@@ -53,7 +53,7 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
-        {{- if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy .Values.aws_secret_access_key }}
+        {{- if or .Values.gcp_creds_secret_name .Values.aws_access_key_id .Values.aws_secret_access_key .Values.aws_region .Values.s3_compat_api_endpoint .Values.http_proxy .Values.https_proxy .Values.no_proxy .Values.azure_storage_connection_string }}
         env:
         {{- end }}
         {{- if .Values.http_proxy }}
@@ -104,7 +104,7 @@ spec:
                "--config_path", "{{ .Values.config_path }}",
           {{- else }}
                "--config_path", "/config/config.json",
-        {{- end }}
+          {{- end }}
         {{- else }}
                "--model_path", "{{ .Values.model_path }}",
                "--model_name", "{{ .Values.model_name }}",
