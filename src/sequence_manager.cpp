@@ -51,7 +51,7 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
 Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
-        Sequence& seqRef = getSequence(it->second.getId());
+        Sequence& sequence = getSequence(it->second.getId());
         std::unique_lock<std::mutex> sequenceLock(seqRef.getMutex());
         if (seqRef.isTimedout()) {
             SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing timeouted sequence - Id: {}", seqRef.getId());
