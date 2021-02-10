@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <filesystem>
-#include <fstream>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -214,7 +211,7 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
@@ -242,7 +239,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
@@ -274,7 +271,7 @@ TEST(ModelManager, configReloadNeededChange) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
@@ -294,7 +291,7 @@ TEST(ModelManager, loadConfigManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
@@ -322,7 +319,7 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
