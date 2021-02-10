@@ -68,7 +68,7 @@ Status SequenceManager::checkForTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
     std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
-        Sequence& seqRef = getSequence(it->second.getId());
+        Sequence& sequence = getSequence(it->second.getId());
         std::unique_lock<std::mutex> sequenceLock(seqRef.getMutex());
         if (!seqRef.isTerminated()) {
             auto timeDiff = currentTime - seqRef.getLastActivityTime();
