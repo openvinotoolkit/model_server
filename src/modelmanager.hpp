@@ -176,6 +176,10 @@ public:
         return models;
     }
 
+    const ModelConfig& getModelConfig(std::string modelName) {
+        return servedModelConfigs[modelName];
+    }
+
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }

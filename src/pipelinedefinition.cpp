@@ -665,6 +665,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         return StatusCode::PIPELINE_MULTIPLE_EXIT_NODES;
     }
 
+    bool isDemultiplexer = false, isMultipleBatchSize = false;
     for (const auto& node : nodeInfos) {
         auto findByName = [node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
@@ -675,12 +676,22 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
+        if (node.demultiplyCount) {
+            isDemultiplexer = true;
+        }
+
+        if (manager.getModelConfig(node.modelName).getBatchSize() >= 2) {
+            isMultipleBatchSize = true;
+        }
+
         auto result = validateNode(manager, node);
         if (!result.ok()) {
             return result;
         }
     }
-
+    if (isDemultiplexer && isMultipleBatchSize) {
+        return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE; 
+    }
     return StatusCode::OK;
 }
 
