@@ -22,8 +22,6 @@
 
 namespace ovms {
 
-static bool sequenceWatcherStarted = false;
-
 const uint32_t SequenceManager::getTimeout() const {
     return timeout;
 }
@@ -100,10 +98,10 @@ Status SequenceManager::createSequence(const uint64_t sequenceId) {
     } 
     */
     if (sequenceExists(sequenceId)) {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence with provided ID already exists");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence with provided ID already exists", modelName);
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Adding new sequence with ID: {}", sequenceId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Adding new sequence with ID: {}", modelName, sequenceId);
         sequences.emplace(sequenceId, sequenceId);
     }
     return StatusCode::OK;
@@ -124,10 +122,10 @@ Sequence& SequenceManager::getSequence(const uint64_t sequenceId) {
 
 Status SequenceManager::removeSequence(const uint64_t sequenceId) {
     if (sequences.count(sequenceId)) {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing sequence with ID: {}", sequenceId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Removing sequence with ID: {}", modelName, sequenceId);
         sequences.erase(sequenceId);
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence with provided ID does not exists");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence with provided ID does not exists", modelName);
         return StatusCode::SEQUENCE_MISSING;
     }
     return StatusCode::OK;

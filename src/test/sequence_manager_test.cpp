@@ -181,19 +181,24 @@ TEST(SequenceManager, AutoRemoveAllTimedOutSequences) {
 
 TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
     std::vector<MockedSequenceManager*> managers;
-    for(int i = 0; i < 10; i++){
-        MockedSequenceManager *sequenceManager = new MockedSequenceManager(2, 10, i);
+    for (int i = 0; i < 10; i++) {
+        MockedSequenceManager* sequenceManager = new MockedSequenceManager(2, 10, std::to_string(i));
         sequenceManager->mockCreateSequence(i);
         managers.push_back(sequenceManager);
     }
 
-    for(int i = 0; i < 10; i++){
+    for (int i = 0; i < 10; i++) {
         ASSERT_TRUE(managers[i]->sequenceExists(i));
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(7));
+    std::this_thread::sleep_for(std::chrono::seconds(4));
 
-    for(int i = 0; i < 10; i++){
+    for (int i = 0; i < 10; i++) {
+        std::cout << i << std::endl;
         ASSERT_FALSE(managers[i]->sequenceExists(i));
+    }
+
+    for (int i = 0; i < 10; i++) {
+        delete managers[i];
     }
 }
