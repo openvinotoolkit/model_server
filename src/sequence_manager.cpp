@@ -16,6 +16,8 @@
 
 #include "sequence_manager.hpp"
 
+#include <utility>
+
 #include "logging.hpp"
 
 namespace ovms {
@@ -55,8 +57,9 @@ Status SequenceManager::removeTimedOutSequences() {
             SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Removing timeouted sequence - Id: {}", seqRef.getId());
             it = sequences.erase(it);
             sequenceLock.unlock();
-        } else
+        } else {
             ++it;
+        }
     }
     return StatusCode::OK;
 }
