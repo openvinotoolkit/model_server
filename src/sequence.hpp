@@ -56,7 +56,7 @@ public:
     std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();
-    bool isTimedout() const;
+    bool isTimedOut() const;
     void setTimedOut();
 };
 
