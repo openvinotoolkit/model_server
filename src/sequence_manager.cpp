@@ -51,7 +51,7 @@ Status SequenceManager::removeTimedOutSequences() {
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         Sequence& sequence = getSequence(it->second.getId());
         if (sequence.isTimedOut()) {
-            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Removing timeouted sequence - Id: {}", modelName, sequence.getId());
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Removing timeouted sequence - Id: {}", modelName, sequence.getId());
             it = sequences.erase(it);
         } else {
             ++it;
@@ -69,7 +69,7 @@ Status SequenceManager::checkForTimedOutSequences() {
         if (!sequence.isTerminated()) {
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} sequence set for timeout - Id: {}", modelName, sequence.getId());
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Sequence set for timeout - Id: {}", modelName, sequence.getId());
                 sequence.setTimedOut();
                 sequenceLock.unlock();
             }

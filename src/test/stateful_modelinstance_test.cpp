@@ -345,7 +345,7 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
 }
 
-void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId, int sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, int sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -365,20 +365,20 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     // Wait for sequence timeout
 
     t1.join();
@@ -390,11 +390,23 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
 
     tensorflow::serving::PredictResponse response2;
 
-    // Do the inference
-    ASSERT_EQ(modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::SEQUENCE_MISSING);
+    auto status = modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr);
+
+    if (sequenceTimeoutScenario == 0) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == 1) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == 2) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario > 2) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
 }
 
-void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId, int sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, int sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -424,20 +436,20 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     // Wait for sequence timeout
 
     t1.join();
@@ -449,11 +461,23 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
 
     tensorflow::serving::PredictResponse response2;
 
+    auto status = modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr);
     // Do the inference
-    ASSERT_EQ(modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::SEQUENCE_MISSING);
+    if (sequenceTimeoutScenario == 0) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
+    if (sequenceTimeoutScenario == 1) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == 2) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario > 2) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
 }
 
-void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId, int sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, int sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -476,32 +500,91 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     tensorflow::serving::PredictResponse response;
     // Do the inference
     std::thread t1(
-        [&waitBeforeSequenceStarted, &waitAfterSequenceStarted, &waitBeforeSequenceFinished, seqId, &modelInstance, &unload_guard, &response, &request]() {
+        [&waitBeforeSequenceStarted, &waitAfterSequenceStarted, &waitBeforeSequenceFinished, seqId, sequenceTimeoutScenario, &modelInstance, &unload_guard, &response, &request]() {
             std::future<void> fut1 = waitBeforeSequenceStarted.get_future();
             std::future<void> fut2 = waitAfterSequenceStarted.get_future();
             std::future<void> fut3 = waitBeforeSequenceFinished.get_future();
             auto status = modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
-            ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            if (sequenceTimeoutScenario == 0) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+            }
+            if (sequenceTimeoutScenario == 1) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
+            if (sequenceTimeoutScenario == 2) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
+            if (sequenceTimeoutScenario > 2) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
         });
 
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(6));
+        std::this_thread::sleep_for(std::chrono::seconds(7));
     // Wait for sequence timeout
 
     t1.join();
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+
+    uint64_t seqId = 0;
+    uint16_t numberOfThreads = 8;
+
+    std::vector<std::thread> inferThreads;
+    for (auto i = 0u; i < numberOfThreads; ++i) {
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, 0);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, 3);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, 3);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, 0);
+                }));
+    }
+
+    for (auto& thread : inferThreads) {
+        thread.join();
+    }
+
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
@@ -614,10 +697,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, 100, seqId, 0);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, 100, seqId++, 1);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, 100, seqId++, 2);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, 100, seqId++, 3);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, 0);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, 1);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, 2);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, 3);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
@@ -632,10 +715,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, 100, seqId, 0);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, 100, seqId++, 1);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, 100, seqId++, 2);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, 100, seqId++, 3);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, 0);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, 1);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, 2);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, 3);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
@@ -650,10 +733,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, 100, seqId, 0);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, 100, seqId++, 1);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, 100, seqId++, 2);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, 100, seqId++, 3);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, 0);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, 1);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, 2);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, 3);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
