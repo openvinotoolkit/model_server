@@ -666,6 +666,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
     }
 
     bool isDemultiplexer = false, isMultipleBatchSize = false;
+    auto& modelConfigs = manager.getModelConfigs();
     for (const auto& node : nodeInfos) {
         auto findByName = [node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
@@ -680,8 +681,15 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             isDemultiplexer = true;
         }
 
-        if (manager.getModelConfig(node.modelName).getBatchSize() >= 2) {
-            isMultipleBatchSize = true;
+        if (modelConfigs.find(node.modelName) != modelConfigs.end()) {
+            for (auto& [inputName, shapeInfo] : modelConfigs.at(node.modelName).getShapes()) {
+                if (!shapeInfo.shape.empty() && shapeInfo.shape[0] >= 2) {
+                    isMultipleBatchSize = true;
+                }
+            }
+            if (modelConfigs.at(node.modelName).getBatchSize() >= 2) {
+                isMultipleBatchSize = true;
+            }
         }
 
         auto result = validateNode(manager, node);

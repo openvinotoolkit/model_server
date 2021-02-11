@@ -3042,3 +3042,57 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
 }
+
+static const char* pipelineDemultiplexerShape = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(3, 10) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ],
+                    "demultiply_count": 2
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineDemultiplexerShape, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+}

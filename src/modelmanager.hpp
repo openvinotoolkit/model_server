@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
 #include <future>
 #include <map>
 #include <memory>
@@ -32,6 +31,7 @@
 
 #include "customloaders.hpp"
 #include "filesystem.hpp"
+#include "logging.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
@@ -176,8 +176,8 @@ public:
         return models;
     }
 
-    const ModelConfig& getModelConfig(std::string modelName) {
-        return servedModelConfigs[modelName];
+    const std::unordered_map<std::string, ModelConfig>& getModelConfigs() const {
+        return servedModelConfigs;
     }
 
     const PipelineFactory& getPipelineFactory() const {
