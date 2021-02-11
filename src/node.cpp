@@ -92,7 +92,11 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
-        nodeSession.setInput(current_node_input_name, it->second, shardId);
+        auto status = nodeSession.setInput(current_node_input_name, it->second, shardId);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
+            return status;
+        }
     }
     return nodeSession.notifyFinishedDependency();
 }
@@ -107,6 +111,7 @@ NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
 }
 
 NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
+    // TODO check for exit node if no session levels remains
     session_key_t sessionKey;
     if (gatherFrom) {
         sessionKey = metadata.getSessionKey(gatherFrom.value());
@@ -120,22 +125,19 @@ NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         metadata.getSessionKey(), getName());
     NodeSessionMetadata newSessionMetadata;
-    uint16_t shardsCount = 1;
+    CollapseDetails collapsingDetails;
     if (gatherFrom) {
-        for (auto& nodeName : gatherFrom.value()) {
-            shardsCount *= metadata.getSubsessionSize(nodeName);
-        }
-        newSessionMetadata = metadata.getCollapsedSessionMetadata(gatherFrom.value());
+        std::tie(newSessionMetadata, collapsingDetails) = metadata.getCollapsedSessionMetadata(gatherFrom.value());
     } else {
         newSessionMetadata = metadata;
     }
-    std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, shardsCount);
+    std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));
     return *(emplacePair.first->second);
 }
 
-std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, session_id_t shardsCount) {
-    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), shardsCount);
+std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), collapsingDetails);
 }
 
 std::vector<session_key_t> Node::getReadySessions() const {
@@ -155,8 +157,14 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
-        if (newDims.size() <= 1) {
-            return StatusCode::UNKNOWN_ERROR;
+        if (newDims.size() < 3) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
+            return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
+        }
+        if (newDims[1] != demultiplexCount.value()) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} expected: {} to demultiply",
+                newDims[1], demultiplexCount.value());
+            return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
         newDims.erase(newDims.begin() + 1);
         const InferenceEngine::TensorDesc dividedBlobDesc(
@@ -171,10 +179,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return status;
             }
             if (dividedBlob->byteSize() != step) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Created blob have wrong byte size: {}, expected: {}",
+                    dividedBlob->byteSize(), step);
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{newSessionMetadatas[i].getSessionKey(), dividedBlob}}});
+            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
         }
     }
     nodeSessionOutputs.erase(metadata.getSessionKey());

@@ -24,7 +24,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelconfig.hpp"
+#include "shapeinfo.hpp"
 
 namespace ovms {
 

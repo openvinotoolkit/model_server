@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,29 +15,30 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
-
-#include <inference_engine.hpp>
-
-#include "nodeinputhandler.hpp"
-#include "session_id.hpp"
+#include <vector>
 
 namespace ovms {
 
-using shard_map_t = std::unordered_map<session_id_t, InferenceEngine::Blob::Ptr>;
+enum Mode { FIXED,
+    AUTO };
+using shape_t = std::vector<size_t>;
 
-class CollapseDetails;
+struct ShapeInfo {
+    Mode shapeMode = FIXED;
+    shape_t shape;
 
-class GatherNodeInputHandler : public NodeInputHandler {
-    std::unordered_map<std::string, shard_map_t> shardsStorage;
-    std::unique_ptr<CollapseDetails> collapsingDetails;
+    operator std::string() const;
 
-public:
-    GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
-    Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
-    Status notifyFinishedDependency() override;
+    bool operator==(const ShapeInfo& rhs) const {
+        return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
+    }
+
+    bool operator!=(const ShapeInfo& rhs) const {
+        return !(*this == rhs);
+    }
 };
+
+using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
 }  // namespace ovms
