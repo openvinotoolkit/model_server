@@ -27,26 +27,26 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-void NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) {
-    inputHandler->setInput(inputName, blobPtr, shardId);
+Status NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) {
+    return inputHandler->setInput(inputName, blobPtr, shardId);
 }
 
-std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, session_id_t shardsCount) {
-    if (shardsCount == 1) {
+std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {
+    if (collapsingDetails.collapsedSessionNames.size() == 0) {
         return std::make_unique<NodeInputHandler>(inputsCount);
     } else {
-        return std::make_unique<GatherNodeInputHandler>(inputsCount, shardsCount);
+        return std::make_unique<GatherNodeInputHandler>(inputsCount, collapsingDetails);
     }
 }
 
-NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
+NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
-    inputHandler(createNodeInputHandler(inputsCount, shardsCount)),
+    inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, session_id_t shardsCount) :
+NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),

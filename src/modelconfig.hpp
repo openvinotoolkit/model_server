@@ -26,30 +26,11 @@
 #include <rapidjson/document.h>
 
 #include "model_version_policy.hpp"
+#include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-enum Mode { FIXED,
-    AUTO };
-using shape_t = std::vector<size_t>;
-
-struct ShapeInfo {
-    Mode shapeMode = FIXED;
-    shape_t shape;
-
-    operator std::string() const;
-
-    bool operator==(const ShapeInfo& rhs) const {
-        return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
-    }
-
-    bool operator!=(const ShapeInfo& rhs) const {
-        return !(*this == rhs);
-    }
-};
-
-using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;

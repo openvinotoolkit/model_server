@@ -36,6 +36,7 @@
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "stringutils.hpp"
+#include "tensorinfo.hpp"
 
 #define DEBUG
 #include "timer.hpp"

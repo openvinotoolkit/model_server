@@ -37,7 +37,7 @@ protected:
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
-    virtual void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId);
+    virtual Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId);
     virtual const BlobMap& getInputs() const { return inputBlobs; }
     void clearInputs();
     bool isReady();
