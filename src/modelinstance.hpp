@@ -183,7 +183,7 @@ protected:
          *
          * @return Status
          */
-    Status loadOVExecutableNetwork(const ModelConfig& config);
+    virtual Status loadOVExecutableNetwork(const ModelConfig& config);
 
     /**
          * @brief Prepares inferenceRequestsQueue
