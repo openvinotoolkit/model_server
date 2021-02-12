@@ -161,7 +161,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         if (info.gatherFromNode) {
-            demultipliers.erase(info.nodeName);
+            demultipliers.erase(info.gatherFromNode.value());
         }
         switch (info.kind) {
         case NodeKind::ENTRY: {
