@@ -181,6 +181,7 @@ public:
         getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
     }
 
+    // This method must be kept up to date with StatefulModelInstance::infer for tests to function properly.
     ovms::Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ovms::ModelInstanceUnloadGuard>& modelUnloadGuardPtr,
