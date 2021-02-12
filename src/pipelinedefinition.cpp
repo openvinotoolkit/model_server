@@ -349,6 +349,20 @@ public:
         return StatusCode::OK;
     }
 
+    Status checkIfGatherNodeCorrect(const NodeInfo& dependantNodeInfo) const {
+        auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [dependantNodeInfo](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == dependantNodeInfo.gatherFromNode; });
+        if (it == nodeInfos.end()) {
+            return StatusCode::PIPELINE_GATHER_FROM_NOT_EXISTING_NODE;
+        }
+        if (!it->demultiplyCount) {
+            return StatusCode::PIPELINE_GATHER_FROM_NOT_DEMULTIPLEXER;
+        }
+        if (it->kind == NodeKind::ENTRY) {
+            return StatusCode::PIPELINE_GATHER_FROM_ENTRY_NODE;
+        }
+        return StatusCode::OK;
+    }
+
     Status checkConnectionMappedToExistingDataSource(const NodeInfo& dependencyNodeInfo, std::shared_ptr<ModelInstance>& dependencyModelInstance, const std::string& dataSource) {
         // Check whether dependency node is configured to have required output.
         if (dependencyNodeInfo.outputNameAliases.count(dataSource) == 0) {
@@ -528,6 +542,13 @@ public:
                 return result;
             }
 
+            if (dependantNodeInfo.gatherFromNode) {
+                result = checkIfGatherNodeCorrect(dependantNodeInfo);
+                if (!result.ok()) {
+                    return result;
+                }
+            }
+
             prepareRemainingUnconnectedDependantModelInputsSet();
         }
 
@@ -535,6 +556,17 @@ public:
             if (!dependantNodeInfo.library.isValid()) {
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
+
+            if (dependantNodeInfo.gatherFromNode) {
+                auto result = checkIfGatherNodeCorrect(dependantNodeInfo);
+                if (!result.ok()) {
+                    return result;
+                }
+            }
+        }
+
+        if (dependantNodeInfo.kind == NodeKind::ENTRY && dependantNodeInfo.demultiplyCount) {
+            return StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE;
         }
 
         if (connections.count(dependantNodeInfo.nodeName) > 0) {

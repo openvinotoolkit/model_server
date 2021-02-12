@@ -347,3 +347,79 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
     EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
+
+TEST(EnsembleMetadata, GatherFromNotExistingNode) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, "no_node"},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_GATHER_FROM_NOT_EXISTING_NODE);
+}
+
+TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, "request"},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_GATHER_FROM_NOT_DEMULTIPLEXER);
+}
+
+
+TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}, 4},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE);
+}
