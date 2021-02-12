@@ -23,7 +23,7 @@ This guide provides step-by-step instructions on how to deploy OpenVINO&trade; M
 - <a href="#singlemodel">Starting Docker Container with a Single Model
 - <a href="#configfile">Starting Docker container with a configuration file for multiple models</a>
 - <a href="#params">Configuration Parameters</a>
-- <a href="#storages">Cloud Storage Requirements </a>
+- <a href="#storage">Cloud Storage Requirements </a>
 - <a href="#ai">Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU</a>
 - <a href="#sec">Security Considerations</a>
 
@@ -243,12 +243,12 @@ Example connection string is:
 AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 ```
 
-Example command with blob storage az://<bucket>/<model_path> :
+Example command with blob storage az://<container_name>/<model_path> :
 ```
 docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
---model_path az://bucket/model_path --model_name as_model --port 9001
+--model_path az://container/model_path --model_name az_model --port 9001
 ```
 
 Example command with file storage azfs://<share>/<model_path> :
@@ -257,7 +257,7 @@ Example command with file storage azfs://<share>/<model_path> :
 docker run --rm -d  -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
 openvino/model_server:latest \
---model_path azfs://share/model_path --model_name as_model --port 9001
+--model_path azfs://share/model_path --model_name az_model --port 9001
 ```
 Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run command for proxy cloud storage connection.
 
