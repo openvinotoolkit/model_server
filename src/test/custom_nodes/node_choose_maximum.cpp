@@ -18,8 +18,8 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "../../custom_node_interface.h"
 
@@ -27,10 +27,10 @@ static const size_t dummyInputSize = 10;
 
 extern "C" {
 enum METHOD {
-MAXIMUM_MINIMUM,
-MAXIMUM_AVERAGE,
-MAXIMUM_MAXIMUM,
-METHOD_COUNT
+    MAXIMUM_MINIMUM,
+    MAXIMUM_AVERAGE,
+    MAXIMUM_MAXIMUM,
+    METHOD_COUNT
 };
 
 static const std::string INPUT_TENSOR_NAME = "input_tensors";
@@ -38,7 +38,7 @@ static const std::string INPUT_TENSOR_NAME = "input_tensors";
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     // choose selection criteria
     uint16_t selection_method = METHOD_COUNT;
-    if ( paramsLength != 1) {
+    if (paramsLength != 1) {
         std::cout << "Wrong number of parameters - expected 1" << std::endl;
     }
     for (int i = 0; i < paramsLength; i++) {
@@ -79,8 +79,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         if (INPUT_TENSOR_NAME == inputs[i].name) {
             inputTensor = reinterpret_cast<float*>(inputs[i].data);
         } else {
-            std::cout << "Lacking input:" << INPUT_TENSOR_NAME <<  std::endl;
-            return 1; // TODO free
+            std::cout << "Lacking input:" << INPUT_TENSOR_NAME << std::endl;
+            return 1;  // TODO free
         }
     }
     // get adjustable dim
@@ -89,21 +89,21 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
     std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
     std::vector<float> averages(tensorsCount, 0);
-    for (size_t opId = 0; opId < tensorsCount; ++opId) { // TODO adjustable opsId
+    for (size_t opId = 0; opId < tensorsCount; ++opId) {  // TODO adjustable opsId
         for (size_t dummyPos = 0; dummyPos < dummyInputSize; ++dummyPos) {
             auto index = opId * dummyInputSize + dummyPos;
-            switch(selection_method) {
-                case METHOD::MAXIMUM_MAXIMUM:
-                    maximums[opId] = std::max(maximums[opId], inputTensor[index]);
-                    break;
-                case METHOD::MAXIMUM_MINIMUM:
-                    minimums[opId] = std::min(maximums[opId], inputTensor[index]);
-                    break;
-                case METHOD::MAXIMUM_AVERAGE:
-                    averages[opId] += inputTensor[index];
-                    break;
-                default:
-                    return 2;
+            switch (selection_method) {
+            case METHOD::MAXIMUM_MAXIMUM:
+                maximums[opId] = std::max(maximums[opId], inputTensor[index]);
+                break;
+            case METHOD::MAXIMUM_MINIMUM:
+                minimums[opId] = std::min(maximums[opId], inputTensor[index]);
+                break;
+            case METHOD::MAXIMUM_AVERAGE:
+                averages[opId] += inputTensor[index];
+                break;
+            default:
+                return 2;
             }
             std::cout << "opId:" << opId
                       << " dummyPos:" << dummyPos
@@ -119,22 +119,22 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     size_t whichTensor = 42;
     const std::vector<float>* fromWhichContainerToChoose = &maximums;
     switch (selection_method) {
-        case METHOD::MAXIMUM_MAXIMUM:
-            fromWhichContainerToChoose = &maximums;
-            break;
-        case METHOD::MAXIMUM_MINIMUM:
-            fromWhichContainerToChoose = &minimums;
-            break;
-        case METHOD::MAXIMUM_AVERAGE:
-            fromWhichContainerToChoose = &averages;
-            break;
-        default:
-            // TODO cleanup of ptrs
-            return 2;
+    case METHOD::MAXIMUM_MAXIMUM:
+        fromWhichContainerToChoose = &maximums;
+        break;
+    case METHOD::MAXIMUM_MINIMUM:
+        fromWhichContainerToChoose = &minimums;
+        break;
+    case METHOD::MAXIMUM_AVERAGE:
+        fromWhichContainerToChoose = &averages;
+        break;
+    default:
+        // TODO cleanup of ptrs
+        return 2;
     }
     whichTensor = std::distance(fromWhichContainerToChoose->begin(),
-                                std::max_element(fromWhichContainerToChoose->begin(),
-                                                 fromWhichContainerToChoose->end()));
+        std::max_element(fromWhichContainerToChoose->begin(),
+            fromWhichContainerToChoose->end()));
     std::cout << "Selected tensor pos: " << whichTensor << std::endl;
     // copy appropiate tensor
     for (size_t i = 0; i < dummyInputSize; ++i) {

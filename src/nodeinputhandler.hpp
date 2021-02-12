@@ -41,7 +41,8 @@ public:
     virtual Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId);
     const BlobMap& getInputs() {
         isUsed = true;
-        return inputBlobs; }
+        return inputBlobs;
+    }
     void clearInputs();
     bool isReady();
     virtual Status notifyFinishedDependency();

@@ -110,7 +110,6 @@ protected:
         for (size_t i = 0; i < actual.size(); i++) {
             EXPECT_NEAR(actual[i], data[i], 0.001) << " i is: " << i;
         }
-
     }
 
     template <typename T>
@@ -1048,30 +1047,30 @@ protected:
 };
 
 enum OPS {
-ADD,
-SUB,
-MULTIPLY,
-DIVIDE
+    ADD,
+    SUB,
+    MULTIPLY,
+    DIVIDE
 };
 
 static void prepareDifferentOpsExpectedOutput(std::vector<float>& expectedOutput, const std::vector<float>& input, const std::vector<float>& factors) {
     const size_t dummy_size = 10;
-    for (size_t j = 0; j < 4; ++j) { // iterate over ops
+    for (size_t j = 0; j < 4; ++j) {  // iterate over ops
         for (size_t i = 0; i < dummy_size; ++i) {
             size_t index = dummy_size * j + i;
-            switch(j) {
-                case ADD:
-                    expectedOutput[index] = input[i] + factors[j];
-                    break;
-                case SUB:
-                    expectedOutput[index] = input[i] - factors[j];
-                    break;
-                case MULTIPLY:
-                    expectedOutput[index] = input[i] * factors[j];
-                    break;
-                case DIVIDE:
-                    expectedOutput[index] = input[i] / factors[j];
-                    break;
+            switch (j) {
+            case ADD:
+                expectedOutput[index] = input[i] + factors[j];
+                break;
+            case SUB:
+                expectedOutput[index] = input[i] - factors[j];
+                break;
+            case MULTIPLY:
+                expectedOutput[index] = input[i] * factors[j];
+                break;
+            case DIVIDE:
+                expectedOutput[index] = input[i] / factors[j];
+                break;
             }
         }
     }
@@ -1083,7 +1082,7 @@ enum class Method {
     MAXIMUM_AVERAGE,
 };
 
-std::vector<float> prepareGatherHighestExpectedOutput( std::vector<float> input, Method option) {
+std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
     const size_t dummy_size = 10;
     std::vector<float> expectedOutput(dummy_size);
     size_t tensorsCount = input.size() / dummy_size;
@@ -1091,22 +1090,22 @@ std::vector<float> prepareGatherHighestExpectedOutput( std::vector<float> input,
     std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
     std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
     std::vector<float> averages(tensorsCount, 0);
-    for (size_t opId = 0; opId < tensorsCount; ++opId) { // iterate over ops
+    for (size_t opId = 0; opId < tensorsCount; ++opId) {  // iterate over ops
         for (size_t i = 0; i < dummy_size; ++i) {
             size_t index = dummy_size * opId + i;
-            switch(option) {
-                case Method::MAXIMUM_MAXIMUM:
-                    maximums[opId] = std::max(maximums[opId], input[index]);
-                    break;
-                case Method::MAXIMUM_MINIMUM:
-                    minimums[opId] = std::min(maximums[opId], input[index]);
-                    break;
-                case Method::MAXIMUM_AVERAGE:
-                    averages[opId] += input[index];
-                    break;
-                default:
-                    throw std::logic_error(""); 
-                    break;
+            switch (option) {
+            case Method::MAXIMUM_MAXIMUM:
+                maximums[opId] = std::max(maximums[opId], input[index]);
+                break;
+            case Method::MAXIMUM_MINIMUM:
+                minimums[opId] = std::min(maximums[opId], input[index]);
+                break;
+            case Method::MAXIMUM_AVERAGE:
+                averages[opId] += input[index];
+                break;
+            default:
+                throw std::logic_error("");
+                break;
             }
         }
         averages[opId] /= dummy_size;
@@ -1115,25 +1114,25 @@ std::vector<float> prepareGatherHighestExpectedOutput( std::vector<float> input,
     size_t whichTensor = 42;
     const std::vector<float>* fromWhichContainerToChoose = &maximums;
     switch (option) {
-        case Method::MAXIMUM_MAXIMUM:
-            fromWhichContainerToChoose = &maximums;
-            break;
-        case Method::MAXIMUM_MINIMUM:
-            fromWhichContainerToChoose = &minimums;
-            break;
-        case Method::MAXIMUM_AVERAGE:
-            fromWhichContainerToChoose = &averages;
-            break;
-        default:
-            throw std::logic_error("");
+    case Method::MAXIMUM_MAXIMUM:
+        fromWhichContainerToChoose = &maximums;
+        break;
+    case Method::MAXIMUM_MINIMUM:
+        fromWhichContainerToChoose = &minimums;
+        break;
+    case Method::MAXIMUM_AVERAGE:
+        fromWhichContainerToChoose = &averages;
+        break;
+    default:
+        throw std::logic_error("");
     }
     whichTensor = std::distance(fromWhichContainerToChoose->begin(),
-                                std::max_element(fromWhichContainerToChoose->begin(),
-                                                 fromWhichContainerToChoose->end()));
+        std::max_element(fromWhichContainerToChoose->begin(),
+            fromWhichContainerToChoose->end()));
     // copy tensor
     std::copy(input.begin() + dummy_size * whichTensor,
-              input.begin() + dummy_size * (whichTensor + 1),
-              expectedOutput.begin());
+        input.begin() + dummy_size * (whichTensor + 1),
+        expectedOutput.begin());
     return expectedOutput;
 }
 
@@ -1141,8 +1140,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     std::unique_ptr<Pipeline> pipeline;
     std::cout << pipelineCustomNodeDifferentOperationsConfig << std::endl;
 
-    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
-    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
     this->prepareRequest(request, input, differentOpsInputName);
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsConfig);
@@ -1220,8 +1219,8 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
 })";
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummy) {
     std::unique_ptr<Pipeline> pipeline;
-    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
-    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
     this->prepareRequest(request, input, differentOpsInputName);
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyConfig);
@@ -1232,7 +1231,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::vector<float> expectedOutput(4 * dummy_size);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
-        [](float f) -> float { return f + 1;});
+        [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
 }
 
@@ -1322,8 +1321,8 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximum) {
     std::unique_ptr<Pipeline> pipeline;
-    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
-    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
     this->prepareRequest(request, input, differentOpsInputName);
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
@@ -1334,7 +1333,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::vector<float> expectedOutput(4 * dummy_size);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
-        [](float f) -> float { return f + 1;});
+        [](float f) -> float { return f + 1; });
     std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
@@ -1437,8 +1436,8 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
 })";
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumThenDummyAgain) {
     std::unique_ptr<Pipeline> pipeline;
-    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
-    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
     this->prepareRequest(request, input, differentOpsInputName);
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig);
@@ -1449,11 +1448,10 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::vector<float> expectedOutput(4 * dummy_size);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
-        [](float f) -> float { return f + 1;});
+        [](float f) -> float { return f + 1; });
     std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
     std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
-        [](float f) -> float { return f + 1;});
+        [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
 // TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)
-
