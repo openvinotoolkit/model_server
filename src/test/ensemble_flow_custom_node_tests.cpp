@@ -1077,32 +1077,64 @@ static void prepareDifferentOpsExpectedOutput(std::vector<float>& expectedOutput
     }
 }
 
-enum class HighestOption {
+enum class Method {
     MAXIMUM_MAXIMUM,
     MAXIMUM_MINIMUM,
-    MINIMUM_MINIMUM,
-    MINIMUM_MAXIMUM,
     MAXIMUM_AVERAGE,
-    MINIMUM_AVERAGE
 };
 
-static void prepareGatherHighestExpectedOutput(std::vector<float>& expectedOutput, const std::vector<float>& input, HighestOption option) {
+std::vector<float> prepareGatherHighestExpectedOutput( std::vector<float> input, Method option) {
     const size_t dummy_size = 10;
-    for (size_t j = 0; j < 4; ++j) { // iterate over ops
+    std::vector<float> expectedOutput(dummy_size);
+    size_t tensorsCount = input.size() / dummy_size;
+    // perform operations
+    std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
+    std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
+    std::vector<float> averages(tensorsCount, 0);
+    for (size_t opId = 0; opId < tensorsCount; ++opId) { // iterate over ops
         for (size_t i = 0; i < dummy_size; ++i) {
-            // size_t index = dummy_size * j + i;
+            size_t index = dummy_size * opId + i;
             switch(option) {
-                case HighestOption::MAXIMUM_MINIMUM:
- //                   expectedOutput[index] = input[i] + factors[j];
+                case Method::MAXIMUM_MAXIMUM:
+                    maximums[opId] = std::max(maximums[opId], input[index]);
                     break;
+                case Method::MAXIMUM_MINIMUM:
+                    minimums[opId] = std::min(maximums[opId], input[index]);
                     break;
-                    break;
+                case Method::MAXIMUM_AVERAGE:
+                    averages[opId] += input[index];
                     break;
                 default:
+                    throw std::logic_error(""); 
                     break;
             }
         }
+        averages[opId] /= dummy_size;
     }
+    // choose tensor
+    size_t whichTensor = 42;
+    const std::vector<float>* fromWhichContainerToChoose = &maximums;
+    switch (option) {
+        case Method::MAXIMUM_MAXIMUM:
+            fromWhichContainerToChoose = &maximums;
+            break;
+        case Method::MAXIMUM_MINIMUM:
+            fromWhichContainerToChoose = &minimums;
+            break;
+        case Method::MAXIMUM_AVERAGE:
+            fromWhichContainerToChoose = &averages;
+            break;
+        default:
+            throw std::logic_error("");
+    }
+    whichTensor = std::distance(fromWhichContainerToChoose->begin(),
+                                std::max_element(fromWhichContainerToChoose->begin(),
+                                                 fromWhichContainerToChoose->end()));
+    // copy tensor
+    std::copy(input.begin() + dummy_size * whichTensor,
+              input.begin() + dummy_size * (whichTensor + 1),
+              expectedOutput.begin());
+    return expectedOutput;
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDifferentOpsCustomNode) {
@@ -1202,8 +1234,226 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1;});
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
-    // TODO remove
-    prepareGatherHighestExpectedOutput(expectedOutput, expectedOutput, HighestOption::MAXIMUM_MINIMUM);
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criterium": "MAXIMUM_MAXIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximum) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
+    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    const size_t dummy_size = 10;
+    std::vector<float> expectedOutput(4 * dummy_size);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1;});
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
+    this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criterium": "MAXIMUM_MAXIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                },
+                {
+                    "name": "dummyNode2",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "choose_max",
+                               "data_item": "maximum_tensor_alias"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode2",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumThenDummyAgain) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0,1,2,3,4,5,6,7,8, 9};
+    std::vector<float> factors{1, 3, 2, 2}; // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    const size_t dummy_size = 10;
+    std::vector<float> expectedOutput(4 * dummy_size);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1;});
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [](float f) -> float { return f + 1;});
+    this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
 // TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)
 
