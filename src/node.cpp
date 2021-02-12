@@ -31,6 +31,10 @@ Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::
     nodeName(nodeName),
     demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt),
     gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
+    SPDLOG_LOGGER_DEBUG("Will create node: {} with demultiply: {}, gatherFrom: {}",
+        getName(),
+        demultiplyCount,
+        gatherFromNode.begin() != gatherFromNode.end() ? *gatherFromNode.begin() : "NONE");
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
@@ -185,7 +189,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-            nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
+            auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
+            if (it == nodeSessionOutputs.end()) {
+                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
+            } else {
+                it->second.second.emplace(blobName, dividedBlob);
+            }
         }
     }
     nodeSessionOutputs.erase(metadata.getSessionKey());
