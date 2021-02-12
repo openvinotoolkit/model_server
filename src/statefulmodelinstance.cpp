@@ -145,8 +145,9 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     if (!sequenceManager->sequenceExists(sequenceId))
         return StatusCode::INTERNAL_ERROR;
     Sequence& sequence = sequenceManager->getSequence(sequenceId);
-    sequence.updateLastActivityTime();
+    
     std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
+    sequence.updateLastActivityTime();
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
