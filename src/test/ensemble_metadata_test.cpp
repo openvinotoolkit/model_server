@@ -398,7 +398,6 @@ TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
     ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_GATHER_FROM_NOT_DEMULTIPLEXER);
 }
 
-
 TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
