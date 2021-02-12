@@ -40,6 +40,8 @@ using testing::Return;
 
 namespace {
 
+static int sequenceTimeoutSleepSeconds = 7;
+
 static const char* modelStatefulConfig = R"(
 {
     "model_config_list": [
@@ -192,53 +194,39 @@ public:
 
         timer.start("get infer request");
         ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
-        int executingInferId = executingStreamIdGuard.getId();
-        std::cout << "executingInferId :" << std::to_string(executingInferId) << std::endl;
 
         InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
         timer.stop("get infer request");
-        SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
         timer.start("preprocess");
         status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
         timer.stop("preprocess");
         if (!status.ok())
             return status;
-        SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
 
         timer.start("deserialize");
         status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
         timer.stop("deserialize");
         if (!status.ok())
             return status;
-        SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
         timer.start("prediction");
         status = performInference(inferRequest);
         timer.stop("prediction");
         if (!status.ok())
             return status;
-        SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
         timer.start("serialize");
         status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
         timer.stop("serialize");
         if (!status.ok())
             return status;
-        SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
         timer.start("postprocess");
         status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
         timer.stop("postprocess");
         if (!status.ok())
             return status;
-        SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-            requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("postprocess") / 1000);
 
         if (waitBeforeSequenceUnlocked) {
             std::cout << "Waiting before waitBeforeSequenceUnlocked" << std::endl;
@@ -365,20 +353,20 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     // Wait for sequence timeout
 
     t1.join();
@@ -436,20 +424,20 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     // Wait for sequence timeout
 
     t1.join();
@@ -520,20 +508,20 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
         });
 
     if (sequenceTimeoutScenario == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     waitBeforeSequenceStarted.set_value();
 
     if (sequenceTimeoutScenario == 1)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitAfterSequenceStarted.set_value();
     if (sequenceTimeoutScenario == 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
     waitBeforeSequenceFinished.set_value();
 
     if (sequenceTimeoutScenario > 2)
-        std::this_thread::sleep_for(std::chrono::seconds(7));
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
     // Wait for sequence timeout
 
     t1.join();
