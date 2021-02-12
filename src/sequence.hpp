@@ -41,8 +41,6 @@ private:
     bool terminated;
     bool timedOut;
 
-    void updateLastActivityTime();
-
 public:
     Sequence(uint64_t sequenceId) :
         sequenceId(sequenceId),
@@ -58,6 +56,7 @@ public:
     void setTerminated();
     bool isTimedOut() const;
     void setTimedOut();
+    void updateLastActivityTime();
 };
 
 }  // namespace ovms
