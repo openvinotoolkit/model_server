@@ -37,6 +37,8 @@ public:
         sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), name);
     }
 
+    ~StatefulModelInstance();
+
     const std::unique_ptr<SequenceManager>& getSequenceManager() const {
         return this->sequenceManager;
     }

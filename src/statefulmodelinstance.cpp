@@ -27,6 +27,10 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
+StatefulModelInstance::~StatefulModelInstance() {
+    sequenceManager->join();
+}
+
 const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
         SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto does not contain tensor shape information", getName(), getVersion());

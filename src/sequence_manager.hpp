@@ -64,12 +64,12 @@ public:
         startWatcher();
     }
 
-    SequenceManager(const SequenceManager& source) {
+    SequenceManager(const SequenceManager& source) :
+        mutex() {
         this->modelName = source.modelName;
         this->timeout = source.timeout;
         this->maxSequenceNumber = source.maxSequenceNumber;
         this->sequenceWatcherIntervalSec = source.sequenceWatcherIntervalSec;
-        // Add new mutex here?
     }
 
     ~SequenceManager();
