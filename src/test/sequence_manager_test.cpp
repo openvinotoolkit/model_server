@@ -159,7 +159,7 @@ TEST(SequenceManager, AutoRemoveOneTimedOutSequence) {
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
 
-    sequenceManager.getSequence(42).updateMemoryState(newState);
+    sequenceManager.getSequence(42).updateLastActivityTime();
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     ASSERT_TRUE(sequenceManager.sequenceExists(42));

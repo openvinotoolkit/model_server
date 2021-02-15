@@ -168,6 +168,7 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
+    bool testWarningPrinted = false;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy");
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
@@ -188,6 +189,10 @@ public:
         std::future<void>* waitBeforeManagerLock,
         std::future<void>* waitBeforeSequenceLock,
         std::future<void>* waitBeforeSequenceUnlocked) {
+        if (!testWarningPrinted) {
+            std::cout << "[WARNING] This method must be kept up to date with StatefulModelInstance::infer for tests to function properly." << std::endl;
+            testWarningPrinted = true;
+        }
         Timer timer;
         using std::chrono::microseconds;
         ovms::SequenceProcessingSpec sequenceProcessingSpec;

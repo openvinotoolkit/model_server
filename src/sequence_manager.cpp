@@ -46,32 +46,21 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-Status SequenceManager::removeTimedOutSequences() {
-    std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-    for (auto it = sequences.cbegin(); it != sequences.cend();) {
-        Sequence& sequence = getSequence(it->second.getId());
-        if (sequence.isTimedOut()) {
-            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Removing timeouted sequence - Id: {}", modelName, sequence.getId());
-            it = sequences.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    return StatusCode::OK;
-}
-
 Status SequenceManager::checkForTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+
     for (auto it = sequences.cbegin(); it != sequences.cend();) {
         Sequence& sequence = getSequence(it->second.getId());
-        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-        if (!sequence.isTerminated()) {
+        // Non blocking try to get mutex
+        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex(), std::try_to_lock);
+        if (!sequence.isTerminated() && sequenceLock.owns_lock()) {
+            std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+            sequenceLock.unlock();
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
                 SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Sequence set for timeout - Id: {}", modelName, sequence.getId());
-                sequence.setTimedOut();
-                sequenceLock.unlock();
+                it = sequences.erase(it);
+                continue;
             }
         }
         ++it;
@@ -85,9 +74,6 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
 
     if (getSequence(sequenceId).isTerminated())
         return StatusCode::SEQUENCE_TERMINATED;
-
-    if (getSequence(sequenceId).isTimedOut())
-        return StatusCode::SEQUENCE_TIMEDOUT;
 
     return StatusCode::OK;
 }
@@ -173,7 +159,6 @@ void SequenceManager::watcher(std::future<void> exit) {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence watcher thread check cycle begin", modelName);
 
         checkForTimedOutSequences();
-        removeTimedOutSequences();
 
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} Sequence watcher thread check cycle end", modelName);
     }

@@ -64,12 +64,4 @@ void Sequence::setTerminated() {
     this->terminated = true;
 }
 
-bool Sequence::isTimedOut() const {
-    return timedOut;
-}
-
-void Sequence::setTimedOut() {
-    this->timedOut = true;
-}
-
 }  // namespace ovms

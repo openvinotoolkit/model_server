@@ -96,8 +96,6 @@ public:
 
     Status checkForTimedOutSequences();
 
-    Status removeTimedOutSequences();
-
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 
     /**
