@@ -150,6 +150,13 @@ public:
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        for (auto it = models.begin(); it != models.end(); it++)
+        {
+            std::cout << "map ket" << it->first    // string (key)
+                    << ':'
+                    << "map value " << (void*)it->second.get()   // string's value 
+                    << std::endl;
+        }
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
     }

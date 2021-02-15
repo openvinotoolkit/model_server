@@ -109,13 +109,17 @@ public:
         isStateful(isStateful),
         name(name),
         defaultVersion(0),
-        subscriptionManager(std::string("model: ") + name) {}
+        subscriptionManager(std::string("model: ") + name) {
+             std::cout << "Model " << (void*)(this) << std::endl;
+        }
 
     /**
          * @brief Destroy the Model object
          * 
          */
-    virtual ~Model() {}
+    virtual ~Model() {
+         std::cout << "delete Model " << (void*)(this) << std::endl;
+    }
 
     /**
          * @brief Gets the model name
