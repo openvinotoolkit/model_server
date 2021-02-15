@@ -41,6 +41,7 @@ using testing::Return;
 namespace {
 
 static int sequenceTimeoutSleepSeconds = 7;
+static bool testWarningPrinted = false;
 
 enum SequenceTimeoutScenarios {
     WAIT_BEFORE_MANAGER_LOCKED,
@@ -168,7 +169,6 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
-    bool testWarningPrinted = false;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy");
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
