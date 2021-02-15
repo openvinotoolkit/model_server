@@ -1298,7 +1298,7 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
                     "type": "custom",
                     "gather_from_node": "custom_node",
                     "params": {
-                        "selection_criterium": "MAXIMUM_MAXIMUM"
+                        "selection_criteria": "MAXIMUM_MAXIMUM"
                     },
                     "inputs": [
                         {"input_tensors": {"node_name": "dummyNode",
@@ -1401,7 +1401,7 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
                     "type": "custom",
                     "gather_from_node": "custom_node",
                     "params": {
-                        "selection_criterium": "MAXIMUM_MAXIMUM"
+                        "selection_criteria": "MAXIMUM_MAXIMUM"
                     },
                     "inputs": [
                         {"input_tensors": {"node_name": "dummyNode",
