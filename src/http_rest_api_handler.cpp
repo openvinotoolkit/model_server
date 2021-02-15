@@ -47,6 +47,8 @@ const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
+const std::string HttpRestApiHandler::modelControlApiRegexExp = R"((.?)\/config\/reload)";
+
 
 Status HttpRestApiHandler::validateUrlAndMethod(
     const std::string_view http_method,
@@ -67,7 +69,7 @@ Status HttpRestApiHandler::validateUrlAndMethod(
     }
 
     if (http_method == "POST") {
-        if (std::regex_match(request_path, *sm, predictionRegex)) {
+        if (std::regex_match(request_path, *sm, predictionRegex) || std::regex_match(request_path, *sm, modelControlApiRegex)) {
             return StatusCode::OK;
         } else if (std::regex_match(request_path, *sm, modelstatusRegex)) {
             return StatusCode::REST_UNSUPPORTED_METHOD;
@@ -137,6 +139,16 @@ Status HttpRestApiHandler::processRequest(
     if (FileSystem::isPathEscaped(request_path_str)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
+    }
+
+    if (std::regex_match(request_path_str, sm, modelControlApiRegex)) {
+        if (http_method == "POST") {
+            return processModelControlApiRequest(*response);
+        }
+        else
+        {
+            return StatusCode::REST_UNSUPPORTED_METHOD;
+        }
     }
 
     auto status = validateUrlAndMethod(http_method, request_path_str, &sm);
@@ -328,6 +340,11 @@ Status HttpRestApiHandler::processModelStatusRequest(
     return StatusCode::OK;
 }
 
+std::string createErrorJsonWithMessage(std::string message)
+{
+    return "{\n\t\"error_message\": \"" + message + "\"\n}";
+}
+
 Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) {
     SPDLOG_INFO("ModelControlApi flow triggered.");
     Status status;
@@ -338,6 +355,7 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
     if (isConfigFileReloadNeeded) {
         status = manager.loadConfig(config.configPath());
         if (!status.ok()) {
+            response = createErrorJsonWithMessage("Reloading config file failed.");
             return status;
         }
     }
@@ -346,20 +364,23 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
     if (!status.ok()) {
+        response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;
     }
 
     std::string jsonString;
     status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, jsonString);
     if (!status.ok()) {
+        response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
         return status;
     }
     response = jsonString;
 
     if (!isConfigFileReloadNeeded) {
+        SPDLOG_DEBUG("Config file reload was not needed.");
         return StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED;
     }
-    return StatusCode::OK;
+    return StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED;
 }
 
 }  // namespace ovms

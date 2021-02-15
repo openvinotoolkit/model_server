@@ -244,6 +244,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED, net_http::HTTPStatusCode::CREATED},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED, net_http::HTTPStatusCode::OK},
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -270,7 +272,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NETWORK_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
     {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
     {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},

@@ -44,6 +44,7 @@ public:
     static const std::string kPathRegexExp;
     static const std::string predictionRegexExp;
     static const std::string modelstatusRegexExp;
+    static const std::string modelControlApiRegexExp;
 
     /**
      * @brief Construct a new HttpRest Api Handler
@@ -54,6 +55,7 @@ public:
         sanityRegex(kPathRegexExp),
         predictionRegex(predictionRegexExp),
         modelstatusRegex(modelstatusRegexExp),
+        modelControlApiRegex(modelControlApiRegexExp),
         timeout_in_ms(timeout_in_ms) {}
 
     Status validateUrlAndMethod(
@@ -155,6 +157,7 @@ private:
     const std::regex sanityRegex;
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
+    const std::regex modelControlApiRegex;
 
     int timeout_in_ms;
 };

@@ -88,7 +88,7 @@ private:
             req->OverwriteResponseHeader(kv.first, kv.second);
         }
         req->WriteResponseString(output);
-        if (http_status != net_http::HTTPStatusCode::OK) {
+        if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
             SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
                 req->http_method(),
                 req->uri_path(),
