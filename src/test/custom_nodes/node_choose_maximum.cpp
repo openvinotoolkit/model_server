@@ -41,11 +41,11 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         return 1;
     }
     if (strcmp(params[0].key, "selection_criteria") == 0) {
-        if (strcmp(params[0].value, "MAXIMUM_MINIMUM") == Method::MAXIMUM_MINIMUM) {
+        if (strcmp(params[0].value, "MAXIMUM_MINIMUM") == 0) {
             selectionMethod = Method::MAXIMUM_MINIMUM;
-        } else if (strcmp(params[0].value, "MAXIMUM_MAXIMUM") == Method::MAXIMUM_MAXIMUM) {
+        } else if (strcmp(params[0].value, "MAXIMUM_MAXIMUM") == 0) {
             selectionMethod = Method::MAXIMUM_MAXIMUM;
-        } else if (strcmp(params[0].value, "MAXIMUM_AVERAGE") == Method::MAXIMUM_AVERAGE) {
+        } else if (strcmp(params[0].value, "MAXIMUM_AVERAGE") == 0) {
             selectionMethod = Method::MAXIMUM_AVERAGE;
         } else {
             std::cout << "Not allowed selection criteria chosen:" << params[0].value << std::endl;
@@ -63,28 +63,25 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     float* inputTensor;
     size_t valuesPerTensor = 0;
     size_t numberOfOps = 0;
-    for (size_t i = 0; i < inputsLength; ++i) {
-        if (INPUT_TENSOR_NAME == inputs[i].name) {
-            if (inputs[i].dimsLength != 3 ||
-                inputs[i].dims[0] != 1 ||
-                inputs[i].dims[1] == 0 ||
-                inputs[i].dims[2] == 0) {
-                std::cout << "improper " << INPUT_TENSOR_NAME
-                          << " dimensions: [" << inputs[i].dims[0]
-                          << ", " << inputs[i].dims[1]
-                          << ", " << inputs[i].dims[2] << "]" << std::endl;
-                return 1;
-            }
-            std::cout << "Input valuesPerTensor" << inputs[i].dims[1] << std::endl;
-            numberOfOps = inputs[i].dims[1];
-            valuesPerTensor = inputs[i].dims[2];
-            inputTensor = reinterpret_cast<float*>(inputs[i].data);
-        } else {
-            std::cout << "Lacking input:" << INPUT_TENSOR_NAME << std::endl;
-            return 1;  // TODO free
+    if (INPUT_TENSOR_NAME == inputs[0].name) {
+        if (inputs[0].dimsLength != 3 ||
+            inputs[0].dims[0] != 1 ||
+            inputs[0].dims[1] == 0 ||
+            inputs[0].dims[2] == 0) {
+            std::cout << "improper " << INPUT_TENSOR_NAME
+                      << " dimensions: [" << inputs[0].dims[0]
+                      << ", " << inputs[0].dims[1]
+                      << ", " << inputs[0].dims[2] << "]" << std::endl;
+            return 1;
         }
+        std::cout << "Input valuesPerTensor" << inputs[0].dims[1] << std::endl;
+        numberOfOps = inputs[0].dims[1];
+        valuesPerTensor = inputs[0].dims[2];
+        inputTensor = reinterpret_cast<float*>(inputs[0].data);
+    } else {
+        std::cout << "Lacking input: " << INPUT_TENSOR_NAME << std::endl;
+        return 1;
     }
-
     // prepare output
     *outputsLength = 1;
     *outputs = new CustomNodeTensor[*outputsLength];
@@ -117,6 +114,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             case Method::MAXIMUM_AVERAGE:
                 averages[opId] += inputTensor[index];
                 break;
+            default:
+                return 1;
             }
             std::cout << "opId:" << opId
                       << " dummyPos:" << dummyPos
@@ -140,6 +139,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     case Method::MAXIMUM_AVERAGE:
         fromWhichContainerToChoose = &averages;
         break;
+    default:
+        return 1;
     }
     size_t whichTensor = std::distance(fromWhichContainerToChoose->begin(),
         std::max_element(fromWhichContainerToChoose->begin(),

@@ -1291,7 +1291,7 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
                     "type": "custom",
                     "gather_from_node": "custom_node",
                     "params": {
-                        "selection_criteria": "MAXIMUM_MAXIMUM"
+                        "selection_criteria": "MAXIMUM_MINIMUM"
                     },
                     "inputs": [
                         {"input_tensors": {"node_name": "dummyNode",
@@ -1326,7 +1326,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
-    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MINIMUM);
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
 
