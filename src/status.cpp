@@ -129,7 +129,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE, "Batch size >= 2 is not allowed when demultiplexer is used"},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE, "Batch size >= 2 is not allowed when demultiplexer node is used"},
     {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are differnt"},
     {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},

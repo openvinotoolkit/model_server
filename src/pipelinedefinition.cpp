@@ -665,8 +665,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         return StatusCode::PIPELINE_MULTIPLE_EXIT_NODES;
     }
 
-    bool isDemultiplexer = false, isMultipleBatchSize = false;
-    auto& modelConfigs = manager.getModelConfigs();
+    bool isDemultiplexerUsed = false, isBsGreaterThan1Used = false;
     for (const auto& node : nodeInfos) {
         auto findByName = [node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
@@ -678,17 +677,20 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         }
 
         if (node.demultiplyCount) {
-            isDemultiplexer = true;
+            isDemultiplexerUsed = true;
         }
 
-        if (modelConfigs.find(node.modelName) != modelConfigs.end()) {
-            for (auto& [inputName, shapeInfo] : modelConfigs.at(node.modelName).getShapes()) {
-                if (!shapeInfo.shape.empty() && shapeInfo.shape[0] >= 2) {
-                    isMultipleBatchSize = true;
+        if (manager.modelExists(node.modelName)) {
+            auto modelInstance = manager.findModelByName(node.modelName)->getDefaultModelInstance();
+            if (modelInstance) {
+                for (auto& [inputName, tensorInfo] : modelInstance->getInputsInfo()) {
+                    if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
+                        isBsGreaterThan1Used = true;
+                    }
                 }
-            }
-            if (modelConfigs.at(node.modelName).getBatchSize() >= 2) {
-                isMultipleBatchSize = true;
+                if (modelInstance->getBatchSize() >= 2) {
+                    isBsGreaterThan1Used = true;
+                }
             }
         }
 
@@ -697,7 +699,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return result;
         }
     }
-    if (isDemultiplexer && isMultipleBatchSize) {
+    if (isDemultiplexerUsed && isBsGreaterThan1Used) {
         return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
     }
     return StatusCode::OK;

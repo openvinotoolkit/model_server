@@ -176,10 +176,6 @@ public:
         return models;
     }
 
-    const std::unordered_map<std::string, ModelConfig>& getModelConfigs() const {
-        return servedModelConfigs;
-    }
-
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
