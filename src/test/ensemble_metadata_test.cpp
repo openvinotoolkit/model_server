@@ -370,7 +370,7 @@ TEST(EnsembleMetadata, GatherFromNotExistingNode) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_GATHER_FROM_NOT_EXISTING_NODE);
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE);
 }
 
 TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
@@ -395,7 +395,7 @@ TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_GATHER_FROM_NOT_DEMULTIPLEXER);
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER);
 }
 
 TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {

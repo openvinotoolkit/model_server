@@ -199,8 +199,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				},
 				"demultiply_count": {
 					"type": "integer",
-					"minimum": 2,
-					"maximum": 100000
+					"minimum": 2
 				},
 				"gather_from_node": {
 					"type": "string"

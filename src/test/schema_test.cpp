@@ -1463,17 +1463,6 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountTypeInvalid) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyCountTooBig) {
-    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
-    const std::string demultiplyCount{"\"demultiply_count\": 100001"};
-    std::string config(demultiplexerConfig);
-    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
-    rapidjson::Document demultiplexerConfigDemultiplyCountTooBigParsed;
-    demultiplexerConfigDemultiplyCountTooBigParsed.Parse(config.c_str());
-    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountTooBigParsed, ovms::MODELS_CONFIG_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
-}
-
 TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
     const std::string gatherFromNodeToReplace{"\"gather_from_node\": \"dummy\""};
     const std::string gatherFromNode{"\"gather_from_node\": 10"};
