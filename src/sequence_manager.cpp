@@ -58,7 +58,7 @@ Status SequenceManager::checkForTimedOutSequences() {
             sequenceLock.unlock();
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Sequence set for timeout - Id: {}", modelName, sequence.getId());
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} Sequence timeouted - Id: {}", modelName, sequence.getId());
                 it = sequences.erase(it);
                 continue;
             }

@@ -560,6 +560,38 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     t1.join();
 }
 
+TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
+    uint64_t sequenceCounter = 10;
+
+    for (uint64_t i = 1; i < sequenceCounter + 1; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        setRequestSequenceId(&request, i);
+        setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+        tensorflow::serving::PredictResponse response3;
+
+        // Do the inference
+        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+    }
+
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    std::unique_lock<std::mutex> sequenceManagerLock(stetefulMockedModelInstance->getSequenceManager()->getMutex());
+    std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    sequenceManagerLock.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
 TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
