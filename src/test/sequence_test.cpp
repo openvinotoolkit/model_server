@@ -36,21 +36,12 @@ TEST(Sequence, SequenceDisabled) {
 }
 
 TEST(Sequence, UpdateLastActivityTime) {
-    // last activity time update is private method and it's called inside updateMemoryState
-    // so updateMemoryState method is triggered to test last activity time update
-    ovms::model_memory_state_t newState;
-    std::vector<size_t> shape1{1, 10};
-    size_t elementsCount1 = std::accumulate(shape1.begin(), shape1.end(), 1, std::multiplies<size_t>());
-    std::vector<float> state1(elementsCount1);
-    std::iota(state1.begin(), state1.end(), 0);
-    addState(newState, "state1", shape1, state1);
-
     uint64_t sequenceId = 3;
     ovms::Sequence sequence(sequenceId);
-    sequence.updateMemoryState(newState);
+    sequence.updateLastActivityTime();
     auto time1 = sequence.getLastActivityTime();
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    sequence.updateMemoryState(newState);
+    sequence.updateLastActivityTime();
     auto time2 = sequence.getLastActivityTime();
     ASSERT_TRUE(std::chrono::duration_cast<std::chrono::milliseconds>(time2.time_since_epoch()).count() >
                 std::chrono::duration_cast<std::chrono::milliseconds>(time1.time_since_epoch()).count());
