@@ -171,7 +171,9 @@ public:
     bool testWarningPrinted = false;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy");
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-        StatefulModelInstance(name, version) {}
+        StatefulModelInstance(name, version) {
+            std::cout << "MockedStatefulModelInstance " << (void*)(this) << std::endl;
+        }
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
@@ -751,13 +753,19 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
     uint64_t seqId = 1;
-
+    { 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
-
     RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+    SPDLOG_ERROR(":ER");
+    }
+    SPDLOG_ERROR("HURA");
+    sleep(2);
+    SPDLOG_ERROR("HURA");
+
+    /*
     RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
     RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);*/
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
