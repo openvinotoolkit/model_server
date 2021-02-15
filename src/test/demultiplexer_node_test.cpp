@@ -30,7 +30,8 @@ public:
     DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint32_t> demultiplyCount, const NodeSessionMetadata& meta) :
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, demultiplyCount.value_or(0)) {
         // createSession to have source session for fetchResults()
-        std::unique_ptr<NodeSession> nodeSession = createNodeSession(meta, 1);
+        CollapseDetails collapsingDetails;
+        std::unique_ptr<NodeSession> nodeSession = createNodeSession(meta, collapsingDetails);
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
@@ -87,3 +88,48 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), sessionResult1.second.begin()->second->byteSize()), 0);
     EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult2.second.begin()->second->cbuffer()), blobData2.data(), sessionResult2.second.begin()->second->byteSize()), 0);
 }
+
+TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
+    const uint16_t demultiplyCount = 3;
+    std::vector<float> blobData{-1, 4, 5, 12, 3, 52};
+    // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
+    const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
+    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::CHW};
+    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobData.data());
+    // construct demultiplexer node
+    NodeSessionMetadata meta;
+    ConstructorEnabledModelManager manager;
+    std::string demultiplexerNodeName("node");
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    demultiplexerNode.setFetchResult(intermediateResultBlob);
+    SessionResults sessionResults;
+    session_key_t sessionKey = meta.getSessionKey();
+    // perform test
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
+    ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY);
+}
+
+TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutput) {
+    std::vector<float> blobData{-1, 4, 5, 12, 3, 52};
+    const uint16_t demultiplyCount = blobData.size();
+    // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
+    const std::vector<size_t> shape{1, demultiplyCount};
+    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
+    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobData.data());
+    // construct demultiplexer node
+    NodeSessionMetadata meta;
+    ConstructorEnabledModelManager manager;
+    std::string demultiplexerNodeName("node");
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    demultiplexerNode.setFetchResult(intermediateResultBlob);
+    SessionResults sessionResults;
+    session_key_t sessionKey = meta.getSessionKey();
+    // perform test
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
+    ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY);
+}
+// TODO check for multiple output if those were demultiplied

@@ -81,6 +81,8 @@ protected:
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
+    Status loadOVExecutableNetwork(const ModelConfig& config) override;
+
 private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);
 };

@@ -77,7 +77,24 @@ TEST(ModelControlApi, positive) {
     createConfigFileWithContent(config_1);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    const char* expectedJson = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
     auto status = handler.processModelControlApiRequest(response);
+
+    EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
@@ -95,23 +112,50 @@ TEST(ModelControlApi, configChange) {
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    manager.loadConfig(configFile);
+
+    const char* expectedJson_1 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+
+    auto status = handler.processModelControlApiRequest(response);
+    EXPECT_EQ(expectedJson_1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
     createConfigFileWithContent(empty_config);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    auto status = handler.processModelControlApiRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-
-    std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_1);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    const char* expectedJson_2 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
 
     status = handler.processModelControlApiRequest(response);
+    EXPECT_EQ(expectedJson_2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
