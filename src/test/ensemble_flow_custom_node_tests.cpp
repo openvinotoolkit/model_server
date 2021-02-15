@@ -1054,10 +1054,9 @@ enum OPS {
 };
 
 static void prepareDifferentOpsExpectedOutput(std::vector<float>& expectedOutput, const std::vector<float>& input, const std::vector<float>& factors) {
-    const size_t dummy_size = 10;
     for (size_t j = 0; j < 4; ++j) {  // iterate over ops
-        for (size_t i = 0; i < dummy_size; ++i) {
-            size_t index = dummy_size * j + i;
+        for (size_t i = 0; i < DUMMY_MODEL_OUTPUT_SIZE; ++i) {
+            size_t index = DUMMY_MODEL_OUTPUT_SIZE * j + i;
             switch (j) {
             case ADD:
                 expectedOutput[index] = input[i] + factors[j];
@@ -1083,16 +1082,15 @@ enum class Method {
 };
 
 std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
-    const size_t dummy_size = 10;
-    std::vector<float> expectedOutput(dummy_size);
-    size_t tensorsCount = input.size() / dummy_size;
+    std::vector<float> expectedOutput(DUMMY_MODEL_OUTPUT_SIZE);
+    size_t tensorsCount = input.size() / DUMMY_MODEL_OUTPUT_SIZE;
     // perform operations
     std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
     std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
     std::vector<float> averages(tensorsCount, 0);
     for (size_t opId = 0; opId < tensorsCount; ++opId) {  // iterate over ops
-        for (size_t i = 0; i < dummy_size; ++i) {
-            size_t index = dummy_size * opId + i;
+        for (size_t i = 0; i < DUMMY_MODEL_OUTPUT_SIZE; ++i) {
+            size_t index = DUMMY_MODEL_OUTPUT_SIZE * opId + i;
             switch (option) {
             case Method::MAXIMUM_MAXIMUM:
                 maximums[opId] = std::max(maximums[opId], input[index]);
@@ -1108,7 +1106,7 @@ std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, 
                 break;
             }
         }
-        averages[opId] /= dummy_size;
+        averages[opId] /= DUMMY_MODEL_OUTPUT_SIZE;
     }
     // choose tensor
     size_t whichTensor = 42;
@@ -1130,16 +1128,14 @@ std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, 
         std::max_element(fromWhichContainerToChoose->begin(),
             fromWhichContainerToChoose->end()));
     // copy tensor
-    std::copy(input.begin() + dummy_size * whichTensor,
-        input.begin() + dummy_size * (whichTensor + 1),
+    std::copy(input.begin() + DUMMY_MODEL_OUTPUT_SIZE * whichTensor,
+        input.begin() + DUMMY_MODEL_OUTPUT_SIZE * (whichTensor + 1),
         expectedOutput.begin());
     return expectedOutput;
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDifferentOpsCustomNode) {
     std::unique_ptr<Pipeline> pipeline;
-    std::cout << pipelineCustomNodeDifferentOperationsConfig << std::endl;
-
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
     this->prepareRequest(request, input, differentOpsInputName);
@@ -1147,10 +1143,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    SPDLOG_ERROR("ER");
 
-    const size_t dummy_size = 10;
-    std::vector<float> expectedOutput(4 * dummy_size);
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
 }
@@ -1227,8 +1221,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
 
-    const size_t dummy_size = 10;
-    std::vector<float> expectedOutput(4 * dummy_size);
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
@@ -1329,8 +1322,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
 
-    const size_t dummy_size = 10;
-    std::vector<float> expectedOutput(4 * dummy_size);
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
@@ -1444,8 +1436,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
 
-    const size_t dummy_size = 10;
-    std::vector<float> expectedOutput(4 * dummy_size);
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });

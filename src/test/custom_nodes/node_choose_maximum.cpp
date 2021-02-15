@@ -23,8 +23,6 @@
 
 #include "../../custom_node_interface.h"
 
-static const size_t DUMMY_INPUT_SIZE = 10;
-
 extern "C" {
 enum Method {
     MAXIMUM_MINIMUM,
@@ -63,8 +61,23 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         return 1;
     }
     float* inputTensor;
+    size_t valuesPerTensor = 0;
+    size_t numberOfOps = 0;
     for (size_t i = 0; i < inputsLength; ++i) {
         if (INPUT_TENSOR_NAME == inputs[i].name) {
+            if (inputs[i].dimsLength != 3 ||
+                inputs[i].dims[0] != 1 ||
+                inputs[i].dims[1] == 0 ||
+                inputs[i].dims[2] == 0) {
+                std::cout << "improper " << INPUT_TENSOR_NAME
+                          << " dimensions: [" << inputs[i].dims[0]
+                          << ", " << inputs[i].dims[1]
+                          << ", " << inputs[i].dims[2] << "]" << std::endl;
+                return 1;
+            }
+            std::cout << "Input valuesPerTensor" << inputs[i].dims[1] << std::endl;
+            numberOfOps = inputs[i].dims[1];
+            valuesPerTensor = inputs[i].dims[2];
             inputTensor = reinterpret_cast<float*>(inputs[i].data);
         } else {
             std::cout << "Lacking input:" << INPUT_TENSOR_NAME << std::endl;
@@ -75,7 +88,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     // prepare output
     *outputsLength = 1;
     *outputs = new CustomNodeTensor[*outputsLength];
-    float* result = new float[DUMMY_INPUT_SIZE];
+    float* result = new float[valuesPerTensor];
 
     CustomNodeTensor& resultTensor = **outputs;
     resultTensor.name = "maximum_tensor";
@@ -83,19 +96,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     resultTensor.dimsLength = 2;
     resultTensor.dims = new uint64_t[resultTensor.dimsLength];
     resultTensor.dims[0] = 1;
-    resultTensor.dims[1] = DUMMY_INPUT_SIZE;
+    resultTensor.dims[1] = valuesPerTensor;
     resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * sizeof(float);
     resultTensor.precision = FP32;
 
-    // get adjustable dim
-    size_t tensorsCount = inputs[0].dims[1];
     // perform operations
-    std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
-    std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
-    std::vector<float> averages(tensorsCount, 0);
-    for (size_t opId = 0; opId < tensorsCount; ++opId) {  // TODO adjustable opsId
-        for (size_t dummyPos = 0; dummyPos < DUMMY_INPUT_SIZE; ++dummyPos) {
-            auto index = opId * DUMMY_INPUT_SIZE + dummyPos;
+    std::vector<float> minimums(numberOfOps, std::numeric_limits<int>::max());
+    std::vector<float> maximums(numberOfOps, std::numeric_limits<int>::lowest());
+    std::vector<float> averages(numberOfOps, 0);
+    for (size_t opId = 0; opId < numberOfOps; ++opId) {
+        for (size_t dummyPos = 0; dummyPos < valuesPerTensor; ++dummyPos) {
+            auto index = opId * valuesPerTensor + dummyPos;
             switch (selectionMethod) {
             case Method::MAXIMUM_MAXIMUM:
                 maximums[opId] = std::max(maximums[opId], inputTensor[index]);
@@ -115,7 +126,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
                       << " maximums:" << maximums[opId]
                       << std::endl;
         }
-        averages[opId] /= DUMMY_INPUT_SIZE;
+        averages[opId] /= valuesPerTensor;
     }
     // find which tensor to choose
     const std::vector<float>* fromWhichContainerToChoose = &maximums;
@@ -135,8 +146,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             fromWhichContainerToChoose->end()));
     std::cout << "Selected tensor pos: " << whichTensor << std::endl;
     // copy appropiate tensor
-    for (size_t i = 0; i < DUMMY_INPUT_SIZE; ++i) {
-        size_t index = whichTensor * DUMMY_INPUT_SIZE + i;
+    for (size_t i = 0; i < valuesPerTensor; ++i) {
+        size_t index = whichTensor * valuesPerTensor + i;
         std::cout << "Putting tensor:" << whichTensor
                   << " index:" << index
                   << " with value:" << inputTensor[index] << std::endl;
