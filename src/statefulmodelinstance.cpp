@@ -28,7 +28,6 @@ using namespace InferenceEngine;
 namespace ovms {
 
 StatefulModelInstance::~StatefulModelInstance() {
-    std::cout << "delete StatefulModelInstance " << (void*)(this) << std::endl;
     sequenceManager->join();
 }
 

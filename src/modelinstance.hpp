@@ -305,9 +305,7 @@ public:
     ModelInstance(const std::string& name, model_version_t version) :
         name(name),
         version(version),
-        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) {
-             std::cout << "ModelInstance " << (void*)(this) << std::endl;
-        }
+        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) {}
 
     /**
          * @brief Destroy the Model Instance object
