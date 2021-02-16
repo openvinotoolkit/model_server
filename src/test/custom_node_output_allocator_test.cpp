@@ -24,21 +24,26 @@ class NodeLibraryCheckingReleaseCalled {
 public:
     static bool releaseBufferCalled;
     static int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-    static int releaseBuffer(struct CustomNodeTensor* output);
-    static int releaseTensors(struct CustomNodeTensor* outputs);
+    static int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
+    static int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
+    static int release(void* ptr);
 };
 
 int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 1;
 }
 
-int NodeLibraryCheckingReleaseCalled::releaseBuffer(struct CustomNodeTensor* output) {
-    releaseBufferCalled = true;
+int NodeLibraryCheckingReleaseCalled::getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 2;
 }
 
-int NodeLibraryCheckingReleaseCalled::releaseTensors(struct CustomNodeTensor* outputs) {
+int NodeLibraryCheckingReleaseCalled::getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 3;
+}
+
+int NodeLibraryCheckingReleaseCalled::release(void* ptr) {
+    releaseBufferCalled = true;
+    return 4;
 }
 
 bool NodeLibraryCheckingReleaseCalled::releaseBufferCalled = false;
@@ -78,8 +83,9 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
         CustomNodeTensorPrecision::FP32};
     NodeLibrary library{
         NodeLibraryCheckingReleaseCalled::execute,
-        NodeLibraryCheckingReleaseCalled::releaseBuffer,
-        NodeLibraryCheckingReleaseCalled::releaseTensors};
+        NodeLibraryCheckingReleaseCalled::getInputsInfo,
+        NodeLibraryCheckingReleaseCalled::getOutputsInfo,
+        NodeLibraryCheckingReleaseCalled::release};
     std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     {
@@ -93,12 +99,16 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 1;
 }
 
-int releaseBuffer(struct CustomNodeTensor* output) {
+int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 2;
 }
 
-int releaseTensors(struct CustomNodeTensor* outputs) {
+int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 3;
+}
+
+int release(void* ptr) {
+    return 4;
 }
 
 TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
@@ -117,8 +127,9 @@ TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
         CustomNodeTensorPrecision::FP32};
     NodeLibrary library{
         execute,
-        releaseBuffer,
-        releaseTensors};
+        getInputsInfo,
+        getOutputsInfo,
+        release};
     std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
     blob->allocate();

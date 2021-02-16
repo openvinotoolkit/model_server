@@ -222,6 +222,8 @@ enum class StatusCode {
     NODE_LIBRARY_INVALID_PRECISION,
     NODE_LIBRARY_INVALID_SHAPE,
     NODE_LIBRARY_INVALID_CONTENT_SIZE,
+    NODE_LIBRARY_METADATA_FAILED,
+    NODE_LIBRARY_OUTPUT_MISSING_NAME,
 
     // Model control API
     OK_CONFIG_FILE_RELOAD_NOT_NEEDED, /*!< Operation succeeded but no config reload was needed */

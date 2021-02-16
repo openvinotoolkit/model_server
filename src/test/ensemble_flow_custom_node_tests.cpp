@@ -136,8 +136,9 @@ protected:
     static NodeLibrary createLibraryMock() {
         return NodeLibrary{
             T::execute,
-            T::releaseBuffer,
-            T::releaseTensors};
+            T::getInputsInfo,
+            T::getOutputsInfo,
+            T::release};
     }
 
     PredictRequest request;
@@ -345,10 +346,14 @@ struct LibraryFailInExecute {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -364,10 +369,14 @@ struct LibraryCorruptedOutputHandle {
         *outputsNum = 5;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -379,14 +388,18 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 
 struct LibraryCorruptedOutputsNumber {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
-        *handle = (struct CustomNodeTensor*)0x004def;
+        *handle = (struct CustomNodeTensor*)malloc(5 * sizeof(struct CustomNodeTensor));
         *outputsNum = 0;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -397,8 +410,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryMissingOutput {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -411,29 +422,24 @@ struct LibraryMissingOutput {
         (*handle)->dataLength = sizeof(float);
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        releaseBufferCalled = true;
-        free(tensor->dims);
-        free(tensor->data);
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryMissingOutput::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutput) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryMissingOutput>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_MISSING_OUTPUT);
-    ASSERT_TRUE(LibraryMissingOutput::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputPrecision {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -445,29 +451,24 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->dataLength = 1;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        releaseBufferCalled = true;
-        free(tensor->dims);
-        free(tensor->data);
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputPrecision::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidPrecision) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputPrecision>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
-    ASSERT_TRUE(LibraryIncorrectOutputPrecision::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputShape {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -479,28 +480,24 @@ struct LibraryIncorrectOutputShape {
         (*handle)->dataLength = 1;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        free(tensor->data);
-        releaseBufferCalled = true;
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputShape::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidShape) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputShape>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
-    ASSERT_TRUE(LibraryIncorrectOutputShape::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputContentSize {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -512,23 +509,21 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->dataLength = 0;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        free(tensor->dims);
-        releaseBufferCalled = true;
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputContentSize::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidContentSize) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputContentSize>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
-    ASSERT_TRUE(LibraryIncorrectOutputContentSize::releaseBufferCalled);
 }
 
 class EnsembleFlowCustomNodeFactoryCreateThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {};
@@ -550,7 +545,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactory
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, std::nullopt, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -608,7 +603,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFacto
             "custom_node_" + std::to_string(i),
             "", std::nullopt,
             {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, std::nullopt,
+            std::nullopt, {},
             library, parameters_t{{"add_value", std::to_string(addValues[i])}, {"sub_value", std::to_string(subValues[i])}})));
     }
 
