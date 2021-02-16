@@ -21,6 +21,8 @@
 
 #include <cxxopts.hpp>
 
+#include "modelconfig.hpp"
+
 namespace ovms {
 /**
      * @brief Provides all the configuration options from command line
