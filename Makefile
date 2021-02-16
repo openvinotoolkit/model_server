@@ -48,7 +48,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= releases/2021/2
 
-DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_latest.tgz
+DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.3.280.tgz
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
@@ -237,7 +237,7 @@ test_perf_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-v $(PWD)/src/test/dummy/1:/dummy/1 \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
@@ -287,7 +287,7 @@ test_throughput_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-v $(PWD)/src/test/dummy/1:/dummy/1 \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy \
