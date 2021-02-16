@@ -76,7 +76,6 @@ enum class StatusCode {
     INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Unexpected value of sequence control input */
     SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
     SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
-    SEQUENCE_TIMEDOUT,               /*!< Sequence has timed out and it's not available anymore */
     SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
 
     // Predict request validation
