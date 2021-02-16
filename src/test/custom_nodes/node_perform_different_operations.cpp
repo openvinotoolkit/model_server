@@ -65,14 +65,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
 
     // prepare outputs
     *outputsLength = 1;
-    *outputs = new CustomNodeTensor[*outputsLength];
-    float* result = new float[OPS_END * valuesPerTensor];  // dummy input size * numbr of ops
+    *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
+    float* result = (float*)malloc(OPS_END * valuesPerTensor * sizeof(float));  // dummy input size * numbr of ops
 
     CustomNodeTensor& resultTensor = *outputs[*outputsLength - 1];
     resultTensor.name = "different_ops_results";
     resultTensor.data = reinterpret_cast<uint8_t*>(result);
     resultTensor.dimsLength = 3;
-    resultTensor.dims = new uint64_t[resultTensor.dimsLength];
+    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
     resultTensor.dims[0] = 1;
     resultTensor.dims[1] = OPS_END;
     resultTensor.dims[2] = valuesPerTensor;
@@ -109,17 +109,43 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 0;
 }
 
-int releaseBuffer(struct CustomNodeTensor* output) {
-    std::cout << "DifferentOperationsCustomLibrary deleting "
-              << output->name << " buffer" << std::endl;
-    delete output->data;
-    delete output->dims;
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    *infoLength = 2;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+
+    (*info)[0].name = "input_numbers";
+    (*info)[0].precision = FP32;
+    (*info)[0].dimsLength = 2;
+    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[0].dims[0] = 1;
+    (*info)[0].dims[1] = 10;
+
+    (*info)[1].name = "op_factors";
+    (*info)[1].precision = FP32;
+    (*info)[1].dimsLength = 2;
+    (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[1].dims[0] = 1;
+    (*info)[1].dims[1] = 4;
+
     return 0;
 }
 
-int releaseTensors(struct CustomNodeTensor* outputs) {
-    std::cout << "DifferentOperationsCustomLibrary deleting outputs:" << outputs << std::endl;
-    delete[] outputs;
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    *infoLength = 1;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    (*info)->name = "different_ops_results";
+    (*info)->dimsLength = 3;
+    (*info)->dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)->dims[0] = 1;
+    (*info)->dims[1] = 4;
+    (*info)->dims[2] = 10;
+    (*info)->precision = FP32;
+    return 0;
+}
+
+int release(void* ptr) {
+    std::cout << "DifferentOperationsCustomLibrary release" << std::endl;
+    free(ptr);
     return 0;
 }
 }
