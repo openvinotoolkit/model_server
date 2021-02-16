@@ -443,7 +443,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
-    // END
+    // START
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::SEQUENCE_START);
@@ -453,7 +453,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
 
-    // START
+    // NO CONTROL
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
@@ -531,7 +531,7 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
-    // END
+    // START
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::SEQUENCE_START);
@@ -541,7 +541,7 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     // Do the inference
     ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
 
-    // START
+    // END
     request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
@@ -633,6 +633,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
     sequenceManagerLock.unlock();
     std::this_thread::sleep_for(std::chrono::seconds(3));
+    stetefulMockedModelInstance->getSequenceManager()->removeTimeOutedSequences();
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
@@ -753,7 +754,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
                 }));
     }
 
-    // sleep to allow all threads to initialize
+    // Sleep to allow all threads to initialize
     for (auto& promise : releaseWaitBeforeSequenceStarted) {
         promise.set_value();
     }
@@ -767,7 +768,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         promise.set_value();
     }
 
-    // sleep to allow half threads to work
+    // Sleep to allow half threads to work
     std::this_thread::sleep_for(std::chrono::seconds(2));
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 

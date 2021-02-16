@@ -193,6 +193,9 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
+    for (int i = 0; i < 10; i++) {
+        ASSERT_EQ(managers[i]->removeTimeOutedSequences(), ovms::StatusCode::OK);
+    }
 
     for (int i = 0; i < 10; i++) {
         std::cout << i << std::endl;
