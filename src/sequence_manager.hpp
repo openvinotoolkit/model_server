@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 
+#include "modelversion.hpp"
 #include "sequence.hpp"
 #include "sequence_processing_spec.hpp"
 #include "status.hpp"
@@ -37,12 +37,8 @@ private:
     uint32_t timeout;
     uint32_t maxSequenceNumber;
     std::string modelName;
+    model_version_t modelVersion;
     std::mutex mutex;
-    bool sequenceWatcherStarted;
-    /**
-     * Time interval between each sequences timeout check
-     */
-    uint sequenceWatcherIntervalSec;
 
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
@@ -55,24 +51,12 @@ protected:
 
 public:
     SequenceManager() = default;
-    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName) :
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber),
         modelName(modelName),
-        sequenceWatcherStarted(false),
-        sequenceWatcherIntervalSec(timeout / 2) {
-        startWatcher();
+        modelVersion(modelVersion) {
     }
-
-    SequenceManager(const SequenceManager& source) :
-        mutex() {
-        this->modelName = source.modelName;
-        this->timeout = source.timeout;
-        this->maxSequenceNumber = source.maxSequenceNumber;
-        this->sequenceWatcherIntervalSec = source.sequenceWatcherIntervalSec;
-    }
-
-    ~SequenceManager();
 
     uint64_t getSequencesCount() {
         return sequences.size();
@@ -94,34 +78,8 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status checkForTimedOutSequences();
+    Status removeTimeOutedSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
-
-    /**
-     * @brief Starts sequence monitoring as new thread
-     *
-     */
-    void startWatcher();
-
-    /**
-     * @brief Gracefully finish the monitoring thread
-     */
-    void join();
-
-    /**
-     * @brief A thread object used for monitoring changes in sequences
-     */
-    std::thread monitor;
-
-    /**
-     * @brief An exit signal to notify watcher thread to exit
-     */
-    std::promise<void> exit;
-
-    /**
-    * @brief Watcher thread for monitor changes in sequences
-    */
-    void watcher(std::future<void> exit);
 };
 }  // namespace ovms

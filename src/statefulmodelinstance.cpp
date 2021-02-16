@@ -27,10 +27,6 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
-StatefulModelInstance::~StatefulModelInstance() {
-    sequenceManager->join();
-}
-
 const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
         SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto does not contain tensor shape information", getName(), getVersion());
@@ -75,7 +71,7 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
 
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), config.getName());
+    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), config.getName(), config.getVersion());
     return ModelInstance::loadModelImpl(config, parameter);
 }
 
@@ -155,7 +151,6 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     Sequence& sequence = sequenceManager->getSequence(sequenceId);
 
     std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-    sequence.updateLastActivityTime();
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");

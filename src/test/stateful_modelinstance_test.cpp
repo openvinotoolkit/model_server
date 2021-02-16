@@ -169,7 +169,7 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
-    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy");
+    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy", 1);
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
 
@@ -219,7 +219,6 @@ public:
         }
 
         std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-        sequence.updateLastActivityTime();
         sequenceManagerLock.unlock();
 
         timer.start("get infer request");
@@ -363,7 +362,7 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
 }
 
-void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -383,21 +382,36 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceStarted.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
-
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitAfterSequenceStarted.set_value();
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED)
-        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceFinished.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
 
     // Wait for sequence timeout
     t1.join();
@@ -425,7 +439,7 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
     }
 }
 
-void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -455,21 +469,36 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
             modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
         });
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceStarted.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
-
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitAfterSequenceStarted.set_value();
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED)
-        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceFinished.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
 
     // Wait for sequence timeout
     t1.join();
@@ -498,7 +527,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     }
 }
 
-void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -540,21 +569,36 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
             }
         });
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceStarted.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
-
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitAfterSequenceStarted.set_value();
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED)
-        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
 
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
     waitBeforeSequenceFinished.set_value();
 
-    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED)
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+        if (!autoTimeout) {
+            modelInstance->getSequenceManager()->removeTimeOutedSequences();
+        }
+    }
 
     // Wait for sequence timeout
     t1.join();
@@ -611,25 +655,25 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout
         inferThreads.emplace_back(
             std::thread(
                 [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+                    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, false);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
                 [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_SEQUENCE_UNLOCKED);
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
                 [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_SEQUENCE_UNLOCKED);
+                    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
                 [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, false);
                 }));
     }
 
@@ -750,10 +794,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, false);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, false);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, false);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
@@ -768,10 +812,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
 
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, false);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, false);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, false);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
@@ -785,10 +829,10 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
     uint64_t seqId = 1;
     auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, false);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, false);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, false);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {

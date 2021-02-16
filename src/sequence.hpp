@@ -39,6 +39,7 @@ private:
     std::chrono::steady_clock::time_point lastActivityTime;
     std::mutex mutex;
     bool terminated;
+    void updateLastActivityTime();
 
 public:
     Sequence(uint64_t sequenceId) :
@@ -52,7 +53,6 @@ public:
     std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();
-    void updateLastActivityTime();
 };
 
 }  // namespace ovms

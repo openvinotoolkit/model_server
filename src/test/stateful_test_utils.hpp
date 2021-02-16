@@ -144,8 +144,8 @@ public:
 
 class MockedSequenceManager : public ovms::SequenceManager {
 public:
-    MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string name) :
-        ovms::SequenceManager(timeout, maxSequenceNumber, name) {}
+    MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string name, ovms::model_version_t version) :
+        ovms::SequenceManager(timeout, maxSequenceNumber, name, version) {}
 
     ovms::Status mockHasSequence(const uint64_t& sequenceId) {
         return ovms::SequenceManager::hasSequence(sequenceId);
