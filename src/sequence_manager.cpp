@@ -46,10 +46,14 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-Status SequenceManager::removeTimeOutedSequences() {
+// Default hardLockManager set to true beacause try_to_lock can be used when calling function from the same thread
+Status SequenceManager::removeTimeOutedSequences(bool hardLockManager = true) {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex, std::try_to_lock);
 
-    if (sequenceManagerLock.owns_lock()) {
+    if (!sequenceManagerLock.owns_lock() && hardLockManager)
+        std::unique_lock<std::mutex> sequenceManagerHardLock(mutex);
+
+    if (sequenceManagerLock.owns_lock() && !hardLockManager) {
         for (auto it = sequences.begin(); it != sequences.end();) {
             Sequence& sequence = it->second;
             // Non blocking try to get mutex

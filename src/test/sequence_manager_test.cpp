@@ -161,7 +161,7 @@ TEST(SequenceManager, RemoveOneTimedOutSequence) {
 
     sequenceManager.getSequence(42).updateMemoryState(newState);
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    sequenceManager.removeTimeOutedSequences();
+    sequenceManager.removeTimeOutedSequences(false);
 
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
@@ -175,7 +175,7 @@ TEST(SequenceManager, RemoveAllTimedOutSequences) {
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    sequenceManager.removeTimeOutedSequences();
+    sequenceManager.removeTimeOutedSequences(false);
     ASSERT_FALSE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
 }
@@ -194,7 +194,7 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
     for (int i = 0; i < 10; i++) {
-        ASSERT_EQ(managers[i]->removeTimeOutedSequences(), ovms::StatusCode::OK);
+        ASSERT_EQ(managers[i]->removeTimeOutedSequences(false), ovms::StatusCode::OK);
     }
 
     for (int i = 0; i < 10; i++) {
