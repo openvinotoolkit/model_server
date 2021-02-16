@@ -134,6 +134,7 @@ Status GetModelStatusImpl::getModelStatus(
 }
 
 Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
+    std::shared_lock lock(manager.modelsMtx);
     const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
     for (auto const& model : models) {
