@@ -53,7 +53,7 @@ Status SequenceManager::removeTimeOutedSequences(bool hardLockManager = true) {
     if (!sequenceManagerLock.owns_lock() && hardLockManager)
         std::unique_lock<std::mutex> sequenceManagerHardLock(mutex);
 
-    if (sequenceManagerLock.owns_lock() && !hardLockManager) {
+    if ((sequenceManagerLock.owns_lock() && !hardLockManager) || hardLockManager) {
         for (auto it = sequences.begin(); it != sequences.end();) {
             Sequence& sequence = it->second;
             // Non blocking try to get mutex
