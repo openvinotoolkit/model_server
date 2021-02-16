@@ -686,6 +686,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
                 for (auto& [inputName, tensorInfo] : modelInstance->getInputsInfo()) {
                     if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
                         isBsGreaterThan1Used = true;
+                        break;
                     }
                 }
                 if (modelInstance->getBatchSize() >= 2) {
