@@ -51,7 +51,7 @@ public:
     void release() override;
 
 private:
-    static std::unique_ptr<struct CustomNodeTensor[]> createInputTensorsForLibrary(const BlobMap& blobMap);
+    static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library);
     Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library);
 };
 }  // namespace ovms

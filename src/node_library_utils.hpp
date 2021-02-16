@@ -15,23 +15,25 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include <inference_engine.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
+#include "node_library.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int);
-typedef int (*metadata_fn)(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int);
-typedef int (*release_fn)(void*);
+class TensorInfo;
 
-struct NodeLibrary {
-    execute_fn execute = nullptr;
-    metadata_fn getInputsInfo = nullptr;
-    metadata_fn getOutputsInfo = nullptr;
-    release_fn release = nullptr;
-
-    bool isValid() const;
-};
+CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision precision);
+InferenceEngine::Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
+std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap);
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap);
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoLength, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback);
 
 }  // namespace ovms

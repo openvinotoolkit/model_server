@@ -82,6 +82,8 @@ cc_library(
         "nodeinfo.hpp",
         "node_library.cpp",
         "node_library.hpp",
+        "node_library_utils.cpp",
+        "node_library_utils.hpp",
         "nodesession.cpp",
         "nodesession.hpp",
         "nodesessionresult.hpp",
