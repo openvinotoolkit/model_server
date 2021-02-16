@@ -22,11 +22,13 @@
 
 #include "../custom_node.hpp"
 #include "../custom_node_library_manager.hpp"
+#include "../node_library_utils.hpp"
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
 #include "../node_library.hpp"
 #include "../pipelinedefinition.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -130,15 +132,6 @@ protected:
         for (size_t i = 0; i < actual.size(); i++) {
             EXPECT_NEAR(actual[i], data[i], 0.001);
         }
-    }
-
-    template <typename T>
-    static NodeLibrary createLibraryMock() {
-        return NodeLibrary{
-            T::execute,
-            T::getInputsInfo,
-            T::getOutputsInfo,
-            T::release};
     }
 
     PredictRequest request;
@@ -1440,4 +1433,255 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
+
 // TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)
+
+struct LibraryParamControlledMetadata {
+    static bool startsWith(const char* str, const char *prefix)
+    {
+        size_t strLen = std::strlen(str);
+        size_t prefixLen = std::strlen(prefix);
+        return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
+    }
+    static CustomNodeTensorInfo extractMetadata(const char* key, const char* value)
+    {
+        SPDLOG_INFO("__________{}/{}", key, value);
+        std::string valueStr = value;
+        auto tokens = tokenize(valueStr, ';');
+        std::string shape = tokens[0];
+        std::string precision = tokens[1];
+        tokens = tokenize(shape, ',');
+        shape_t shapeVector;
+        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeVector),
+               [](const std::string& str) { return std::stoull(str); });
+        InferenceEngine::Precision iePrecision = InferenceEngine::Precision::FromStr(precision);
+        CustomNodeTensorPrecision cnPrecision = toCustomNodeTensorPrecision(iePrecision);
+        CustomNodeTensorInfo info;
+        info.name = key; // TODO: this is might not be safe? - check life time
+        info.dimsLength = shapeVector.size();
+        info.dims = (uint64_t*)malloc(info.dimsLength * sizeof(uint64_t));
+        std::memcpy(info.dims, shapeVector.data(), info.dimsLength * sizeof(uint64_t));
+        info.precision = cnPrecision;
+        return info;
+        // in format:
+        // "in_InputA": "1,2,500;FP32"
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+        return 1;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+        int inputs = 0;
+        for (int i = 0; i < paramsLength; i++) {
+            if (startsWith(params[i].key, "in_")) {
+                inputs++;
+            }
+        }
+        if (inputs == 0) {
+            return 1;
+        }
+        *infoLength = inputs;
+        *info = (struct CustomNodeTensorInfo*)malloc(inputs * sizeof(CustomNodeTensorInfo));
+        int preparedInputsMetaCount = 0;
+        for (int i = 0; i < paramsLength; i++) {
+            if (startsWith(params[i].key, "in_")) {
+                (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
+                preparedInputsMetaCount++;
+            }
+        }
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+        int outputs = 0;
+        for (int i = 0; i < paramsLength; i++) {
+            if (startsWith(params[i].key, "out_")) {
+                outputs++;
+            }
+        }
+        if (outputs == 0) {
+            return 1;
+        }
+        *infoLength = outputs;
+        *info = (struct CustomNodeTensorInfo*)malloc(outputs * sizeof(CustomNodeTensorInfo));
+        int preparedInputsMetaCount = 0;
+        for (int i = 0; i < paramsLength; i++) {
+            if (startsWith(params[i].key, "out_")) {
+                (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
+                preparedInputsMetaCount++;
+            }
+        }
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
+        return 0;
+    }
+};
+
+class EnsembleConfigurationValidationWithCustomNode : public ::testing::Test {
+protected:
+    void SetUp() override {
+        mockedLibrary = createLibraryMock<LibraryParamControlledMetadata>();
+        ASSERT_TRUE(mockedLibrary.isValid());
+    }
+
+    NodeLibrary mockedLibrary;
+
+    // TODO: Move to test_utils?
+    const std::string customNodeInputName = "input_numbers";
+    const std::string customNodeOutputName = "output_numbers";
+    static constexpr const char* pipelineInputName = "pipeline_input";
+    const std::string pipelineOutputName = "pipeline_output";
+};
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, SuccessfulConfiguration) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"},{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}
+            }},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}
+            }},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {
+            {pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {
+            {"1", "in_InputNumbers_1"},
+            {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenCustomNodes) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"},{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}
+            }},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}
+            }},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {
+            {pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {
+            {"1", "in_InputNumbers_1"},
+            {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenDLModelAndCustomNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenCustomNodeAndDLNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenCustomNodes) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeInputsAreConnected) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeOutputsAreConnected) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, SharedLibraryErrorsOnMetadataCall) {
+    ASSERT_FALSE(true);
+}
+
+class EnsembleConfigurationValidationWithDemultiplexer : public ::testing::Test {};
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDemultiplexer) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationMultipleDemultiplexers) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    // Not possible - missing such model?
+    // Mock
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenCustomNodes) {
+    ASSERT_FALSE(true);
+}
+
+class EnsembleConfigurationValidationWithGather : public ::testing::Test {};
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    // Mock model instance with desired shape
+    ASSERT_FALSE(true);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNodes) {
+    ASSERT_FALSE(true);
+}
