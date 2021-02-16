@@ -154,8 +154,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
 
 Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output) {
     std::string outputTmp;
-    if(modelsStatuses.begin() == modelsStatuses.end())
-    {
+    if (modelsStatuses.begin() == modelsStatuses.end()) {
         output = "{}";
         return StatusCode::OK;
     }

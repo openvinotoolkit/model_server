@@ -49,7 +49,6 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
 const std::string HttpRestApiHandler::modelControlApiRegexExp = R"((.?)\/config\/reload)";
 
-
 Status HttpRestApiHandler::validateUrlAndMethod(
     const std::string_view http_method,
     const std::string& request_path,
@@ -144,9 +143,7 @@ Status HttpRestApiHandler::processRequest(
     if (std::regex_match(request_path_str, sm, modelControlApiRegex)) {
         if (http_method == "POST") {
             return processModelControlApiRequest(*response);
-        }
-        else
-        {
+        } else {
             return StatusCode::REST_UNSUPPORTED_METHOD;
         }
     }
@@ -340,8 +337,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     return StatusCode::OK;
 }
 
-std::string createErrorJsonWithMessage(std::string message)
-{
+std::string createErrorJsonWithMessage(std::string message) {
     return "{\n\t\"error_message\": \"" + message + "\"\n}";
 }
 
