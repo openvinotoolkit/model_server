@@ -117,6 +117,11 @@ private:
     void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
     /**
+     * @brief Mutex for protecting concurrent reloading config
+     */
+    mutable std::recursive_mutex configMtx;
+
+    /**
      * Time interval between each config file check
      */
     uint watcherIntervalSec = 1;
@@ -131,11 +136,6 @@ public:
      * @brief Mutex for blocking concurrent add & find of model
      */
     mutable std::shared_mutex modelsMtx;
-
-    /**
-     * @brief Mutex for protecting concurrent reloading config
-     */
-    mutable std::recursive_mutex configMtx;
 
     /**
      * @brief Gets the instance of ModelManager

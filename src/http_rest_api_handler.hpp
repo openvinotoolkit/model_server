@@ -30,15 +30,6 @@
 
 namespace ovms {
 
-struct HttpRequestComponents {
-    std::string_view http_method;
-    std::string model_name;
-    std::optional<int64_t> model_version;
-    std::optional<std::string_view> model_version_label;
-    std::string processing_method;
-    std::string model_subresource;
-};
-
 class HttpRestApiHandler {
 public:
     static const std::string kPathRegexExp;
@@ -52,7 +43,6 @@ public:
      * @param timeout_in_ms 
      */
     HttpRestApiHandler(int timeout_in_ms) :
-        sanityRegex(kPathRegexExp),
         predictionRegex(predictionRegexExp),
         modelstatusRegex(modelstatusRegexExp),
         modelControlApiRegex(modelControlApiRegexExp),
@@ -69,7 +59,8 @@ public:
         const std::string_view request_path,
         const std::string& request_body,
         std::string* response,
-        const HttpRequestComponents& request_components);
+        std::smatch& sm,
+        const std::string_view http_method);
 
     /**
      * @brief Process Request
@@ -154,7 +145,6 @@ public:
     Status processModelControlApiRequest(std::string& response);
 
 private:
-    const std::regex sanityRegex;
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
     const std::regex modelControlApiRegex;
