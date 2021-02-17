@@ -340,15 +340,17 @@ public:
     }
 
     Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
-        auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [dependantNodeInfo](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == dependantNodeInfo.gatherFromNode; });
-        if (it == nodeInfos.end()) {
-            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE;
-        }
-        if (!it->demultiplyCount) {
-            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
-        }
-        if (it->kind == NodeKind::ENTRY) {
-            return StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE;
+        for (const auto& gather : dependantNodeInfo.gatherFromNode) {
+            auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
+            if (it == nodeInfos.end()) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE;
+            }
+            if (!it->demultiplyCount) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
+            }
+            if (it->kind == NodeKind::ENTRY) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE;
+            }
         }
         return StatusCode::OK;
     }
@@ -541,7 +543,7 @@ public:
             }
         }
 
-        if (dependantNodeInfo.gatherFromNode) {
+        if (!dependantNodeInfo.gatherFromNode.empty()) {
             auto result = validateGatherNode(dependantNodeInfo);
             if (!result.ok()) {
                 return result;
