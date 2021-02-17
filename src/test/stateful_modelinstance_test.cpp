@@ -679,7 +679,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
-TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout) {
+TEST_F(StatefulModelInstanceTempDir, DISABLED_statefulInferMultipleThreadsSequenceTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     SetUpConfig(modelStatefulConfigTimeout4);
@@ -825,7 +825,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
-TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
+TEST_F(StatefulModelInstanceTempDir, DISABLED_statefulInferSequenceStartTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     SetUpConfig(modelStatefulConfigTimeout4);
@@ -843,7 +843,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
     RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
 }
 
-TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
+TEST_F(StatefulModelInstanceTempDir, DISABLED_statefulInferSequenceNoControlTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     SetUpConfig(modelStatefulConfigTimeout4);
@@ -861,7 +861,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
     RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, false);
 }
 
-TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
+TEST_F(StatefulModelInstanceTempDir, DISABLED_statefulInferSequenceEndTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     SetUpConfig(modelStatefulConfigTimeout4);
