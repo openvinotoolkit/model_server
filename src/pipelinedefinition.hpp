@@ -84,7 +84,7 @@ protected:
 private:
     std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
-    Status validateNode(ModelManager& manager, const NodeInfo& node);
+    Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
     Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback) const;
 

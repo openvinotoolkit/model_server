@@ -28,58 +28,62 @@
 
 namespace ovms {
 
-    const uint32_t NO_CONTROL_INPUT = 0;
-    const uint32_t SEQUENCE_START = 1;
-    const uint32_t SEQUENCE_END = 2;
+const uint32_t NO_CONTROL_INPUT = 0;
+const uint32_t SEQUENCE_START = 1;
+const uint32_t SEQUENCE_END = 2;
 
-    class SequenceManager {
-    private:
-        uint32_t timeout;
-        uint32_t maxSequenceNumber;
-        std::string modelName;
-        model_version_t modelVersion;
-        std::mutex mutex;
+class SequenceManager {
+private:
+    uint32_t timeout;
+    uint32_t maxSequenceNumber;
+    std::string modelName;
+    model_version_t modelVersion;
+    std::mutex mutex;
 
-    protected:
-        std::unordered_map<uint64_t, Sequence> sequences;
+protected:
+    std::unordered_map<uint64_t, Sequence> sequences;
 
-        Status hasSequence(const uint64_t sequenceId);
+    uint64_t sequenceIdCounter;
 
-        Status createSequence(const uint64_t sequenceId);
+    uint64_t getUniqueSequenceId();
 
-        Status terminateSequence(const uint64_t sequenceId);
+    Status hasSequence(const uint64_t sequenceId);
 
-    public:
-        SequenceManager() = default;
-        SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
-            timeout(timeout),
-            maxSequenceNumber(maxSequenceNumber),
-            modelName(modelName),
-            modelVersion(modelVersion) {
-        }
+    Status createSequence(SequenceProcessingSpec& sequenceProcessingSpec);
 
-        uint64_t getSequencesCount() {
-            return sequences.size();
-        }
+    Status terminateSequence(const uint64_t sequenceId);
 
-        const uint32_t getTimeout() const;
+public:
+    SequenceManager() = default;
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
+        timeout(timeout),
+        maxSequenceNumber(maxSequenceNumber),
+        modelName(modelName),
+        modelVersion(modelVersion),
+        sequenceIdCounter(1) {}
 
-        void setTimeout(uint32_t timeout);
+    uint64_t getSequencesCount() {
+        return sequences.size();
+    }
 
-        const uint32_t getMaxSequenceNumber() const;
+    const uint32_t getTimeout() const;
 
-        void setMaxSequenceNumber(uint32_t maxSequenceNumber);
+    void setTimeout(uint32_t timeout);
 
-        std::mutex& getMutex();
+    const uint32_t getMaxSequenceNumber() const;
 
-        bool sequenceExists(const uint64_t sequenceId) const;
+    void setMaxSequenceNumber(uint32_t maxSequenceNumber);
 
-        Sequence& getSequence(const uint64_t sequenceId);
+    std::mutex& getMutex();
 
-        Status removeSequence(const uint64_t sequenceId);
+    bool sequenceExists(const uint64_t sequenceId) const;
 
-        Status removeTimeOutedSequences();
+    Sequence& getSequence(const uint64_t sequenceId);
 
-        Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
-    };
+    Status removeSequence(const uint64_t sequenceId);
+
+    Status removeTimeOutedSequences();
+
+    Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
+};
 }  // namespace ovms
