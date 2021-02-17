@@ -94,7 +94,6 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
 }
 
 Status SequenceManager::createSequence(SequenceProcessingSpec& sequenceProcessingSpec) {
-
     if (sequences.size() >= this->maxSequenceNumber) {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Max sequence number has been reached. Could not create new sequence.", modelName, modelVersion);
         return StatusCode::MAX_SEQUENCE_NUMBER_REACHED;
