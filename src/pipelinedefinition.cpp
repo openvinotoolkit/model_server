@@ -265,6 +265,7 @@ class NodeValidator {
     const NodeInfo& dependantNodeInfo;
     const pipeline_connections_t& connections;
     const std::vector<NodeInfo>& nodeInfos;
+    const bool isMultiBatchAllowed;
 
     std::unique_ptr<ModelInstanceUnloadGuard> dependantModelUnloadGuard;
     std::shared_ptr<ModelInstance> dependantModelInstance;
@@ -276,12 +277,14 @@ public:
         ModelManager& manager,
         const NodeInfo& dependantNodeInfo,
         const pipeline_connections_t& connections,
-        const std::vector<NodeInfo>& nodeInfos) :
+        const std::vector<NodeInfo>& nodeInfos,
+        const bool isMultiBatchAllowed = true) :
         pipelineName(pipelineName),
         manager(manager),
         dependantNodeInfo(dependantNodeInfo),
         connections(connections),
-        nodeInfos(nodeInfos) {
+        nodeInfos(nodeInfos),
+        isMultiBatchAllowed(isMultiBatchAllowed) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation of pipeline: {}; node name: {}; node kind: {}",
             pipelineName,
             dependantNodeInfo.nodeName,
@@ -335,6 +338,20 @@ public:
                 dependantNodeInfo.nodeName,
                 dependantNodeInfo.modelName);
             return StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER;
+        }
+        return StatusCode::OK;
+    }
+
+    Status checkForRestrictedBatchSize() {
+        if (!isMultiBatchAllowed) {
+            for (auto& [inputName, tensorInfo] : dependantModelInstance->getInputsInfo()) {
+                if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
+                    return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
+                }
+            }
+            if (dependantModelInstance->getBatchSize() >= 2) {
+                return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
+            }
         }
         return StatusCode::OK;
     }
@@ -534,6 +551,11 @@ public:
                 return result;
             }
 
+            result = checkForRestrictedBatchSize();
+            if (!result.ok()) {
+                return result;
+            }
+
             prepareRemainingUnconnectedDependantModelInputsSet();
         }
 
@@ -577,8 +599,8 @@ public:
     }
 };
 
-Status PipelineDefinition::validateNode(ModelManager& manager, const NodeInfo& dependantNodeInfo) {
-    NodeValidator validator(this->pipelineName, manager, dependantNodeInfo, connections, nodeInfos);
+Status PipelineDefinition::validateNode(ModelManager& manager, const NodeInfo& dependantNodeInfo, const bool isMultiBatchAllowed) {
+    NodeValidator validator(this->pipelineName, manager, dependantNodeInfo, connections, nodeInfos, isMultiBatchAllowed);
     return validator.validate();
 }
 
@@ -682,6 +704,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         return StatusCode::PIPELINE_MULTIPLE_EXIT_NODES;
     }
 
+    const bool isMultiBatchAllowed = !std::any_of(nodeInfos.begin(), nodeInfos.end(), [](const auto& node) { return node.demultiplyCount; });
     for (const auto& node : nodeInfos) {
         auto findByName = [node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
@@ -692,12 +715,11 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
-        auto result = validateNode(manager, node);
+        auto result = validateNode(manager, node, isMultiBatchAllowed);
         if (!result.ok()) {
             return result;
         }
     }
-
     return StatusCode::OK;
 }
 
