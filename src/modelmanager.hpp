@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
 #include <future>
 #include <map>
 #include <memory>
@@ -31,7 +32,6 @@
 
 #include "customloaders.hpp"
 #include "filesystem.hpp"
-#include "logging.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
