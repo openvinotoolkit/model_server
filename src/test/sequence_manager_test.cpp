@@ -227,7 +227,7 @@ TEST(SequenceManager, RemoveOneTimedOutSequence) {
     std::iota(state1.begin(), state1.end(), 0);
     addState(newState, "state1", shape1, state1);
 
-    MockedSequenceManager sequenceManager(2, 24);
+    MockedSequenceManager sequenceManager(2, 24, "dummy", 1);
     EXPECT_EQ(sequenceManager.getTimeout(), 2);
     uint64_t sequenceId1 = 42;
     ovms::SequenceProcessingSpec spec1(ovms::SEQUENCE_START, sequenceId1);
@@ -254,27 +254,32 @@ TEST(SequenceManager, RemoveOneTimedOutSequence) {
 
 TEST(SequenceManager, RemoveAllTimedOutSequences) {
     MockedSequenceManager sequenceManager(2, 24, "dummy", 1);
-    sequenceManager.mockCreateSequence(42);
-    sequenceManager.mockCreateSequence(314);
+    uint64_t sequenceId1 = 42;
+    ovms::SequenceProcessingSpec spec1(ovms::SEQUENCE_START, sequenceId1);
+    uint64_t sequenceId2 = 314;
+    ovms::SequenceProcessingSpec spec2(ovms::SEQUENCE_START, sequenceId2);
+    sequenceManager.mockCreateSequence(spec1);
+    sequenceManager.mockCreateSequence(spec2);
 
-    ASSERT_TRUE(sequenceManager.sequenceExists(42));
-    ASSERT_TRUE(sequenceManager.sequenceExists(314));
+    ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
+    ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId2));
     std::this_thread::sleep_for(std::chrono::seconds(3));
     sequenceManager.removeTimedOutSequences();
-    ASSERT_FALSE(sequenceManager.sequenceExists(42));
-    ASSERT_FALSE(sequenceManager.sequenceExists(314));
+    ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId1));
+    ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId2));
 }
 
 TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
     std::vector<MockedSequenceManager*> managers;
     for (int i = 0; i < 10; i++) {
         MockedSequenceManager* sequenceManager = new MockedSequenceManager(2, 10, std::to_string(i), 1);
-        sequenceManager->mockCreateSequence(i);
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i + 1);
+        sequenceManager->mockCreateSequence(spec);
         managers.push_back(sequenceManager);
     }
 
     for (int i = 0; i < 10; i++) {
-        ASSERT_TRUE(managers[i]->sequenceExists(i));
+        ASSERT_TRUE(managers[i]->sequenceExists(i + 1));
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
@@ -283,7 +288,7 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
     }
 
     for (int i = 0; i < 10; i++) {
-        ASSERT_FALSE(managers[i]->sequenceExists(i));
+        ASSERT_FALSE(managers[i]->sequenceExists(i + 1));
     }
 
     for (int i = 0; i < 10; i++) {
