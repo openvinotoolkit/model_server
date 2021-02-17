@@ -35,8 +35,8 @@
 #pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
-#include "../tensorinfo.hpp"
 #include "../node_library.hpp"
+#include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
