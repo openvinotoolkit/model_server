@@ -78,7 +78,7 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimeOutedSequences(bool hardLockManager);
+    Status removeTimeOutedSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };

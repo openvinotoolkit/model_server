@@ -161,16 +161,10 @@ TEST(SequenceManager, RemoveOneTimedOutSequence) {
 
     sequenceManager.getSequence(42).updateMemoryState(newState);
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    sequenceManager.removeTimeOutedSequences(false);
+    sequenceManager.removeTimeOutedSequences();
 
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
-
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-
-    sequenceManager.removeTimeOutedSequences(true);
-
-    ASSERT_FALSE(sequenceManager.sequenceExists(42));
 }
 
 TEST(SequenceManager, RemoveAllTimedOutSequences) {
@@ -181,20 +175,7 @@ TEST(SequenceManager, RemoveAllTimedOutSequences) {
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    sequenceManager.removeTimeOutedSequences(false);
-    ASSERT_FALSE(sequenceManager.sequenceExists(42));
-    ASSERT_FALSE(sequenceManager.sequenceExists(314));
-}
-
-TEST(SequenceManager, RemoveAllTimedOutSequencesHardLock) {
-    MockedSequenceManager sequenceManager(2, 24, "dummy", 1);
-    sequenceManager.mockCreateSequence(42);
-    sequenceManager.mockCreateSequence(314);
-
-    ASSERT_TRUE(sequenceManager.sequenceExists(42));
-    ASSERT_TRUE(sequenceManager.sequenceExists(314));
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    sequenceManager.removeTimeOutedSequences(true);
+    sequenceManager.removeTimeOutedSequences();
     ASSERT_FALSE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
 }
@@ -213,33 +194,7 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
     for (int i = 0; i < 10; i++) {
-        ASSERT_EQ(managers[i]->removeTimeOutedSequences(false), ovms::StatusCode::OK);
-    }
-
-    for (int i = 0; i < 10; i++) {
-        ASSERT_FALSE(managers[i]->sequenceExists(i));
-    }
-
-    for (int i = 0; i < 10; i++) {
-        delete managers[i];
-    }
-}
-
-TEST(SequenceManager, MultiManagersAllTimedOutSequencesHardLock) {
-    std::vector<MockedSequenceManager*> managers;
-    for (int i = 0; i < 10; i++) {
-        MockedSequenceManager* sequenceManager = new MockedSequenceManager(2, 10, std::to_string(i), 1);
-        sequenceManager->mockCreateSequence(i);
-        managers.push_back(sequenceManager);
-    }
-
-    for (int i = 0; i < 10; i++) {
-        ASSERT_TRUE(managers[i]->sequenceExists(i));
-    }
-
-    std::this_thread::sleep_for(std::chrono::seconds(4));
-    for (int i = 0; i < 10; i++) {
-        ASSERT_EQ(managers[i]->removeTimeOutedSequences(true), ovms::StatusCode::OK);
+        ASSERT_EQ(managers[i]->removeTimeOutedSequences(), ovms::StatusCode::OK);
     }
 
     for (int i = 0; i < 10; i++) {

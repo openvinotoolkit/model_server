@@ -46,31 +46,25 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-// Default hardLockManager set to true beacause try_to_lock can be used when calling function from the same thread
-Status SequenceManager::removeTimeOutedSequences(bool hardLockManager = true) {
-    std::unique_lock<std::mutex> sequenceManagerLock(mutex, std::try_to_lock);
+Status SequenceManager::removeTimeOutedSequences() {
+    std::unique_lock<std::mutex> sequenceManagerLock(mutex);
 
-    if (!sequenceManagerLock.owns_lock() && hardLockManager)
-        std::unique_lock<std::mutex> sequenceManagerHardLock(mutex);
-
-    if ((sequenceManagerLock.owns_lock() && !hardLockManager) || hardLockManager) {
-        for (auto it = sequences.begin(); it != sequences.end();) {
-            Sequence& sequence = it->second;
-            // Non blocking try to get mutex
-            std::unique_lock<std::mutex> sequenceLock(sequence.getMutex(), std::try_to_lock);
-            if (!sequence.isTerminated() && sequenceLock.owns_lock()) {
-                sequenceLock.unlock();
-                // We hold sequence manager lock before lock and after unlock so no other thread even attempts accessing that sequence at that moment
-                std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-                auto timeDiff = currentTime - sequence.getLastActivityTime();
-                if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                    SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed - Id: {}", modelName, modelVersion, sequence.getId());
-                    it = sequences.erase(it);
-                    continue;
-                }
+    for (auto it = sequences.begin(); it != sequences.end();) {
+        Sequence& sequence = it->second;
+        // Non blocking try to get mutex
+        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex(), std::try_to_lock);
+        if (!sequence.isTerminated() && sequenceLock.owns_lock()) {
+            sequenceLock.unlock();
+            // We hold sequence manager lock before lock and after unlock so no other thread even attempts accessing that sequence at that moment
+            std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+            auto timeDiff = currentTime - sequence.getLastActivityTime();
+            if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed - Id: {}", modelName, modelVersion, sequence.getId());
+                it = sequences.erase(it);
+                continue;
             }
-            ++it;
         }
+        ++it;
     }
 
     return StatusCode::OK;
