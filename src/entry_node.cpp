@@ -41,6 +41,9 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
     // TODO handle multiple sessions later on
     BlobMap outputs;
     auto status = fetchResults(outputs);
+    if (!status.ok()) {
+        return status;
+    }
     SessionResult metaOutputsPair{nodeSession.getNodeSessionMetadata(), std::move(outputs)};
     auto it = nodeSessionOutputs.emplace(nodeSession.getSessionKey(), std::move(metaOutputsPair));
     if (!it.second) {
@@ -63,7 +66,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name", getName(), details);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
             const auto& tensor_proto = request->inputs().at(output_name);
