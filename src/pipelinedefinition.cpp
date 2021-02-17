@@ -353,17 +353,14 @@ public:
     }
 
     Status checkForRestrictedBatchSize() {
-        if (!isMultiBatchAllowed && manager.modelExists(dependantNodeInfo.modelName)) {
-            auto modelInstance = manager.findModelByName(dependantNodeInfo.modelName)->getDefaultModelInstance();
-            if (modelInstance) {
-                for (auto& [inputName, tensorInfo] : modelInstance->getInputsInfo()) {
-                    if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
-                        return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
-                    }
-                }
-                if (modelInstance->getBatchSize() >= 2) {
+        if (!isMultiBatchAllowed) {
+            for (auto& [inputName, tensorInfo] : dependantModelInstance->getInputsInfo()) {
+                if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
                     return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
                 }
+            }
+            if (dependantModelInstance->getBatchSize() >= 2) {
+                return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
             }
         }
         return StatusCode::OK;
@@ -537,18 +534,18 @@ public:
     }
 
     Status validate() {
-        auto result = checkForRestrictedBatchSize();
-        if (!result.ok()) {
-            return result;
-        }
-
         if (dependantNodeInfo.kind == NodeKind::DL) {
-            result = fetchUnderlyingModelInstance();
+            auto result = fetchUnderlyingModelInstance();
             if (!result.ok()) {
                 return result;
             }
 
             result = checkForForbiddenDynamicParameters();
+            if (!result.ok()) {
+                return result;
+            }
+
+            result = checkForRestrictedBatchSize();
             if (!result.ok()) {
                 return result;
             }
@@ -569,7 +566,7 @@ public:
                 }
 
                 std::vector<NodeInfo>::const_iterator dependencyNodeInfo;
-                result = getDependencyNodeInfo(dependencyNodeName, dependencyNodeInfo);
+                auto result = getDependencyNodeInfo(dependencyNodeName, dependencyNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
