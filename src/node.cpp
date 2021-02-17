@@ -34,7 +34,12 @@ Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create node: {} with demultiply: {}, gatherFrom: {}.",
         getName(),
         demultiplyCount,
-        std::accumulate(gatherFromNode.begin(), gatherFromNode.end(), std::string(), [](const std::string& lhs, const std::string& rhs) { return lhs + ", " + rhs; }));
+        std::accumulate(gatherFromNode.begin(), gatherFromNode.end(), std::string("NA"), [](const std::string& lhs, const std::string& rhs) {
+            if (lhs == "NA") {
+                return rhs;
+            } else {
+                return lhs + ", " + rhs;
+            }}));
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
