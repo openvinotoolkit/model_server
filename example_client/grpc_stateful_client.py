@@ -113,8 +113,8 @@ def parse_arguments():
     parser.add_argument(
         '--sequence_id',
         required=False,
-        default=1,
-        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
+        default=0,
+        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 0')
 
     print('### Starting grpc_stateful_client.py client ###')
 
@@ -338,7 +338,7 @@ def main():
 
             # Unique sequence_id provided by OVMS
             if get_sequence_id:
-                sequence_id = np.uint64(result.outputs['sequence_id'])
+                sequence_id = result.outputs['sequence_id'].uint64_val[0]
                 get_sequence_id = False
 
             duration = (end_time - start_time).total_seconds() * 1000

@@ -43,9 +43,13 @@ private:
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
 
+    uint64_t sequenceIdCounter;
+
+    uint64_t getUniqueSequenceId();
+
     Status hasSequence(const uint64_t sequenceId);
 
-    Status createSequence(const uint64_t sequenceId);
+    Status createSequence(SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status terminateSequence(const uint64_t sequenceId);
 
@@ -55,8 +59,8 @@ public:
         timeout(timeout),
         maxSequenceNumber(maxSequenceNumber),
         modelName(modelName),
-        modelVersion(modelVersion) {
-    }
+        modelVersion(modelVersion),
+        sequenceIdCounter(1) {}
 
     uint64_t getSequencesCount() {
         return sequences.size();
@@ -78,7 +82,7 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimeOutedSequences();
+    Status removeTimedOutSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };
