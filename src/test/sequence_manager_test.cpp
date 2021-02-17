@@ -295,3 +295,18 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
         delete managers[i];
     }
 }
+
+TEST(SequenceManager, ExceedMaxSequenceNumber) {
+    MockedSequenceManager sequenceManager(120, 5, "dummy", 1);
+    uint64_t sequenceId = 1;
+    auto i = sequenceId;
+    for (; i < 6; i++) {
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i);
+        ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::OK);
+    }
+
+    for (; i < 3; i++) {
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i);
+        ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::MAX_SEQUENCE_NUMBER_REACHED);
+    }
+}
