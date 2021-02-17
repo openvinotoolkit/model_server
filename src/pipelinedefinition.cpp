@@ -339,6 +339,22 @@ public:
         return StatusCode::OK;
     }
 
+    Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
+        for (const auto& gather : dependantNodeInfo.gatherFromNode) {
+            auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
+            if (it == nodeInfos.end()) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE;
+            }
+            if (!it->demultiplyCount) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
+            }
+            if (it->kind == NodeKind::ENTRY) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE;
+            }
+        }
+        return StatusCode::OK;
+    }
+
     Status checkConnectionMappedToExistingDataSource(const NodeInfo& dependencyNodeInfo, std::shared_ptr<ModelInstance>& dependencyModelInstance, const std::string& dataSource) {
         // Check whether dependency node is configured to have required output.
         if (dependencyNodeInfo.outputNameAliases.count(dataSource) == 0) {
@@ -525,6 +541,17 @@ public:
             if (!dependantNodeInfo.library.isValid()) {
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
+        }
+
+        if (!dependantNodeInfo.gatherFromNode.empty()) {
+            auto result = validateGatherNode(dependantNodeInfo);
+            if (!result.ok()) {
+                return result;
+            }
+        }
+
+        if (dependantNodeInfo.kind == NodeKind::ENTRY && dependantNodeInfo.demultiplyCount) {
+            return StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE;
         }
 
         if (connections.count(dependantNodeInfo.nodeName) > 0) {

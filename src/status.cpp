@@ -134,6 +134,10 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
     {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
     {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE, "Gather node refers to not existing node"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
+    {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
