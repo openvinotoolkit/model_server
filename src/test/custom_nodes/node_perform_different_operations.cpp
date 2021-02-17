@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include <cstddef>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "../../custom_node_interface.h"
 

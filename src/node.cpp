@@ -39,7 +39,7 @@ Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::
                 return rhs;
             } else {
                 return lhs + ", " + rhs;
-            }}));
+            } }));
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {

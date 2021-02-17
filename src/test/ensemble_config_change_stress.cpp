@@ -839,16 +839,16 @@ public:
         }
     }
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) {
-            tensorflow::serving::PredictRequest request = preparePredictRequest(
-                {{pipelineInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
-            auto& input = (*request.mutable_inputs())[pipelineInputName];
-            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
-            return std::move(request);
+        tensorflow::serving::PredictRequest request = preparePredictRequest(
+            {{pipelineInputName,
+                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
+        auto& input = (*request.mutable_inputs())[pipelineInputName];
+        input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+        return std::move(request);
     }
     virtual void checkPipelineResponse(const std::string& pipelineOutputName,
-            tensorflow::serving::PredictRequest& request,
-            tensorflow::serving::PredictResponse& response) {
+        tensorflow::serving::PredictRequest& request,
+        tensorflow::serving::PredictResponse& response) {
         checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
     }
 
@@ -869,7 +869,7 @@ public:
                 break;
             }
             std::unique_ptr<Pipeline> pipelinePtr;
-            
+
             tensorflow::serving::PredictRequest request = preparePipelinePredictRequest(
                 {{pipelineInputName,
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
@@ -1094,32 +1094,30 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
         allowedLoadResults);
 }
 
-
-
 class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChanges {
     const size_t differentOpsFactorsInputSize = 4;
-    const std::vector<float> factorsData {1., 3, 2, 2};
-    const std::string pipelineFactorsInputName {"pipeline_factors"};
-    public:
+    const std::vector<float> factorsData{1., 3, 2, 2};
+    const std::string pipelineFactorsInputName{"pipeline_factors"};
+
+public:
     tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) override {
-            tensorflow::serving::PredictRequest request = preparePredictRequest(
-                {
-                    {pipelineInputName,
-                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
-                    {pipelineFactorsInputName,
-                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}});
-            auto& input = (*request.mutable_inputs())[pipelineInputName];
-            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
-            auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
-            factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
-            return std::move(request);
+        tensorflow::serving::PredictRequest request = preparePredictRequest(
+            {{pipelineInputName,
+                 std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
+                {pipelineFactorsInputName,
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}});
+        auto& input = (*request.mutable_inputs())[pipelineInputName];
+        input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+        auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
+        factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
+        return std::move(request);
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
-            tensorflow::serving::PredictRequest& request,
-            tensorflow::serving::PredictResponse& response) override {
+        tensorflow::serving::PredictRequest& request,
+        tensorflow::serving::PredictResponse& response) override {
         // we need to imitate -> different ops then dummy then max
         std::vector<float> result(requestData.begin(), requestData.end());
-        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f * factorsData[2];});
+        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f * factorsData[2]; });
         checkDummyResponse(pipelineOutputName, result, request, response, 1);
     }
 };
@@ -1127,8 +1125,8 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET}; // we may hit during pipeline reload
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we may hit during pipeline reload
     // TODO replace above with the one below when removing libraries will be fully implemented.
     // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
     //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
@@ -1145,7 +1143,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                          // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
