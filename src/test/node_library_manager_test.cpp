@@ -36,11 +36,13 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     status = manager.getLibrary("random_name", library);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_NE(library.execute, nullptr);
-    ASSERT_NE(library.releaseBuffer, nullptr);
-    ASSERT_NE(library.releaseTensors, nullptr);
+    ASSERT_NE(library.getInputsInfo, nullptr);
+    ASSERT_NE(library.getOutputsInfo, nullptr);
+    ASSERT_NE(library.release, nullptr);
     EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0), 1);
-    EXPECT_EQ(library.releaseBuffer(nullptr), 2);
-    EXPECT_EQ(library.releaseTensors(nullptr), 3);
+    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0), 2);
+    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0), 3);
+    EXPECT_EQ(library.release(nullptr), 4);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateName) {
@@ -102,11 +104,13 @@ TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
     status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_NE(library.execute, nullptr);
-    ASSERT_NE(library.releaseBuffer, nullptr);
-    ASSERT_NE(library.releaseTensors, nullptr);
+    ASSERT_NE(library.getInputsInfo, nullptr);
+    ASSERT_NE(library.getOutputsInfo, nullptr);
+    ASSERT_NE(library.release, nullptr);
     EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0), 1);
-    EXPECT_EQ(library.releaseBuffer(nullptr), 2);
-    EXPECT_EQ(library.releaseTensors(nullptr), 3);
+    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0), 2);
+    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0), 3);
+    EXPECT_EQ(library.release(nullptr), 4);
 }
 
 TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
@@ -124,8 +128,9 @@ TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
     status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
     ASSERT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
     EXPECT_EQ(library.execute, nullptr);
-    EXPECT_EQ(library.releaseBuffer, nullptr);
-    EXPECT_EQ(library.releaseTensors, nullptr);
+    EXPECT_EQ(library.getInputsInfo, nullptr);
+    EXPECT_EQ(library.getOutputsInfo, nullptr);
+    EXPECT_EQ(library.release, nullptr);
 }
 
 TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
@@ -153,11 +158,13 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
 
     // Expect lib1 to be loaded but lib2 not
     EXPECT_NE(lib1Before.execute, nullptr);
-    EXPECT_NE(lib1Before.releaseBuffer, nullptr);
-    EXPECT_NE(lib1Before.releaseTensors, nullptr);
+    EXPECT_NE(lib1Before.getInputsInfo, nullptr);
+    EXPECT_NE(lib1Before.getOutputsInfo, nullptr);
+    EXPECT_NE(lib1Before.release, nullptr);
     EXPECT_EQ(lib2Before.execute, nullptr);
-    EXPECT_EQ(lib2Before.releaseBuffer, nullptr);
-    EXPECT_EQ(lib2Before.releaseTensors, nullptr);
+    EXPECT_EQ(lib2Before.getInputsInfo, nullptr);
+    EXPECT_EQ(lib2Before.getOutputsInfo, nullptr);
+    EXPECT_EQ(lib2Before.release, nullptr);
 
     // Reload with configAfter
     NodeLibrary lib1After, lib2After;
@@ -169,11 +176,13 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
 
     // Expect lib1 not to change and lib2 to be created after reload.
     EXPECT_EQ(lib1Before.execute, lib1After.execute);
-    EXPECT_EQ(lib1Before.releaseBuffer, lib1After.releaseBuffer);
-    EXPECT_EQ(lib1Before.releaseTensors, lib1After.releaseTensors);
+    EXPECT_EQ(lib1Before.getInputsInfo, lib1After.getInputsInfo);
+    EXPECT_EQ(lib1Before.getOutputsInfo, lib1After.getOutputsInfo);
+    EXPECT_EQ(lib1Before.release, lib1After.release);
     EXPECT_NE(lib2After.execute, nullptr);
-    EXPECT_NE(lib2After.releaseBuffer, nullptr);
-    EXPECT_NE(lib2After.releaseTensors, nullptr);
+    EXPECT_NE(lib2After.getInputsInfo, nullptr);
+    EXPECT_NE(lib2After.getOutputsInfo, nullptr);
+    EXPECT_NE(lib2After.release, nullptr);
 
     // Reload with initial config (remove lib2 entry)
     NodeLibrary lib1Entry, lib2Entry;
@@ -185,9 +194,11 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
 
     // Expect lib1 not to change and lib2 to still be loaded
     EXPECT_EQ(lib1After.execute, lib1Entry.execute);
-    EXPECT_EQ(lib1After.releaseBuffer, lib1Entry.releaseBuffer);
-    EXPECT_EQ(lib1After.releaseTensors, lib1Entry.releaseTensors);
+    EXPECT_EQ(lib1After.getInputsInfo, lib1Entry.getInputsInfo);
+    EXPECT_EQ(lib1After.getOutputsInfo, lib1Entry.getOutputsInfo);
+    EXPECT_EQ(lib1After.release, lib1Entry.release);
     EXPECT_EQ(lib2After.execute, lib2Entry.execute);
-    EXPECT_EQ(lib2After.releaseBuffer, lib2Entry.releaseBuffer);
-    EXPECT_EQ(lib2After.releaseTensors, lib2Entry.releaseTensors);
+    EXPECT_EQ(lib2After.getInputsInfo, lib2Entry.getInputsInfo);
+    EXPECT_EQ(lib2After.getOutputsInfo, lib2Entry.getOutputsInfo);
+    EXPECT_EQ(lib2After.release, lib2Entry.release);
 }

@@ -25,6 +25,7 @@
 #include "exit_node.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"
+#include "node_library_utils.hpp"
 #include "pipeline.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
@@ -151,57 +152,46 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
     EntryNode* entry = nullptr;
     ExitNode* exit = nullptr;
-    std::set<std::string> demultipliers;
-    for (const auto& info : nodeInfos) {
-        if (info.demultiplyCount) {
-            demultipliers.insert(info.nodeName);
-        }
-    }
+
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
-        if (info.gatherFromNode) {
-            demultipliers.erase(info.nodeName);
-        }
         switch (info.kind) {
         case NodeKind::ENTRY: {
             auto node = std::make_unique<EntryNode>(request);
             entry = node.get();
-            nodes.insert(std::make_pair(info.nodeName, std::move(node)));
+            nodes.emplace(info.nodeName, std::move(node));
             break;
         }
         case NodeKind::DL:
-            nodes.insert(std::make_pair(info.nodeName, std::make_unique<DLNode>(
-                                                           info.nodeName,
-                                                           info.modelName,
-                                                           info.modelVersion,
-                                                           manager,
-                                                           info.outputNameAliases,
-                                                           info.demultiplyCount.value_or(0),
-                                                           info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
+            nodes.emplace(info.nodeName, std::make_unique<DLNode>(
+                                             info.nodeName,
+                                             info.modelName,
+                                             info.modelVersion,
+                                             manager,
+                                             info.outputNameAliases,
+                                             info.demultiplyCount.value_or(0),
+                                             info.gatherFromNode));
             break;
         case NodeKind::CUSTOM:
-            nodes.insert(std::make_pair(info.nodeName, std::make_unique<CustomNode>(
-                                                           info.nodeName,
-                                                           info.library,
-                                                           info.parameters,
-                                                           info.outputNameAliases,
-                                                           info.demultiplyCount.value_or(0),
-                                                           info.gatherFromNode ? std::set<std::string>{info.gatherFromNode.value()} : std::set<std::string>{})));
+            nodes.emplace(info.nodeName, std::make_unique<CustomNode>(
+                                             info.nodeName,
+                                             info.library,
+                                             info.parameters,
+                                             info.outputNameAliases,
+                                             info.demultiplyCount.value_or(0),
+                                             info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
+            auto node = std::make_unique<ExitNode>(response, info.gatherFromNode);
+            exit = node.get();
+            nodes.emplace(info.nodeName, std::move(node));
             break;
         }
         default:
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Requested pipeline {} contains unknown node kind", getName());
             throw std::invalid_argument("unknown node kind");
         }
-    }
-    const auto& it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [](const NodeInfo& info) { return info.kind == NodeKind::EXIT; });
-    if (it != nodeInfos.end()) {
-        auto node = std::make_unique<ExitNode>(response, demultipliers);
-        exit = node.get();
-        nodes.insert(std::make_pair(it->nodeName, std::move(node)));
     }
     for (const auto& kv : connections) {
         const auto& dependantNode = nodes.at(kv.first);
@@ -726,6 +716,22 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
                 }
                 break;
             }
+            case NodeKind::CUSTOM: {
+                if (!dependantNodeInfo->library.isValid()) {
+                    return StatusCode::NODE_LIBRARY_MISSING;
+                }
+
+                tensor_map_t info;
+                auto status = this->getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo);
+                if (!status.ok()) {
+                    return status;
+                }
+
+                for (const auto& [alias, realName] : specificDependencyMapping) {
+                    inputsInfo[alias] = info.at(realName);
+                }
+                break;
+            }
             default: {
                 // Pipeline validation does not allow connections into entry node.
                 SPDLOG_ERROR("Unexpected dependant node kind (name: {})", this->getName());
@@ -733,6 +739,50 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
             }
             }
         }
+    }
+    return StatusCode::OK;
+}
+
+std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape) {
+    if (gatherShape.size() == 0) {
+        return tensorInfo;
+    }
+    shape_t newShape = tensorInfo->getShape();
+    newShape.insert(newShape.begin() + 1, gatherShape.begin(), gatherShape.end());
+    return tensorInfo->createCopyWithNewShape(newShape);
+}
+
+Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+    auto instance = manager.findModelInstance(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0));
+    if (!instance) {
+        SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo.modelName, this->getName());
+        return StatusCode::MODEL_MISSING;
+    }
+    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+    auto status = instance->waitForLoaded(0, unloadGuard);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
+        return status;
+    }
+    for (const auto& [alias, realName] : specificDependencyMapping) {
+        const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
+        outputsInfo[realName] = applyGatherShapeForTensor(instance->getOutputsInfo().at(finalName), gatherShape);
+    }
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+    if (!dependencyNodeInfo.library.isValid()) {
+        return StatusCode::NODE_LIBRARY_MISSING;
+    }
+    tensor_map_t info;
+    auto status = this->getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    for (const auto& [alias, realName] : specificDependencyMapping) {
+        const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
+        outputsInfo[realName] = applyGatherShapeForTensor(info.at(finalName), gatherShape);
     }
     return StatusCode::OK;
 }
@@ -752,6 +802,8 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
             continue;
         }
 
+        auto gatherShape = this->getNodeGatherShape(*dependantNodeInfo);
+
         for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
             const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
 
@@ -763,21 +815,18 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
                 break;
             }
             case NodeKind::DL: {
-                auto instance = manager.findModelInstance(dependencyNodeInfo->modelName, dependencyNodeInfo->modelVersion.value_or(0));
-                if (!instance) {
-                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo->modelName, this->getName());
-                    return StatusCode::MODEL_MISSING;
-                }
-                std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
-                auto status = instance->waitForLoaded(0, unloadGuard);
+                auto status = populateOutputsInfoWithDLModelOutputs(
+                    *dependencyNodeInfo, manager, outputsInfo, specificDependencyMapping, gatherShape);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
-
-                for (const auto& [alias, realName] : specificDependencyMapping) {
-                    const auto& finalName = dependencyNodeInfo->outputNameAliases.count(alias) > 0 ? dependencyNodeInfo->outputNameAliases.at(alias) : alias;
-                    outputsInfo[realName] = instance->getOutputsInfo().at(finalName);
+                break;
+            }
+            case NodeKind::CUSTOM: {
+                auto status = populateOutputsInfoWithCustomNodeOutputs(
+                    *dependencyNodeInfo, manager, outputsInfo, specificDependencyMapping, gatherShape);
+                if (!status.ok()) {
+                    return status;
                 }
                 break;
             }
@@ -790,6 +839,58 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
         }
     }
     return StatusCode::OK;
+}
+
+Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback) const {
+    struct CustomNodeTensorInfo* info = nullptr;
+    int infoLength = 0;
+    auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);  // TODO: not create it in every call? prepare it once?
+    int paramArrayLength = customNodeInfo.parameters.size();
+    int result = callback(&info, &infoLength, paramArray.get(), paramArrayLength);
+    if (result != 0) {
+        SPDLOG_ERROR("Metadata call to custom node {} in pipeline {} returned an error code: {}",
+            customNodeInfo.nodeName, this->getName(), result);
+        return StatusCode::NODE_LIBRARY_METADATA_FAILED;
+    }
+    return createTensorInfoMap(info, infoLength, inputsInfo, customNodeInfo.library.release);
+}
+
+const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) const {
+    return *std::find_if(std::begin(this->nodeInfos), std::end(this->nodeInfos), [&name](const NodeInfo& nodeInfo) {
+        return nodeInfo.nodeName == name;
+    });
+}
+
+shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
+    if (info.gatherFromNode.size() == 0) {
+        return {};
+    }
+    shape_t shape;
+    shape.reserve(info.gatherFromNode.size());
+
+    std::function<void(const std::string&)> search;
+    search = [this, &info, &search, &shape](const std::string& nodeName) {
+        if (this->connections.count(nodeName) == 0) {
+            return;
+        }
+        if (info.gatherFromNode.count(nodeName) > 0) {
+            shape.emplace_back(this->findNodeByName(nodeName).demultiplyCount.value());
+        }
+        for (const auto& [previousNodeName, _] : this->connections.at(nodeName)) {
+            search(previousNodeName);
+        }
+    };
+
+    search(info.nodeName);
+
+    if (info.gatherFromNode.size() != shape.size()) {
+        SPDLOG_ERROR("Pipeline {} node {} is misconfigured, gather shape has different number of dimensions that gather from node elements: {} vs {}",
+            this->getName(), info.nodeName, shape.size(), info.gatherFromNode.size());
+        throw std::invalid_argument("Gather shape has different number of dimensions that gather from node elements");
+    }
+
+    std::reverse(shape.begin(), shape.end());
+    return std::move(shape);
 }
 
 }  // namespace ovms

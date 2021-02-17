@@ -44,7 +44,7 @@ public:
     }
 
     bool free(void* handle) noexcept override {
-        return nodeLibrary.releaseBuffer(&tensor);
+        return nodeLibrary.release(tensor.data) == 0;
     }
 };
 

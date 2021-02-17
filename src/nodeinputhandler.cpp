@@ -42,6 +42,9 @@ void NodeInputHandler::clearInputs() {
 }
 
 bool NodeInputHandler::isReady() {
+    if (this->isUsed) {
+        return false;
+    }
     return remainingDependencies == 0;
 }
 

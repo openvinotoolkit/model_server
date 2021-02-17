@@ -55,8 +55,8 @@ protected:
     }
 
     template <typename T>
-    void prepareRequest(PredictRequest& request, const std::vector<T>& data) {
-        tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    void prepareRequest(PredictRequest& request, const std::vector<T>& data, const std::string& inputName = pipelineInputName) {
+        tensorflow::TensorProto& proto = (*request.mutable_inputs())[inputName];
         proto.set_dtype(tensorflow::DataTypeToEnum<T>::value);
         proto.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(T));
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
@@ -95,6 +95,24 @@ protected:
     }
 
     template <typename T>
+    void checkResponse(const std::string& outputName, const PredictResponse& response, const std::vector<T>& data, const shape_t& shape) {
+        ASSERT_TRUE(response.outputs().contains(outputName));
+        const auto& proto = response.outputs().at(outputName);
+
+        ASSERT_EQ(proto.tensor_content().size(), data.size() * sizeof(T));
+        ASSERT_EQ(proto.tensor_shape().dim_size(), shape.size());
+        for (size_t i = 0; i < shape.size(); ++i) {
+            ASSERT_EQ(proto.tensor_shape().dim(i).size(), shape[i]);
+        }
+
+        auto* ptr = reinterpret_cast<const T*>(proto.tensor_content().c_str());
+        const std::vector<T> actual(ptr, ptr + data.size());
+        for (size_t i = 0; i < actual.size(); i++) {
+            EXPECT_NEAR(actual[i], data[i], 0.001) << " i is: " << i;
+        }
+    }
+
+    template <typename T>
     void checkResponse(const std::string& outputName, const PredictResponse& response, std::vector<T> data, std::function<T(T)> op) {
         std::transform(data.begin(), data.end(), data.begin(), op);
         ASSERT_TRUE(response.outputs().contains(outputName));
@@ -118,8 +136,9 @@ protected:
     static NodeLibrary createLibraryMock() {
         return NodeLibrary{
             T::execute,
-            T::releaseBuffer,
-            T::releaseTensors};
+            T::getInputsInfo,
+            T::getOutputsInfo,
+            T::release};
     }
 
     PredictRequest request;
@@ -132,7 +151,7 @@ protected:
     const std::string libraryPath = "/ovms/bazel-bin/src/lib_node_add_sub.so";
     const std::string customNodeInputName = "input_numbers";
     const std::string customNodeOutputName = "output_numbers";
-    const std::string pipelineInputName = "pipeline_input";
+    static constexpr const char* pipelineInputName = "pipeline_input";
     const std::string pipelineOutputName = "pipeline_output";
 };
 
@@ -327,10 +346,14 @@ struct LibraryFailInExecute {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -346,10 +369,14 @@ struct LibraryCorruptedOutputHandle {
         *outputsNum = 5;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -361,14 +388,18 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 
 struct LibraryCorruptedOutputsNumber {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
-        *handle = (struct CustomNodeTensor*)0x004def;
+        *handle = (struct CustomNodeTensor*)malloc(5 * sizeof(struct CustomNodeTensor));
         *outputsNum = 0;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor*) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor*) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
@@ -379,8 +410,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryMissingOutput {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -393,29 +422,24 @@ struct LibraryMissingOutput {
         (*handle)->dataLength = sizeof(float);
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        releaseBufferCalled = true;
-        free(tensor->dims);
-        free(tensor->data);
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryMissingOutput::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutput) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryMissingOutput>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_MISSING_OUTPUT);
-    ASSERT_TRUE(LibraryMissingOutput::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputPrecision {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -427,29 +451,24 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->dataLength = 1;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        releaseBufferCalled = true;
-        free(tensor->dims);
-        free(tensor->data);
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputPrecision::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidPrecision) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputPrecision>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
-    ASSERT_TRUE(LibraryIncorrectOutputPrecision::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputShape {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -461,28 +480,24 @@ struct LibraryIncorrectOutputShape {
         (*handle)->dataLength = 1;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        free(tensor->data);
-        releaseBufferCalled = true;
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputShape::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidShape) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputShape>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
-    ASSERT_TRUE(LibraryIncorrectOutputShape::releaseBufferCalled);
 }
 
 struct LibraryIncorrectOutputContentSize {
-    static bool releaseBufferCalled;
-
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
@@ -494,23 +509,21 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->dataLength = 0;
         return 0;
     }
-    static int releaseBuffer(struct CustomNodeTensor* tensor) {
-        free(tensor->dims);
-        releaseBufferCalled = true;
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
         return 0;
     }
-    static int releaseTensors(struct CustomNodeTensor* handle) {
-        free(handle);
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
         return 0;
     }
 };
 
-bool LibraryIncorrectOutputContentSize::releaseBufferCalled = false;
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidContentSize) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputContentSize>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
-    ASSERT_TRUE(LibraryIncorrectOutputContentSize::releaseBufferCalled);
 }
 
 class EnsembleFlowCustomNodeFactoryCreateThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {};
@@ -532,7 +545,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactory
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, std::nullopt, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -590,7 +603,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFacto
             "custom_node_" + std::to_string(i),
             "", std::nullopt,
             {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, std::nullopt,
+            std::nullopt, {},
             library, parameters_t{{"add_value", std::to_string(addValues[i])}, {"sub_value", std::to_string(subValues[i])}})));
     }
 
@@ -692,18 +705,17 @@ static const char* pipelineCustomNodeConfig = R"(
 class EnsembleFlowCustomNodeLoadConfigThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {
 protected:
     void SetUp() override {
-        EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
+        TestWithTempDir::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
 
     void loadCorrectConfiguration() {
-        createConfigFileWithContent(pipelineCustomNodeConfig, configJsonFilePath);
-        manager.loadConfig(configJsonFilePath);
+        this->loadConfiguration(pipelineCustomNodeConfig);
     }
 
     void loadConfiguration(const char* configContent) {
         createConfigFileWithContent(configContent, configJsonFilePath);
-        manager.loadConfig(configJsonFilePath);
+        ASSERT_EQ(manager.loadConfig(configJsonFilePath), StatusCode::OK);
     }
 
     void checkResponseForCorrectConfiguration() {
@@ -980,4 +992,452 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRest
     this->checkResponseForCorrectConfiguration();
 }
 
+static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+class EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
+protected:
+    void SetUp() override {
+        EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
+        configJsonFilePath = directoryPath + "/ovms_config_file.json";
+    }
+    const std::string differentOpsInputName = "pipeline_input";
+    const std::string differentOpsFactorsName = "pipeline_factors";
+};
+
+enum OPS {
+    ADD,
+    SUB,
+    MULTIPLY,
+    DIVIDE
+};
+
+static void prepareDifferentOpsExpectedOutput(std::vector<float>& expectedOutput, const std::vector<float>& input, const std::vector<float>& factors) {
+    for (size_t j = 0; j < 4; ++j) {  // iterate over ops
+        for (size_t i = 0; i < DUMMY_MODEL_OUTPUT_SIZE; ++i) {
+            size_t index = DUMMY_MODEL_OUTPUT_SIZE * j + i;
+            switch (j) {
+            case ADD:
+                expectedOutput[index] = input[i] + factors[j];
+                break;
+            case SUB:
+                expectedOutput[index] = input[i] - factors[j];
+                break;
+            case MULTIPLY:
+                expectedOutput[index] = input[i] * factors[j];
+                break;
+            case DIVIDE:
+                expectedOutput[index] = input[i] / factors[j];
+                break;
+            }
+        }
+    }
+}
+
+enum class Method {
+    MAXIMUM_MAXIMUM,
+    MAXIMUM_MINIMUM,
+    MAXIMUM_AVERAGE,
+};
+
+std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
+    std::vector<float> expectedOutput(DUMMY_MODEL_OUTPUT_SIZE);
+    size_t tensorsCount = input.size() / DUMMY_MODEL_OUTPUT_SIZE;
+    // perform operations
+    std::vector<float> minimums(tensorsCount, std::numeric_limits<int>::max());
+    std::vector<float> maximums(tensorsCount, std::numeric_limits<int>::lowest());
+    std::vector<float> averages(tensorsCount, 0);
+    for (size_t opId = 0; opId < tensorsCount; ++opId) {  // iterate over ops
+        for (size_t i = 0; i < DUMMY_MODEL_OUTPUT_SIZE; ++i) {
+            size_t index = DUMMY_MODEL_OUTPUT_SIZE * opId + i;
+            switch (option) {
+            case Method::MAXIMUM_MAXIMUM:
+                maximums[opId] = std::max(maximums[opId], input[index]);
+                break;
+            case Method::MAXIMUM_MINIMUM:
+                minimums[opId] = std::min(maximums[opId], input[index]);
+                break;
+            case Method::MAXIMUM_AVERAGE:
+                averages[opId] += input[index];
+                break;
+            default:
+                throw std::logic_error("");
+                break;
+            }
+        }
+        averages[opId] /= DUMMY_MODEL_OUTPUT_SIZE;
+    }
+    // choose tensor
+    size_t whichTensor = 42;
+    const std::vector<float>* fromWhichContainerToChoose = &maximums;
+    switch (option) {
+    case Method::MAXIMUM_MAXIMUM:
+        fromWhichContainerToChoose = &maximums;
+        break;
+    case Method::MAXIMUM_MINIMUM:
+        fromWhichContainerToChoose = &minimums;
+        break;
+    case Method::MAXIMUM_AVERAGE:
+        fromWhichContainerToChoose = &averages;
+        break;
+    default:
+        throw std::logic_error("");
+    }
+    whichTensor = std::distance(fromWhichContainerToChoose->begin(),
+        std::max_element(fromWhichContainerToChoose->begin(),
+            fromWhichContainerToChoose->end()));
+    // copy tensor
+    std::copy(input.begin() + DUMMY_MODEL_OUTPUT_SIZE * whichTensor,
+        input.begin() + DUMMY_MODEL_OUTPUT_SIZE * (whichTensor + 1),
+        expectedOutput.begin());
+    return expectedOutput;
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDifferentOpsCustomNode) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummy) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MINIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximum) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MINIMUM);
+    this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MAXIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                },
+                {
+                    "name": "dummyNode2",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "choose_max",
+                               "data_item": "maximum_tensor_alias"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode2",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumThenDummyAgain) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MAXIMUM);
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
 // TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)

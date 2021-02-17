@@ -34,11 +34,15 @@ class NodeInputHandler {
 protected:
     BlobMap inputBlobs;
     uint32_t remainingDependencies;
+    bool isUsed = false;
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
     virtual Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId);
-    virtual const BlobMap& getInputs() const { return inputBlobs; }
+    const BlobMap& getInputs() {
+        isUsed = true;
+        return inputBlobs;
+    }
     void clearInputs();
     bool isReady();
     virtual Status notifyFinishedDependency();

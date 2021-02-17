@@ -53,23 +53,35 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    release_fn releaseBuffer = reinterpret_cast<release_fn>(dlsym(handle, "releaseBuffer"));
+    metadata_fn getInputsInfo = reinterpret_cast<metadata_fn>(dlsym(handle, "getInputsInfo"));
     error = dlerror();
-    if (error || releaseBuffer == nullptr) {
+    if (error || getInputsInfo == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    release_fn releaseTensors = reinterpret_cast<release_fn>(dlsym(handle, "releaseTensors"));
+    metadata_fn getOutputsInfo = reinterpret_cast<metadata_fn>(dlsym(handle, "getOutputsInfo"));
     error = dlerror();
-    if (error || releaseBuffer == nullptr) {
+    if (error || getOutputsInfo == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
         dlclose(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    libraries.emplace(std::make_pair(name, NodeLibrary{execute, releaseBuffer, releaseTensors}));
+    release_fn release = reinterpret_cast<release_fn>(dlsym(handle, "release"));
+    error = dlerror();
+    if (error || release == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        dlclose(handle);
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
+    }
+
+    libraries.emplace(name, NodeLibrary{
+                                execute,
+                                getInputsInfo,
+                                getOutputsInfo,
+                                release});
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
