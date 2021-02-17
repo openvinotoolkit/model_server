@@ -17,46 +17,11 @@
 
 namespace ovms {
 
-CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision precision) {
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return CustomNodeTensorPrecision::FP32;
-    case InferenceEngine::Precision::FP16:
-        return CustomNodeTensorPrecision::FP16;
-    case InferenceEngine::Precision::U8:
-        return CustomNodeTensorPrecision::U8;
-    case InferenceEngine::Precision::I8:
-        return CustomNodeTensorPrecision::I8;
-    case InferenceEngine::Precision::I16:
-        return CustomNodeTensorPrecision::I16;
-    case InferenceEngine::Precision::U16:
-        return CustomNodeTensorPrecision::U16;
-    case InferenceEngine::Precision::I32:
-        return CustomNodeTensorPrecision::I32;
-    default:
-        return CustomNodeTensorPrecision::UNSPECIFIED;
-    }
-}
-
-InferenceEngine::Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-    switch (precision) {
-    case CustomNodeTensorPrecision::FP32:
-        return InferenceEngine::Precision::FP32;
-    case CustomNodeTensorPrecision::FP16:
-        return InferenceEngine::Precision::FP16;
-    case CustomNodeTensorPrecision::U8:
-        return InferenceEngine::Precision::U8;
-    case CustomNodeTensorPrecision::I8:
-        return InferenceEngine::Precision::I8;
-    case CustomNodeTensorPrecision::I16:
-        return InferenceEngine::Precision::I16;
-    case CustomNodeTensorPrecision::U16:
-        return InferenceEngine::Precision::U16;
-    case CustomNodeTensorPrecision::I32:
-        return InferenceEngine::Precision::I32;
-    default:
-        return InferenceEngine::Precision::UNSPECIFIED;
-    }
+bool NodeLibrary::isValid() const {
+    return execute != nullptr &&
+           getInputsInfo != nullptr &&
+           getOutputsInfo != nullptr &&
+           release != nullptr;
 }
 
 }  // namespace ovms

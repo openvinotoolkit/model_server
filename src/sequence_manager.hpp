@@ -18,8 +18,10 @@
 
 #include <memory>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 
+#include "modelversion.hpp"
 #include "sequence.hpp"
 #include "sequence_processing_spec.hpp"
 #include "status.hpp"
@@ -34,6 +36,8 @@ class SequenceManager {
 private:
     uint32_t timeout;
     uint32_t maxSequenceNumber;
+    std::string modelName;
+    model_version_t modelVersion;
     std::mutex mutex;
 
 protected:
@@ -47,9 +51,12 @@ protected:
 
 public:
     SequenceManager() = default;
-    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
+    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
         timeout(timeout),
-        maxSequenceNumber(maxSequenceNumber) {}
+        maxSequenceNumber(maxSequenceNumber),
+        modelName(modelName),
+        modelVersion(modelVersion) {
+    }
 
     uint64_t getSequencesCount() {
         return sequences.size();
@@ -71,7 +78,7 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimedOutSequences(std::chrono::steady_clock::time_point currentTime);
+    Status removeTimeOutedSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };

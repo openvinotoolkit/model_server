@@ -24,7 +24,7 @@
 #include "stateful_test_utils.hpp"
 
 TEST(SequenceManager, CreateSequenceOK) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     ASSERT_FALSE(sequenceManager.sequenceExists(42));
     auto status = sequenceManager.mockCreateSequence(42);
     ASSERT_TRUE(status.ok());
@@ -32,7 +32,7 @@ TEST(SequenceManager, CreateSequenceOK) {
 }
 
 TEST(SequenceManager, CreateSequenceConflict) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.mockCreateSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
@@ -40,7 +40,7 @@ TEST(SequenceManager, CreateSequenceConflict) {
 }
 
 TEST(SequenceManager, RemoveSequenceOK) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status.ok());
@@ -48,26 +48,26 @@ TEST(SequenceManager, RemoveSequenceOK) {
 }
 
 TEST(SequenceManager, RemoveSequenceNotExists) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     auto status = sequenceManager.removeSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, HasSequenceOK) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.mockHasSequence(42);
     ASSERT_TRUE(status.ok());
 }
 
 TEST(SequenceManager, HasSequenceNotExist) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     auto status = sequenceManager.mockHasSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, HasSequenceTerminated) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.mockTerminateSequence(42);
     ASSERT_TRUE(status.ok());
@@ -77,20 +77,20 @@ TEST(SequenceManager, HasSequenceTerminated) {
 }
 
 TEST(SequenceManager, TerminateSequenceOK) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.mockTerminateSequence(42);
     ASSERT_TRUE(status.ok());
 }
 
 TEST(SequenceManager, TerminateSequenceMissing) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     auto status = sequenceManager.mockTerminateSequence(42);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, TerminateSequenceAlreadyTerminated) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     auto status = sequenceManager.mockTerminateSequence(42);
     ASSERT_TRUE(status.ok());
@@ -100,7 +100,7 @@ TEST(SequenceManager, TerminateSequenceAlreadyTerminated) {
 }
 
 TEST(SequenceManager, ProcessSpecNoControlInput) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     ovms::SequenceProcessingSpec spec(ovms::NO_CONTROL_INPUT, 42);
     auto status = sequenceManager.processRequestedSpec(spec);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
@@ -116,7 +116,7 @@ TEST(SequenceManager, ProcessSpecNoControlInput) {
 }
 
 TEST(SequenceManager, ProcessSpecSequenceStart) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 42);
     auto status = sequenceManager.processRequestedSpec(spec);
     ASSERT_TRUE(status.ok());
@@ -126,7 +126,7 @@ TEST(SequenceManager, ProcessSpecSequenceStart) {
 }
 
 TEST(SequenceManager, ProcessSpecSequenceEnd) {
-    MockedSequenceManager sequenceManager(120, 24);
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_END, 42);
     auto status = sequenceManager.processRequestedSpec(spec);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
@@ -139,7 +139,7 @@ TEST(SequenceManager, ProcessSpecSequenceEnd) {
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
 }
 
-TEST(SequenceManager, RemoveTimedOutSequences) {
+TEST(SequenceManager, RemoveOneTimedOutSequence) {
     ovms::model_memory_state_t newState;
     std::vector<size_t> shape1{1, 10};
     size_t elementsCount1 = std::accumulate(shape1.begin(), shape1.end(), 1, std::multiplies<size_t>());
@@ -147,22 +147,61 @@ TEST(SequenceManager, RemoveTimedOutSequences) {
     std::iota(state1.begin(), state1.end(), 0);
     addState(newState, "state1", shape1, state1);
 
-    MockedSequenceManager sequenceManager(5, 24);
-    EXPECT_EQ(sequenceManager.getTimeout(), 5);
+    MockedSequenceManager sequenceManager(2, 24, "dummy", 1);
+    EXPECT_EQ(sequenceManager.getTimeout(), 2);
+    sequenceManager.mockCreateSequence(42);
+    sequenceManager.mockCreateSequence(314);
+
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(314));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_TRUE(sequenceManager.sequenceExists(314));
+
+    sequenceManager.getSequence(42).updateMemoryState(newState);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    sequenceManager.removeTimeOutedSequences();
+
+    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    ASSERT_FALSE(sequenceManager.sequenceExists(314));
+}
+
+TEST(SequenceManager, RemoveAllTimedOutSequences) {
+    MockedSequenceManager sequenceManager(2, 24, "dummy", 1);
     sequenceManager.mockCreateSequence(42);
     sequenceManager.mockCreateSequence(314);
 
     ASSERT_TRUE(sequenceManager.sequenceExists(42));
     ASSERT_TRUE(sequenceManager.sequenceExists(314));
     std::this_thread::sleep_for(std::chrono::seconds(3));
-
-    sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
-    ASSERT_TRUE(sequenceManager.sequenceExists(42));
-    ASSERT_TRUE(sequenceManager.sequenceExists(314));
-
-    sequenceManager.getSequence(42).updateMemoryState(newState);
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    sequenceManager.removeTimedOutSequences(std::chrono::steady_clock::now());
-    ASSERT_TRUE(sequenceManager.sequenceExists(42));
+    sequenceManager.removeTimeOutedSequences();
+    ASSERT_FALSE(sequenceManager.sequenceExists(42));
     ASSERT_FALSE(sequenceManager.sequenceExists(314));
+}
+
+TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
+    std::vector<MockedSequenceManager*> managers;
+    for (int i = 0; i < 10; i++) {
+        MockedSequenceManager* sequenceManager = new MockedSequenceManager(2, 10, std::to_string(i), 1);
+        sequenceManager->mockCreateSequence(i);
+        managers.push_back(sequenceManager);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        ASSERT_TRUE(managers[i]->sequenceExists(i));
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(4));
+    for (int i = 0; i < 10; i++) {
+        ASSERT_EQ(managers[i]->removeTimeOutedSequences(), ovms::StatusCode::OK);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        ASSERT_FALSE(managers[i]->sequenceExists(i));
+    }
+
+    for (int i = 0; i < 10; i++) {
+        delete managers[i];
+    }
 }

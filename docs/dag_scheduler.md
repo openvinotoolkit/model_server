@@ -9,15 +9,11 @@ Each model output can be mapped to another model input. Since intermediate resul
 This guide gives information about following:
 
 * <a href="#node-type">Node Types</a>
-    * Pre-defined Node Types
-    * Other Node Types
-* <a href="#example">Example Use Case</a>
-    * Prepare the models
-    * Define a pipeline
-    * Start model server
-    * Requesting the service
-    * Analyze pipeline execution in server logs
-    * Requesting pipeline metadata
+* <a href="#configuration-file">Configuration file</a>
+* <a href="#using-pipelines">Using the pipelines</a>
+* <a href="#pipeline-examples">Pipelines examples </a>
+* <a href="#current-limitations">Current Limitations</a>
+
 
 
 ## Node Types <a name="node-type"></a>
@@ -35,7 +31,7 @@ There are two special kinds of nodes - Request and Response node. Both of them a
     Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output. 
     Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response. 
 
-## Configuration file
+## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 
 [models config file](docker_container.md#configfile).
@@ -77,7 +73,7 @@ Below is depicted a basic pipeline section template:
 
 
 
-## Pipeline configuration options explained
+### Pipeline configuration options explained
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -112,7 +108,7 @@ Below is depicted a basic pipeline section template:
 |`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
 
-## Using the pipelines
+## Using the pipelines <a name="using-pipelines"></a>
 
 Pipelines can use the same API like the models. There are exactly the same calls for running 
 the predictions. The request format much much the pipeline definition inputs.
@@ -127,7 +123,7 @@ and [REST Model Status](model_server_rest_api.md#model-status)
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
 version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Pipelines examples
+## Pipelines examples <a name="pipeline-examples"></a>
 
 [Models ensemble](ensemble_scheduler.md)
 
@@ -135,7 +131,7 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 
 
-## Current limitations
+## Current limitations <a name="current-limitations"></a>
 
 - Models with ["auto" batch size or shape](shape_and_batch_size.md) cannot be referenced in pipeline
 - Connected inputs and output for subsequent node models need to exactly match each other in terms of data shape and precision - 

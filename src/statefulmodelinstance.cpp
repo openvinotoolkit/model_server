@@ -71,8 +71,16 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
 
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), config.getName(), config.getVersion());
     return ModelInstance::loadModelImpl(config, parameter);
+}
+
+Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+    if (performLowLatencyTransformation) {
+        SPDLOG_DEBUG("[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
+        InferenceEngine::LowLatency(*network);
+    }
+    return ModelInstance::loadOVExecutableNetwork(config);
 }
 
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {

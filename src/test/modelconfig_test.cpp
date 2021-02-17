@@ -529,7 +529,7 @@ static std::string config_sequence_timeout_non_stateful = R"#(
                 "name": "config_timeout_stateful",
                 "base_path": "/tmp/models/dummy1",
                 "stateful": false,
-                "sequence_timeout_seconds": 120
+                "sequence_timeout_seconds": 2
             }
         }
     ]
@@ -574,7 +574,7 @@ static std::string config_stateful_should_pass = R"#(
                 "base_path": "/tmp/models/dummy1",
                 "stateful": true,
                 "max_sequence_number": 1,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 2,
                 "low_latency_transformation": true
             }
         }
@@ -591,7 +591,7 @@ static std::string config_low_invalid_max_seq = R"#(
                 "base_path": "/tmp/models/dummy1",
                 "stateful": true,
                 "max_sequence_number": 5294967295,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 2,
                 "low_latency_transformation": true
             }
         }
@@ -640,7 +640,7 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
         ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), true);
         ASSERT_EQ(modelConfig.isStateful(), true);
         ASSERT_EQ(modelConfig.getMaxSequenceNumber(), 1);
-        ASSERT_EQ(modelConfig.getSequenceTimeout(), 120);
+        ASSERT_EQ(modelConfig.getSequenceTimeout(), 2);
     }
 }
 

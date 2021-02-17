@@ -21,6 +21,7 @@
 #include "customnodesession.hpp"
 #include "logging.hpp"
 #include "node_library.hpp"
+#include "node_library_utils.hpp"
 
 namespace ovms {
 
@@ -34,17 +35,8 @@ CustomNode::CustomNode(
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),
-    nodeOutputNameAlias(nodeOutputNameAlias) {
-    if (parameters.size() > 0) {
-        this->libraryParameters = std::make_unique<struct CustomNodeParam[]>(parameters.size());
-
-        int i = 0;
-        for (const auto& [key, value] : parameters) {
-            this->libraryParameters[i].key = key.c_str();
-            this->libraryParameters[i].value = value.c_str();
-            i++;
-        }
-    }
+    nodeOutputNameAlias(nodeOutputNameAlias),
+    libraryParameters(createCustomNodeParamArray(this->parameters)) {
 }
 
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {

@@ -77,17 +77,35 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 0;
 }
 
-int releaseBuffer(struct CustomNodeTensor* output) {
-    printf("CUSTOM ADD_SUB NODE => Releasing Buffer (output name: %s)\n", output->name);
-    fflush(stdout);
-    free(output->data);
-    free(output->dims);
+// TODO: Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
+// This needs to be addressed before release.
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) { 
+    *infoLength = 1;
+    *info = (struct CustomNodeTensorInfo*) malloc (*infoLength * sizeof(struct CustomNodeTensorInfo));
+    (*info)->name = "input_numbers";
+    (*info)->dimsLength = 2;
+    (*info)->dims = (uint64_t*) malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)->dims[0] = 1;
+    (*info)->dims[1] = 50;
+    (*info)->precision = FP32;
     return 0;
 }
 
-int releaseTensors(struct CustomNodeTensor* outputs) {
-    printf("CUSTOM ADD_SUB NODE => Releasing Tensors\n");
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    *infoLength = 1;
+    *info = (struct CustomNodeTensorInfo*) malloc (*infoLength * sizeof(struct CustomNodeTensorInfo));
+    (*info)->name = "output_numbers";
+    (*info)->dimsLength = 2;
+    (*info)->dims = (uint64_t*) malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)->dims[0] = 1;
+    (*info)->dims[1] = 50;
+    (*info)->precision = FP32;
+    return 0;
+}
+
+int release(void* ptr) {
+    printf("CUSTOM ADD_SUB RELEASE\n");
     fflush(stdout);
-    free(outputs);
+    free(ptr);
     return 0;
 }

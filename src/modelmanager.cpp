@@ -226,6 +226,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         {NodeKind::ENTRY, ENTRY_NODE_NAME}};
     processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
     pipeline_connections_t connections;
+    std::set<std::string> nonGatheredDemultiplexerNodes;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
@@ -262,10 +263,13 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::optional<size_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
             demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
+            nonGatheredDemultiplexerNodes.insert(nodeName);
         }
-        std::optional<std::string> gatherFromNode;
+        std::set<std::string> gatherFromNode;
         if (nodeConfig.HasMember("gather_from_node")) {
-            gatherFromNode = nodeConfig["gather_from_node"].GetString();
+            std::string nodeToGatherFrom = nodeConfig["gather_from_node"].GetString();
+            gatherFromNode.insert(nodeToGatherFrom);
+            nonGatheredDemultiplexerNodes.erase(nodeToGatherFrom);
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
@@ -285,7 +289,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
     // pipeline outputs are node exit inputs
     processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
-    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {})));
+    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);

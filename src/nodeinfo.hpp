@@ -17,6 +17,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -71,7 +72,7 @@ struct NodeInfo {
     std::optional<model_version_t> modelVersion;
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
-    std::optional<std::string> gatherFromNode;
+    std::set<std::string> gatherFromNode;
     NodeLibrary library;
     parameters_t parameters;
 
@@ -81,7 +82,7 @@ struct NodeInfo {
         std::optional<model_version_t> modelVersion = std::nullopt,
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
-        std::optional<std::string> gatherFromNode = std::nullopt,
+        const std::set<std::string>& gatherFromNode = {},
         const NodeLibrary& library = {},
         const parameters_t& parameters = {}) :
         kind(kind),
