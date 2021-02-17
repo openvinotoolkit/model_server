@@ -45,6 +45,7 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
         memoryState[stateName] = copyBlobPtr;
     }
     updateLastActivityTime();
+
     return StatusCode::OK;
 }
 

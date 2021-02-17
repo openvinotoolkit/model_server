@@ -591,8 +591,9 @@ class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
-    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults&) override {
+    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults& sessionResults) override {
         // no release is called as in dl_node.cpp when on error path
+        DLNode::fetchResults(nodeSession, sessionResults);
         return StatusCode::UNKNOWN_ERROR;
     }
 };
@@ -2680,7 +2681,7 @@ static const char* dummyWithStatefulModelType = R"(
                 "nireq": 1,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 2,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
