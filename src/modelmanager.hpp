@@ -32,6 +32,7 @@
 
 #include "customloaders.hpp"
 #include "filesystem.hpp"
+#include "global_sequences_viewer.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
@@ -63,6 +64,8 @@ protected:
     PipelineFactory pipelineFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    GlobalSequencesViewer sequenceViewer;
 
 private:
     /**

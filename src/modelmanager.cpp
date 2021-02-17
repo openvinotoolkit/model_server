@@ -54,6 +54,7 @@ static bool watcherStarted = false;
 
 ModelManager::ModelManager() {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
+    this->sequenceViewer = new GlobalSequencesViewer();
 }
 
 ModelManager::~ModelManager() = default;
@@ -82,6 +83,8 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
+
+    sequenceViewer.startWatcher();
 }
 
 Status ModelManager::startFromConfig() {
@@ -577,6 +580,8 @@ void ModelManager::join() {
             watcherStarted = false;
         }
     }
+
+    sequenceViewer.join();
 }
 
 void ModelManager::getVersionsToChange(
