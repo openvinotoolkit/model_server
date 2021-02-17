@@ -35,14 +35,32 @@ namespace ovms {
     std::mutex& GlobalSequencesViewer::getMutex() {
         return mutex;
     }
+
+    Status GlobalSequencesViewer::AddModels()
+
+
     Status GlobalSequencesViewer::register(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager) {
         std::unique_lock<std::mutex> viewerLock(mutex);
+        if (registeredSequenceManagers.count(managerId)) {
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);
+            return StatusCode::SEQUENCE_ALREADY_EXISTS;
+        }
+        else {
+            registeredSequenceManagers.emplace(managerId, sequenceManager);
+        }
 
         return StatusCode::OK;
     }
 
     Status GlobalSequencesViewer::unregister(std::string managerId) {
         std::unique_lock<std::mutex> viewerLock(mutex);
+        if (registeredSequenceManagers.count(managerId)) {
+            registeredSequenceManagers.erase(managerId);
+        }
+        else {
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);
+            return StatusCode::SEQUENCE_MISSING;
+        }
         return StatusCode::OK;
     }
 
