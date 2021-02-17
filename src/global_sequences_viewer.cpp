@@ -30,61 +30,62 @@
 
 namespace ovms {
 
-static bool sequenceWatcherStarted = false;
+    static bool sequenceWatcherStarted = false;
 
-std::mutex& GlobalSequencesViewer::getMutex() {
-    return mutex;
-}
-Status GlobalSequencesViewer::register(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager) {
-    std::unique_lock<std::mutex> viewerLock(mutex);
-    return StatusCode::OK;
-}
-
-Status GlobalSequencesViewer::unregister(std::string managerId) {
-    std::unique_lock<std::mutex> viewerLock(mutex);
-    return StatusCode::OK;
-}
-
-Status GlobalSequencesViewer::removeTimedOutSequences()
-{
-    std::unique_lock<std::mutex> viewerLock(mutex);
-    for (auto it = registeredSequenceManagers.begin(); it != registeredSequenceManagers.end();) {
-        SequenceManager& sequenceManager = it->second;
-        seqenceManager.removeTimeOutedSequences();
+    std::mutex& GlobalSequencesViewer::getMutex() {
+        return mutex;
     }
-}
+    Status GlobalSequencesViewer::register(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager) {
+        std::unique_lock<std::mutex> viewerLock(mutex);
 
-void GlobalSequencesViewer::sequenceWatcher(std::future<void> exit) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence timeout watcher thread");
-
-    while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-        std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle begin");
-
-        removeTimedOutSequences();
-
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle end");
+        return StatusCode::OK;
     }
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited sequence timeout watcher thread");
-}
 
-void GlobalSequencesViewer::join() {
-    if (sequenceWatcherStarted) {
-        exit.set_value();
-        if (sequenceMonitor.joinable()) {
-            sequenceMonitor.join();
-            sequenceWatcherStarted = false;
+    Status GlobalSequencesViewer::unregister(std::string managerId) {
+        std::unique_lock<std::mutex> viewerLock(mutex);
+        return StatusCode::OK;
+    }
+
+    Status GlobalSequencesViewer::removeTimedOutSequences()
+    {
+        std::unique_lock<std::mutex> viewerLock(mutex);
+        for (auto it = registeredSequenceManagers.begin(); it != registeredSequenceManagers.end();) {
+            SequenceManager& sequenceManager = it->second;
+            seqenceManager.removeTimeOutedSequences();
         }
     }
-}
 
-void GlobalSequencesViewer::startWatcher() {
-    if ((!sequenceWatcherStarted) && (sequenceWatcherIntervalSec > 0)) {
-        std::future<void> exitSignal = exit.get_future();
-        std::thread t(std::thread(&ModelManager::sequenceWatcher, this, std::move(exitSignal)));
-        sequenceWatcherStarted = true;
-        sequenceMonitor = std::move(t);
+    void GlobalSequencesViewer::sequenceWatcher(std::future<void> exit) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence timeout watcher thread");
+
+        while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+            std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle begin");
+
+            removeTimedOutSequences();
+
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle end");
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited sequence timeout watcher thread");
     }
-}
+
+    void GlobalSequencesViewer::join() {
+        if (sequenceWatcherStarted) {
+            exit.set_value();
+            if (sequenceMonitor.joinable()) {
+                sequenceMonitor.join();
+                sequenceWatcherStarted = false;
+            }
+        }
+    }
+
+    void GlobalSequencesViewer::startWatcher() {
+        if ((!sequenceWatcherStarted) && (sequenceWatcherIntervalSec > 0)) {
+            std::future<void> exitSignal = exit.get_future();
+            std::thread t(std::thread(&ModelManager::sequenceWatcher, this, std::move(exitSignal)));
+            sequenceWatcherStarted = true;
+            sequenceMonitor = std::move(t);
+        }
+    }
 
 }  // namespace ovms
