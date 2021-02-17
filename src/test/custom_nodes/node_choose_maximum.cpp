@@ -114,7 +114,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
                 maximums[opId] = std::max(maximums[opId], inputTensor[index]);
                 break;
             case Method::MAXIMUM_MINIMUM:
-                minimums[opId] = std::min(maximums[opId], inputTensor[index]);
+                minimums[opId] = std::min(minimums[opId], inputTensor[index]);
                 break;
             case Method::MAXIMUM_AVERAGE:
                 averages[opId] += inputTensor[index];
@@ -128,6 +128,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
                << " minimums:" << minimums[opId]
                << " averages:" << averages[opId]
                << " maximums:" << maximums[opId]
+               << " selected method:" << selectionMethod
                << std::endl;
         }
         averages[opId] /= valuesPerTensor;
