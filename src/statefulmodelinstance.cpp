@@ -75,6 +75,14 @@ Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const Dyn
     return ModelInstance::loadModelImpl(config, parameter);
 }
 
+Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+    if (performLowLatencyTransformation) {
+        SPDLOG_DEBUG("[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
+        InferenceEngine::LowLatency(*network);
+    }
+    return ModelInstance::loadOVExecutableNetwork(config);
+}
+
 const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
     auto completeInputsNumber = expectedNumberOfInputs;

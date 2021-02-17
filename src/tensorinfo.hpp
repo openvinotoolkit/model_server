@@ -25,6 +25,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
 #include "shapeinfo.hpp"
@@ -195,6 +196,10 @@ public:
          * @return shape
          */
     const shape_t& getShape() const;
+
+    void setShape(const shape_t& shape);
+
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shapee) const;
 
     /**
          * @brief Get the Tensor Desc object

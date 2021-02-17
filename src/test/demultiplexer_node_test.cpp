@@ -87,6 +87,7 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobs) {
     EXPECT_THAT(sessionResult2.second.begin()->second->getTensorDesc().getDims(), ElementsAre(1, blobData2.size()));
     EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult1.second.begin()->second->cbuffer()), blobData1.data(), sessionResult1.second.begin()->second->byteSize()), 0);
     EXPECT_EQ(std::memcmp((char*)((const void*)sessionResult2.second.begin()->second->cbuffer()), blobData2.data(), sessionResult2.second.begin()->second->byteSize()), 0);
+    // TODO Add expected result blob name check
 }
 
 TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {

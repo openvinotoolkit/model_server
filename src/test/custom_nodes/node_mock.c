@@ -15,15 +15,18 @@
 //*****************************************************************************
 
 #include "../../custom_node_interface.h"
-
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     return 1;
 }
 
-int releaseBuffer(struct CustomNodeTensor* output) {
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
     return 2;
 }
 
-int releaseTensors(struct CustomNodeTensor* outputs) {
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
     return 3;
+}
+
+int release(void* ptr) {
+    return 4;
 }

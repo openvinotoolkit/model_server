@@ -261,6 +261,16 @@ const shape_t& TensorInfo::getShape() const {
     return shape;
 }
 
+void TensorInfo::setShape(const shape_t& shape) {
+    this->shape = shape;
+}
+
+std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
+    auto copy = std::make_shared<TensorInfo>(*this);
+    copy->setShape(shape);
+    return copy;
+}
+
 const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
     return InferenceEngine::TensorDesc{precision, shape, layout};
 }

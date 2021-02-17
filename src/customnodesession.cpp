@@ -23,6 +23,7 @@
 #include "logging.hpp"
 #include "node.hpp"
 #include "node_library.hpp"
+#include "node_library_utils.hpp"
 #include "nodeinputhandler.hpp"
 #include "pipelineeventqueue.hpp"
 
@@ -36,25 +37,10 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-std::unique_ptr<struct CustomNodeTensor[]> CustomNodeSession::createInputTensorsForLibrary(const BlobMap& blobMap) {
-    auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(blobMap.size());
-    int i = 0;
-    for (const auto& [name, blob] : blobMap) {
-        inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());
-        inputTensors[i].dataLength = static_cast<uint64_t>(blob->byteSize());
-        inputTensors[i].dims = static_cast<uint64_t*>(blob->getTensorDesc().getDims().data());
-        inputTensors[i].dimsLength = static_cast<uint64_t>(blob->getTensorDesc().getDims().size());
-        inputTensors[i].precision = toCustomNodeTensorPrecision(blob->getTensorDesc().getPrecision());
-        i++;
-    }
-    return std::move(inputTensors);
-}
-
 Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersLength) {
     const auto& blobMap = this->inputHandler->getInputs();
     auto inputTensorsLength = blobMap.size();
-    auto inputTensors = createInputTensorsForLibrary(blobMap);
+    auto inputTensors = createCustomNodeTensorArray(blobMap);
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsLength = 0;
 
@@ -74,6 +60,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         return StatusCode::NODE_LIBRARY_EXECUTION_FAILED;
     }
 
+    // In other cases we are responsible of cleaning whatever is possible.
     if (outputTensors == nullptr) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted outputs handle", getName(), getSessionKey());
         notifyEndQueue.push({node, getSessionKey()});
@@ -82,8 +69,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsLength <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        // Cleanup whatever is possible
-        library.releaseTensors(outputTensors);
+        library.release(outputTensors);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -95,18 +81,22 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     for (int i = 0; i < outputTensorsLength; i++) {
         InferenceEngine::Blob::Ptr resultBlob;
         auto result = this->createBlob(&outputTensors[i], resultBlob, library);
+        if (outputTensors[i].name == nullptr) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed blob conversion - missing output name", getName(), getSessionKey());
+            status = StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME;
+            continue;
+        }
         if (!result.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to blob", getName(), getSessionKey(), outputTensors[i].name);
-            library.releaseBuffer(&outputTensors[i]);
             if (status.ok()) {
                 status = result;
             }
             continue;
         }
-        this->resultBlobs.emplace(std::make_pair(std::string(outputTensors[i].name), std::move(resultBlob)));
+        this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.releaseTensors(outputTensors);
+    library.release(outputTensors);
 
     notifyEndQueue.push({node, getSessionKey()});
     return status;
@@ -121,7 +111,39 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
     return StatusCode::OK;
 }
 
+void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library) {
+    if (tensor->data) {
+        library.release(tensor->data);
+    }
+    if (tensor->dims) {
+        library.release(tensor->dims);
+    }
+}
+
+class TensorResourcesGuard {
+    const struct CustomNodeTensor* tensor;
+    const NodeLibrary& library;
+    bool persistData = false;
+
+public:
+    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library) :
+        tensor(tensor),
+        library(library) {}
+    ~TensorResourcesGuard() {
+        if (tensor->data && !persistData) {
+            library.release(tensor->data);
+        }
+        if (tensor->dims) {
+            library.release(tensor->dims);
+        }
+    }
+    void setPersistData() {
+        this->persistData = true;
+    }
+};
+
 Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library) {
+    TensorResourcesGuard tensorResourcesGuard(tensor, library);
     InferenceEngine::TensorDesc desc;
 
     InferenceEngine::Precision precision = toInferenceEnginePrecision(tensor->precision);
@@ -202,7 +224,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
     }
 
     resultBlob->allocate();
-
+    tensorResourcesGuard.setPersistData();
     return StatusCode::OK;
 }
 
