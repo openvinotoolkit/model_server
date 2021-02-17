@@ -84,7 +84,7 @@ protected:
 private:
     std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
-    Status validateNode(ModelManager& manager, const NodeInfo& node,  const bool isMultiBatchAllowed);
+    Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
