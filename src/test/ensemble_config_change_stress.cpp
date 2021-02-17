@@ -316,7 +316,256 @@ static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
     ]
 })";
 
+static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MINIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumRemovedLibraryConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MINIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "choose_max",
+                                         "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumChangedParamConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_AVERAGE"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
 class StressPipelineConfigChanges : public TestWithTempDir {
+protected:
     const uint loadThreadCount = 20;
     const uint beforeConfigChangeLoadTimeMs = 30;
     const uint afterConfigChangeLoadTimeMs = 50;
@@ -330,7 +579,7 @@ class StressPipelineConfigChanges : public TestWithTempDir {
     const std::string pipelineInputName = "custom_dummy_input";
     const std::string pipelineOutputName = "custom_dummy_output";
 
-    const std::vector<float> requestData{1., 2., 3., 7., 5., 6., 4., 9., 10., 8.};
+    const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
 public:
     void SetUpConfig(const std::string& configContent) {
@@ -339,7 +588,6 @@ public:
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
         configFilePath = directoryPath + "/ovms_config.json";
     }
-    void TearDown() override {}
     void SetUp() override {
         TestWithTempDir::SetUp();
         modelPath = directoryPath + "/dummy/";
@@ -384,6 +632,18 @@ public:
     void retireSpecificVersionUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeCustomLibraryUsed() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumRemovedLibraryConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void changeCustomLibraryParam() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumChangedParamConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void performStressTest(
@@ -578,6 +838,20 @@ public:
             }
         }
     }
+    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) {
+            tensorflow::serving::PredictRequest request = preparePredictRequest(
+                {{pipelineInputName,
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
+            auto& input = (*request.mutable_inputs())[pipelineInputName];
+            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+            return std::move(request);
+    }
+    virtual void checkPipelineResponse(const std::string& pipelineOutputName,
+            tensorflow::serving::PredictRequest& request,
+            tensorflow::serving::PredictResponse& response) {
+        checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
+    }
+
     void triggerPredictInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -595,12 +869,15 @@ public:
                 break;
             }
             std::unique_ptr<Pipeline> pipelinePtr;
-            tensorflow::serving::PredictRequest request = preparePredictRequest(
+            
+            tensorflow::serving::PredictRequest request = preparePipelinePredictRequest(
+                {{pipelineInputName,
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
+            /*tensorflow::serving::PredictRequest request = preparePredictRequest(
                 {{pipelineInputName,
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
             auto& input = (*request.mutable_inputs())[pipelineInputName];
-            std::vector<float> reqData = requestData;
-            input.mutable_tensor_content()->assign((char*)reqData.data(), reqData.size() * sizeof(float));
+            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));*/
             tensorflow::serving::PredictResponse response;
             auto createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
             // we need to make sure that expected status happened and still accept
@@ -619,7 +896,7 @@ public:
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
                 << executePipelineStatus.string() << "\n";
             if (executePipelineStatus.ok()) {
-                checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
+                checkPipelineResponse(pipelineOutputName, request, response);
             }
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
@@ -812,6 +1089,67 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::retireSpecificVersionUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+
+
+class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChanges {
+    const size_t differentOpsFactorsInputSize = 4;
+    const std::vector<float> factorsData {1., 3, 2, 2};
+    const std::string pipelineFactorsInputName {"pipeline_factors"};
+    public:
+    tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) override {
+            tensorflow::serving::PredictRequest request = preparePredictRequest(
+                {
+                    {pipelineInputName,
+                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
+                    {pipelineFactorsInputName,
+                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}});
+            auto& input = (*request.mutable_inputs())[pipelineInputName];
+            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+            auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
+            factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
+            return std::move(request);
+    }
+    void checkPipelineResponse(const std::string& pipelineOutputName,
+            tensorflow::serving::PredictRequest& request,
+            tensorflow::serving::PredictResponse& response) override {
+        // we need to imitate -> different ops then dummy then max
+        std::vector<float> result(requestData.begin(), requestData.end());
+        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f * factorsData[2];});
+        checkDummyResponse(pipelineOutputName, result, request, response, 1);
+    }
+};
+
+TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET}; // we may hit during pipeline reload
+    // TODO replace above with the one below when removing libraries will be fully implemented.
+    // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    // std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::removeCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPredictLoad) {
+    // we change used PARAM durign load. This change does not effect results, but is should be enough to verify
+    // correctness of this operation - no segfaults etc.
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                          // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeCustomLibraryParam,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
