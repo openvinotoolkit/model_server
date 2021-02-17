@@ -82,7 +82,7 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimeOutedSequences();
+    Status removeTimedOutSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };
