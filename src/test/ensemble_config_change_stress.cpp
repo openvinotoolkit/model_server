@@ -748,33 +748,13 @@ public:
         response.metadata().at("signature_def").UnpackTo(&def);
         const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
         const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
-
-        bool inputsSizeCorrect{inputs.size() == 1};
-        EXPECT_TRUE(inputsSizeCorrect) << "Expected: " << 1 << " actual: " << inputs.size();
+        auto expectedInputs = getExpectedInputsInfo();
+        std::cout << "Expected inputs: " << expectedInputs.size() << std::endl;
+        bool inputsSizeCorrect{inputs.size() == expectedInputs.size()};
+        EXPECT_TRUE(inputsSizeCorrect) << "Expected: " << expectedInputs.size() << " actual: " << inputs.size();
         bool outputsSizeCorrect{outputs.size() == 1};
         EXPECT_TRUE(outputsSizeCorrect) << "Expected: " << 1 << " actual: " << outputs.size();
         if (!inputsSizeCorrect || !outputsSizeCorrect) {
-            return false;
-        }
-        bool inputNameExist{inputs.find(pipelineInputName.c_str()) != inputs.end()};
-        EXPECT_TRUE(inputNameExist);
-        bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
-        EXPECT_TRUE(outputNameExist);
-        if (!inputNameExist || !outputNameExist) {
-            return false;
-        }
-        bool inputNameCorrect{inputs.at(pipelineInputName.c_str()).name() == pipelineInputName};
-        EXPECT_TRUE(inputNameCorrect);
-        bool outputNameCorrect{outputs.at(pipelineOutputName.c_str()).name() == pipelineOutputName};
-        EXPECT_TRUE(outputNameCorrect);
-        if (!inputNameCorrect || !outputNameCorrect) {
-            return false;
-        }
-        bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-        EXPECT_TRUE(inputTypeCorrect);
-        bool outputTypeCorrect{outputs.at(pipelineOutputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-        EXPECT_TRUE(outputTypeCorrect);
-        if (!inputTypeCorrect || !outputTypeCorrect) {
             return false;
         }
         auto isShape = [](
@@ -790,15 +770,51 @@ public:
             }
             return true;
         };
-        bool inputShapeCorrect{isShape(
-            inputs.at(pipelineInputName.c_str()).tensor_shape(),
-            {1, 10})};
-        EXPECT_TRUE(inputShapeCorrect);
+        SPDLOG_ERROR("ExpectedInputsCount:{}", expectedInputs.size());
+        for (auto& [expectedInputName, shapeTypeTuple] : expectedInputs) {
+            bool inputNameExist = inputs.find(expectedInputName.c_str()) != inputs.end();
+            EXPECT_TRUE(inputNameExist);
+            if (!inputNameExist) {
+                return false;
+            }
+            bool inputNameCorrect{inputs.at(pipelineInputName.c_str()).name() == pipelineInputName};
+            EXPECT_TRUE(inputNameCorrect);
+            if (!inputNameCorrect) {
+                return false;
+            }
+            bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+            EXPECT_TRUE(inputTypeCorrect);
+            if (!inputTypeCorrect) {
+                return false;
+            }
+            bool inputShapeCorrect{isShape(
+                inputs.at(pipelineInputName.c_str()).tensor_shape(),
+                {1, 10})};
+            EXPECT_TRUE(inputShapeCorrect);
+            if (!inputShapeCorrect) {
+                return false;
+            }
+        }
+        bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
+        EXPECT_TRUE(outputNameExist);
+        if (!outputNameExist) {
+            return false;
+        }
+        bool outputNameCorrect{outputs.at(pipelineOutputName.c_str()).name() == pipelineOutputName};
+        EXPECT_TRUE(outputNameCorrect);
+        if (!outputNameCorrect) {
+            return false;
+        }
+        bool outputTypeCorrect{outputs.at(pipelineOutputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+        EXPECT_TRUE(outputTypeCorrect);
+        if (!outputTypeCorrect) {
+            return false;
+        }
         bool outputShapeCorrect{isShape(
             outputs.at(pipelineOutputName.c_str()).tensor_shape(),
             {1, 10})};
         EXPECT_TRUE(outputShapeCorrect);
-        if (!inputShapeCorrect || !outputShapeCorrect) {
+        if (!outputShapeCorrect) {
             return false;
         }
         return true;
@@ -838,10 +854,13 @@ public:
             }
         }
     }
+    virtual inputs_info_t getExpectedInputsInfo() {
+        return {{pipelineInputName,
+                 std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}};
+    }
+
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(
-            {{pipelineInputName,
-                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
+        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         return std::move(request);
@@ -1101,16 +1120,18 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
 
 public:
     tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) override {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(
-            {{pipelineInputName,
-                 std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
-                {pipelineFactorsInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}});
+        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
         factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
         return std::move(request);
+    }
+    inputs_info_t getExpectedInputsInfo() override {
+        return {{pipelineInputName,
+                 std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
+                {pipelineFactorsInputName,
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
@@ -1147,6 +1168,34 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeCustomLibraryParam,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we may hit during pipeline reload
+    // TODO replace above with the one below when removing libraries will be fully implemented.
+    // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    // std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation most of the time
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET}; // might hit reload phase
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::changeCustomLibraryParam,
         performWholeConfigReload,
         requiredLoadResults,
