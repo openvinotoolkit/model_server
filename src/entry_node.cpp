@@ -76,10 +76,8 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             if (!status.ok()) {
                 return status;
             }
-
             outputs[output_name] = blob;
-
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name {} has been prepared", getName(), output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), output_name, TensorInfo::tensorDescToString(blob->getTensorDesc()));
         }
     }
 
@@ -158,7 +156,6 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             getName(), status.string(), e.what());
         return status;
     }
-
     return StatusCode::OK;
 }
 }  // namespace ovms
