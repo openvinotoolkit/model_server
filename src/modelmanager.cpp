@@ -54,7 +54,7 @@ static bool watcherStarted = false;
 
 ModelManager::ModelManager() {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
-    this->sequenceViewer = new GlobalSequencesViewer();
+    this->sequenceViewer = std::make_unique<GlobalSequencesViewer>();
 }
 
 ModelManager::~ModelManager() = default;
@@ -84,7 +84,11 @@ void ModelManager::startWatcher() {
         monitor = std::move(t);
     }
 
-    sequenceViewer.startWatcher();
+    sequenceViewer->startWatcher();
+}
+
+void ModelManager::startSequenceWatcher() {
+    sequenceViewer->startWatcher();
 }
 
 Status ModelManager::startFromConfig() {
@@ -581,7 +585,7 @@ void ModelManager::join() {
         }
     }
 
-    sequenceViewer.join();
+    sequenceViewer->join();
 }
 
 void ModelManager::getVersionsToChange(
@@ -734,7 +738,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
                 status.string());
         }
         if (config.isStateful())
-            status = sequenceViewer.addVersions(config.getName(), versionsToStart);
+            status = sequenceViewer->addVersions(model, versionsToStart);
 
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
@@ -753,7 +757,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
                 status.string());
         }
         if (config.isStateful())
-            status = sequenceViewer.reloadVersions(model, versionsToReload);
+            status = sequenceViewer->reloadVersions(model, versionsToReload);
 
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
@@ -867,7 +871,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
         if (config.isStateful())
-            status = sequenceViewer.retireVersions(config.getName(), versionsToRetire);
+            status = sequenceViewer->retireVersions(model, versionsToRetire);
     }
     return blocking_status;
 }

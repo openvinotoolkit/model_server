@@ -35,7 +35,8 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
         auto modelInstance = model->getModelInstanceByVersion(version);
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
         std::string managerId = model->getName() + std::to_string(version);
-        auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager());
+        //std::shared_ptr<SequenceManager> manager = std::make_shared<SequenceManager>(std::move());
+        auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
     }
@@ -72,14 +73,16 @@ void GlobalSequencesViewer::updateThreadInterval() {
     }
 
     sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread interval set to {}", sequenceWatcherIntervalSec);
 }
 
-ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager) {
+ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, SequenceManager* sequenceManager) {
     std::unique_lock<std::mutex> viewerLock(mutex);
     if (registeredSequenceManagers.count(managerId)) {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} added", managerId);
         registeredSequenceManagers.emplace(managerId, sequenceManager);
     }
 
@@ -89,6 +92,7 @@ ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, std::
 ovms::Status GlobalSequencesViewer::unregisterManager(std::string managerId) {
     std::unique_lock<std::mutex> viewerLock(mutex);
     if (registeredSequenceManagers.count(managerId)) {
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} removed", managerId);
         registeredSequenceManagers.erase(managerId);
     } else {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);

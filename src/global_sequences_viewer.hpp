@@ -31,7 +31,7 @@ namespace ovms {
 class GlobalSequencesViewer {
 private:
     std::mutex mutex;
-    std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
+    std::map<std::string, SequenceManager*> registeredSequenceManagers;
 
     /**
          * @brief sequence Watcher thread for monitor changes in config
@@ -51,9 +51,9 @@ private:
     /**
          * Time interval between each sequence timeout check
          */
-    uint sequenceWatcherIntervalSec = ovms::DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
+    uint sequenceWatcherIntervalSec = 1;
 
-    ovms::Status registerManager(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager);
+    ovms::Status registerManager(std::string managerId, SequenceManager* sequenceManager);
 
     ovms::Status unregisterManager(std::string managerId);
 

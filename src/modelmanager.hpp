@@ -65,7 +65,7 @@ protected:
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
-    GlobalSequencesViewer sequenceViewer;
+    std::unique_ptr<GlobalSequencesViewer> sequenceViewer;
 
 private:
     /**
@@ -179,6 +179,8 @@ public:
     const std::map<std::string, std::shared_ptr<Model>>& getModels() {
         return models;
     }
+
+    void startSequenceWatcher();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
