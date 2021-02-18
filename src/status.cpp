@@ -129,11 +129,17 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE, "Batch size >= 2 is not allowed when demultiplexer node is used"},
     {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are differnt"},
     {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
     {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
     {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE, "Gather node refers to not existing node"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
+    {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
@@ -244,6 +250,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED, net_http::HTTPStatusCode::CREATED},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED, net_http::HTTPStatusCode::OK},
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -270,7 +278,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NETWORK_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
     {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
     {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
