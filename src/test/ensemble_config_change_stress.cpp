@@ -335,7 +335,7 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 1
+                "nireq": 100
             }
         }
     ],
@@ -415,7 +415,7 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 1
+                "nireq": 100
             }
         }
     ],
@@ -499,7 +499,7 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 1
+                "nireq": 100
             }
         }
     ],
@@ -859,7 +859,7 @@ public:
                  std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}};
     }
 
-    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) {
+    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
         tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
@@ -889,14 +889,7 @@ public:
             }
             std::unique_ptr<Pipeline> pipelinePtr;
 
-            tensorflow::serving::PredictRequest request = preparePipelinePredictRequest(
-                {{pipelineInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
-            /*tensorflow::serving::PredictRequest request = preparePredictRequest(
-                {{pipelineInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}});
-            auto& input = (*request.mutable_inputs())[pipelineInputName];
-            input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));*/
+            tensorflow::serving::PredictRequest request = preparePipelinePredictRequest();
             tensorflow::serving::PredictResponse response;
             auto createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
             // we need to make sure that expected status happened and still accept
@@ -1119,7 +1112,7 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
     const std::string pipelineFactorsInputName{"pipeline_factors"};
 
 public:
-    tensorflow::serving::PredictRequest preparePipelinePredictRequest(inputs_info_t requestInputs) override {
+    tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
         tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
