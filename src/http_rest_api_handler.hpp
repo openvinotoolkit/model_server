@@ -29,7 +29,10 @@
 #include "status.hpp"
 
 namespace ovms {
-enum RequestType {Predict, GetModelStatus, GetModelMetadata, ConfigReload};
+enum RequestType { Predict,
+    GetModelStatus,
+    GetModelMetadata,
+    ConfigReload };
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;

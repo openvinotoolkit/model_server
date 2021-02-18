@@ -79,11 +79,11 @@ Status HttpRestApiHandler::dispatchToProcessor(
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, response);
     }
-    if(request_components.type == GetModelStatus) {
+    if (request_components.type == GetModelStatus) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, response);
     }
-    if(request_components.type == ConfigReload) {
+    if (request_components.type == ConfigReload) {
         return processModelControlApiRequest(*response);
     }
     return StatusCode::UNKNOWN_ERROR;
@@ -104,9 +104,8 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         return StatusCode::PATH_INVALID;
     }
 
-
     if (http_method == "POST") {
-        if (std::regex_match(request_path, sm, predictionRegex)){
+        if (std::regex_match(request_path, sm, predictionRegex)) {
             requestComponents.type = Predict;
             requestComponents.model_name = sm[2];
 
@@ -123,12 +122,11 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.processing_method = sm[5];
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, modelControlApiRegex))
-        {
+        if (std::regex_match(request_path, sm, modelControlApiRegex)) {
             requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, modelstatusRegex)) 
+        if (std::regex_match(request_path, sm, modelstatusRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
@@ -145,10 +143,9 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             }
 
             requestComponents.model_subresource = sm[5];
-            if(!requestComponents.model_subresource.empty() && requestComponents.model_subresource == "metadata"){
+            if (!requestComponents.model_subresource.empty() && requestComponents.model_subresource == "metadata") {
                 requestComponents.type = GetModelMetadata;
-            } else
-            {
+            } else {
                 requestComponents.type = GetModelStatus;
             }
             return StatusCode::OK;
