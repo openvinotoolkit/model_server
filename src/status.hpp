@@ -232,6 +232,7 @@ enum class StatusCode {
 
     // Model control API
     OK_CONFIG_FILE_RELOAD_NOT_NEEDED, /*!< Operation succeeded but no config reload was needed */
+    OK_CONFIG_FILE_RELOAD_NEEDED,     /*!< Operation succeeded but no config reload was needed */
 
     STATUS_CODE_END
 };

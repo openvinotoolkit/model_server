@@ -134,6 +134,7 @@ Status GetModelStatusImpl::getModelStatus(
 }
 
 Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
+    std::shared_lock lock(manager.modelsMtx);
     const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
     for (auto const& model : models) {
@@ -143,7 +144,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
         if (status != StatusCode::OK) {
-            return status;
+            continue;
         }
         modelsStatusesTmp.insert({model.first, response});
     }
@@ -154,6 +155,11 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
 
 Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, std::string& output) {
     std::string outputTmp;
+    if (modelsStatuses.begin() == modelsStatuses.end()) {
+        output = "{}";
+        return StatusCode::OK;
+    }
+
     outputTmp += "{\n";
     for (auto modelStatus = modelsStatuses.begin(); modelStatus != modelsStatuses.end(); modelStatus++) {
         outputTmp += ("\"" + modelStatus->first + "\" : \n");
