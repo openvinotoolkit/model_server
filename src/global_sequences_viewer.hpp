@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "model.hpp"
 #include "modelconfig.hpp"
 #include "modelversion.hpp"
 #include "sequence_manager.hpp"
@@ -28,60 +29,61 @@
 namespace ovms {
 
 class GlobalSequencesViewer {
-    private:
-        std::mutex mutex;
-        std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
+private:
+    std::mutex mutex;
+    std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
 
-        /**
+    /**
          * @brief sequence Watcher thread for monitor changes in config
          */
-        void sequenceWatcher(std::future<void> exit);
+    void sequenceWatcher(std::future<void> exit);
 
-        /**
+    /**
          * @brief A thread object used for monitoring sequence timeouts
          */
-        std::thread sequenceMonitor;
+    std::thread sequenceMonitor;
 
-        /**
+    /**
          * @brief An exit signal to notify watcher thread to exit
          */
-        std::promise<void> exit;
+    std::promise<void> exit;
 
-        /**
+    /**
          * Time interval between each sequence timeout check
          */
-        uint sequenceWatcherIntervalSec = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
+    uint sequenceWatcherIntervalSec = ovms::DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
 
-        std::map<std::string, std::shared_ptr<SequenceManager>> getSequenceManagers;
+    ovms::Status registerManager(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager);
 
-        Status register(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager);
+    ovms::Status unregisterManager(std::string managerId);
 
-        Status unregister(std::string managerId);
+    ovms::Status removeTimedOutSequences();
 
-        Status RemoveTimedOutSequences();
+    void updateThreadInterval();
 
-    public:
-        GlobalSequencesViewer() = default;
+public:
+    GlobalSequencesViewer() = default;
 
-        std::mutex& getMutex();
+    void startWatcher();
 
-        Status addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd);
+    std::mutex& getMutex();
 
-        Status retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire);
+    ovms::Status addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd);
 
-        Status reloadVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToReload);
+    ovms::Status retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire);
 
-        /**
+    ovms::Status reloadVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToReload);
+
+    /**
          *  @brief Gets the sequence watcher interval timestep in seconds
          */
-        uint getSequenceWatcherIntervalSec() {
-            return sequenceWatcherIntervalSec;
-        }
+    uint getSequenceWatcherIntervalSec() {
+        return sequenceWatcherIntervalSec;
+    }
 
-        /**
+    /**
          * @brief Gracefully finish the thread
          */
-        void join();
-
-    };
+    void join();
+};
 }  // namespace ovms
