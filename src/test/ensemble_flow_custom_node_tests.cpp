@@ -1511,6 +1511,7 @@ struct LibraryParamControlledMetadata {
         return 0;
     }
     static int release(void* ptr) {
+        SPDLOG_INFO("_________SS!!");
         free(ptr);
         return 0;
     }
@@ -1587,8 +1588,8 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenDLMod
         {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
     connections["custom_node"] = {
-        {"dummy_node_1", {{DUMMY_MODEL_INPUT_NAME, "in_InputNumbers_1"}}},
-        {"dummy_node_2", {{DUMMY_MODEL_INPUT_NAME, "in_InputNumbers_2"}}}};
+        {"dummy_node_1", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}},
+        {"dummy_node_2", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_2"}}}};
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
@@ -1685,8 +1686,8 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenDL
         {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
     connections["custom_node"] = {
-        {"dummy_node_1", {{DUMMY_MODEL_INPUT_NAME, "in_InputNumbers_1"}}},
-        {"dummy_node_2", {{DUMMY_MODEL_INPUT_NAME, "in_InputNumbers_2"}}}};
+        {"dummy_node_1", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}},
+        {"dummy_node_2", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_2"}}}};
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
@@ -1882,7 +1883,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, SharedLibraryErrorsOnMetad
 
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_CUSTOM_NODE_METADATA_CALL_ERROR);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
 }
 
 class EnsembleConfigurationValidationWithDemultiplexer : public EnsembleConfigurationValidationWithCustomNode {};
@@ -1963,6 +1964,45 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+// TODO: Covered in other test?
+// TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInModelRestricted) {
+// }
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNodeRestricted) {
+    const size_t demultiplyCount = 9;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "3,3,10;FP32"},  // 1,3,10 is correct
+                {"out_OutputNumbers_1", "1,9,700;I32"},
+                {"out_OutputNumbers_2", "1,9,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDLModelAndCustomNode) {
