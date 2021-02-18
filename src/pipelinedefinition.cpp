@@ -403,12 +403,53 @@ public:
         return StatusCode::OK;
     }
 
-    Status checkConnectionMetadataCorrectness(const NodeInfo& dependencyNodeInfo, std::shared_ptr<ModelInstance>& dependencyModelInstance, const std::string& modelInputName, const std::string& modelOutputName) {
+    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+        if (shape.size() < 3) {
+            return StatusCode::UNKNOWN_ERROR;  // TODO: specific error? Add test?
+        }
+        if (shape[1] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Demultiply count: {} of node: {} does not match tensor second dimenson value: {}",
+                this->pipelineName,
+                demultiplicatorNodeInfo.demultiplyCount.value(),
+                demultiplicatorNodeInfo.nodeName,
+                shape[1]);
+            return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
+        }
+        shape.erase(shape.begin() + 1);
+        return StatusCode::OK;
+    }
+
+    Status checkConnectionMetadataCorrectness(const NodeInfo& dependencyNodeInfo, const std::string& modelInputName, const std::string& modelOutputName) {
         // If validated connection pair connects two DL model/Custom nodes,
         // check if both input/output exist and its metadata (shape, precision) matches.
+        // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        if (tensorInput->getShape() != tensorOutput->getShape()) {
+        shape_t tensorInputShape = tensorInput->getShape();
+        shape_t tensorOutputShape = tensorOutput->getShape();
+        if (dependencyNodeInfo.demultiplyCount) {
+            auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
+            if (!result.ok()) {
+                return result;
+            }
+        }
+        if (dependantNodeInfo.gatherFromNode.size() == 1) {
+            std::vector<NodeInfo>::const_iterator demultiplicatorNode;
+            auto result = getDependencyNodeInfo(*dependantNodeInfo.gatherFromNode.begin(), demultiplicatorNode);
+            if (!result.ok()) {
+                return result;
+            }
+            result = influenceShapeWithDemultiplexer(tensorInputShape, *demultiplicatorNode);
+            if (!result.ok()) {
+                return result;
+            }
+        } else if (dependantNodeInfo.gatherFromNode.size() > 1) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Manual gathering from multiple nodes is not supported in node name: {}",
+                this->pipelineName,
+                dependantNodeInfo.nodeName);
+            return StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED;
+        }
+        if (tensorInputShape != tensorOutputShape) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Shape mismatch between: dependant node:{}; input:{}; shape:{} vs dependency node:{}; output:{}; shape:{}",
                 pipelineName,
                 dependantNodeInfo.nodeName,
@@ -527,7 +568,7 @@ public:
             if (
                 (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) &&
                 (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
-                result = checkConnectionMetadataCorrectness(dependencyNodeInfo, dependencyModelInstance, realName, dependencyNodeInfo.outputNameAliases.at(alias));
+                result = checkConnectionMetadataCorrectness(dependencyNodeInfo, realName, dependencyNodeInfo.outputNameAliases.at(alias));
                 if (!result.ok()) {
                     return result;
                 }
