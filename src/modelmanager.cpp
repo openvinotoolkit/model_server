@@ -310,11 +310,14 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
         return StatusCode::OK;
     }
+    std::set<std::string> librariesInConfig;
     for (const auto& libraryConfig : doc->value.GetArray()) {
+        librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
         this->customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
             libraryConfig.FindMember("base_path")->value.GetString());
     }
+    this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
 }
 
