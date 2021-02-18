@@ -16,14 +16,13 @@
 
 #pragma once
 
-#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 
+#include "modelconfig.hpp"
 #include "modelversion.hpp"
-#include "sequence.hpp"
-#include "sequence_processing_spec.hpp"
+#include "sequence_manager.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -51,12 +50,7 @@ class GlobalSequencesViewer {
         /**
          * Time interval between each sequence timeout check
          */
-        uint sequenceWatcherIntervalSec = 1;
-
-    public:
-        GlobalSequencesViewer() = default;
-
-        std::mutex& getMutex();
+        uint sequenceWatcherIntervalSec = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
 
         std::map<std::string, std::shared_ptr<SequenceManager>> getSequenceManagers;
 
@@ -65,6 +59,17 @@ class GlobalSequencesViewer {
         Status unregister(std::string managerId);
 
         Status RemoveTimedOutSequences();
+
+    public:
+        GlobalSequencesViewer() = default;
+
+        std::mutex& getMutex();
+
+        Status addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd);
+
+        Status retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire);
+
+        Status reloadVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToReload);
 
         /**
          *  @brief Gets the sequence watcher interval timestep in seconds

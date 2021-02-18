@@ -18,14 +18,9 @@
 
 #include "global_sequences_viewer.hpp"
 
-#include <memory>
-#include <mutex>
-#include <string>
-#include <unordered_map>
-
+#include "model.hpp"
 #include "modelversion.hpp"
-#include "sequence.hpp"
-#include "sequence_processing_spec.hpp"
+#include "stategulmodelinstance.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -36,8 +31,42 @@ namespace ovms {
         return mutex;
     }
 
-    Status GlobalSequencesViewer::AddModels()
+    Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd) {
+        for (const auto version : *versionsToStart) {
+            auto modelInstance = model->getModelInstanceByVersion(version);
+            auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
+            std::string managerId = model->getName() + std::to_string(version);
+            register(managerId, statefulModelInstance.getSequenceManager());
+        }
 
+        updateThreadInterval();
+    }
+
+    Status GlobalSequencesViewer::retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire) {
+        for (const auto version : *versionsToStart) {
+            std::string managerId = model->getName() + std::to_string(version);
+            unregister(managerId);
+        }
+
+        updateThreadInterval();
+    }
+
+    Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToReload) {
+        // TODO: Do we need to implement this ?
+        updateThreadInterval();
+    }
+
+    status GlobalSequencesViewer::updateThreadInterval() {
+        uint32_t lowestHalfTimeoutInterval = DEFAULT_SEQUENCE_TIMEOUT_SECONDS/2;
+        for (auto const&[key, val] : registeredSequenceManagers) {
+            auto sequenceManager = val;
+            uint32_t newInterval = sequenceManager.getTimeout() / 2;
+            if (newInterval < lowestHalfTimeoutInterval)
+                lowestHalfTimeoutInterval = newInterval;
+        }
+
+        sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
+    }
 
     Status GlobalSequencesViewer::register(std::string managerId, std::shared_ptr<SequenceManager> sequenceManager) {
         std::unique_lock<std::mutex> viewerLock(mutex);

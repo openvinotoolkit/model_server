@@ -734,7 +734,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
                 status.string());
         }
         if (config.isStateful())
-            status = sequenceViewer.addVersions(model, versionsToStart);
+            status = sequenceViewer.addVersions(config.getName(), versionsToStart);
 
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
@@ -867,7 +867,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 status.string());
         }
         if (config.isStateful())
-            status = sequenceViewer.retireVersions(model, versionsToRetire);
+            status = sequenceViewer.retireVersions(config.getName(), versionsToRetire);
     }
     return blocking_status;
 }
