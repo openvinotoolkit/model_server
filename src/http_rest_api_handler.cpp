@@ -49,36 +49,6 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
 const std::string HttpRestApiHandler::modelControlApiRegexExp = R"((.?)\/config\/reload)";
 
-Status HttpRestApiHandler::validateUrlAndMethod(
-    const std::string_view http_method,
-    const std::string& request_path,
-    std::smatch* sm) {
-
-    if (http_method != "POST" && http_method != "GET") {
-        return StatusCode::REST_UNSUPPORTED_METHOD;
-    }
-
-    if (FileSystem::isPathEscaped(request_path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
-        return StatusCode::PATH_INVALID;
-    }
-
-    if (http_method == "POST") {
-        if (std::regex_match(request_path, *sm, predictionRegex) || std::regex_match(request_path, *sm, modelControlApiRegex)) {
-            return StatusCode::OK;
-        } else if (std::regex_match(request_path, *sm, modelstatusRegex)) {
-            return StatusCode::REST_UNSUPPORTED_METHOD;
-        }
-    } else if (http_method == "GET") {
-        if (std::regex_match(request_path, *sm, modelstatusRegex)) {
-            return StatusCode::OK;
-        } else if (std::regex_match(request_path, *sm, predictionRegex)) {
-            return StatusCode::REST_UNSUPPORTED_METHOD;
-        }
-    }
-    return StatusCode::REST_INVALID_URL;
-}
-
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
         try {
@@ -92,66 +62,101 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
 }
 
 Status HttpRestApiHandler::dispatchToProcessor(
-    const std::string_view request_path,
     const std::string& request_body,
     std::string* response,
-    std::smatch& sm,
-    const std::string_view http_method) {
-    if (FileSystem::isPathEscaped({request_path.begin(), request_path.end()})) {
+    const HttpRequestComponents& request_components) {
+
+    if (request_components.type == Predict) {
+        if (request_components.processing_method == "predict") {
+            return processPredictRequest(request_components.model_name, request_components.model_version,
+                request_components.model_version_label, request_body, response);
+        } else {
+            SPDLOG_WARN("Requested REST resource not found");
+            return StatusCode::REST_NOT_FOUND;
+        }
+    }
+    if (request_components.type == GetModelMetadata) {
+        return processModelMetadataRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, response);
+    }
+    if(request_components.type == GetModelStatus) {
+        return processModelStatusRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, response);
+    }
+    if(request_components.type == ConfigReload) {
+        return processModelControlApiRequest(*response);
+    }
+    return StatusCode::UNKNOWN_ERROR;
+}
+
+Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
+    const std::string_view http_method,
+    const std::string& request_path) {
+    std::smatch sm;
+    requestComponents.http_method = http_method;
+
+    if (http_method != "POST" && http_method != "GET") {
+        return StatusCode::REST_UNSUPPORTED_METHOD;
+    }
+
+    if (FileSystem::isPathEscaped(request_path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
 
-    std::string request_path_str(request_path);
-
-    if (std::regex_match(request_path_str, sm, modelControlApiRegex)) {
-        if (http_method == "POST") {
-            return processModelControlApiRequest(*response);
-        } else {
-            return StatusCode::REST_UNSUPPORTED_METHOD;
-        }
-    }
-
-    std::string processing_method;
-    std::string model_subresource;
-    std::string model_name;
-    std::optional<int64_t> model_version;
-    std::optional<std::string_view> model_version_label;
-
-    model_name = sm[2];
-    std::string model_version_str = sm[3];
-    std::string model_version_label_str = sm[4];
-    if (http_method == "POST")
-        processing_method = sm[5];
-    else
-        model_subresource = sm[5];
-
-    auto status = parseModelVersion(model_version_str, model_version);
-    if (!status.ok())
-        return status;
-
-    if (!model_version_label_str.empty()) {
-        model_version_label = model_version_label_str;
-    }
 
     if (http_method == "POST") {
-        if (processing_method == "predict") {
-            return processPredictRequest(model_name, model_version,
-                model_version_label, request_body, response);
-        } else {
-            SPDLOG_WARN("Requested REST resource {} not found", std::string(request_path));
-            return StatusCode::REST_NOT_FOUND;
+        if (std::regex_match(request_path, sm, predictionRegex)){
+            requestComponents.type = Predict;
+            requestComponents.model_name = sm[2];
+
+            std::string model_version_str = sm[3];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+
+            std::string model_version_label_str = sm[4];
+            if (!model_version_label_str.empty()) {
+                requestComponents.model_version_label = model_version_label_str;
+            }
+
+            requestComponents.processing_method = sm[5];
+            return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, modelControlApiRegex))
+        {
+            requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, modelstatusRegex)) 
+            return StatusCode::REST_UNSUPPORTED_METHOD;
     } else if (http_method == "GET") {
-        if (!model_subresource.empty() && model_subresource == "metadata") {
-            return processModelMetadataRequest(model_name, model_version,
-                model_version_label, response);
-        } else {
-            return processModelStatusRequest(model_name, model_version,
-                model_version_label, response);
+        if (std::regex_match(request_path, sm, modelstatusRegex)) {
+            requestComponents.model_name = sm[2];
+
+            std::string model_version_str = sm[3];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+
+            std::string model_version_label_str = sm[4];
+            if (!model_version_label_str.empty()) {
+                requestComponents.model_version_label = model_version_label_str;
+            }
+
+            requestComponents.model_subresource = sm[5];
+            if(!requestComponents.model_subresource.empty() && requestComponents.model_subresource == "metadata"){
+                requestComponents.type = GetModelMetadata;
+            } else
+            {
+                requestComponents.type = GetModelStatus;
+            }
+            return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, predictionRegex))
+            return StatusCode::REST_UNSUPPORTED_METHOD;
     }
-    return StatusCode::UNKNOWN_ERROR;
+    return StatusCode::REST_INVALID_URL;
 }
 
 Status HttpRestApiHandler::processRequest(
@@ -168,16 +173,15 @@ Status HttpRestApiHandler::processRequest(
         return StatusCode::PATH_INVALID;
     }
 
-    auto status = validateUrlAndMethod(http_method, request_path_str, &sm);
-    if (!status.ok()) {
-        return status;
-    }
-
     headers->clear();
     response->clear();
     headers->push_back({"Content-Type", "application/json"});
 
-    return dispatchToProcessor(request_path, request_body, response, sm, http_method);
+    HttpRequestComponents requestComponents;
+    auto status = parseRequestComponents(requestComponents, http_method, request_path_str);
+    if (!status.ok())
+        return status;
+    return dispatchToProcessor(request_body, response, requestComponents);
 }
 
 Status HttpRestApiHandler::processPredictRequest(

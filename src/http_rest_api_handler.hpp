@@ -29,6 +29,16 @@
 #include "status.hpp"
 
 namespace ovms {
+enum RequestType {Predict, GetModelStatus, GetModelMetadata, ConfigReload};
+struct HttpRequestComponents {
+    RequestType type;
+    std::string_view http_method;
+    std::string model_name;
+    std::optional<int64_t> model_version;
+    std::optional<std::string_view> model_version_label;
+    std::string processing_method;
+    std::string model_subresource;
+};
 
 class HttpRestApiHandler {
 public:
@@ -48,19 +58,16 @@ public:
         modelControlApiRegex(modelControlApiRegexExp),
         timeout_in_ms(timeout_in_ms) {}
 
-    Status validateUrlAndMethod(
+    Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
-        const std::string& request_path,
-        std::smatch* sm);
+        const std::string& request_path);
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
 
     Status dispatchToProcessor(
-        const std::string_view request_path,
         const std::string& request_body,
         std::string* response,
-        std::smatch& sm,
-        const std::string_view http_method);
+        const HttpRequestComponents& request_components);
 
     /**
      * @brief Process Request
