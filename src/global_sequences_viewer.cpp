@@ -103,13 +103,12 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
 
 void GlobalSequencesViewer::updateThreadInterval() {
     uint32_t lowestHalfTimeoutInterval = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
-    for (auto const&[key, val] : registeredSequenceManagers) {
+    for (auto const& [key, val] : registeredSequenceManagers) {
         auto sequenceManager = val;
         uint32_t newInterval = sequenceManager->getTimeout() / 2;
         if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval) {
             lowestHalfTimeoutInterval = newInterval;
-        }
-        else if (sequenceManager->getTimeout() == 1){
+        } else if (sequenceManager->getTimeout() == 1) {
             lowestHalfTimeoutInterval = 1;
         }
     }
