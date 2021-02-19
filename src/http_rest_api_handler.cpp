@@ -383,7 +383,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
 
     std::string pipelinesStatusesJson = manager.getPipelinesStatusesAsJson();
 
-    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" +  pipelinesStatusesJson;
+    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" + pipelinesStatusesJson;
 
     if (!isConfigFileReloadNeeded) {
         SPDLOG_DEBUG("Config file reload was not needed.");
@@ -413,7 +413,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response) {
 
     std::string pipelinesStatusesJson = manager.getPipelinesStatusesAsJson();
 
-    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" +  pipelinesStatusesJson;
+    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" + pipelinesStatusesJson;
 
     return StatusCode::OK;
 }

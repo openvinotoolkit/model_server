@@ -33,7 +33,7 @@ enum RequestType { Predict,
     GetModelStatus,
     GetModelMetadata,
     ConfigReload,
-    ConfigStatus};
+    ConfigStatus };
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
