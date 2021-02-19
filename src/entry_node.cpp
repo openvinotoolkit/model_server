@@ -19,7 +19,7 @@
 #include <string>
 #include <utility>
 
-#include <spdlog/spdlog.h>
+#include "logging.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -27,6 +27,31 @@
 #pragma GCC diagnostic pop
 
 namespace ovms {
+
+Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    // TODO this should be created in EntryNode::SetInputs, or special method for entry node called
+    // in event loop can be done at the end of part 3 or in future release
+    NodeSessionMetadata metadata;
+    NodeSession& nodeSession = getNodeSession(metadata);  // call to create session
+    notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession.getSessionKey()));
+    return StatusCode::OK;
+}
+
+Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    // TODO handle multiple sessions later on
+    BlobMap outputs;
+    auto status = fetchResults(outputs);
+    if (!status.ok()) {
+        return status;
+    }
+    SessionResult metaOutputsPair{nodeSession.getNodeSessionMetadata(), std::move(outputs)};
+    auto it = nodeSessionOutputs.emplace(nodeSession.getSessionKey(), std::move(metaOutputsPair));
+    if (!it.second) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to set entry node session results.");
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    return StatusCode::OK;
+}
 
 Status EntryNode::fetchResults(BlobMap& outputs) {
     // Fill outputs map with tensorflow predict request inputs. Fetch only those that are required in following nodes
@@ -41,12 +66,12 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
-                SPDLOG_DEBUG("[Node: {}] Missing input with specific name", getName(), details);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
             const auto& tensor_proto = request->inputs().at(output_name);
             InferenceEngine::Blob::Ptr blob;
-            SPDLOG_DEBUG("[Node: {}] Deserializing input: {}", getName(), output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);
             if (!status.ok()) {
                 return status;
@@ -54,7 +79,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
 
             outputs[output_name] = blob;
 
-            SPDLOG_DEBUG("[Node: {}]: blob with name {} has been prepared", getName(), output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name {} has been prepared", getName(), output_name);
         }
     }
 
@@ -65,7 +90,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
     InferenceEngine::TensorDesc description;
     if (proto.tensor_content().size() == 0) {
         const std::string details = "Tensor content size can't be 0";
-        SPDLOG_DEBUG("[Node: {}] {}", getName(), details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] {}", getName(), details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
@@ -84,7 +109,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
         std::stringstream ss;
         ss << "Expected: " << tensor_count * tensorflow::DataTypeSize(proto.dtype()) << "; Actual: " << proto.tensor_content().size();
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[Node {}] Invalid size of tensor proto - {}", getName(), details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node {}] Invalid size of tensor proto - {}", getName(), details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
@@ -118,18 +143,18 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             std::stringstream ss;
             ss << "Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());
             const std::string details = ss.str();
-            SPDLOG_DEBUG("[Node: {}] Unsupported deserialization precision - {}", getName(), details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unsupported deserialization precision - {}", getName(), details);
             return Status(StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, details);
         }
         }
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
             getName(), status.string(), e.what());
         return status;
     } catch (std::logic_error& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
             getName(), status.string(), e.what());
         return status;
     }

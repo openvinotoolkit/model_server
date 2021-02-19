@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 #include "../executingstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../processing_spec.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
@@ -192,6 +192,15 @@ public:
     }
 };
 
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance() :
+        ModelInstance("UNUSED_NAME", 42) {}
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+};
+
 void TestPredict::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
@@ -200,7 +209,6 @@ void TestPredict::performPredict(const std::string modelName,
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    ovms::ProcessingSpec processingSpec;
 
     auto& tensorProto = request.inputs().find("b")->second;
     size_t batchSize = tensorProto.tensor_shape().dim(0).size();
@@ -219,7 +227,7 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->validate(&request);
+    ovms::Status validationStatus = (std::static_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);

@@ -49,10 +49,10 @@ public:
         case InferenceEngine::Precision::FP32:
             return makeBlob<float>(requestInput, tensorInfo);
         case InferenceEngine::Precision::FP16: {
-            // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L45
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = blob->buffer().as<uint16_t*>();
             auto size = static_cast<size_t>(requestInput.half_val_size());
             for (size_t i = 0; i < size; i++) {
@@ -65,10 +65,10 @@ public:
         case InferenceEngine::Precision::I8:
             return makeBlob<int8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::U16: {
-            // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = blob->buffer().as<uint16_t*>();
             auto size = static_cast<size_t>(requestInput.int_val_size());
             for (size_t i = 0; i < size; i++) {
@@ -80,9 +80,7 @@ public:
             return makeBlob<int16_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::I32:
             return makeBlob<int32_t>(requestInput, tensorInfo);
-
         case InferenceEngine::Precision::I64:
-
         case InferenceEngine::Precision::MIXED:
         case InferenceEngine::Precision::Q78:
         case InferenceEngine::Precision::BIN:

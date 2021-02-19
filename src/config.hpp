@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 #include <vector>
 
 #include <cxxopts.hpp>
+
+#include "modelconfig.hpp"
 
 namespace ovms {
 /**
@@ -268,9 +270,9 @@ public:
      *
      * @return uint
      */
-    uint32_t sequenceTimeout() {
+    uint32_t sequenceTimeoutSeconds() {
         if (!result->count("sequence_timeout_seconds")) {
-            return 0;
+            return DEFAULT_SEQUENCE_TIMEOUT_SECONDS;
         }
         return result->operator[]("sequence_timeout_seconds").as<uint32_t>();
     }
@@ -291,7 +293,7 @@ public:
      */
     uint32_t maxSequenceNumber() {
         if (!result->count("max_sequence_number")) {
-            return 0;
+            return DEFAULT_MAX_SEQUENCE_NUMBER;
         }
         return result->operator[]("max_sequence_number").as<uint32_t>();
     }

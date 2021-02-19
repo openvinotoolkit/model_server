@@ -735,3 +735,741 @@ TEST(SchemaTest, ModelConfigNireqNegative) {
     auto result = ovms::validateJsonAgainstSchema(modelConfigNireqNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
+    const char* modelConfigSeqNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "max_sequence_number": -1
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigSeqNegativeDoc;
+    modelConfigSeqNegativeDoc.Parse(modelConfigSeqNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelConfigTimeoutNegative) {
+    const char* modelConfigTimeoutNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "sequence_timeout_seconds": -1
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigSeqNegativeDoc;
+    modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeLibraryConfigMatchingSchema) {
+    const char* customNodeLibraryConfig = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": "dummy_path"
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            },
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode2",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeLibraryConfigParsed;
+    customNodeLibraryConfigParsed.Parse(customNodeLibraryConfig);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, CustomNodeLibraryConfigMissingLibraryName) {
+    const char* customNodeLibraryConfigMissingLibraryName = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "base_path": "dummy_path"
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeLibraryConfigMissingLibraryNameParsed;
+    customNodeLibraryConfigMissingLibraryNameParsed.Parse(customNodeLibraryConfigMissingLibraryName);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigMissingLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeLibraryConfigMissingBasePath) {
+    const char* customNodeLibraryConfigMissingBasePath = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library"
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeLibraryConfigMissingBasePathParsed;
+    customNodeLibraryConfigMissingBasePathParsed.Parse(customNodeLibraryConfigMissingBasePath);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigMissingBasePathParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeLibraryConfigInvalidNameType) {
+    const char* customNodeLibraryConfigInvalidNameType = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": 2,
+                "base_path": "dummy_path"
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeLibraryConfigInvalidNameTypeParsed;
+    customNodeLibraryConfigInvalidNameTypeParsed.Parse(customNodeLibraryConfigInvalidNameType);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigInvalidNameTypeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeLibraryConfigInvalidBasePathType) {
+    const char* customNodeLibraryConfigInvalidBasePathType = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": 2
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeLibraryConfigInvalidBasePathTypeParsed;
+    customNodeLibraryConfigInvalidBasePathTypeParsed.Parse(customNodeLibraryConfigInvalidBasePathType);
+    auto result = ovms::validateJsonAgainstSchema(customNodeLibraryConfigInvalidBasePathTypeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeConfigInvalidLibraryNameType) {
+    const char* customNodeConfigInvalidLibraryNameType = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": 2,
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeConfigInvalidLibraryNameTypeParsed;
+    customNodeConfigInvalidLibraryNameTypeParsed.Parse(customNodeConfigInvalidLibraryNameType);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigInvalidLibraryNameTypeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeConfigNoLibraryName) {
+    const char* customNodeConfigNoLibraryName = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeConfigNoLibraryNameParsed;
+    customNodeConfigNoLibraryNameParsed.Parse(customNodeConfigNoLibraryName);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigNoLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeConfigModelNameShouldNotBeAcceptedInCustomNode) {
+    const char* customNodeConfigModelName = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "model_name": "dummy",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeConfigModelNameParsed;
+    customNodeConfigModelNameParsed.Parse(customNodeConfigModelName);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigModelNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeConfigNotAppropiateParameterShouldNotBeAcceptedInCustomNode) {
+    const char* customNodeConfigNotAppropiateParameter = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": "dummy_path"
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "type": "custom",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ],
+                        "not_appropiate": "not_appropiate"
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeConfigNotAppropiateParameterParsed;
+    customNodeConfigNotAppropiateParameterParsed.Parse(customNodeConfigNotAppropiateParameter);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigNotAppropiateParameterParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelNodeConfigLibraryNameShouldNotBeAcceptedInDLNode) {
+    const char* modelNodeConfigLibraryName = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": "dummy_path"
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document modelNodeConfigLibraryNameParsed;
+    modelNodeConfigLibraryNameParsed.Parse(modelNodeConfigLibraryName);
+    auto result = ovms::validateJsonAgainstSchema(modelNodeConfigLibraryNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelNodeConfigNotAppropiateParameterShouldNotBeAcceptedInDLNode) {
+    const char* modelNodeConfigNotAppropiateParameter = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": "dummy_path"
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "params": {
+                            "a": "1024",
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ],
+                        "not_appropiate": "not_appropiate"
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document modelNodeConfigNotAppropiateParameterParsed;
+    modelNodeConfigNotAppropiateParameterParsed.Parse(modelNodeConfigNotAppropiateParameter);
+    auto result = ovms::validateJsonAgainstSchema(modelNodeConfigNotAppropiateParameterParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, CustomNodeConfigParamsInvalidType) {
+    const char* customNodeConfigParamsInvalidType = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "target_device": "CPU",
+                    "model_version_policy": {"all": {}},
+                    "nireq": 1
+                }
+            }
+        ],
+        "custom_node_library_config_list": [
+            {
+                "name": "dummy_library",
+                "base_path": "dummy_path"
+            }
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "pipeline1Dummy",
+                "inputs": ["custom_dummy_input"],
+                "nodes": [
+                    {
+                        "name": "dummyNode",
+                        "library_name": "dummy_library",
+                        "type": "custom",
+                        "params": {
+                            "a": 1024,
+                            "b": "512"
+                        },
+                        "inputs": [
+                            {"b": {"node_name": "request",
+                                "data_item": "custom_dummy_input"}}
+                        ],
+                        "outputs": [
+                            {"data_item": "a",
+                            "alias": "new_dummy_output"}
+                        ]
+                    }
+                ],
+                "outputs": [
+                    {"custom_dummy_output": {"node_name": "dummyNode",
+                                            "data_item": "new_dummy_output"}
+                    }
+                ]
+            }
+        ]
+    })";
+
+    rapidjson::Document customNodeConfigParamsInvalidTypeParsed;
+    customNodeConfigParamsInvalidTypeParsed.Parse(customNodeConfigParamsInvalidType);
+    auto result = ovms::validateJsonAgainstSchema(customNodeConfigParamsInvalidTypeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+static const char* demultiplexerConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "dummy_path",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "dummy_library",
+            "base_path": "dummy_path"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "library_name": "dummy_library",
+                    "type": "custom",
+                    "params": {
+                        "a": "1024",
+                        "b": "512"
+                    },
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ],
+                    "demultiply_count": 10,
+                    "gather_from_node": "dummy"
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST(SchemaTest, DemultiplexerConfigMatchingSchema) {
+    rapidjson::Document demultiplexerConfigMatchingSchemaParsed;
+    demultiplexerConfigMatchingSchemaParsed.Parse(demultiplexerConfig);
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegativeNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": -1"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountNegativeParsed;
+    demultiplexerConfigDemultiplyCountNegativeParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": 0"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsZeroParsed;
+    demultiplexerConfigDemultiplyCountEqualsZeroParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsZeroParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": 1"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountEqualsOneParsed;
+    demultiplexerConfigDemultiplyCountEqualsOneParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsOneParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountTypeInvalid) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": \"10\""};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountTypeInvalidParsed;
+    demultiplexerConfigDemultiplyCountTypeInvalidParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountTypeInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
+    const std::string gatherFromNodeToReplace{"\"gather_from_node\": \"dummy\""};
+    const std::string gatherFromNode{"\"gather_from_node\": 10"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(gatherFromNodeToReplace), gatherFromNodeToReplace.size(), gatherFromNode);
+    rapidjson::Document demultiplexerConfigGatherFromNodeTypeInvalidParsed;
+    demultiplexerConfigGatherFromNodeTypeInvalidParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigGatherFromNodeTypeInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}

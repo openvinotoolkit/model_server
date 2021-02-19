@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,8 +45,24 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
-    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is subscribed to pipeline"},
+    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
+    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
+    {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
+    {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
+    {StatusCode::INVALID_SEQUENCE_TIMEOUT, "Sequence timeout parameter too high"},
+    {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
+
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, "Sequence with provided ID already exists"},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, "Sequence ID has not been provided in request inputs"},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, "Could not find sequence id in expected tensor proto field uint64_val"},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, "Could not find sequence control input in expected tensor proto field uint32_val"},
+    {StatusCode::SEQUENCE_TERMINATED, "Sequence last request is being processed and it's not available anymore"},
+    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, "Special input proto does not contain tensor shape information"},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, "Max sequence number has been reached. Could not create new sequence."},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
@@ -91,7 +107,9 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
-    {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Tensor serialization error"},
+    {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Size of data in tensor_content does not match declared tensor shape"},
+    {StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, "Number of elements in xxx_val field does not match declared tensor shape"},
+    {StatusCode::REST_SERIALIZE_NO_DATA, "No data found in tensor_content or xxx_val field matching tensor dtype"},
 
     // Pipeline validation errors
     {StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST, "Pipeline definition with the same name already exists"},
@@ -112,6 +130,16 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE, "Batch size >= 2 is not allowed when demultiplexer node is used"},
+    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are differnt"},
+    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
+    {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
+    {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
+    {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE, "Gather node refers to not existing node"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
+    {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
+    {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
 
     // Storage errors
     // S3
@@ -182,6 +210,17 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
 
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::ALREADY_EXISTS},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::FAILED_PRECONDITION},
+    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, grpc::StatusCode::UNAVAILABLE},
+
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_MISSING_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
@@ -213,6 +252,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED, net_http::HTTPStatusCode::CREATED},
+    {StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED, net_http::HTTPStatusCode::OK},
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -239,7 +280,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NETWORK_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
     {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
     {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
@@ -256,6 +297,17 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
+
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},

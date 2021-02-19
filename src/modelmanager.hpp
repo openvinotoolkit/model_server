@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ namespace ovms {
 const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
 class IVersionReader;
+class CustomNodeLibraryManager;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -49,9 +50,9 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager() = default;
+    ModelManager();
 
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
 
     /**
      * @brief A collection of models
@@ -60,6 +61,8 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
 
     PipelineFactory pipelineFactory;
+
+    std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
 private:
     /**
@@ -72,6 +75,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
+    Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
@@ -79,6 +83,7 @@ private:
      * @brief creates customloader from the loader configuration
      */
     Status createCustomLoader(CustomLoaderConfig& loaderConfig);
+
     /**
      * @brief Watcher thread for monitor changes in config
      */
@@ -113,16 +118,26 @@ private:
     void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
     /**
-     * @brief Mutex for blocking concurrent add & find of model
+     * @brief Mutex for protecting concurrent reloading config
      */
-    mutable std::shared_mutex modelsMtx;
+    mutable std::recursive_mutex configMtx;
 
     /**
      * Time interval between each config file check
      */
     uint watcherIntervalSec = 1;
 
+    /**
+     * @brief Time of last config change
+     */
+    int64_t lastConfigChangeTime;
+
 public:
+    /**
+     * @brief Mutex for blocking concurrent add & find of model
+     */
+    mutable std::shared_mutex modelsMtx;
+
     /**
      * @brief Gets the instance of ModelManager
      */
@@ -142,7 +157,7 @@ public:
      * @brief Destroy the Model Manager object
      * 
      */
-    virtual ~ModelManager() {}
+    virtual ~ModelManager();
 
     /**
      * @brief Gets config filename
@@ -165,6 +180,8 @@ public:
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+
+    const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 
     /**
      * @brief Finds model with specific name
@@ -270,8 +287,8 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name) {
-        return std::make_shared<Model>(name);
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
+        return std::make_shared<Model>(name, isStateful);
     }
 
     /**
@@ -306,7 +323,11 @@ public:
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 
-protected:
+    /**
+     * @brief Check if configuration file reload is needed.
+     */
+    bool configFileReloadNeeded();
+
     /**
      * @brief Reads models from configuration file
      * 

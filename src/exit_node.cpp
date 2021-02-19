@@ -18,18 +18,29 @@
 #include <string>
 #include <utility>
 
-#include <spdlog/spdlog.h>
+#include "logging.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
-namespace ovms {
+#include "exitnodesession.hpp"
 
-Status ExitNode::fetchResults(BlobMap&) {
+namespace ovms {
+Status ExitNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
+    return this->fetchResults(exitNodeSession.getInputBlobs());
+}
+
+Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
+    return StatusCode::OK;
+}
+
+Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
     // Serialize results to proto
-    for (const auto& kv : this->inputBlobs) {
+    for (const auto& kv : inputBlobs) {
         const auto& output_name = kv.first;
         auto& blob = kv.second;
         SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name: {}", getName(), output_name);
@@ -41,7 +52,6 @@ Status ExitNode::fetchResults(BlobMap&) {
 
         SPDLOG_DEBUG("[Node: {}] Serialized blob to proto: blob name {}", getName(), output_name);
     }
-
     return StatusCode::OK;
 }
 
@@ -90,5 +100,9 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
     proto.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
 
     return StatusCode::OK;
+}
+
+std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
 }
 }  // namespace ovms

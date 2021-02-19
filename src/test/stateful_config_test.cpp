@@ -54,7 +54,7 @@ static const char* modelStatefulChangedConfig = R"(
                 "nireq": 100,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 2,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
@@ -121,5 +121,5 @@ TEST_F(StatefulConfigTest, ChangedValues) {
     auto seq = modelConfig.getMaxSequenceNumber();
     ASSERT_EQ(seq, 1000);
     seq = modelConfig.getSequenceTimeout();
-    ASSERT_EQ(seq, 120);
+    ASSERT_EQ(seq, 2);
 }

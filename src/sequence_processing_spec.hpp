@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,23 +19,18 @@
 
 namespace ovms {
 
-struct SequenceProcessingSpec {
+class SequenceProcessingSpec {
     uint32_t sequenceControlInput;
     uint64_t sequenceId;
+
+public:
+    SequenceProcessingSpec() = default;
     SequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) :
         sequenceControlInput(sequenceControlInput),
         sequenceId(sequenceId) {}
-};
-
-class ProcessingSpec {
-private:
-    std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpec;
-
-public:
-    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpec; }
-
-    void setSequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) {
-        sequenceProcessingSpec = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
-    }
+    const uint32_t getSequenceControlInput() const { return sequenceControlInput; }
+    void setSequenceControlInput(uint32_t sequenceControlInput) { this->sequenceControlInput = sequenceControlInput; }
+    const uint64_t getSequenceId() const { return sequenceId; }
+    void setSequenceId(uint64_t sequenceId) { this->sequenceId = sequenceId; }
 };
 }  // namespace ovms

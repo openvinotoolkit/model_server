@@ -113,8 +113,8 @@ def parse_arguments():
     parser.add_argument(
         '--sequence_id',
         required=False,
-        default=1,
-        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
+        default=0,
+        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 0')
 
     print('### Starting grpc_stateful_client.py client ###')
 
@@ -161,8 +161,8 @@ def prepare_processing_data(args):
     if len(reference_files) != len(output_names):
         print(
             "ERROR: Number of output ark files {} must be equal to the number of output names {}".format(
-                len(input_files),
-                len(input_names)))
+                len(reference_files),
+                len(output_names)))
         exit(1)
 
     # Consolidate input
@@ -312,16 +312,16 @@ def main():
             # Add sequence start
             if x == 0:
                 request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_START, dtype="uint32"))
+                    make_tensor_proto([SEQUENCE_START], dtype="uint32"))
 
             # Set sequence id
             request.inputs['sequence_id'].CopyFrom(
-                make_tensor_proto(sequence_id, dtype="uint64"))
+                make_tensor_proto([sequence_id], dtype="uint64"))
 
             # Add sequence end
             if x == sequence_size + cw_l + cw_r - 1:
                 request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+                    make_tensor_proto([SEQUENCE_END], dtype="uint32"))
 
             start_time = datetime.datetime.now()
             # result includes a dictionary with all model outputs
@@ -332,13 +332,13 @@ def main():
                 print(
                     "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
                 request.inputs['sequence_control_input'].CopyFrom(
-                    make_tensor_proto(SEQUENCE_END, dtype="uint32"))
+                    make_tensor_proto([SEQUENCE_END], dtype="uint32"))
                 result = stub.Predict(request, 10.0)
                 exit(1)
 
             # Unique sequence_id provided by OVMS
             if get_sequence_id:
-                sequence_id = np.uint64(result.outputs['sequence_id'])
+                sequence_id = result.outputs['sequence_id'].uint64_val[0]
                 get_sequence_id = False
 
             duration = (end_time - start_time).total_seconds() * 1000
@@ -372,7 +372,7 @@ def main():
                     'Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
                         x, avg_rms_error_sum, round(
                             np.average(duration), 2), round(
-                            1000 * sequence_size / np.average(duration), 2)))
+                            sequence_size / np.average(duration), 2)))
                 # END output names loop
 
             score_index += 1
@@ -380,10 +380,10 @@ def main():
 
         seq_avg_rms_error_sum = mean_avg_rms_error_sum / (sequence_size)
         print(
-            "\tSequence {} average rms error: {:.10f}\n".format(
+            "\tSequence id: {} ; Sequence name: {} ; Average RMS Error: {:.10f}\n".format(
                 sequence_id,
+                sequence_name,
                 seq_avg_rms_error_sum))
-        sequence_id += 1
         global_avg_rms_error_sum += seq_avg_rms_error_sum
         # END input name loop
 
@@ -391,7 +391,7 @@ def main():
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
-    print_statistics(processing_times, sequence_size)
+    print_statistics(processing_times, sequence_size / 1000)
     print('### Finished grpc_stateful_client.py client processing ###')
 
 

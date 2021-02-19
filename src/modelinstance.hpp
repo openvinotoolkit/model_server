@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "sequence_processing_spec.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -76,6 +77,13 @@ class PipelineDefinition;
 class ModelInstance {
 protected:
     /**
+         * @brief Performs model loading
+         *
+         * @return status
+         */
+    virtual Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
          * @brief Inference Engine core object
          */
     std::unique_ptr<InferenceEngine::Core> engine;
@@ -104,6 +112,11 @@ protected:
          * @brief A model version
          */
     const model_version_t version = -1;
+
+    /**
+         * @brief A model subscription manager
+         */
+    ModelChangeSubscription subscriptionManager;
 
     /**
          * @brief A model status
@@ -170,7 +183,7 @@ protected:
          *
          * @return Status
          */
-    Status loadOVExecutableNetwork(const ModelConfig& config);
+    virtual Status loadOVExecutableNetwork(const ModelConfig& config);
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -218,6 +231,8 @@ protected:
 
     const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
+
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
 private:
     /**
@@ -267,13 +282,6 @@ private:
     void loadOutputTensors(const ModelConfig& config);
 
     /**
-         * @brief Performs model loading
-         *
-         * @return status
-         */
-    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    /**
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
@@ -289,8 +297,6 @@ private:
          * @return Status
          */
     Status recoverFromReloadingError(const Status& status);
-
-    ModelChangeSubscription subscriptionManager;
 
 public:
     /**
@@ -491,8 +497,6 @@ public:
     void unsubscribe(PipelineDefinition& pd);
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
-
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
 
