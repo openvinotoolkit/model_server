@@ -77,6 +77,7 @@ enum class StatusCode {
     SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
     SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
     SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
+    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */

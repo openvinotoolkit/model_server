@@ -62,6 +62,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, "Could not find sequence control input in expected tensor proto field uint32_val"},
     {StatusCode::SEQUENCE_TERMINATED, "Sequence last request is being processed and it's not available anymore"},
     {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, "Special input proto does not contain tensor shape information"},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, "Max sequence number has been reached. Could not create new sequence."},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
@@ -210,14 +211,15 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
 
     // Sequence management
-    {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::ALREADY_EXISTS},
     {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::SEQUENCE_ID_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::FAILED_PRECONDITION},
     {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, grpc::StatusCode::UNAVAILABLE},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
@@ -295,6 +297,17 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
+
+    // Sequence management
+    {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+    {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
+    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
