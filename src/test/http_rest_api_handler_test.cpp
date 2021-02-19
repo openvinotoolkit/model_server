@@ -95,7 +95,7 @@ TEST(ModelControlApi, positive) {
     auto status = handler.processModelControlApiRequest(response);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
 static const char* empty_config = R"(
@@ -132,7 +132,7 @@ TEST(ModelControlApi, configChange) {
 
     auto status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
     createConfigFileWithContent(empty_config);
@@ -156,7 +156,7 @@ TEST(ModelControlApi, configChange) {
 
     status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
 TEST(ModelControlApi, reloadNotNeeded) {

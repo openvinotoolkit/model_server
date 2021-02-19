@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <cstddef>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "../../custom_node_interface.h"
@@ -32,6 +33,7 @@ static const std::string INPUT_TENSOR_NAME = "input_numbers";
 static const std::string FACTORS_TENSOR_NAME = "op_factors";
 
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+    std::stringstream ss;
     // validate inputs
     float* inputTensor;
     float* inputFactors;
@@ -41,19 +43,21 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             if (inputs[i].dimsLength != 2 ||
                 inputs[i].dims[0] != 1 ||
                 inputs[i].dims[1] == 0) {
-                std::cout << "improper " << INPUT_TENSOR_NAME
-                          << " dimensions: [" << inputs[i].dims[0] << ", " << inputs[i].dims[1] << "]" << std::endl;
+                ss << "improper " << INPUT_TENSOR_NAME
+                   << " dimensions: [" << inputs[i].dims[0] << ", " << inputs[i].dims[1] << "]" << std::endl;
+                std::cout << ss.str() << std::endl;
                 return 1;
             }
-            std::cout << "Input valuesPerTensor" << inputs[i].dims[1] << std::endl;
+            ss << "Input valuesPerTensor:" << inputs[i].dims[1] << std::endl;
             valuesPerTensor = inputs[i].dims[1];
             inputTensor = reinterpret_cast<float*>(inputs[i].data);
         } else if (FACTORS_TENSOR_NAME == inputs[i].name) {
             if (inputs[i].dimsLength != 2 ||
                 inputs[i].dims[0] != 1 ||
                 inputs[i].dims[1] != OPS_END) {
-                std::cout << "improper " << FACTORS_TENSOR_NAME
-                          << " dimensions:[" << inputs[i].dims[0] << ", " << inputs[i].dims[1] << "]" << std::endl;
+                ss << "improper " << FACTORS_TENSOR_NAME
+                   << " dimensions:[" << inputs[i].dims[0] << ", " << inputs[i].dims[1] << "]" << std::endl;
+                std::cout << ss.str() << std::endl;
                 return 1;
             }
             inputFactors = reinterpret_cast<float*>(inputs[i].data);
@@ -97,15 +101,16 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
                 result[resultIndex] = inputTensor[dummyPos] / inputFactors[opId];
                 break;
             }
-            std::cout << "opId:" << opId
-                      << " dummyPos:" << dummyPos
-                      << " resultIndex:" << resultIndex
-                      << " result:" << result[resultIndex]
-                      << " inputTensor:" << inputTensor[dummyPos]
-                      << " inputFactor:" << inputFactors[opId]
-                      << std::endl;
+            ss << "opId:" << opId
+               << " dummyPos:" << dummyPos
+               << " resultIndex:" << resultIndex
+               << " result:" << result[resultIndex]
+               << " inputTensor:" << inputTensor[dummyPos]
+               << " inputFactor:" << inputFactors[opId]
+               << std::endl;
         }
     }
+    std::cout << ss.str() << std::endl;
     return 0;
 }
 
