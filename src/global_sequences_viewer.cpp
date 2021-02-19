@@ -38,13 +38,12 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
         if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
             continue;
         auto modelInstance = model->getModelInstanceByVersion(version);
-        if (!modelVersion) {
+        if (!modelInstance) {
             Status status = StatusCode::UNKNOWN_ERROR;
             SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
                 model->getName(),
                 version,
                 status.string());
-            result = status;
             continue;
         }
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
@@ -83,13 +82,12 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
             return status;
 
         auto modelInstance = model->getModelInstanceByVersion(version);
-        if (!modelVersion) {
+        if (!modelInstance) {
             Status status = StatusCode::UNKNOWN_ERROR;
             SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
                 model->getName(),
                 version,
                 status.string());
-            result = status;
             continue;
         }
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
@@ -109,8 +107,7 @@ void GlobalSequencesViewer::updateThreadInterval() {
         uint32_t newInterval = sequenceManager->getTimeout() / 2;
         if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval) {
             lowestHalfTimeoutInterval = newInterval;
-        }
-        else if (sequenceManager->getTimeout() == 1){
+        } else if (sequenceManager->getTimeout() == 1) {
             lowestHalfTimeoutInterval = 1;
         }
     }
