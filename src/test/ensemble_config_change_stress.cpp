@@ -578,7 +578,8 @@ protected:
     const std::string& pipelineName = PIPELINE_1_DUMMY_NAME;
     const std::string pipelineInputName = "custom_dummy_input";
     const std::string pipelineOutputName = "custom_dummy_output";
-
+    // 1.1 for different ops test to be sure that always demultiplication
+    // producess highest results
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
 public:
@@ -1139,8 +1140,8 @@ public:
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we may hit during pipeline reload
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
     // TODO replace above with the one below when removing libraries will be fully implemented.
     // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
     //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
