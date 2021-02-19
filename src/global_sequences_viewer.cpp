@@ -29,10 +29,6 @@ namespace ovms {
 
 static bool sequenceWatcherStarted = false;
 
-std::mutex& GlobalSequencesViewer::getMutex() {
-    return mutex;
-}
-
 ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& model,
     std::shared_ptr<model_versions_t> versionsToAdd,
     std::shared_ptr<model_versions_t> versionsFailed) {

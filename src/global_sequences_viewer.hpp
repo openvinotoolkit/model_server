@@ -68,8 +68,6 @@ public:
 
     void startWatcher();
 
-    std::mutex& getMutex();
-
     ovms::Status addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd, std::shared_ptr<model_versions_t> versionsFailed);
 
     ovms::Status retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire);
