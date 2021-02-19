@@ -16,6 +16,9 @@
 
 #include "global_sequences_viewer.hpp"
 
+#include <memory>
+#include <utility>
+
 #include "logging.hpp"
 #include "model.hpp"
 #include "modelversion.hpp"

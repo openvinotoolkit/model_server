@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
