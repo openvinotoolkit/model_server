@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -53,7 +54,7 @@ private:
     /**
          * Time interval between each sequence timeout check
          */
-    uint32_t sequenceWatcherIntervalSec = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
+    uint32_t sequenceWatcherIntervalSec = std::numeric_limits<uint32_t>::max();
 
     ovms::Status registerManager(std::string managerId, SequenceManager* sequenceManager);
 

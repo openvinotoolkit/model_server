@@ -16,6 +16,7 @@
 
 #include "global_sequences_viewer.hpp"
 
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -102,7 +103,7 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
 }
 
 void GlobalSequencesViewer::updateThreadInterval() {
-    uint32_t lowestHalfTimeoutInterval = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
+    uint32_t lowestHalfTimeoutInterval = std::numeric_limits<uint32_t>::max();
     for (auto const&[key, val] : registeredSequenceManagers) {
         auto sequenceManager = val;
         uint32_t newInterval = sequenceManager->getTimeout() / 2;
