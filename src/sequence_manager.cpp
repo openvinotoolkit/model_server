@@ -88,7 +88,7 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
         return StatusCode::SEQUENCE_MISSING;
 
     if (getSequence(sequenceId).isTerminated())
-        return StatusCode::SEQUENCE_TERMINATED;
+        return StatusCode::SEQUENCE_MISSING;
 
     return StatusCode::OK;
 }
@@ -108,7 +108,12 @@ Status SequenceManager::createSequence(SequenceProcessingSpec& sequenceProcessin
         sequenceProcessingSpec.setSequenceId(uniqueSequenceId);
         return StatusCode::OK;
     }
+
     if (sequenceExists(sequenceId)) {
+        if (getSequence(sequenceId).isTerminated()) {
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Sequence with provided ID is currently being removed", modelName, modelVersion);
+            return StatusCode::SEQUENCE_TERMINATED;
+        }
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Sequence with provided ID already exists", modelName, modelVersion);
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {
