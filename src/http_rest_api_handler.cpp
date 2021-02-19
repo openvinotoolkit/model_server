@@ -42,12 +42,12 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
-const std::string HttpRestApiHandler::kPathRegexExp = R"((.?)\/v1\/models\/.*)";
 const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
-const std::string HttpRestApiHandler::modelControlApiRegexExp = R"((.?)\/config\/reload)";
+const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/config\/reload)";
+const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/config\/status)";
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
@@ -84,7 +84,10 @@ Status HttpRestApiHandler::dispatchToProcessor(
             request_components.model_version_label, response);
     }
     if (request_components.type == ConfigReload) {
-        return processModelControlApiRequest(*response);
+        return processConfigReloadRequest(*response);
+    }
+    if (request_components.type == ConfigStatus) {
+        return processConfigStatusRequest(*response);
     }
     return StatusCode::UNKNOWN_ERROR;
 }
@@ -122,7 +125,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.processing_method = sm[5];
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, modelControlApiRegex)) {
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
             requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
@@ -148,6 +151,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             } else {
                 requestComponents.type = GetModelStatus;
             }
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, configStatusRegex)) {
+            requestComponents.type = ConfigStatus;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, predictionRegex))
@@ -344,8 +351,8 @@ std::string createErrorJsonWithMessage(std::string message) {
     return "{\n\t\"error_message\": \"" + message + "\"\n}";
 }
 
-Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) {
-    SPDLOG_INFO("ModelControlApi flow triggered.");
+Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
+    SPDLOG_DEBUG("Processing config reload request started.");
     Status status;
     auto& config = ovms::Config::instance();
     auto& manager = ModelManager::getInstance();
@@ -383,6 +390,32 @@ Status HttpRestApiHandler::processModelControlApiRequest(std::string& response) 
         return StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED;
     }
     return StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED;
+}
+
+Status HttpRestApiHandler::processConfigStatusRequest(std::string& response) {
+    SPDLOG_DEBUG("Processing config status request started.");
+    Status status;
+    auto& manager = ModelManager::getInstance();
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
+        return status;
+    }
+
+    std::string modelsStatusesJson;
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, modelsStatusesJson);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
+        return status;
+    }
+
+    std::string pipelinesStatusesJson = manager.getPipelinesStatusesAsJson();
+
+    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" +  pipelinesStatusesJson;
+
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

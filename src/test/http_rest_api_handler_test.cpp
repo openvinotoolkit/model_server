@@ -55,7 +55,7 @@ TEST(ModelControlApi, nonExistingConfigFile) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
@@ -95,7 +95,7 @@ TEST(ModelControlApi, positive) {
 },
 "pipelines" : 
 {})";
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
@@ -136,7 +136,7 @@ TEST(ModelControlApi, configChange) {
 "pipelines" : 
 {})";
 
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
@@ -163,7 +163,7 @@ TEST(ModelControlApi, configChange) {
 "pipelines" : 
 {})";
 
-    status = handler.processModelControlApiRequest(response);
+    status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
@@ -180,7 +180,7 @@ TEST(ModelControlApi, reloadNotNeeded) {
 
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     manager.loadConfig(configFile);
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 }
 
@@ -202,7 +202,7 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
     std::function<void()> func = [&handler]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string response;
-        EXPECT_EQ(handler.processModelControlApiRequest(response), ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+        EXPECT_EQ(handler.processConfigReloadRequest(response), ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -290,7 +290,7 @@ TEST(ModelControlApi, positiveWithPipelines) {
 {
  "pipeline1Dummy" : "AVAILABLE"
 })";
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
@@ -390,7 +390,7 @@ TEST(ModelControlApi, configChangeWithPipelines) {
  "pipeline1Dummy" : "AVAILABLE"
 })";
 
-    auto status = handler.processModelControlApiRequest(response);
+    auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
@@ -420,7 +420,7 @@ TEST(ModelControlApi, configChangeWithPipelines) {
  "pipeline2Dummy" : "AVAILABLE"
 })";
 
-    status = handler.processModelControlApiRequest(response);
+    status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
