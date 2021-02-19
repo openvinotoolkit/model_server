@@ -35,7 +35,7 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
         auto modelInstance = model->getModelInstanceByVersion(version);
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
         std::string managerId = model->getName() + std::to_string(version);
-        //std::shared_ptr<SequenceManager> manager = std::make_shared<SequenceManager>(std::move());
+
         auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
@@ -68,7 +68,7 @@ void GlobalSequencesViewer::updateThreadInterval() {
     for (auto const& [key, val] : registeredSequenceManagers) {
         auto sequenceManager = val;
         uint32_t newInterval = sequenceManager->getTimeout() / 2;
-        if (newInterval < lowestHalfTimeoutInterval)
+        if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval)
             lowestHalfTimeoutInterval = newInterval;
     }
 
@@ -106,6 +106,7 @@ ovms::Status GlobalSequencesViewer::removeTimedOutSequences() {
     for (auto it = registeredSequenceManagers.begin(); it != registeredSequenceManagers.end();) {
         auto sequenceManager = it->second;
         auto status = sequenceManager->removeTimedOutSequences();
+        it++;
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
     }
