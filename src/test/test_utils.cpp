@@ -57,7 +57,7 @@ ovms::tensor_map_t prepareTensors(
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     PredictRequest& request, PredictResponse& response, int seriesLength, int batchSize) {
-    ASSERT_EQ(response.outputs().count(outputName), 1);
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     const auto& output_proto = response.outputs().at(outputName);
 
     ASSERT_EQ(output_proto.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));

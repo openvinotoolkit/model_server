@@ -18,6 +18,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,7 @@ enum Method {
 static const std::string INPUT_TENSOR_NAME = "input_tensors";
 
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+    std::stringstream ss;
     // choose selection criteria
     Method selectionMethod = Method::METHOD_COUNT;
     if (paramsLength != 1) {
@@ -48,7 +50,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         } else if (strcmp(params[0].value, "MAXIMUM_AVERAGE") == 0) {
             selectionMethod = Method::MAXIMUM_AVERAGE;
         } else {
-            std::cout << "Not allowed selection criteria chosen:" << params[0].value << std::endl;
+            ss << "Not allowed selection criteria chosen:" << params[0].value << std::endl;
+            std::cout << ss.str() << std::endl;
             return 1;
         }
     } else {
@@ -68,18 +71,20 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             inputs[0].dims[0] != 1 ||
             inputs[0].dims[1] == 0 ||
             inputs[0].dims[2] == 0) {
-            std::cout << "improper " << INPUT_TENSOR_NAME
-                      << " dimensions: [" << inputs[0].dims[0]
-                      << ", " << inputs[0].dims[1]
-                      << ", " << inputs[0].dims[2] << "]" << std::endl;
+            ss << "improper " << INPUT_TENSOR_NAME
+               << " dimensions: [" << inputs[0].dims[0]
+               << ", " << inputs[0].dims[1]
+               << ", " << inputs[0].dims[2] << "]" << std::endl;
+            std::cout << ss.str() << std::endl;
             return 1;
         }
-        std::cout << "Input valuesPerTensor" << inputs[0].dims[1] << std::endl;
+        ss << "Input valuesPerTensor: " << inputs[0].dims[1] << std::endl;
         numberOfOps = inputs[0].dims[1];
         valuesPerTensor = inputs[0].dims[2];
         inputTensor = reinterpret_cast<float*>(inputs[0].data);
     } else {
-        std::cout << "Lacking input: " << INPUT_TENSOR_NAME << std::endl;
+        ss << "Lacking input: " << INPUT_TENSOR_NAME << std::endl;
+        std::cout << ss.str() << std::endl;
         return 1;
     }
     // prepare output
@@ -109,7 +114,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
                 maximums[opId] = std::max(maximums[opId], inputTensor[index]);
                 break;
             case Method::MAXIMUM_MINIMUM:
-                minimums[opId] = std::min(maximums[opId], inputTensor[index]);
+                minimums[opId] = std::min(minimums[opId], inputTensor[index]);
                 break;
             case Method::MAXIMUM_AVERAGE:
                 averages[opId] += inputTensor[index];
@@ -117,13 +122,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             default:
                 return 1;
             }
-            std::cout << "opId:" << opId
-                      << " dummyPos:" << dummyPos
-                      << " input:" << inputTensor[index]
-                      << " minimums:" << minimums[opId]
-                      << " averages:" << averages[opId]
-                      << " maximums:" << maximums[opId]
-                      << std::endl;
+            ss << "opId:" << opId
+               << " dummyPos:" << dummyPos
+               << " input:" << inputTensor[index]
+               << " minimums:" << minimums[opId]
+               << " averages:" << averages[opId]
+               << " maximums:" << maximums[opId]
+               << " selected method:" << selectionMethod
+               << std::endl;
         }
         averages[opId] /= valuesPerTensor;
     }
@@ -145,15 +151,16 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     size_t whichTensor = std::distance(fromWhichContainerToChoose->begin(),
         std::max_element(fromWhichContainerToChoose->begin(),
             fromWhichContainerToChoose->end()));
-    std::cout << "Selected tensor pos: " << whichTensor << std::endl;
+    ss << "Selected tensor pos: " << whichTensor << std::endl;
     // copy appropiate tensor
     for (size_t i = 0; i < valuesPerTensor; ++i) {
         size_t index = whichTensor * valuesPerTensor + i;
-        std::cout << "Putting tensor:" << whichTensor
-                  << " index:" << index
-                  << " with value:" << inputTensor[index] << std::endl;
+        ss << "Putting tensor:" << whichTensor
+           << " index:" << index
+           << " with value:" << inputTensor[index] << std::endl;
         result[i] = inputTensor[index];
     }
+    std::cout << ss.str() << std::endl;
     return 0;
 }
 
