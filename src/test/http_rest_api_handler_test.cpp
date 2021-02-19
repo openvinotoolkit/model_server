@@ -215,7 +215,7 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
-static const char* config_with_pipelines = R"(
+static const char* config_with_pipeline = R"(
 {
     "model_config_list": [
         {
@@ -267,7 +267,7 @@ TEST(ModelControlApi, positiveWithPipelines) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_with_pipelines);
+    createConfigFileWithContent(config_with_pipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"("models" : 
@@ -296,7 +296,7 @@ TEST(ModelControlApi, positiveWithPipelines) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-static const char* config_with_pipelines_changed = R"(
+static const char* config_with_pipelines = R"(
 {
     "model_config_list": [
         {
@@ -360,7 +360,7 @@ static const char* config_with_pipelines_changed = R"(
 
 TEST(ModelControlApi, configChangeWithPipelines) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    auto configFile = createConfigFileWithContent(config_with_pipelines);
+    auto configFile = createConfigFileWithContent(config_with_pipeline);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -395,7 +395,7 @@ TEST(ModelControlApi, configChangeWithPipelines) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_with_pipelines_changed);
+    createConfigFileWithContent(config_with_pipelines);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_2 = R"("models" : 
@@ -423,4 +423,43 @@ TEST(ModelControlApi, configChangeWithPipelines) {
     status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+}
+
+TEST(ConfigStatus, configWithPipelines) {
+    std::filesystem::remove("/tmp/ovms_config_file.json");
+    auto configFile = createConfigFileWithContent(config_with_pipelines);
+    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
+    int arg_count = 5;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.loadConfig(configFile);
+
+    const char* expectedJson = R"("models" : 
+{
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+},
+"pipelines" : 
+{
+ "pipeline1Dummy" : "AVAILABLE",
+ "pipeline2Dummy" : "AVAILABLE"
+})";
+    auto status = handler.processConfigStatusRequest(response);
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
