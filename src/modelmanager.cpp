@@ -747,7 +747,6 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
                 return status;
             }
         }
-
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
     }
@@ -775,7 +774,6 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
                 return status;
             }
         }
-
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
     }
