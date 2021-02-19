@@ -396,7 +396,7 @@ public:
                     modelOutputName,
                     dependencyNodeInfo.nodeName,
                     dataSource);
-                return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT;  // TODO: Check status for Model phrase, might need to have add custom too
+                return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT;
             }
         }
 
@@ -405,7 +405,11 @@ public:
 
     Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
         if (shape.size() < 3) {
-            return StatusCode::UNKNOWN_ERROR;  // TODO: specific error? Add test?
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Node {} demultiply cannot occur due to not enough shape dimensions: {}",
+                this->pipelineName,
+                demultiplicatorNodeInfo.nodeName,
+                shape.size());
+            return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
         if (shape[1] != demultiplicatorNodeInfo.demultiplyCount.value()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline({}) definition failed. Demultiply count: {} of node: {} does not match tensor second dimenson value: {}",
