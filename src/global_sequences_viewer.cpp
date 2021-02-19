@@ -28,6 +28,7 @@
 namespace ovms {
 
 static bool sequenceWatcherStarted = false;
+static std::string separator = "_";
 
 ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& model,
     std::shared_ptr<model_versions_t> versionsToAdd,
@@ -36,8 +37,17 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
         if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
             continue;
         auto modelInstance = model->getModelInstanceByVersion(version);
+        if (!modelVersion) {
+            Status status = StatusCode::UNKNOWN_ERROR;
+            SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
+                model->getName(),
+                version,
+                status.string());
+            result = status;
+            continue;
+        }
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
-        std::string managerId = model->getName() + std::to_string(version);
+        std::string managerId = model->getName() + separator + std::to_string(version);
 
         auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
         if (status.getCode() != ovms::StatusCode::OK)
@@ -50,7 +60,7 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
 
 ovms::Status GlobalSequencesViewer::retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire) {
     for (const auto version : *versionsToRetire) {
-        std::string managerId = model->getName() + std::to_string(version);
+        std::string managerId = model->getName() + separator + std::to_string(version);
         auto status = unregisterManager(managerId);
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
@@ -66,12 +76,21 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
     for (const auto version : *versionsToReload) {
         if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
             continue;
-        std::string managerId = model->getName() + std::to_string(version);
+        std::string managerId = model->getName() + separator + std::to_string(version);
         auto status = unregisterManager(managerId);
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
 
         auto modelInstance = model->getModelInstanceByVersion(version);
+        if (!modelVersion) {
+            Status status = StatusCode::UNKNOWN_ERROR;
+            SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
+                model->getName(),
+                version,
+                status.string());
+            result = status;
+            continue;
+        }
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
 
         status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
@@ -84,24 +103,27 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
 
 void GlobalSequencesViewer::updateThreadInterval() {
     uint32_t lowestHalfTimeoutInterval = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
-    for (auto const& [key, val] : registeredSequenceManagers) {
+    for (auto const&[key, val] : registeredSequenceManagers) {
         auto sequenceManager = val;
         uint32_t newInterval = sequenceManager->getTimeout() / 2;
-        if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval)
+        if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval) {
             lowestHalfTimeoutInterval = newInterval;
+        }
+        else if (sequenceManager->getTimeout() == 1){
+            lowestHalfTimeoutInterval = 1;
+        }
     }
 
     sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread interval set to {}", sequenceWatcherIntervalSec);
 }
 
 ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, SequenceManager* sequenceManager) {
     std::unique_lock<std::mutex> viewerLock(mutex);
     if (registeredSequenceManagers.count(managerId)) {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);
-        return StatusCode::SEQUENCE_ALREADY_EXISTS;
+        SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Sequence manager {} already exists", managerId);
+        return StatusCode::INTERNAL_ERROR;
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} added", managerId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} registered in the sequence timeout watcher", managerId);
         registeredSequenceManagers.emplace(managerId, sequenceManager);
     }
 
@@ -111,11 +133,11 @@ ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, Seque
 ovms::Status GlobalSequencesViewer::unregisterManager(std::string managerId) {
     std::unique_lock<std::mutex> viewerLock(mutex);
     if (registeredSequenceManagers.count(managerId)) {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} removed", managerId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} unregistred from sequence timeout watcher", managerId);
         registeredSequenceManagers.erase(managerId);
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} already exists", managerId);
-        return StatusCode::SEQUENCE_MISSING;
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} does not exists", managerId);
+        return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
 }
@@ -138,13 +160,13 @@ void GlobalSequencesViewer::sequenceWatcher(std::future<void> exit) {
 
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle begin");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Sequence watcher thread check cycle begin");
 
         removeTimedOutSequences();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence watcher thread check cycle end");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Sequence watcher thread check cycle end");
     }
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited sequence timeout watcher thread");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Exited sequence timeout watcher thread");
 }
 
 void GlobalSequencesViewer::join() {

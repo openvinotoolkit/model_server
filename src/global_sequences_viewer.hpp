@@ -53,7 +53,7 @@ private:
     /**
          * Time interval between each sequence timeout check
          */
-    uint sequenceWatcherIntervalSec = 1;
+    uint32_t sequenceWatcherIntervalSec = DEFAULT_SEQUENCE_TIMEOUT_SECONDS / 2;
 
     ovms::Status registerManager(std::string managerId, SequenceManager* sequenceManager);
 
@@ -77,7 +77,7 @@ public:
     /**
          *  @brief Gets the sequence watcher interval timestep in seconds
          */
-    uint getSequenceWatcherIntervalSec() {
+    uint32_t getSequenceWatcherIntervalSec() {
         return sequenceWatcherIntervalSec;
     }
 

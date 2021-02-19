@@ -741,7 +741,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
         if (config.isStateful()) {
             status = sequenceViewer->addVersions(model, versionsToStart, versionsFailed);
             if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while adding version in sequence viewer: {}; versions; error: {}",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while registering model versions to sequence timeout watcher: {}; versions; error: {}",
                     config.getName(),
                     status.string());
                 return status;
@@ -768,7 +768,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
         if (config.isStateful()) {
             status = sequenceViewer->reloadVersions(model, versionsToReload, versionsFailed);
             if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading version in sequence viewer: {}; versions; error: {}",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading version in sequence timeout watcher: {}; versions; error: {}",
                     config.getName(),
                     status.string());
                 return status;
@@ -889,7 +889,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         if (config.isStateful()) {
             status = sequenceViewer->retireVersions(model, versionsToRetire);
             if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while retiring version in sequence viewer: {}; versions; error: {}",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while retiring version in sequence timeout watcher: {}; versions; error: {}",
                     config.getName(),
                     status.string());
                 return status;
