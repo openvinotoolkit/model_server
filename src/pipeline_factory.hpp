@@ -31,6 +31,7 @@
 
 #include "nodeinfo.hpp"
 #include "status.hpp"
+#include "pipelinedefinitionstatus.hpp"
 
 namespace ovms {
 
@@ -64,6 +65,7 @@ public:
 
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
     void revalidatePipelines(ModelManager&);
+    void getPipelinesStatuses(std::map<std::string, PipelineDefinitionStatus>& pipelineStatuses);
 };
 
 }  // namespace ovms

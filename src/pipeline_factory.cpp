@@ -111,4 +111,11 @@ void PipelineFactory::revalidatePipelines(ModelManager& manager) {
         }
     }
 }
+
+void PipelineFactory::getPipelinesStatuses(std::map<std::string, PipelineDefinitionStatus>& pipelineStatuses) {
+    for(auto const& [pipelineName, definition] : definitions){
+        auto status = std::pair<std::string,PipelineDefinitionStatus>(pipelineName, definition->getStatus());
+        pipelineStatuses.insert(status);
+    }
+}
 }  // namespace ovms

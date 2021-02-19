@@ -903,4 +903,21 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
     return *customNodeLibraryManager;
 }
 
+std::string ModelManager::getPipelinesStatusesAsJson(){
+    std::string response = "{";
+    std::map<std::string, PipelineDefinitionStatus> pipelinesStatuses;
+    pipelineFactory.getPipelinesStatuses(pipelinesStatuses);
+    if(!pipelinesStatuses.empty())
+    {
+        response += "\n";
+    }
+    for(auto i =  pipelinesStatuses.begin(); i != pipelinesStatuses.end(); i++){
+        response += " \"" + i->first + "\" : \"" +  pipelineDefinitionStateCodeToString(i->second.getStateCode()) + "\"";
+        if(std::next(i) != pipelinesStatuses.end())
+            response += ",";
+        response += "\n";
+    }
+    response += "}";
+    return response;
+}
 }  // namespace ovms

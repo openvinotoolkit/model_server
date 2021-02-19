@@ -77,7 +77,8 @@ TEST(ModelControlApi, positive) {
     createConfigFileWithContent(config_1);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson = R"({
+    const char* expectedJson = R"("models" : 
+{
 "dummy" : 
 {
  "model_version_status": [
@@ -91,7 +92,9 @@ TEST(ModelControlApi, positive) {
   }
  ]
 }
-})";
+},
+"pipelines" : 
+{})";
     auto status = handler.processModelControlApiRequest(response);
 
     EXPECT_EQ(expectedJson, response);
@@ -114,7 +117,8 @@ TEST(ModelControlApi, configChange) {
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_1 = R"({
+    const char* expectedJson_1 = R"("models" : 
+{
 "dummy" : 
 {
  "model_version_status": [
@@ -128,7 +132,9 @@ TEST(ModelControlApi, configChange) {
   }
  ]
 }
-})";
+},
+"pipelines" : 
+{})";
 
     auto status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_1, response);
@@ -138,7 +144,8 @@ TEST(ModelControlApi, configChange) {
     createConfigFileWithContent(empty_config);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_2 = R"({
+    const char* expectedJson_2 = R"("models" : 
+{
 "dummy" : 
 {
  "model_version_status": [
@@ -152,7 +159,9 @@ TEST(ModelControlApi, configChange) {
   }
  ]
 }
-})";
+},
+"pipelines" : 
+{})";
 
     status = handler.processModelControlApiRequest(response);
     EXPECT_EQ(expectedJson_2, response);
@@ -204,4 +213,214 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
         thread.join();
     }
     EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+static const char* config_with_pipelines = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST(ModelControlApi, positiveWithPipelines) {
+    std::filesystem::remove("/tmp/ovms_config_file.json");
+    auto configFile = createConfigFileWithContent(config_1);
+    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
+    int arg_count = 5;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    manager.loadConfig(configFile);
+    std::filesystem::remove("/tmp/ovms_config_file.json");
+    createConfigFileWithContent(config_with_pipelines);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson = R"("models" : 
+{
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+},
+"pipelines" : 
+{
+ "pipeline1Dummy" : "AVAILABLE"
+})";
+    auto status = handler.processModelControlApiRequest(response);
+
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+}
+
+static const char* config_with_pipelines_changed = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        },
+        {
+            "name": "pipeline2Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST(ModelControlApi, configChangeWithPipelines) {
+    std::filesystem::remove("/tmp/ovms_config_file.json");
+    auto configFile = createConfigFileWithContent(config_with_pipelines);
+    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
+    int arg_count = 5;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson_1 = R"("models" : 
+{
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+},
+"pipelines" : 
+{
+ "pipeline1Dummy" : "AVAILABLE"
+})";
+
+    auto status = handler.processModelControlApiRequest(response);
+    EXPECT_EQ(expectedJson_1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+
+    std::filesystem::remove("/tmp/ovms_config_file.json");
+    createConfigFileWithContent(config_with_pipelines_changed);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson_2 = R"("models" : 
+{
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+},
+"pipelines" : 
+{
+ "pipeline1Dummy" : "AVAILABLE",
+ "pipeline2Dummy" : "AVAILABLE"
+})";
+
+    status = handler.processModelControlApiRequest(response);
+    EXPECT_EQ(expectedJson_2, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }

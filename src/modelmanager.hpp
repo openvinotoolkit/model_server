@@ -340,6 +340,8 @@ public:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     void updateConfigurationWithoutConfigFile();
+
+    std::string getPipelinesStatusesAsJson();
 };
 
 }  // namespace ovms
