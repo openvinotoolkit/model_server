@@ -98,20 +98,4 @@ Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary
     }
 }
 
-void CustomNodeLibraryManager::unloadLibrariesRemovedFromConfig(const std::set<std::string> librariesInConfig) {
-    std::set<std::string> librariesCurrentlyLoaded;
-    for (auto& library : libraries) {
-        librariesCurrentlyLoaded.emplace(library.first);
-    }
-    std::set<std::string> librariesToUnload;
-    std::set_difference(
-        librariesCurrentlyLoaded.begin(), librariesCurrentlyLoaded.end(),
-        librariesInConfig.begin(), librariesInConfig.end(),
-        std::inserter(librariesToUnload, librariesToUnload.end()));
-    for (auto& library : librariesToUnload) {
-        libraries.erase(library);
-        libraryBasePaths.erase(library);
-    }
-}
-
 }  // namespace ovms

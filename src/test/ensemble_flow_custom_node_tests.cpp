@@ -20,7 +20,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../logging.hpp"
 #include "../custom_node.hpp"
 #include "../custom_node_library_manager.hpp"
 #include "../dl_node.hpp"
@@ -1441,69 +1440,4 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
-
-class CustomNodeLibraryManagerTestReloadWithoutChanges : public CustomNodeLibraryManager {
-    std::vector<std::pair<std::string, std::string>> libraryNameBasePath;
-    Status loadLibrary(const std::string& name, const std::string& basePath) override {
-        //ASSERT_TRUE(std::find(libraryNameBasePath.begin(), libraryNameBasePath.end(), std::pair<std::string, std::string>{name, basePath}) == libraryNameBasePath.end());
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "AAAAAAAAAAA");
-        libraryNameBasePath.push_back(std::pair<std::string, std::string>{name, basePath});
-        return CustomNodeLibraryManager::loadLibrary(name, basePath);
-    }
-};
-
-class ModelManagerTestReloadWithoutChanges : public ConstructorEnabledModelManager {
-public:
-    ModelManagerTestReloadWithoutChanges() {
-        this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManagerTestReloadWithoutChanges>();
-    }
-};
-
-class EnsembleFlowCustomNodeLoadConfigThenReloadWithoutChangesTest : public EnsembleFlowCustomNodePipelineExecutionTest {
-protected:
-    void SetUp() override {
-        EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
-        configJsonFilePath = directoryPath + "/ovms_config_file.json";
-    }
-
-    void loadCorrectConfiguration() {
-        createConfigFileWithContent(pipelineCustomNodeConfig, configJsonFilePath);
-        manager.loadConfig(configJsonFilePath);
-    }
-
-    void loadConfiguration(const char* configContent) {
-        createConfigFileWithContent(configContent, configJsonFilePath);
-        manager.loadConfig(configJsonFilePath);
-    }
-
-    void checkResponseForCorrectConfiguration() {
-        this->checkResponse<float>(inputValues, [](float value) -> float {
-            return value + 3.2 - 2.7;
-        });
-    }
-
-    std::string configJsonFilePath;
-    const std::string pipelineName = "my_pipeline";
-    ModelManagerTestReloadWithoutChanges manager;
-    const std::vector<float> inputValues{2.4, 9.3, -7.1};
-};
-
-TEST_F(EnsembleFlowCustomNodeLoadConfigThenReloadWithoutChangesTest, LibraryIsNotLoadingWhenReloadingConfigWithoutChanges) {
-    std::unique_ptr<Pipeline> pipeline;
-    this->prepareRequest(inputValues);
-
-    // Loading correct configuration is required for test to pass.
-    // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-    response.Clear();
-
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-}
-
 // TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)

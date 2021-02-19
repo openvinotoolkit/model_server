@@ -45,12 +45,20 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     EXPECT_EQ(library.release(nullptr), 4);
 }
 
-TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateName) {
+TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_ALREADY_LOADED);
+}
+
+TEST(NodeLibraryManagerTest, LibraryReloadingDuplicateNameAndDifferentBasePath) {
+    CustomNodeLibraryManager manager;
+    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    ASSERT_EQ(status, StatusCode::OK);
+    status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_add_sub.so");
+    EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
