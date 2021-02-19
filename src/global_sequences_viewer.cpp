@@ -34,7 +34,7 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
     std::shared_ptr<model_versions_t> versionsToAdd,
     std::shared_ptr<model_versions_t> versionsFailed) {
     for (const auto version : *versionsToAdd) {
-        if (versionsFailed.count(version))
+        if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
             continue;
         auto modelInstance = model->getModelInstanceByVersion(version);
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
@@ -51,8 +51,6 @@ ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& mo
 
 ovms::Status GlobalSequencesViewer::retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire) {
     for (const auto version : *versionsToRetire) {
-        if (versionsFailed.count(version))
-            continue;
         std::string managerId = model->getName() + std::to_string(version);
         auto status = unregisterManager(managerId);
         if (status.getCode() != ovms::StatusCode::OK)
@@ -66,8 +64,8 @@ ovms::Status GlobalSequencesViewer::retireVersions(std::shared_ptr<ovms::Model>&
 ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>& model,
     std::shared_ptr<model_versions_t> versionsToReload,
     std::shared_ptr<model_versions_t> versionsFailed) {
-    for (const auto version : *versionsToRetire) {
-        if (versionsFailed.count(version))
+    for (const auto version : *versionsToReload) {
+        if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
             continue;
         std::string managerId = model->getName() + std::to_string(version);
         auto status = unregisterManager(managerId);
@@ -77,7 +75,7 @@ ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>&
         auto modelInstance = model->getModelInstanceByVersion(version);
         auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
 
-        auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
+        status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
     }
