@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
