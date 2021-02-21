@@ -60,7 +60,7 @@ TEST(ModelControlApi, nonExistingConfigFile) {
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
-TEST(ModelControlApi, positive) {
+TEST(ModelControlApi, simpleConfigReloaded) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
@@ -77,8 +77,7 @@ TEST(ModelControlApi, positive) {
     createConfigFileWithContent(config_1);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson = R"("models" : 
-{
+    const char* expectedJson = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -92,9 +91,7 @@ TEST(ModelControlApi, positive) {
   }
  ]
 }
-},
-"pipelines" : 
-{})";
+})";
     auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(expectedJson, response);
@@ -106,7 +103,7 @@ static const char* empty_config = R"(
     "model_config_list": []
 })";
 
-TEST(ModelControlApi, configChange) {
+TEST(ModelControlApi, configReloadAfterChange) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
@@ -117,8 +114,7 @@ TEST(ModelControlApi, configChange) {
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_1 = R"("models" : 
-{
+    const char* expectedJson_1 = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -132,9 +128,7 @@ TEST(ModelControlApi, configChange) {
   }
  ]
 }
-},
-"pipelines" : 
-{})";
+})";
 
     auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
@@ -144,8 +138,7 @@ TEST(ModelControlApi, configChange) {
     createConfigFileWithContent(empty_config);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_2 = R"("models" : 
-{
+    const char* expectedJson_2 = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -159,9 +152,7 @@ TEST(ModelControlApi, configChange) {
   }
  ]
 }
-},
-"pipelines" : 
-{})";
+})";
 
     status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
@@ -253,7 +244,7 @@ static const char* config_with_pipeline = R"(
     ]
 })";
 
-TEST(ModelControlApi, positiveWithPipelines) {
+TEST(ModelControlApi, configWithPipelinesReloaded) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
@@ -270,8 +261,7 @@ TEST(ModelControlApi, positiveWithPipelines) {
     createConfigFileWithContent(config_with_pipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson = R"("models" : 
-{
+    const char* expectedJson = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -284,11 +274,20 @@ TEST(ModelControlApi, positiveWithPipelines) {
    }
   }
  ]
-}
 },
-"pipelines" : 
+"pipeline1Dummy" : 
 {
- "pipeline1Dummy" : "AVAILABLE"
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 })";
     auto status = handler.processConfigReloadRequest(response);
 
@@ -358,7 +357,7 @@ static const char* config_with_pipelines = R"(
     ]
 })";
 
-TEST(ModelControlApi, configChangeWithPipelines) {
+TEST(ModelControlApi, configWithPipelinesReloadAfterChange) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_with_pipeline);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
@@ -369,8 +368,7 @@ TEST(ModelControlApi, configChangeWithPipelines) {
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_1 = R"("models" : 
-{
+    const char* expectedJson_1 = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -383,11 +381,20 @@ TEST(ModelControlApi, configChangeWithPipelines) {
    }
   }
  ]
-}
 },
-"pipelines" : 
+"pipeline1Dummy" : 
 {
- "pipeline1Dummy" : "AVAILABLE"
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 })";
 
     auto status = handler.processConfigReloadRequest(response);
@@ -398,8 +405,7 @@ TEST(ModelControlApi, configChangeWithPipelines) {
     createConfigFileWithContent(config_with_pipelines);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const char* expectedJson_2 = R"("models" : 
-{
+    const char* expectedJson_2 = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -412,12 +418,33 @@ TEST(ModelControlApi, configChangeWithPipelines) {
    }
   }
  ]
-}
 },
-"pipelines" : 
+"pipeline1Dummy" : 
 {
- "pipeline1Dummy" : "AVAILABLE",
- "pipeline2Dummy" : "AVAILABLE"
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"pipeline2Dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 })";
 
     status = handler.processConfigReloadRequest(response);
@@ -438,8 +465,7 @@ TEST(ConfigStatus, configWithPipelines) {
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     manager.loadConfig(configFile);
 
-    const char* expectedJson = R"("models" : 
-{
+    const char* expectedJson = R"({
 "dummy" : 
 {
  "model_version_status": [
@@ -452,12 +478,33 @@ TEST(ConfigStatus, configWithPipelines) {
    }
   }
  ]
-}
 },
-"pipelines" : 
+"pipeline1Dummy" : 
 {
- "pipeline1Dummy" : "AVAILABLE",
- "pipeline2Dummy" : "AVAILABLE"
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"pipeline2Dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 })";
     auto status = handler.processConfigStatusRequest(response);
     EXPECT_EQ(expectedJson, response);

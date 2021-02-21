@@ -374,16 +374,11 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
         return status;
     }
 
-    std::string modelsStatusesJson;
-    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, modelsStatusesJson);
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, response);
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
         return status;
     }
-
-    std::string pipelinesStatusesJson = manager.getPipelinesStatusesAsJson();
-
-    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" + pipelinesStatusesJson;
 
     if (!isConfigFileReloadNeeded) {
         SPDLOG_DEBUG("Config file reload was not needed.");
@@ -404,16 +399,11 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response) {
         return status;
     }
 
-    std::string modelsStatusesJson;
-    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, modelsStatusesJson);
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, response);
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
         return status;
     }
-
-    std::string pipelinesStatusesJson = manager.getPipelinesStatusesAsJson();
-
-    response = "\"models\" : \n" + modelsStatusesJson + ",\n\"pipelines\" : \n" + pipelinesStatusesJson;
 
     return StatusCode::OK;
 }

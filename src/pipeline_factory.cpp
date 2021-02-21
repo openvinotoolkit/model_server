@@ -111,12 +111,11 @@ void PipelineFactory::revalidatePipelines(ModelManager& manager) {
         }
     }
 }
-
-void PipelineFactory::getPipelinesStatuses(std::map<std::string, PipelineDefinitionStatus>& pipelineStatuses) {
-    std::shared_lock lock(definitionsMtx);
-    for (auto const& [pipelineName, definition] : definitions) {
-        auto status = std::pair<std::string, PipelineDefinitionStatus>(pipelineName, definition->getStatus());
-        pipelineStatuses.insert(status);
+const std::vector<std::string> PipelineFactory::getPipelinesNames() const{
+    std::vector<std::string>  names;
+    for (auto& [name, definition] : definitions) {
+        names.push_back(definition->getName());
     }
+    return names;
 }
 }  // namespace ovms

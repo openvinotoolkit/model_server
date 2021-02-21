@@ -65,7 +65,7 @@ public:
 
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
     void revalidatePipelines(ModelManager&);
-    void getPipelinesStatuses(std::map<std::string, PipelineDefinitionStatus>& pipelineStatuses);
+    const std::vector<std::string> getPipelinesNames() const;
 };
 
 }  // namespace ovms
