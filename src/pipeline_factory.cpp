@@ -111,8 +111,8 @@ void PipelineFactory::revalidatePipelines(ModelManager& manager) {
         }
     }
 }
-const std::vector<std::string> PipelineFactory::getPipelinesNames() const{
-    std::vector<std::string>  names;
+const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
+    std::vector<std::string> names;
     for (auto& [name, definition] : definitions) {
         names.push_back(definition->getName());
     }
