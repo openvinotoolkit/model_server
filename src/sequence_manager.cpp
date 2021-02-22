@@ -61,7 +61,6 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
 
 Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-
     for (auto it = sequences.begin(); it != sequences.end();) {
         Sequence& sequence = it->second;
         // Non blocking try to get mutex
@@ -72,7 +71,7 @@ Status SequenceManager::removeTimedOutSequences() {
             std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed - Id: {}", modelName, modelVersion, sequence.getId());
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed Id: {}", modelName, modelVersion, sequence.getId());
                 it = sequences.erase(it);
                 continue;
             }
