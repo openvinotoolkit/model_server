@@ -65,7 +65,7 @@ private:
     void updateThreadInterval();
 
 public:
-    GlobalSequencesViewer() = default;
+    GlobalSequencesViewer();
 
     void startWatcher();
 

@@ -112,7 +112,14 @@ void GlobalSequencesViewer::updateThreadInterval() {
         }
     }
 
-    sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
+    // In case we have not found any stateful models stop the watcher thread
+    if (lowestHalfTimeoutInterval == std::numeric_limits<uint32_t>::max()) {
+        sequenceWatcherIntervalSec = 0;
+        join();
+    } else {
+        sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
+        startWatcher();
+    }
 }
 
 ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, SequenceManager* sequenceManager) {
@@ -175,6 +182,11 @@ void GlobalSequencesViewer::join() {
             sequenceWatcherStarted = false;
         }
     }
+}
+
+GlobalSequencesViewer::GlobalSequencesViewer()
+{
+    updateThreadInterval();
 }
 
 void GlobalSequencesViewer::startWatcher() {
