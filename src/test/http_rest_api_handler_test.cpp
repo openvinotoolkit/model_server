@@ -36,7 +36,7 @@ static const char* config_1 = R"(
 })";
 
 class ModelControlApi : public TestWithTempDir {
-    public:
+public:
     void SetUp() {
         std::filesystem::remove("/tmp/ovms_config_file.json");
     }
