@@ -84,7 +84,7 @@ void ModelManager::startWatcher() {
         monitor = std::move(t);
     }
 
-    sequenceViewer->startWatcher();
+    startSequenceWatcher();
 }
 
 void ModelManager::startSequenceWatcher() {
