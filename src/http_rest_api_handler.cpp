@@ -348,7 +348,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
 }
 
 std::string createErrorJsonWithMessage(std::string message) {
-    return "{\n\t\"error_message\": \"" + message + "\"\n}";
+    return "{\n\t\"error\": \"" + message + "\"\n}";
 }
 
 Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
