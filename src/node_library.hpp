@@ -31,6 +31,8 @@ struct NodeLibrary {
     metadata_fn getOutputsInfo = nullptr;
     release_fn release = nullptr;
 
+    std::string basePath = "";
+
     bool isValid() const;
 };
 
