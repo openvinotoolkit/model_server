@@ -1787,13 +1787,8 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeInputsAreC
 
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED);  // TODO: Search for this test in enesemble_tests and check for other missing tests
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED);
 }
-
-// Not connecting all outputs is allowed
-// TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeOutputsAreConnected) {
-//     ASSERT_FALSE(true);
-// }
 
 TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
     NodeLibrary invalidLibrary{};
@@ -2357,7 +2352,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
                                           InferenceEngine::Precision::FP32,
-                                          shape_t{1, demultiplyCount, 10})}});  // 1, demultiplyCount, 11 is correct
+                                          shape_t{1, demultiplyCount, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -2511,7 +2506,6 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
 
-//?
 TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNodes) {
     const size_t demultiplyCount = 51;
     const std::set<std::string> gatherFrom{"custom_node_1"};
