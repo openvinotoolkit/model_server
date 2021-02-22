@@ -35,10 +35,14 @@ static const char* config_1 = R"(
     ]
 })";
 
-class ModelControlApi : public TestWithTempDir {};
+class ModelControlApi : public TestWithTempDir {
+    public:
+    void SetUp() {
+        std::filesystem::remove("/tmp/ovms_config_file.json");
+    }
+};
 
 TEST(ModelControlApi, nonExistingConfigFile) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -61,7 +65,6 @@ TEST(ModelControlApi, nonExistingConfigFile) {
 }
 
 TEST(ModelControlApi, simpleConfigReloaded) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -103,8 +106,7 @@ static const char* empty_config = R"(
     "model_config_list": []
 })";
 
-TEST(ModelControlApi, configReloadAfterChange) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+TEST(ModelControlApi, configReloadAfterModelRetired) {
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -160,7 +162,6 @@ TEST(ModelControlApi, configReloadAfterChange) {
 }
 
 TEST(ModelControlApi, reloadNotNeeded) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -176,7 +177,6 @@ TEST(ModelControlApi, reloadNotNeeded) {
 }
 
 TEST(ModelControlApi, reloadNotNeededManyThreads) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -245,7 +245,6 @@ static const char* config_with_pipeline = R"(
 })";
 
 TEST(ModelControlApi, configWithPipelinesReloaded) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
     auto configFile = createConfigFileWithContent(config_1);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -357,8 +356,7 @@ static const char* config_with_pipelines = R"(
     ]
 })";
 
-TEST(ModelControlApi, configWithPipelinesReloadAfterChange) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+TEST(ModelControlApi, configWithPipelinesReloadAfterPipelineAdded) {
     auto configFile = createConfigFileWithContent(config_with_pipeline);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
