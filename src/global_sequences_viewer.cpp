@@ -184,8 +184,7 @@ void GlobalSequencesViewer::join() {
     }
 }
 
-GlobalSequencesViewer::GlobalSequencesViewer()
-{
+GlobalSequencesViewer::GlobalSequencesViewer() {
     updateThreadInterval();
 }
 
