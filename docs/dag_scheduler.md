@@ -31,6 +31,16 @@ There are two special kinds of nodes - Request and Response node. Both of them a
     Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output. 
     Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response. 
 
+### Custom node type
+
+* custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
+a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](../src/custom_node_interface.h). Custom nodes can run the data
+processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
+ by adding its definition to the pipeline configuration. The configuration includes a path to the compiled binary with `.so` extension. 
+Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
+
+Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
+
 ## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 
@@ -42,7 +52,15 @@ Nodes in the pipelines can reference only the models configured in model_config_
 Below is depicted a basic pipeline section template:
 
 ```
+
 {
+    "model_config_list": [...],
+    "custom_node_library_config_list": [
+        {
+            "name": "custom_node_lib",
+            "base_path": "/libs/libcustom_node.so"
+        }
+    ],
     "pipeline_config_list": [
         {
             "name": "<pipeline name>",
@@ -60,6 +78,23 @@ Below is depicted a basic pipeline section template:
                         {"data_item": "<model output>",
                          "alias": "<node output name>"}
                     ] 
+                },
+                {
+                    "name": "custon_node_name",
+                    "library_name": "custom_node_lib",
+                    "type": "custom",
+                    "params": {
+                        "param1": "value1",
+                        "param2": "value2",
+                    },
+                    "inputs": [
+                        {"input": {"node_name": "request",  # reference to pipeline input
+                                   "data_item": "<input1>"}}  # input name from the request
+                    ], 
+                    "outputs": [
+                        {"data_item": "<library_output>",
+                            "alias": "<node_output>"},
+                    ]
                 }
             ],
             "outputs": [      # pipeline outputs
@@ -108,6 +143,24 @@ Below is depicted a basic pipeline section template:
 |`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
 
+### Custom node options explained
+
+In case the pipeline definition includes the custom node, the configuration file must include `custom_node_library_config_list`
+section. It includes:
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"name"`|string|The name of the custom node library - it will be used as a reference in the custom node pipeline definition |&check;|
+|`"base_path"`|string|Path the the dynamic library with the custom node implementation|&check;|
+
+Custom node definition in the pipeline configuration is similar to the model node. Node inputs and outputs are configurable in 
+the same way. Custom node functions just like a standard mode in that respect. The differences is in extra parameters:
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"library_name"`|string|Name of the custom node library defined in `custom_node_library_config_list`|&check;|
+|`"type"`|string|Must be set to `custom`|&check;|
+|`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation||
+
 ## Using the pipelines <a name="using-pipelines"></a>
 
 Pipelines can use the same API like the models. There are exactly the same calls for running 
@@ -129,7 +182,7 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 [Face analysis with combined models](combined_model_dag.md)
 
-
+[Optical Character Recognition with custom node pipeline](east_ocr.md)
 
 ## Current limitations <a name="current-limitations"></a>
 

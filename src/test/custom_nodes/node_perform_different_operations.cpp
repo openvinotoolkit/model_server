@@ -32,15 +32,15 @@ enum OPS {
 static const std::string INPUT_TENSOR_NAME = "input_numbers";
 static const std::string FACTORS_TENSOR_NAME = "op_factors";
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     std::stringstream ss;
     // validate inputs
     float* inputTensor = nullptr;
     float* inputFactors = nullptr;
     size_t valuesPerTensor = 0;
-    for (size_t i = 0; i < inputsLength; ++i) {
+    for (size_t i = 0; i < inputsCount; ++i) {
         if (INPUT_TENSOR_NAME == inputs[i].name) {
-            if (inputs[i].dimsLength != 2 ||
+            if (inputs[i].dimsCount != 2 ||
                 inputs[i].dims[0] != 1 ||
                 inputs[i].dims[1] == 0) {
                 ss << "improper " << INPUT_TENSOR_NAME
@@ -52,7 +52,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             valuesPerTensor = inputs[i].dims[1];
             inputTensor = reinterpret_cast<float*>(inputs[i].data);
         } else if (FACTORS_TENSOR_NAME == inputs[i].name) {
-            if (inputs[i].dimsLength != 2 ||
+            if (inputs[i].dimsCount != 2 ||
                 inputs[i].dims[0] != 1 ||
                 inputs[i].dims[1] != OPS_END) {
                 ss << "improper " << FACTORS_TENSOR_NAME
@@ -72,31 +72,31 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     }
 
     // prepare outputs
-    *outputsLength = 2;
-    *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
+    *outputsCount = 2;
+    *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
     float* result = (float*)malloc(OPS_END * valuesPerTensor * sizeof(float));  // dummy input size * number of ops
     float* resultFactors = (float*)malloc(OPS_END * OPS_END * sizeof(float));   // dummy input size * number of ops
 
     CustomNodeTensor& resultTensor = (*outputs)[0];
     resultTensor.name = "different_ops_results";
     resultTensor.data = reinterpret_cast<uint8_t*>(result);
-    resultTensor.dimsLength = 3;
-    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
+    resultTensor.dimsCount = 3;
+    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
     resultTensor.dims[0] = OPS_END;
     resultTensor.dims[1] = 1;
     resultTensor.dims[2] = valuesPerTensor;
-    resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * resultTensor.dims[2] * sizeof(float);
+    resultTensor.dataBytes = resultTensor.dims[0] * resultTensor.dims[1] * resultTensor.dims[2] * sizeof(float);
     resultTensor.precision = FP32;
 
     CustomNodeTensor& resultFactorsTensor = (*outputs)[1];
     resultFactorsTensor.name = "different_ops_factors_results";
     resultFactorsTensor.data = reinterpret_cast<uint8_t*>(resultFactors);
-    resultFactorsTensor.dimsLength = 3;
-    resultFactorsTensor.dims = (uint64_t*)malloc(resultFactorsTensor.dimsLength * sizeof(uint64_t));
+    resultFactorsTensor.dimsCount = 3;
+    resultFactorsTensor.dims = (uint64_t*)malloc(resultFactorsTensor.dimsCount * sizeof(uint64_t));
     resultFactorsTensor.dims[0] = OPS_END;
     resultFactorsTensor.dims[1] = 1;
     resultFactorsTensor.dims[2] = OPS_END;
-    resultFactorsTensor.dataLength = resultFactorsTensor.dims[0] * resultFactorsTensor.dims[1] * resultFactorsTensor.dims[2] * sizeof(float);
+    resultFactorsTensor.dataBytes = resultFactorsTensor.dims[0] * resultFactorsTensor.dims[1] * resultFactorsTensor.dims[2] * sizeof(float);
     resultFactorsTensor.precision = FP32;
     // perform operations
     for (size_t opId = 0; opId < OPS_END; ++opId) {
@@ -132,41 +132,41 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 2;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 2;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = "input_numbers";
     (*info)[0].precision = FP32;
-    (*info)[0].dimsLength = 2;
-    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 2;
+    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = 1;
     (*info)[0].dims[1] = 10;
 
     (*info)[1].name = "op_factors";
     (*info)[1].precision = FP32;
-    (*info)[1].dimsLength = 2;
-    (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[1].dimsCount = 2;
+    (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     (*info)[1].dims[0] = 1;
     (*info)[1].dims[1] = 4;
 
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 2;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 2;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)[0].name = "different_ops_results";
-    (*info)[0].dimsLength = 3;
-    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 3;
+    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = OPS_END;
     (*info)[0].dims[1] = 1;
     (*info)[0].dims[2] = 10;
     (*info)[0].precision = FP32;
 
     (*info)[1].name = "factors_results";
-    (*info)[1].dimsLength = 3;
-    (*info)[1].dims = (uint64_t*)malloc((*info)[1].dimsLength * sizeof(uint64_t));
+    (*info)[1].dimsCount = 3;
+    (*info)[1].dims = (uint64_t*)malloc((*info)[1].dimsCount * sizeof(uint64_t));
     (*info)[1].dims[0] = OPS_END;
     (*info)[1].dims[1] = 1;
     (*info)[1].dims[2] = OPS_END;

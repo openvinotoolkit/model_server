@@ -24,14 +24,14 @@ extern "C" {
 
 static const std::string INPUT_TENSOR_NAME = "input_numbers";
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     std::stringstream ss;
     // validate inputs
     float* inputTensor = nullptr;
     size_t valuesPerTensor = 0;
-    for (size_t i = 0; i < inputsLength; ++i) {
+    for (size_t i = 0; i < inputsCount; ++i) {
         if (INPUT_TENSOR_NAME == inputs[i].name) {
-            if (inputs[i].dimsLength != 2 ||
+            if (inputs[i].dimsCount != 2 ||
                 inputs[i].dims[0] != 1 ||
                 inputs[i].dims[1] == 0) {
                 ss << "improper " << INPUT_TENSOR_NAME
@@ -55,19 +55,19 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     ss << "Will demultiply with count = " << demultiplyCount << std::endl;
 
     // prepare outputs
-    *outputsLength = 1;
-    *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
+    *outputsCount = 1;
+    *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
     float* result = (float*)malloc(demultiplyCount * valuesPerTensor * sizeof(float));  // dummy input size * number of ops
 
     CustomNodeTensor& resultTensor = (*outputs)[0];
     resultTensor.name = "dynamic_demultiplex_results";
     resultTensor.data = reinterpret_cast<uint8_t*>(result);
-    resultTensor.dimsLength = 3;
-    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
+    resultTensor.dimsCount = 3;
+    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
     resultTensor.dims[0] = demultiplyCount;
     resultTensor.dims[1] = 1;
     resultTensor.dims[2] = valuesPerTensor;
-    resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * resultTensor.dims[2] * sizeof(float);
+    resultTensor.dataBytes = resultTensor.dims[0] * resultTensor.dims[1] * resultTensor.dims[2] * sizeof(float);
     resultTensor.precision = FP32;
 
     // perform operations - copy input tensor n times
@@ -89,27 +89,27 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 1;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 1;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = "input_numbers";
     (*info)[0].precision = FP32;
-    (*info)[0].dimsLength = 2;
-    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 2;
+    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = 1;
     (*info)[0].dims[1] = 10;
 
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 1;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 1;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = "dynamic_demultiplex_results";
-    (*info)[0].dimsLength = 3;
-    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 3;
+    (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = 0;
     (*info)[0].dims[1] = 1;
     (*info)[0].dims[2] = 10;

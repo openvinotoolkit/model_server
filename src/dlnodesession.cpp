@@ -231,6 +231,8 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
                 SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}", __FUNCTION__, getName(), kv.first);
                 return StatusCode::INTERNAL_ERROR;
             }
+            // Update blob layout with model input layout
+            kv.second->getTensorDesc().setLayout(this->model->getInputsInfo().at(kv.first)->getLayout());
             inferRequest.SetBlob(realModelInputName, kv.second);
         }
         // OV implementation the InferenceEngineException is not
