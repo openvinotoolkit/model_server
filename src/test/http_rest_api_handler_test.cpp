@@ -64,7 +64,7 @@ TEST(ModelControlApi, nonExistingConfigFile) {
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
-TEST(ModelControlApi, simpleConfigReloaded) {
+TEST(ModelControlApi, startWith1DummyThenReload) {
     auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -106,7 +106,7 @@ static const char* empty_config = R"(
     "model_config_list": []
 })";
 
-TEST(ModelControlApi, configReloadAfterModelRetired) {
+TEST(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
     auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -244,7 +244,7 @@ static const char* configWith1DummyPipeline = R"(
     ]
 })";
 
-TEST(ModelControlApi, configWithPipelinesReloaded) {
+TEST(ModelControlApi, StartWith1DummyThenReloadToAddPipeline) {
     auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
@@ -356,7 +356,7 @@ static const char* configWith2DummyPipelines = R"(
     ]
 })";
 
-TEST(ModelControlApi, configWithPipelinesReloadAfterPipelineAdded) {
+TEST(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
     auto configFile = createConfigFileWithContent(configWith1DummyPipeline);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
