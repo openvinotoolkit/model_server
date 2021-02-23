@@ -26,12 +26,6 @@
 #include "opencv2/imgproc.hpp"
 #include "../../custom_node_interface.h"
 
-extern "C" {
-enum ResizeParam {
-    LAYOUT,
-    SIZE
-};
-
 static const std::string INPUT_TENSOR_NAME = "image";
 
 auto nchw_to_mat(CustomNodeTensor input) {
@@ -50,12 +44,10 @@ auto nchw_to_mat(CustomNodeTensor input) {
 
 
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
-    // choose selection criteria
-    //cv::Mat image;
-
-    //float* inputTensor;
-    // size_t valuesPerTensor = 0;
-    //size_t numberOfOps = 0;
+    std::cout << "executing custom node" << std::endl;
+    std::cout << "input name " << inputs[0].name << std::endl;
+    std::cout << "input dataLength " << inputs[0].dataLength << std::endl;
+    std::cout << "input dimsLength " << inputs[0].dimsLength << std::endl;
     if (INPUT_TENSOR_NAME == inputs[0].name) {
         if (inputs[0].dimsLength != 4 ||
             inputs[0].dims[0] != 1 ||
@@ -63,7 +55,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             std::cout << "improper " << INPUT_TENSOR_NAME
                       << " dimensions: [" << inputs[0].dims[0]
                       << ", " << inputs[0].dims[1]
-                      << ", " << inputs[0].dims[2] << "]" << std::endl;
+                      << ", " << inputs[0].dims[2]
+                      << ", " << inputs[0].dims[3] << "]" << std::endl;
             return 1;
         }
         std::cout << "Input valuesPerTensor" << inputs[0].dims[1] << std::endl;
@@ -123,5 +116,4 @@ int release(void* ptr) {
     std::cout << "ChooseMaximumCustomLibrary release" << std::endl;
     free(ptr);
     return 0;
-}
 }
