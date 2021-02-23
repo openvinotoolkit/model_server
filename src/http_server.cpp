@@ -51,8 +51,7 @@ private:
 
 class RestApiRequestDispatcher {
 public:
-    RestApiRequestDispatcher(int timeout_in_ms) :
-        regex_(HttpRestApiHandler::kPathRegexExp) {
+    RestApiRequestDispatcher(int timeout_in_ms) {
         handler_ = std::make_unique<HttpRestApiHandler>(timeout_in_ms);
     }
 
@@ -97,7 +96,6 @@ private:
         req->ReplyWithStatus(http_status);
     }
 
-    const std::regex regex_;
     std::unique_ptr<HttpRestApiHandler> handler_;
 };
 

@@ -32,7 +32,8 @@ namespace ovms {
 enum RequestType { Predict,
     GetModelStatus,
     GetModelMetadata,
-    ConfigReload };
+    ConfigReload,
+    ConfigStatus };
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
@@ -45,10 +46,10 @@ struct HttpRequestComponents {
 
 class HttpRestApiHandler {
 public:
-    static const std::string kPathRegexExp;
     static const std::string predictionRegexExp;
     static const std::string modelstatusRegexExp;
-    static const std::string modelControlApiRegexExp;
+    static const std::string configReloadRegexExp;
+    static const std::string configStatusRegexExp;
 
     /**
      * @brief Construct a new HttpRest Api Handler
@@ -58,7 +59,8 @@ public:
     HttpRestApiHandler(int timeout_in_ms) :
         predictionRegex(predictionRegexExp),
         modelstatusRegex(modelstatusRegexExp),
-        modelControlApiRegex(modelControlApiRegexExp),
+        configReloadRegex(configReloadRegexExp),
+        configStatusRegex(configStatusRegexExp),
         timeout_in_ms(timeout_in_ms) {}
 
     Status parseRequestComponents(HttpRequestComponents& components,
@@ -152,12 +154,15 @@ public:
         const std::optional<std::string_view>& model_version_label,
         std::string* response);
 
-    Status processModelControlApiRequest(std::string& response);
+    Status processConfigReloadRequest(std::string& response);
+
+    Status processConfigStatusRequest(std::string& response);
 
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
-    const std::regex modelControlApiRegex;
+    const std::regex configReloadRegex;
+    const std::regex configStatusRegex;
 
     int timeout_in_ms;
 };
