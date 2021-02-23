@@ -23,7 +23,7 @@
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
-static const char* config_1 = R"(
+static const char* configWith1Dummy = R"(
 {
     "model_config_list": [
         {
@@ -43,7 +43,7 @@ public:
 };
 
 TEST(ModelControlApi, nonExistingConfigFile) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -55,7 +55,7 @@ TEST(ModelControlApi, nonExistingConfigFile) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_1);
+    createConfigFileWithContent(configWith1Dummy);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
@@ -65,7 +65,7 @@ TEST(ModelControlApi, nonExistingConfigFile) {
 }
 
 TEST(ModelControlApi, simpleConfigReloaded) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -77,7 +77,7 @@ TEST(ModelControlApi, simpleConfigReloaded) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_1);
+    createConfigFileWithContent(configWith1Dummy);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"({
@@ -107,7 +107,7 @@ static const char* empty_config = R"(
 })";
 
 TEST(ModelControlApi, configReloadAfterModelRetired) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -162,7 +162,7 @@ TEST(ModelControlApi, configReloadAfterModelRetired) {
 }
 
 TEST(ModelControlApi, reloadNotNeeded) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -177,7 +177,7 @@ TEST(ModelControlApi, reloadNotNeeded) {
 }
 
 TEST(ModelControlApi, reloadNotNeededManyThreads) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -206,7 +206,7 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
-static const char* config_with_pipeline = R"(
+static const char* configWith1DummyPipeline = R"(
 {
     "model_config_list": [
         {
@@ -245,7 +245,7 @@ static const char* config_with_pipeline = R"(
 })";
 
 TEST(ModelControlApi, configWithPipelinesReloaded) {
-    auto configFile = createConfigFileWithContent(config_1);
+    auto configFile = createConfigFileWithContent(configWith1Dummy);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -257,7 +257,7 @@ TEST(ModelControlApi, configWithPipelinesReloaded) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.loadConfig(configFile);
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_with_pipeline);
+    createConfigFileWithContent(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"({
@@ -294,7 +294,7 @@ TEST(ModelControlApi, configWithPipelinesReloaded) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-static const char* config_with_pipelines = R"(
+static const char* configWith2DummyPipelines = R"(
 {
     "model_config_list": [
         {
@@ -357,7 +357,7 @@ static const char* config_with_pipelines = R"(
 })";
 
 TEST(ModelControlApi, configWithPipelinesReloadAfterPipelineAdded) {
-    auto configFile = createConfigFileWithContent(config_with_pipeline);
+    auto configFile = createConfigFileWithContent(configWith1DummyPipeline);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -400,7 +400,7 @@ TEST(ModelControlApi, configWithPipelinesReloadAfterPipelineAdded) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(config_with_pipelines);
+    createConfigFileWithContent(configWith2DummyPipelines);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_2 = R"({
@@ -452,7 +452,7 @@ TEST(ModelControlApi, configWithPipelinesReloadAfterPipelineAdded) {
 
 TEST(ConfigStatus, configWithPipelines) {
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    auto configFile = createConfigFileWithContent(config_with_pipelines);
+    auto configFile = createConfigFileWithContent(configWith2DummyPipelines);
     char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
     int arg_count = 5;
     ovms::Config::instance().parse(arg_count, n_argv);

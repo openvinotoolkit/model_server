@@ -30,7 +30,6 @@
 #pragma GCC diagnostic pop
 
 #include "nodeinfo.hpp"
-#include "pipelinedefinitionstatus.hpp"
 #include "status.hpp"
 
 namespace ovms {

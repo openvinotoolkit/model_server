@@ -89,7 +89,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     if (request_components.type == ConfigStatus) {
         return processConfigStatusRequest(*response);
     }
-    return StatusCode::UNKNOWN_ERROR;
+    return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
