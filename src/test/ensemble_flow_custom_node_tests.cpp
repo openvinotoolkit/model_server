@@ -795,13 +795,13 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
     this->checkResponseForCorrectConfiguration();
 }
 
-static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryConfig = R"(
+static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig = R"(
 {
     "model_config_list": [],
     "custom_node_library_config_list": [
         {
             "name": "lib_add_sub_new",
-            "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"
+            "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"
         }
     ],
     "pipeline_config_list": [
@@ -813,8 +813,6 @@ static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryCo
                     "name": "custom_node",
                     "library_name": "lib_add_sub_new",
                     "params": {
-                        "add_value": "3.2",
-                        "sub_value": "2.7"
                     },
                     "type": "custom",
                     "inputs": [
@@ -848,7 +846,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithExec
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryConfig);
+    this->loadConfiguration(pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
     response.Clear();
