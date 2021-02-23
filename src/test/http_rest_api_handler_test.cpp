@@ -35,7 +35,7 @@ static const char* configWith1Dummy = R"(
     ]
 })";
 
-class ModelControlApi : public TestWithTempDir {
+class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
 
 public:
@@ -52,12 +52,14 @@ public:
         manager.loadConfig(configFilePath);
     }
 
-    void removeConfig() {
+    void RemoveConfig() {
         std::filesystem::remove(configFilePath);
     }
 };
 
-TEST_F(ModelControlApi, nonExistingConfigFile) {
+class ConfigReload : public ConfigApi {};
+
+TEST_F(ConfigReload, nonExistingConfigFile) {
     SetUpConfig(configWith1Dummy);
     LoadConfig();
 
@@ -65,13 +67,13 @@ TEST_F(ModelControlApi, nonExistingConfigFile) {
     std::string response;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    removeConfig();
+    RemoveConfig();
     auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
-TEST_F(ModelControlApi, startWith1DummyThenReload) {
+TEST_F(ConfigReload, startWith1DummyThenReload) {
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
@@ -79,7 +81,7 @@ TEST_F(ModelControlApi, startWith1DummyThenReload) {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     LoadConfig();
-    removeConfig();
+    RemoveConfig();
     SetUpConfig(configWith1Dummy);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -109,7 +111,7 @@ static const char* emptyConfig = R"(
     "model_config_list": []
 })";
 
-TEST_F(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
+TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
     SetUpConfig(configWith1Dummy);
     LoadConfig();
     auto handler = ovms::HttpRestApiHandler(10);
@@ -161,7 +163,7 @@ TEST_F(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-TEST_F(ModelControlApi, reloadNotNeeded) {
+TEST_F(ConfigReload, reloadNotNeeded) {
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
@@ -172,7 +174,7 @@ TEST_F(ModelControlApi, reloadNotNeeded) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 }
 
-TEST_F(ModelControlApi, reloadNotNeededManyThreads) {
+TEST_F(ConfigReload, reloadNotNeededManyThreads) {
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
@@ -235,7 +237,7 @@ static const char* configWith1DummyPipeline = R"(
     ]
 })";
 
-TEST_F(ModelControlApi, StartWith1DummyThenReloadToAddPipeline) {
+TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
@@ -343,7 +345,7 @@ static const char* configWith2DummyPipelines = R"(
     ]
 })";
 
-TEST_F(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
+TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
     SetUpConfig(configWith1DummyPipeline);
 
     auto handler = ovms::HttpRestApiHandler(10);
@@ -434,18 +436,14 @@ TEST_F(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-TEST(ConfigStatus, configWithPipelines) {
-    std::filesystem::remove("/tmp/ovms_config_file.json");
-    auto configFile = createConfigFileWithContent(configWith2DummyPipelines);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+class ConfigStatus : public ConfigApi {};
+
+TEST_F(ConfigStatus, configWithPipelines) {
+    SetUpConfig(configWith2DummyPipelines);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    manager.loadConfig(configFile);
+    LoadConfig();
 
     const char* expectedJson = R"({
 "dummy" : 
