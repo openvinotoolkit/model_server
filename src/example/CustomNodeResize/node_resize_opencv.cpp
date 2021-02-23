@@ -35,31 +35,31 @@ enum ResizeParam {
 static const std::string INPUT_TENSOR_NAME = "image";
 
 auto nchw_to_mat(CustomNodeTensor input) {
-    std::vector<float> data(nchwVector.size());
     std::vector<float> nchwVector(input.data, input.data + input.dataLength);
-    for(int c = 0; c < dims[1]; ++c) {
-        for(int y = 0; y < dims[2]; ++y) {
-            for(int x = 0; x < dims[3]; ++x) {
-                data[c * (dims[2] * dims[3]) + y * dims[3] + x] = nchwVector[y * dims[1] * dims[3] + x * dims[1] + c];
+    std::vector<float> data(nchwVector.size());
+    for(uint64_t c = 0; c < input.dims[1]; ++c) {
+        for(uint64_t y = 0; y < input.dims[2]; ++y) {
+            for(uint64_t x = 0; x < input.dims[3]; ++x) {
+                data[c * (input.dims[2] * input.dims[3]) + y * input.dims[3] + x] = nchwVector[y * input.dims[1] * input.dims[3] + x * input.dims[1] + c];
             }
         }
     }
-    CV::Mat image(dims[2], [3] , CV_32F, data.data())
+    cv::Mat image(input.dims[2], input.dims[3] , CV_32F, data.data());
     return image;
 }
 
 
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
     // choose selection criteria
-    cv::Mat image;
+    //cv::Mat image;
 
-    float* inputTensor;
-    size_t valuesPerTensor = 0;
-    size_t numberOfOps = 0;
+    //float* inputTensor;
+    // size_t valuesPerTensor = 0;
+    //size_t numberOfOps = 0;
     if (INPUT_TENSOR_NAME == inputs[0].name) {
         if (inputs[0].dimsLength != 4 ||
             inputs[0].dims[0] != 1 ||
-            inputs[0].dims[1] == 3  {
+            inputs[0].dims[1] == 3 ) {
             std::cout << "improper " << INPUT_TENSOR_NAME
                       << " dimensions: [" << inputs[0].dims[0]
                       << ", " << inputs[0].dims[1]
@@ -67,27 +67,27 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             return 1;
         }
         std::cout << "Input valuesPerTensor" << inputs[0].dims[1] << std::endl;
-        numberOfOps = inputs[0].dims[1];
-        valuesPerTensor = inputs[0].dims[2];
-        inputTensor = reinterpret_cast<float*>(inputs[0].data);
+        //numberOfOps = inputs[0].dims[1];
+        //valuesPerTensor = inputs[0].dims[2];
+        //inputTensor = reinterpret_cast<float*>(inputs[0].data);
     } else {
         std::cout << "Lacking input: " << INPUT_TENSOR_NAME << std::endl;
         return 1;
     }
     // convert input to Mat object
-    cv:Mat image = nchw_to_mat(CV_32F,inputs[0].data, inputs[0].dims);
+    cv::Mat image = nchw_to_mat(inputs[0]);
 
     *outputsLength = 1;
-    *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
-    CustomNodeTensor& resultTensor = **outputs;
-    resultTensor.name = "maximum_tensor";
-    resultTensor.data = reinterpret_cast<uint8_t*>(result);
-    resultTensor.dimsLength = 2;
-    resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
-    resultTensor.dims[0] = 1;
-    resultTensor.dims[1] = valuesPerTensor;
-    resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * sizeof(float);
-    resultTensor.precision = FP32;
+ //   *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
+ //   CustomNodeTensor& resultTensor = **outputs;
+ //   resultTensor.name = "maximum_tensor";
+ //   resultTensor.data = reinterpret_cast<uint8_t*>(result);
+ //   resultTensor.dimsLength = 2;
+ //   resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
+ //   resultTensor.dims[0] = 1;
+ //   resultTensor.dims[1] = valuesPerTensor;
+ //   resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * sizeof(float);
+ //   resultTensor.precision = FP32;
 
 
 
