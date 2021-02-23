@@ -46,8 +46,8 @@ const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
-const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/config\/reload)";
-const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/config\/status)";
+const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
+const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {

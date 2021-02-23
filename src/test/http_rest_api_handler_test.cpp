@@ -36,48 +36,50 @@ static const char* configWith1Dummy = R"(
 })";
 
 class ModelControlApi : public TestWithTempDir {
+    std::string configFilePath;
 public:
-    void SetUp() {
-        std::filesystem::remove("/tmp/ovms_config_file.json");
+    void SetUpConfig(const std::string& configContent) {
+        configFilePath = directoryPath + "/ovms_config.json";
+        createConfigFileWithContent(configContent, configFilePath);
+        char* n_argv[] = {"ovms", "--config_path", &configFilePath[0], "--file_system_poll_wait_seconds", "0"};
+        int arg_count = 5;
+        ovms::Config::instance().parse(arg_count, n_argv);
+    }
+
+    void LoadConfig() {
+        ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+        manager.loadConfig(configFilePath);
+    }
+
+    void removeConfig() {
+        std::filesystem::remove(configFilePath);
     }
 };
 
-TEST(ModelControlApi, nonExistingConfigFile) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, nonExistingConfigFile) {
+    SetUpConfig(configWith1Dummy);
+    LoadConfig();
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    manager.loadConfig(configFile);
-    std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(configWith1Dummy);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+    removeConfig();
     auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
-TEST(ModelControlApi, startWith1DummyThenReload) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, startWith1DummyThenReload) {
+    SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    manager.loadConfig(configFile);
-    std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(configWith1Dummy);
+    LoadConfig();
+    removeConfig();
+    SetUpConfig(configWith1Dummy);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"({
@@ -101,17 +103,14 @@ TEST(ModelControlApi, startWith1DummyThenReload) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-static const char* empty_config = R"(
+static const char* emptyConfig = R"(
 {
     "model_config_list": []
 })";
 
-TEST(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
-
+TEST_F(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
+    SetUpConfig(configWith1Dummy);
+    LoadConfig();
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -134,10 +133,10 @@ TEST(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
 
     auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(empty_config);
+    SetUpConfig(emptyConfig);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_2 = R"({
@@ -161,32 +160,24 @@ TEST(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 }
 
-TEST(ModelControlApi, reloadNotNeeded) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, reloadNotNeeded) {
+    SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    manager.loadConfig(configFile);
+    LoadConfig();
     auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 }
 
-TEST(ModelControlApi, reloadNotNeededManyThreads) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, reloadNotNeededManyThreads) {
+    SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.loadConfig(configFile);
+    LoadConfig();
 
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
@@ -203,7 +194,6 @@ TEST(ModelControlApi, reloadNotNeededManyThreads) {
     for (auto& thread : threads) {
         thread.join();
     }
-    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 static const char* configWith1DummyPipeline = R"(
@@ -244,20 +234,16 @@ static const char* configWith1DummyPipeline = R"(
     ]
 })";
 
-TEST(ModelControlApi, StartWith1DummyThenReloadToAddPipeline) {
-    auto configFile = createConfigFileWithContent(configWith1Dummy);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, StartWith1DummyThenReloadToAddPipeline) {
+    SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    manager.loadConfig(configFile);
+    LoadConfig();
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(configWith1DummyPipeline);
+    SetUpConfig(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"({
@@ -356,11 +342,8 @@ static const char* configWith2DummyPipelines = R"(
     ]
 })";
 
-TEST(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
-    auto configFile = createConfigFileWithContent(configWith1DummyPipeline);
-    char* n_argv[] = {"ovms", "--config_path", "/tmp/ovms_config_file.json", "--file_system_poll_wait_seconds", "0"};
-    int arg_count = 5;
-    ovms::Config::instance().parse(arg_count, n_argv);
+TEST_F(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
+    SetUpConfig(configWith1DummyPipeline);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
@@ -400,7 +383,7 @@ TEST(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
     std::filesystem::remove("/tmp/ovms_config_file.json");
-    createConfigFileWithContent(configWith2DummyPipelines);
+    SetUpConfig(configWith2DummyPipelines);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_2 = R"({
