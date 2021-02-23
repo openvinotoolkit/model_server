@@ -237,6 +237,18 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libnode_resize_opencv.so",
+    srcs = [
+        "example/CustomNodeResize/node_resize_opencv.cpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+            "@opencv//:opencv"
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -254,6 +266,17 @@ cc_binary(
     deps = [
         "//src:ovms_lib"
     ]
+)
+
+cc_binary(
+    name = "test_app",
+    srcs = [
+        "example/CustomNodeResize/test_app.cpp",
+    ],
+    deps = [
+        "libnode_resize_opencv.so"
+    ],
+    linkstatic=False
 )
 
 cc_test(
@@ -334,6 +357,7 @@ cc_test(
         "//src:lib_node_add_sub.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
+        "//src:lib_node_resize_opencv.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [

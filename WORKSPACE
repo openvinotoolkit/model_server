@@ -211,3 +211,12 @@ new_local_repository(
     path = "/opt/intel/openvino/deployment_tools",
 )
 ################## END OF OPENVINO DEPENDENCY ##########
+
+##################### OPEN CV ######################
+# OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
+new_local_repository(
+    name = "opencv",
+    build_file = "@//third_party/opencv:BUILD",
+    path = "/opt/intel/openvino/opencv",
+)
+################## END OF OPENCV DEPENDENCY ##########
