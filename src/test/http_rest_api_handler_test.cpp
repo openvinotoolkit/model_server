@@ -37,6 +37,7 @@ static const char* configWith1Dummy = R"(
 
 class ModelControlApi : public TestWithTempDir {
     std::string configFilePath;
+
 public:
     void SetUpConfig(const std::string& configContent) {
         configFilePath = directoryPath + "/ovms_config.json";
