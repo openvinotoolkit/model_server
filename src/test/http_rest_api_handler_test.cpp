@@ -136,7 +136,7 @@ TEST_F(ModelControlApi, StartWith1DummyThenReloadToRetireDummy) {
     EXPECT_EQ(expectedJson_1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
 
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+    RemoveConfig();
     SetUpConfig(emptyConfig);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -243,7 +243,7 @@ TEST_F(ModelControlApi, StartWith1DummyThenReloadToAddPipeline) {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     LoadConfig();
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+    RemoveConfig();
     SetUpConfig(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -383,7 +383,7 @@ TEST_F(ModelControlApi, StartWith1DummyPipelineThenReloadToAddPipeline) {
     EXPECT_EQ(expectedJson_1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
 
-    std::filesystem::remove("/tmp/ovms_config_file.json");
+    RemoveConfig();
     SetUpConfig(configWith2DummyPipelines);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
