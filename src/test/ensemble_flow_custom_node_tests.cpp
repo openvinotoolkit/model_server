@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <array>
 #include <functional>
+#include <numeric>
 #include <utility>
 
 #include <gmock/gmock.h>
@@ -98,7 +99,7 @@ protected:
 
     template <typename T>
     void checkResponse(const std::string& outputName, const PredictResponse& response, const std::vector<T>& data, const shape_t& shape) {
-        ASSERT_TRUE(response.outputs().contains(outputName));
+        ASSERT_TRUE(response.outputs().contains(outputName)) << outputName;
         const auto& proto = response.outputs().at(outputName);
 
         ASSERT_EQ(proto.tensor_content().size(), data.size() * sizeof(T));
@@ -179,6 +180,200 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
         return value + addValue - subValue;
     });
+}
+
+class EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest : public EnsembleFlowCustomNodePipelineExecutionTest {
+protected:
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    CustomNodeLibraryManager manager;
+    NodeLibrary differentOpsLibrary;
+    NodeLibrary chooseMaxLibrary;
+    const std::string differentOpsLibraryName{"different_ops"};
+    const std::string chooseMaxLibraryName{"choose_max"};
+    const std::string differentOpsLibraryPath{"/ovms/bazel-bin/src/lib_node_perform_different_operations.so"};
+    const std::string chooseMaxLibraryPath{"/ovms/bazel-bin/src/lib_node_choose_maximum.so"};
+    const std::string pipelineInputName = "pipeline_input";
+    const std::string pipelineOutputName = "pipeline_output";
+    const std::string pipelineFactorsName = "pipeline_factors";
+    const std::string chooseMaxInputName = "input_tensors";
+    const std::string chooseMaxOutputName = "maximum_tensor";
+    const std::string differentOpsInputName = "input_numbers";
+    const std::string differentOpsFactorsInputName = "op_factors";
+    const std::string differentOpsOutputName = "different_ops_results";
+    const std::string differentOpsFactorsOutputName = "different_ops_factors_results";
+    const std::unordered_map<std::string, std::string> differentOpsOutputAlias{{differentOpsOutputName, differentOpsOutputName}};
+    const std::unordered_map<std::string, std::string> chooseMaxOutputAlias{{chooseMaxOutputName, chooseMaxOutputName}};
+    const std::string dummyNodeName = "dummy";
+    const std::string differentOpsNodeName{"different-ops-node"};
+    const std::string chooseMaxNodeName{"choose-max-node"};
+    const uint32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
+
+    void SetUp() override {
+        // increasing default nireq == 1 to speed up the tests
+        // in multilayered demultiplication we still will have more than
+        // 16 concurrent inferences
+        config.setNireq(16);
+        ASSERT_EQ(modelManager.reloadModelWithVersions(config), StatusCode::OK);
+        ASSERT_EQ(manager.loadLibrary(
+                      differentOpsLibraryName,
+                      differentOpsLibraryPath),
+            StatusCode::OK);
+        ASSERT_EQ(manager.getLibrary(
+                      differentOpsLibraryName,
+                      differentOpsLibrary),
+            StatusCode::OK);
+        ASSERT_EQ(manager.loadLibrary(
+                      chooseMaxLibraryName,
+                      chooseMaxLibraryPath),
+            StatusCode::OK);
+        ASSERT_EQ(manager.getLibrary(
+                      chooseMaxLibraryName,
+                      chooseMaxLibrary),
+            StatusCode::OK);
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerDummyGathersIntertwinedLevels) {
+    // Most basic configuration, just process single add-sub custom node pipeline request
+    // input  (differentOps    dummy   chooseMax ) XN    output
+    //  O-----(----->O---------->O------->O------>...----->O
+    const uint demultiplicationLayersCount = 10;
+    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
+    const std::vector<float> inputFactors{1, -1, 2, 2};
+    parameters_t parameters{
+        {"selection_criteria", "MAXIMUM_MAXIMUM"}};
+    // create expected output -> it is dependent from input values & DAG topology
+    auto expectedResult = inputValues;
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [demultiplicationLayersCount, inputFactors](float f) {
+            for (size_t iterations = 0; iterations < demultiplicationLayersCount; ++iterations) {
+                // input values are prepared in a way that the first layer will choose adding operation tensor
+                if (iterations == 0) {
+                    f += inputFactors[0];
+                } else {
+                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                }
+                f += 1;  // dummy
+            }
+            return f;
+        });
+    PredictRequest predictRequest;
+    this->prepareRequest(predictRequest, inputValues, pipelineInputName);
+    this->prepareRequest(predictRequest, inputFactors, pipelineFactorsName);
+
+    // create pipeline
+    std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    nodes[1] = std::make_unique<ExitNode>(&response);
+    size_t i = 2;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        nodes[i++] = std::make_unique<CustomNode>(differentOpsNodeName + "-" + std::to_string(demultiplicationLayer), differentOpsLibrary, parameters_t{}, differentOpsOutputAlias, demultiplyCount);
+        nodes[i++] = std::make_unique<DLNode>(dummyNodeName + "-" + std::to_string(demultiplicationLayer), "dummy", std::nullopt, modelManager);
+        nodes[i++] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, 0, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
+    }
+
+    Pipeline pipeline(dynamic_cast<EntryNode&>(*nodes[0]), dynamic_cast<ExitNode&>(*nodes[1]));
+    i = 2;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        if (i == 2) {  // first node after entry
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}, {pipelineInputName, differentOpsInputName}});
+        } else {  // node inside pipeline
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}});
+        }
+        pipeline.connect(*nodes[i], *nodes[i + 1], {{differentOpsOutputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, chooseMaxInputName}});
+        if ((i + 3) != (2 + 3 * demultiplicationLayersCount)) {  // connect different ops to choose max
+            pipeline.connect(*nodes[i + 2], *nodes[i + 3], {{chooseMaxOutputName, differentOpsInputName}});
+        } else {  // if last connect to exit node
+            pipeline.connect(*nodes[i + 2], *nodes[1], {{chooseMaxOutputName, pipelineOutputName}});
+        }
+        i = i + 3;
+    }
+    for (auto& node : nodes) {
+        pipeline.push(std::move(node));
+    }
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(response.outputs().size(), 1);
+    this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerLevelsThenDummyThenMultipleGathers) {
+    // Most basic configuration, just process single add-sub custom node pipeline request
+    // input  (differentOps dummy)xN   chooseMax xN    output
+    //  O-----(----->O------->O---...----->O---->...----->O
+    const uint demultiplicationLayersCount = 4;
+    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
+    const std::vector<float> inputFactors{1, -1, 2, 2};
+    parameters_t parameters{
+        {"selection_criteria", "MAXIMUM_MAXIMUM"}};
+    // create expected output -> it is dependent from input values & DAG topology
+    auto expectedResult = inputValues;
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [demultiplicationLayersCount, inputFactors](float f) {
+            for (size_t iterations = 0; iterations < demultiplicationLayersCount; ++iterations) {
+                // input values are prepared in a way that the first layer will choose adding operation tensor
+                if (iterations == 0) {
+                    f += inputFactors[0];
+                } else {
+                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                }
+                f += 1;  // dummy
+            }
+            return f;
+        });
+    PredictRequest predictRequest;
+    this->prepareRequest(predictRequest, inputValues, pipelineInputName);
+    this->prepareRequest(predictRequest, inputFactors, pipelineFactorsName);
+
+    // create pipeline
+    size_t nodesCount = 2 + 3 * demultiplicationLayersCount;  // entry + exit + (choose + differentOps + dummy) * layerCount
+    std::vector<std::unique_ptr<Node>> nodes(nodesCount);
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response);
+    size_t i = 1;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        nodes[i++] = std::make_unique<CustomNode>(differentOpsNodeName + "-" + std::to_string(demultiplicationLayer), differentOpsLibrary, parameters_t{}, differentOpsOutputAlias, demultiplyCount);
+        nodes[i++] = std::make_unique<DLNode>(dummyNodeName + "-" + std::to_string(demultiplicationLayer), "dummy", std::nullopt, modelManager);
+        nodes[nodesCount - 1 - (i / 2)] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, 0, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
+    }
+
+    Pipeline pipeline(dynamic_cast<EntryNode&>(*nodes[0]), dynamic_cast<ExitNode&>(*nodes[nodesCount - 1]));
+    i = 1;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        if (i == 1) {  // first node after entry needs to connect to entry
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}, {pipelineInputName, differentOpsInputName}});
+        }
+        pipeline.connect(*nodes[i], *nodes[i + 1], {{differentOpsOutputName, DUMMY_MODEL_INPUT_NAME}});
+        // pass factors further if +2 node is differentOps
+        if (demultiplicationLayer != demultiplicationLayersCount - 1) {
+            pipeline.connect(*nodes[i], *nodes[i + 2], {{differentOpsFactorsOutputName, differentOpsFactorsInputName}});
+        }
+        // in between different ops & dummy node
+        if (demultiplicationLayer != demultiplicationLayersCount - 1) {  // all but last dummy connect to differentOps node
+            pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, differentOpsInputName}});
+        } else {  // last dummy connects to chooseMax node
+            pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, chooseMaxInputName}});
+        }
+        if (demultiplicationLayer != 0) {  // in between choose max nodes
+            pipeline.connect(*nodes[nodesCount - 1 - (demultiplicationLayer + 1)],
+                *nodes[nodesCount - 1 - demultiplicationLayer], {{chooseMaxOutputName, chooseMaxInputName}});
+        } else {  // connect last choose max to exit node
+            pipeline.connect(*nodes[nodesCount - 1 - (demultiplicationLayer + 1)],
+                *nodes[nodesCount - 1 - demultiplicationLayer], {{chooseMaxOutputName, pipelineOutputName}});
+        }
+        i = i + 2;
+    }
+    for (auto& node : nodes) {
+        pipeline.push(std::move(node));
+    }
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(response.outputs().size(), 1);
+    this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {

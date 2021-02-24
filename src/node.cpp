@@ -44,8 +44,10 @@ Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
     auto it = nodeSessions.find(sessionId);
+
     auto& nodeSession = it->second;
     if (it == nodeSessions.end()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Could not find session: {} for node: {}", sessionId, getName());
         return StatusCode::UNKNOWN_ERROR;
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
@@ -53,6 +55,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
         status = demultiplyOutputs(nodeSessionOutputs);
     }
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
     nodeSessions.erase(sessionId);
     return status;
 }
@@ -133,7 +136,7 @@ NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
         return *(*it).second;
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
-        metadata.getSessionKey(), getName());
+        sessionKey, getName());
     NodeSessionMetadata newSessionMetadata;
     CollapseDetails collapsingDetails;
     if (gatherFrom) {

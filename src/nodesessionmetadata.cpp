@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <utility>
 
@@ -45,6 +46,13 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
         meta.sessionsLevels.push_back(nodeName);
         ++counter;
     }
+    SPDLOG_LOGGER_TRACE(dag_executor_logger, "Generated subsession levels: {}",
+        std::accumulate(metas[0].sessionsLevels.begin(), metas[0].sessionsLevels.end(),
+            std::string(), [](const std::string& lhs, const std::string& rhs) {
+                if (lhs.empty()) {
+                    return rhs;
+                }
+                return lhs + ", " + rhs; }));
     return std::move(metas);
 }
 
@@ -64,14 +72,26 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
         throw std::logic_error("Tried to create session key ignoring non-existing subsession");
     }
     std::stringstream ss;
-    for (auto& [nodeName, subsessionPair] : details) {
-        if (ignoredNodeNames.find(nodeName) != ignoredNodeNames.end()) {
-            continue;
+    size_t j = 0;
+    for (int32_t i = sessionsLevels.size() - 1; i >= 0; --i, ++j) {
+        if ((ignoredNodeNames.size() > 0) &&
+            (ignoredNodeNames.size() > j) &&
+            ((sessionsLevels.size() - ignoredNodeNames.size()) >= 0) &&
+            (ignoredNodeNames.find(sessionsLevels[i]) == ignoredNodeNames.end())) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first", sessionsLevels[i]);
+            throw std::logic_error("Cannot collapse sessions not in LIFO order");
+        } else {
+            if (j < ignoredNodeNames.size()) {
+                continue;
+            }
+            if (ss.tellp() > 0) {
+                ss << "_";
+            }
+            ss << sessionsLevels[i] << "_" << std::get<0>(details.at(sessionsLevels[i]));
         }
-        if (ss.tellp() > 0) {
-            ss << "_";
+        if (i == 0) {
+            break;
         }
-        ss << nodeName << "_" << std::get<0>(subsessionPair);
     }
     return ss.str();
 }
@@ -137,9 +157,28 @@ session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collap
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse more subsession levels than exists");
         throw std::logic_error("Tried to collapse more subsession levels than exists");
     }
-    for (size_t i = sessionsLevels.size() - 1; i > 0; --i) {
+    for (size_t i = sessionsLevels.size() - 1; i > sessionsLevels.size() - 1 - collapsedNames.size(); --i) {
         if (collapsedNames.find(sessionsLevels[i]) == collapsedNames.end()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first", sessionsLevels[i]);
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first, but tried to: {}. SubsessionLevels: {}",
+                sessionsLevels[i],
+                std::accumulate(collapsedNames.begin(),
+                    collapsedNames.end(),
+                    std::string(),
+                    [](const std::string& lhs, const std::string rhs) {
+                        if (lhs.empty()) {
+                            return rhs;
+                        }
+                        return lhs + ", " + rhs;
+                    }),
+                std::accumulate(sessionsLevels.begin(),
+                    sessionsLevels.end(),
+                    std::string(),
+                    [](const std::string& lhs, const std::string rhs) {
+                        if (lhs.empty()) {
+                            return rhs;
+                        }
+                        return lhs + ", " + rhs;
+                    }));
             throw std::logic_error("Cannot collapse sessions not in LIFO order");
         }
     }
