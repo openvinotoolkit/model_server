@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include <inference_engine.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
@@ -30,6 +32,8 @@ struct NodeLibrary {
     metadata_fn getInputsInfo = nullptr;
     metadata_fn getOutputsInfo = nullptr;
     release_fn release = nullptr;
+
+    std::string basePath = "";
 
     bool isValid() const;
 };
