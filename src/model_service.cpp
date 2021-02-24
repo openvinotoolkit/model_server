@@ -152,7 +152,6 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
     }
     manager_lock.unlock();
 
-    std::shared_lock pipeline_lock(manager.getPipelineFactory().definitionsMtx);
     const std::vector<std::string>& pipelinesNames = manager.getPipelineFactory().getPipelinesNames();
     for (auto const& pipelineName : pipelinesNames) {
         std::optional<int64_t> noValueModelVersion;
@@ -165,7 +164,6 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         }
         modelsStatusesTmp.insert({pipelineName, response});
     }
-    pipeline_lock.unlock();
 
     modelsStatuses.merge(modelsStatusesTmp);
     return StatusCode::OK;
