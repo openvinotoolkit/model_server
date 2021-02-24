@@ -145,7 +145,7 @@ TEST(SequenceManager, HasSequenceTerminated) {
     ASSERT_TRUE(status.ok());
 
     status = sequenceManager.mockHasSequence(sequenceId);
-    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, TerminateSequenceOK) {
@@ -172,6 +172,18 @@ TEST(SequenceManager, TerminateSequenceAlreadyTerminated) {
     ASSERT_TRUE(status.ok());
 
     status = sequenceManager.mockTerminateSequence(sequenceId);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
+}
+
+TEST(SequenceManager, CreateSequenceAlreadyTerminated) {
+    MockedSequenceManager sequenceManager(120, 24, "dummy", 1);
+    uint64_t sequenceId = 42;
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
+    sequenceManager.mockCreateSequence(spec);
+    auto status = sequenceManager.mockTerminateSequence(sequenceId);
+    ASSERT_TRUE(status.ok());
+
+    status = sequenceManager.mockCreateSequence(spec);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
 }
 
@@ -190,7 +202,7 @@ TEST(SequenceManager, ProcessSpecNoControlInput) {
     sequenceManager.mockTerminateSequence(sequenceId);
 
     status = sequenceManager.processRequestedSpec(spec);
-    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, ProcessSpecSequenceStart) {
@@ -210,13 +222,13 @@ TEST(SequenceManager, ProcessSpecSequenceEnd) {
     auto status = sequenceManager.processRequestedSpec(spec);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 
-    ovms::SequenceProcessingSpec creation_spec(ovms::SEQUENCE_START, sequenceId);
-    sequenceManager.mockCreateSequence(creation_spec);
+    ovms::SequenceProcessingSpec creationSpec(ovms::SEQUENCE_START, sequenceId);
+    sequenceManager.mockCreateSequence(creationSpec);
     status = sequenceManager.processRequestedSpec(spec);
     ASSERT_TRUE(status.ok());
 
     status = sequenceManager.processRequestedSpec(spec);
-    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_TERMINATED);
+    ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_MISSING);
 }
 
 TEST(SequenceManager, RemoveOneTimedOutSequence) {
@@ -293,5 +305,20 @@ TEST(SequenceManager, MultiManagersAllTimedOutSequences) {
 
     for (int i = 0; i < 10; i++) {
         delete managers[i];
+    }
+}
+
+TEST(SequenceManager, ExceedMaxSequenceNumber) {
+    MockedSequenceManager sequenceManager(120, 5, "dummy", 1);
+    uint64_t sequenceId = 1;
+    auto i = sequenceId;
+    for (; i < 6; i++) {
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i);
+        ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::OK);
+    }
+
+    for (; i < 3; i++) {
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i);
+        ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::MAX_SEQUENCE_NUMBER_REACHED);
     }
 }

@@ -61,7 +61,6 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
 
 Status SequenceManager::removeTimedOutSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
-
     for (auto it = sequences.begin(); it != sequences.end();) {
         Sequence& sequence = it->second;
         // Non blocking try to get mutex
@@ -72,7 +71,7 @@ Status SequenceManager::removeTimedOutSequences() {
             std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
             auto timeDiff = currentTime - sequence.getLastActivityTime();
             if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed - Id: {}", modelName, modelVersion, sequence.getId());
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed Id: {}", modelName, modelVersion, sequence.getId());
                 it = sequences.erase(it);
                 continue;
             }
@@ -88,23 +87,32 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
         return StatusCode::SEQUENCE_MISSING;
 
     if (getSequence(sequenceId).isTerminated())
-        return StatusCode::SEQUENCE_TERMINATED;
+        return StatusCode::SEQUENCE_MISSING;
 
     return StatusCode::OK;
 }
 
 Status SequenceManager::createSequence(SequenceProcessingSpec& sequenceProcessingSpec) {
+    if (sequences.size() >= this->maxSequenceNumber) {
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Max sequence number has been reached. Could not create new sequence.", modelName, modelVersion);
+        return StatusCode::MAX_SEQUENCE_NUMBER_REACHED;
+    }
+
     uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
 
     if (sequenceId == 0) {
         uint64_t uniqueSequenceId = getUniqueSequenceId();
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Adding new sequence with ID: {}", uniqueSequenceId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Adding new sequence with ID: {}", modelName, modelVersion, uniqueSequenceId);
         sequences.emplace(uniqueSequenceId, uniqueSequenceId);
         sequenceProcessingSpec.setSequenceId(uniqueSequenceId);
         return StatusCode::OK;
     }
 
     if (sequenceExists(sequenceId)) {
+        if (getSequence(sequenceId).isTerminated()) {
+            SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Sequence with provided ID is currently being removed", modelName, modelVersion);
+            return StatusCode::SEQUENCE_TERMINATED;
+        }
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Sequence with provided ID already exists", modelName, modelVersion);
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
     } else {

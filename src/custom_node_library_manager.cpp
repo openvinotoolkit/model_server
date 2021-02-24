@@ -31,7 +31,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::PATH_INVALID;
     }
 
-    if (libraries.count(name) == 1) {
+    auto it = libraries.find(name);
+    if (it != libraries.end() && it->second.basePath == basePath) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
@@ -81,8 +82,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         execute,
         getInputsInfo,
         getOutputsInfo,
-        release};
-    libraryBasePaths[name] = basePath;
+        release,
+        basePath};
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;

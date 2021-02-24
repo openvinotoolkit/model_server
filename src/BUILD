@@ -49,6 +49,8 @@ cc_library(
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
+        "global_sequences_viewer.hpp",
+        "global_sequences_viewer.cpp",
         "http_rest_api_handler.cpp",
         "http_rest_api_handler.hpp",
         "http_server.cpp",

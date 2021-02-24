@@ -21,6 +21,8 @@
 
 #include <cxxopts.hpp>
 
+#include "modelconfig.hpp"
+
 namespace ovms {
 /**
      * @brief Provides all the configuration options from command line
@@ -270,7 +272,7 @@ public:
      */
     uint32_t sequenceTimeoutSeconds() {
         if (!result->count("sequence_timeout_seconds")) {
-            return 0;
+            return DEFAULT_SEQUENCE_TIMEOUT_SECONDS;
         }
         return result->operator[]("sequence_timeout_seconds").as<uint32_t>();
     }
@@ -291,7 +293,7 @@ public:
      */
     uint32_t maxSequenceNumber() {
         if (!result->count("max_sequence_number")) {
-            return 0;
+            return DEFAULT_MAX_SEQUENCE_NUMBER;
         }
         return result->operator[]("max_sequence_number").as<uint32_t>();
     }
