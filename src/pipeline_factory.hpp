@@ -40,9 +40,10 @@ class PipelineDefinition;
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;
-    mutable std::shared_mutex definitionsMtx;
 
 public:
+    mutable std::shared_mutex definitionsMtx;
+    
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,

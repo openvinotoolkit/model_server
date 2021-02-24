@@ -554,10 +554,14 @@ bool ModelManager::configFileReloadNeeded() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     struct stat statTime;
 
-    stat(configFilename.c_str(), &statTime);
-    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
-        return false;
+    if(stat(configFilename.c_str(), &statTime) == 0)
+    {
+        if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+            return false;
+        }
+        return true;
     }
+
     return true;
 }
 

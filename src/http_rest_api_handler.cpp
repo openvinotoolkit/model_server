@@ -361,12 +361,12 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
     if (isConfigFileReloadNeeded) {
         status = manager.loadConfig(config.configPath());
         if (!status.ok()) {
-            response = createErrorJsonWithMessage("Reloading config file failed.");
+            response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;
         }
     }
     manager.updateConfigurationWithoutConfigFile();
-
+    
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
     if (!status.ok()) {
