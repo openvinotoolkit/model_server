@@ -68,6 +68,21 @@ protected:
     tensorflow::serving::GetModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
 
+    std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&)> isShape = [](
+                                                                                                         const tensorflow::TensorShapeProto& actual,
+                                                                                                         const std::vector<int64_t>&& expected) -> bool {
+        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
+            SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
+            return false;
+        }
+        for (int i = 0; i < actual.dim_size(); i++) {
+            if (actual.dim(i).size() != expected[i]) {
+                SPDLOG_ERROR("Unexpected dim[{}]. Got: {}, Expect: {}", i, actual.dim(i).size(), expected[i]);
+                return false;
+            }
+        }
+        return true;
+    };
     virtual void prepare() {
         pipelineDefinition.mockMetadata({{"Input_FP32_1_3_224_224",
                                              std::make_shared<TensorInfo>("Input_FP32_1_3_224_224", InferenceEngine::Precision::FP32, shape_t{1, 3, 224, 224})},
@@ -202,20 +217,6 @@ TEST_F(GetPipelineMetadataResponseBuild, HasCorrectShape) {
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    auto isShape = [](
-                       const tensorflow::TensorShapeProto& actual,
-                       const std::vector<size_t>&& expected) -> bool {
-        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
-            return false;
-        }
-        for (int i = 0; i < actual.dim_size(); i++) {
-            if (static_cast<unsigned int>(actual.dim(i).size()) != expected[i]) {
-                return false;
-            }
-        }
-        return true;
-    };
-
     EXPECT_TRUE(isShape(
         inputs.at("Input_FP32_1_3_224_224").tensor_shape(),
         {1, 3, 224, 224}));
@@ -277,4 +278,43 @@ TEST_F(GetPipelineMetadataResponseBuild, serialize2Json) {
     EXPECT_TRUE(received_doc.IsObject());
     EXPECT_TRUE(received_doc.HasMember("modelSpec"));
     EXPECT_TRUE(received_doc.HasMember("metadata"));
+}
+
+class GetPipelineMetadataResponseBuildWithDynamicShapes : public GetPipelineMetadataResponseBuild {
+
+protected:
+    void prepare() override {
+        GetPipelineMetadataResponse::prepare();
+        pipelineDefinition.mockMetadata(
+            {{"Input_FP32_1_-1_224_224",
+                 std::make_shared<TensorInfo>("Input_FP32_1_-1_224_224", InferenceEngine::Precision::FP32, shape_t{1, 0, 224, 224})},
+                {"Input_U8_1_3_-1_-1",
+                    std::make_shared<TensorInfo>("Input_U8_1_3_-1_-1", InferenceEngine::Precision::U8, shape_t{1, 3, 0, 0})}},
+            {{"Output_I32_1_-1",
+                 std::make_shared<TensorInfo>("Output_I32_1_-1", InferenceEngine::Precision::I32, shape_t{1, 0})},
+                {"Output_FP32_1_-1_-1_3",
+                    std::make_shared<TensorInfo>("Output_FP32_1_-1_-1_3", InferenceEngine::Precision::FP32, shape_t{1, 0, 0, 3})}});
+        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    }
+};
+
+TEST_F(GetPipelineMetadataResponseBuildWithDynamicShapes, HandleDynamicShapes) {
+    tensorflow::serving::SignatureDefMap def;
+    response.metadata().at("signature_def").UnpackTo(&def);
+
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+
+    EXPECT_TRUE(isShape(
+        inputs.at("Input_FP32_1_-1_224_224").tensor_shape(),
+        {1, -1, 224, 224}));
+    EXPECT_TRUE(isShape(
+        inputs.at("Input_U8_1_3_-1_-1").tensor_shape(),
+        {1, 3, -1, -1}));
+    EXPECT_TRUE(isShape(
+        outputs.at("Output_I32_1_-1").tensor_shape(),
+        {1, -1}));
+    EXPECT_TRUE(isShape(
+        outputs.at("Output_FP32_1_-1_-1_3").tensor_shape(),
+        {1, -1, -1, 3}));
 }

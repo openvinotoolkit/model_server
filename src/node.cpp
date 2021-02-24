@@ -27,13 +27,14 @@
 
 namespace ovms {
 
-Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::string> gatherFromNode) :
+Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
     nodeName(nodeName),
-    demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt),
+    demultiplexCount(demultiplyCount),
     gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
+    // TODO fix logs
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create node: {} with demultiply: {}, gatherFrom: {}.",
         getName(),
-        demultiplyCount,
+        demultiplexCount ? std::to_string(demultiplexCount.value()) : "NA",
         std::accumulate(gatherFromNode.begin(), gatherFromNode.end(), std::string("NA"), [](const std::string& lhs, const std::string& rhs) {
             if (lhs == "NA") {
                 return rhs;
@@ -51,7 +52,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         return StatusCode::UNKNOWN_ERROR;
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
-    if (status.ok() && demultiplexCount) {
+    if (status.ok() && demultiplexCount) {  // TODO fix logs
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
         status = demultiplyOutputs(nodeSessionOutputs);
     }
@@ -166,7 +167,11 @@ std::vector<session_key_t> Node::getReadySessions() const {
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
+    auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
+    uint32_t demultiplyCount = tensorDesc.getDims()[1];
+    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplyCount));
+
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
@@ -174,17 +179,26 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if (newDims[1] != demultiplexCount.value()) {
+
+        if (demultiplexCount &&
+            (demultiplexCount.value() != 0) &&
+            (newDims[1] != demultiplexCount.value())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} expected: {} to demultiply",
                 newDims[1], demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
+        if (demultiplyCount == 0) {
+            // TODO handle dynamic demultiply_count == 0
+            nodeSessionOutputs.erase(metadata.getSessionKey());
+            return StatusCode::NOT_IMPLEMENTED;
+        }
+
         newDims.erase(newDims.begin() + 1);
         const InferenceEngine::TensorDesc dividedBlobDesc(
             tensorDesc.getPrecision(),
             newDims,
             InferenceEngine::Layout::ANY);
-        const auto step = blob->byteSize() / demultiplexCount.value();
+        const auto step = blob->byteSize() / demultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
             auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
@@ -192,8 +206,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return status;
             }
             if (dividedBlob->byteSize() != step) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Created blob have wrong byte size: {}, expected: {}",
-                    dividedBlob->byteSize(), step);
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob have wrong byte size: {}, expected: {}",
+                    getName(), metadata.getSessionKey(), dividedBlob->byteSize(), step);
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);

@@ -1430,7 +1430,8 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegativeNotAllowed) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroNotAllowed) {
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroAllowed) {
+    // this is to allow dynamic demultiplexing
     const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
     const std::string demultiplyCount{"\"demultiply_count\": 0"};
     std::string config(demultiplexerConfig);
@@ -1438,10 +1439,12 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroNotAllowed) {
     rapidjson::Document demultiplexerConfigDemultiplyCountEqualsZeroParsed;
     demultiplexerConfigDemultiplyCountEqualsZeroParsed.Parse(config.c_str());
     auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsZeroParsed, ovms::MODELS_CONFIG_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneNotAllowed) {
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneAllowed) {
+    // this is to allow dynamic demultiplexing. We could invalidate 1 and still accept 0, [2,3, ...]
+    // but this is just probably not efficient - unnecessary to have demultiply_count == 1
     const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
     const std::string demultiplyCount{"\"demultiply_count\": 1"};
     std::string config(demultiplexerConfig);
@@ -1449,7 +1452,7 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneNotAllowed) {
     rapidjson::Document demultiplexerConfigDemultiplyCountEqualsOneParsed;
     demultiplexerConfigDemultiplyCountEqualsOneParsed.Parse(config.c_str());
     auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountEqualsOneParsed, ovms::MODELS_CONFIG_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
 TEST(SchemaTest, DemultiplexerConfigDemultiplyCountTypeInvalid) {
