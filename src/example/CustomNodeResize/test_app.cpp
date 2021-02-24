@@ -25,9 +25,8 @@ auto reorder_to_chw(cv::Mat* mat) {
     return data;
 }
 
-std::unique_ptr<struct CustomNodeTensor[]> Jpeg2CustomNodeTensor(std::string jpegPath){
+std::unique_ptr<struct CustomNodeTensor[]> Jpeg2CustomNodeTensor(std::string jpegPath, cv::Mat& image, std::vector<uint64_t>& shape){
     std::cout << "started Jpeg2CustomNodeTensor" << std::endl;
-    cv::Mat image;
     image = cv::imread( jpegPath, 1 );
     std::cout << "created mat from jpeg " << image.rows << ":" << image.cols << std::endl;
     cv::Mat image_32;
@@ -36,8 +35,8 @@ std::unique_ptr<struct CustomNodeTensor[]> Jpeg2CustomNodeTensor(std::string jpe
     auto image_nchw = reorder_to_chw(&image);
     std::cout << "mat reordered to nchw vector " << image_nchw.size() << std::endl;
     std::string tensor_name("image");
-    std::vector<uint64_t> dims{ 1, 3, image.rows, image.cols };
-    std::cout << "created dims vector " << dims.size() << std::endl;
+    shape = { 1, 3, image.rows, image.cols };
+    std::cout << "created dims vector " << shape.size() << std::endl;
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(1);
     std::cout << "initialized inputTensors " << std::endl;
     inputTensors[0].name = static_cast<const char*>(tensor_name.c_str());
@@ -46,8 +45,8 @@ std::unique_ptr<struct CustomNodeTensor[]> Jpeg2CustomNodeTensor(std::string jpe
     std::cout << "set tensor data" << std::endl;
     inputTensors[0].dataLength = static_cast<uint64_t>(sizeof(image_nchw[0]) * image_nchw.size());
     std::cout << "set tensor dataLength" << std::endl;
-    inputTensors[0].dims = static_cast<uint64_t*>(dims.data());
-    std::cout << "set dims" <<  dims[0] << dims[1] << dims[2] << dims[3] << std::endl;
+    inputTensors[0].dims = static_cast<uint64_t*>(shape.data());
+    std::cout << "set dims" <<  shape[0] << shape[1] << shape[2] << shape[3] << std::endl;
     inputTensors[0].dimsLength = static_cast<uint64_t>(4);
     inputTensors[0].precision = CustomNodeTensorPrecision::FP32;
     return std::move(inputTensors);
@@ -71,7 +70,10 @@ int main() {
     std::cout << "test" << std::endl;
     int value = 10;
     std::unique_ptr<struct CustomNodeTensor[]> inputs;
-    inputs = Jpeg2CustomNodeTensor("example_client/images/bee.jpeg");
+    //inputs = Jpeg2CustomNodeTensor("example_client/images/bee.jpeg");
+    cv::Mat image;
+    std::vector<uint64_t> shape;
+    inputs = Jpeg2CustomNodeTensor("/workspace/east_utils/bee.jpeg", image, shape);
     std::cout << "jpeg converted to custom tensor" << std::endl;
     uint64_t inputTensorsLength = 1;
     struct CustomNodeTensor* outputTensors = nullptr;
