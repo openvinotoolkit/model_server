@@ -366,7 +366,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
         }
     }
     manager.updateConfigurationWithoutConfigFile();
-    
+
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
     if (!status.ok()) {
