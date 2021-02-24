@@ -1,0 +1,85 @@
+2021-02-24 09:59:42.070228: W tensorflow/stream_executor/platform/default/dso_loader.cc:60] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory
+2021-02-24 09:59:42.070260: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+### Starting rest_stateful_client.py client ###
+Context window left width cw_l: 0
+Context window right width cw_r: 0
+Starting sequence_id: 1
+Start processing:
+Model name: rm_lstm4f
+Reading input ark file /home/rasapala/download/rm_lstm4f/test_feat_1_10.ark
+Reading scores ark file /home/rasapala/download/rm_lstm4f/test_score_1_10.ark
+Adding input name Parameter
+Adding output name affinetransform/Fused_Add_
+
+	Sequence name: aem02_st0049_oct89
+	Sequence size: 250
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0049_oct89 ; Average RMS Error: 0.0000015206
+
+
+	Sequence name: aem02_st0122_oct89
+	Sequence size: 441
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0122_oct89 ; Average RMS Error: 0.0000015164
+
+
+	Sequence name: aem02_st0182_oct89
+	Sequence size: 347
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0182_oct89 ; Average RMS Error: 0.0000016075
+
+
+	Sequence name: aem02_st0276_oct89
+	Sequence size: 407
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0276_oct89 ; Average RMS Error: 0.0000015992
+
+
+	Sequence name: aem02_st0343_oct89
+	Sequence size: 353
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0343_oct89 ; Average RMS Error: 0.0000017230
+
+
+	Sequence name: aem02_st0421_oct89
+	Sequence size: 372
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0421_oct89 ; Average RMS Error: 0.0000016386
+
+
+	Sequence name: aem02_st0490_oct89
+	Sequence size: 214
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0490_oct89 ; Average RMS Error: 0.0000014658
+
+
+	Sequence name: aem02_st0554_oct89
+	Sequence size: 318
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0554_oct89 ; Average RMS Error: 0.0000017808
+
+
+	Sequence name: aem02_st0623_oct89
+	Sequence size: 285
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0623_oct89 ; Average RMS Error: 0.0000015989
+
+
+	Sequence name: aem02_st0705_oct89
+	Sequence size: 414
+	Sequence id: 1
+	Sequence id: 1 ; Sequence name: aem02_st0705_oct89 ; Average RMS Error: 0.0000014963
+
+Global average rms error: 0.0000015947
+
+
+processing time for all iterations
+average time: 4.71 ms; average speed: 87.87 fps
+median time: 4.00 ms; median speed: 103.50 fps
+max time: 17.00 ms; min speed: 24.35 fps
+min time: 2.00 ms; max speed: 207.00 fps
+time percentile 90: 7.00 ms; speed percentile 90: 59.14 fps
+time percentile 50: 4.00 ms; speed percentile 50: 103.50 fps
+time standard deviation: 1.99
+time variance: 3.95
+### Finished rest_stateful_client.py client processing ###

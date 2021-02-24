@@ -17,15 +17,17 @@
 import grpc
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray, expand_dims
-import classes
 import datetime
 import argparse
 import math
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
+import importlib
 
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../basic/client_utils.py'))
+client_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(client_utils)
 
 def print_debug(msg):
     global debug_mode
@@ -391,7 +393,7 @@ def main():
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
-    print_statistics(processing_times, sequence_size / 1000)
+    client_utils.print_statistics(processing_times, sequence_size / 1000)
     print('### Finished grpc_stateful_client.py client processing ###')
 
 
