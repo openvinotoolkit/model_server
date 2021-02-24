@@ -27,6 +27,7 @@ A few key features:
 - [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
+- [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
 
@@ -46,6 +47,8 @@ More detailed guides to using Model Server in various scenarios can be found her
 * [Performance tuning](docs/performance_tuning.md)
 
 * [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
+
+* [Serving stateful models](docs/stateful_models.md)
 
 
 ## API documentation

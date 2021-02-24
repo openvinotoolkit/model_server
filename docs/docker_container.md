@@ -204,6 +204,10 @@ Here the numerical values depict the version number of the model.
 | `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md)  ||
 | `"nireq"`  | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` |  Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
+| `stateful` | `bool` | If set to true, model is loaded as stateful. ||
+| `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans. <br> See [idle sequence cleanup](stateful_models.md#stateful_cleanup). ||
+| `max_sequence_number` | `uint32` | Determines how many sequences can be  handled concurrently by a model instance. ||
+| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. ||
 
 #### To know more about batch size and shape parameters refer [Batch Size and Shape document](shape_and_batch_size.md)
 
@@ -223,6 +227,7 @@ Configuration options for server are defined only via command line options and d
 | `grpc_workers` | `integer` |  Number of the gRPC server instances (should be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. ||
 | `rest_workers` | `integer` |  Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. ||
 | `file_system_poll_wait_seconds` | `integer` |  Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. ||
+| `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner.<br> See [idle sequence cleanup](stateful_models.md#stateful_cleanup). ||
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_Extensibility_DG_Intro.html) (preview feature in OVMS).
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` |  Serving logging level ||
 | `log_path` | `string` |  Optional path to the log file. ||
