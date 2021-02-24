@@ -26,7 +26,6 @@ namespace ovms {
 
 class CustomNodeLibraryManager {
     std::unordered_map<std::string, NodeLibrary> libraries;
-    std::unordered_map<std::string, std::string> libraryBasePaths;
 
 public:
     Status loadLibrary(const std::string& name, const std::string& basePath);

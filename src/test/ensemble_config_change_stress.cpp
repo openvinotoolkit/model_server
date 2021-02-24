@@ -1140,12 +1140,9 @@ public:
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
-    // TODO replace above with the one below when removing libraries will be fully implemented.
-    // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-    //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-    // std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
         &StressPipelineConfigChanges::removeCustomLibraryUsed,
@@ -1158,7 +1155,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,

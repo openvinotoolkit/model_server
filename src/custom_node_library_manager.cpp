@@ -111,7 +111,6 @@ void CustomNodeLibraryManager::unloadLibrariesRemovedFromConfig(const std::set<s
         std::inserter(librariesToUnload, librariesToUnload.end()));
     for (auto& library : librariesToUnload) {
         libraries.erase(library);
-        libraryBasePaths.erase(library);
     }
 }
 
