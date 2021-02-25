@@ -791,31 +791,30 @@ Status PipelineDefinition::validateForCycles() {
 }
 
 Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
-    std::vector<std::pair<std::string, std::vector<std::string>>> nodesToCheck{{"request", {}}};
+    auto it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [](const NodeInfo& nodeInfo) { return nodeInfo.kind == NodeKind::EXIT; });
+    std::vector<std::pair<std::string, std::vector<std::string>>> nodesToCheck{{it->nodeName, {}}};
     std::vector<std::string> visited;
     while (!nodesToCheck.empty()) {
         auto [node, demultiplyStack] = nodesToCheck.back();
         nodesToCheck.pop_back();
         for (auto& [connectedNode, aliasName] : connections[node]) {
-            auto it = std::find_if(std::begin(this->nodeInfos), std::end(this->nodeInfos), [&connectedNode](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == connectedNode; });
-            if (!it->gatherFromNode.empty()) {
-                for (auto& gatherNode : it->gatherFromNode) {
-                    if (demultiplyStack.empty() || demultiplyStack.back() != gatherNode) {
-                        return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
-                    }
-                    demultiplyStack.pop_back();
+            auto it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [&connectedNode](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == connectedNode; });
+            for (auto& gatherNode : it->gatherFromNode) {
+                demultiplyStack.emplace_back(gatherNode);
+            }
+            if (it->demultiplyCount && !demultiplyStack.empty()) {
+                if (demultiplyStack.back() != connectedNode) {
+                    return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
+                demultiplyStack.pop_back();
             }
-            if (it->demultiplyCount) {
-                demultiplyStack.emplace_back(connectedNode);
-            }
-            if (it->kind == NodeKind::EXIT && !demultiplyStack.empty()) {
+            if (it->kind == NodeKind::ENTRY && !demultiplyStack.empty()) {
                 return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
             }
-            if (std::find(visited.begin(), visited.end(), connectedNode) != visited.end()) {
-                visited.emplace_back(node);
-                nodesToCheck.emplace_back(std::pair{node, demultiplyStack});
+            if (std::find(visited.begin(), visited.end(), connectedNode) == visited.end()) {
+                nodesToCheck.emplace_back(std::pair{connectedNode, demultiplyStack});
             }
+            visited.emplace_back(node);
         }
     }
     return StatusCode::OK;
