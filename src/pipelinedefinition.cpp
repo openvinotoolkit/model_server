@@ -63,6 +63,12 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+
+    validationResult = validateDemultiplexerGatherNodesOrder();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     return validationResult;
@@ -778,6 +784,37 @@ Status PipelineDefinition::validateForCycles() {
             } else {
                 nodeName = parentNodes.back();
                 parentNodes.pop_back();
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
+    std::vector<std::pair<std::string, std::vector<std::string>>> nodesToCheck{{"request", {}}};
+    std::vector<std::string> visited;
+    while (!nodesToCheck.empty()) {
+        auto [node, demultiplyStack] = nodesToCheck.back();
+        nodesToCheck.pop_back();
+        for (auto& [connectedNode, aliasName] : connections[node]) {
+            auto it = std::find_if(std::begin(this->nodeInfos), std::end(this->nodeInfos), [&connectedNode](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == connectedNode; });
+            if (!it->gatherFromNode.empty()) {
+                for (auto& gatherNode : it->gatherFromNode) {
+                    if (demultiplyStack.empty() || demultiplyStack.back() != gatherNode) {
+                        return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+                    }
+                    demultiplyStack.pop_back();
+                }
+            }
+            if (it->demultiplyCount) {
+                demultiplyStack.emplace_back(connectedNode);
+            }
+            if (it->kind == NodeKind::EXIT && !demultiplyStack.empty()) {
+                return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+            }
+            if (std::find(visited.begin(), visited.end(), connectedNode) != visited.end()) {
+                visited.emplace_back(node);
+                nodesToCheck.emplace_back(std::pair{node, demultiplyStack});
             }
         }
     }

@@ -108,6 +108,8 @@ public:
     Status validate(ModelManager& manager);
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
+    Status validateDemultiplexerGatherNodesOrder();
+
     const std::string& getName() const { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
