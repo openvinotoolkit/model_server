@@ -1,6 +1,6 @@
 # OpenVINO™ Model Server Stateful Example Clients 
 
-This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
+This document contains examples to run *Predict* functions over gRPC API and REST API on stateful Kaldi models (rm_lstm4f , aspire_tdnn).
 
 It covers following topics:
 * <a href="#grpc-api">gRPC API Stateful Client Example </a>
@@ -13,7 +13,7 @@ Install client dependencies using the command below in the example_client direct
 pip3 install -r stateful_client_requirements.txt
 ```
 
-### Getting ready with rm_lstm4f stateful model
+### Getting ready with rm_lstm4f Kaldi stateful model
 
 The purpose of this example is to show how to run stateful models on OpenVino model server.
 
@@ -33,6 +33,10 @@ OVMS can be started using the command:
 ```bash
 docker run -d -rm -v /home/rm_lstm4f/model:/tmp/model -p 8111:8111 -p 5555:5555 openvino/model_server:latest --stateful --port 8111 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model
 ```
+
+### Getting ready with aspire_tdnn Kaldi stateful model
+
+1. Follow the [OpenVINO instructions](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_kaldi_specific_Aspire_Tdnn_Model.html)
 
 ## gRPC API Client Example <a name="grpc-api"></a>
 
