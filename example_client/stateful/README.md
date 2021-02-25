@@ -13,7 +13,7 @@ Install client dependencies using the command below in the example_client direct
 pip3 install -r stateful_client_requirements.txt
 ```
 
-### Getting ready with rm_lstm4f Kaldi stateful model
+### Getting ready with rm_lstm4f stateful model
 
 The purpose of this example is to show how to run stateful models on OpenVino model server.
 
