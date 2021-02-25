@@ -25,7 +25,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 from kaldi_python_io import ArchiveReader
 import importlib
 
-spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../basic/client_utils.py'))
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
 client_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client_utils)
 

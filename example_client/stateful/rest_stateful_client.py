@@ -26,7 +26,7 @@ import json
 import requests
 import importlib
 
-spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../basic/client_utils.py'))
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
 client_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client_utils)
 
