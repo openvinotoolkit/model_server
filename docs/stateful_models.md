@@ -116,7 +116,7 @@ To provide that information, requests to stateful models must contain additional
 
 **Note**: Model server also appends `sequence_id` to every response.
 
-**Both `sequence_id` and `sequence_control_input` shall be provided as 1-dimensional arrays of size 1.**  
+**Both `sequence_id` and `sequence_control_input` must be provided as 1-dimensional arrays of size 1.**  
 _See examples for gRPC and HTTP below_.
 
 In order to successfully infer the sequence, perform these actions:
@@ -137,15 +137,15 @@ In order to successfully infer the sequence, perform these actions:
 
 ### Inference via gRPC <a name="stateful_grpc"></a>
 
-Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md#predict-api) for reference_). The difference is that requests to stateful models shall containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md#predict-api) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
-`sequence_id` and `sequence_control_input` shall be added to gRPC request inputs as [TensorProtos](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto).
+`sequence_id` and `sequence_control_input` must be added to gRPC request inputs as [TensorProtos](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto).
 
 * For `sequence_id` model server expects one value in tensor proto [uint64_val](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto#L85) field.
 
 * For `sequence_control_input` model server expects one value in tensor proto [uint32_val](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto#L82) field.
 
-Both inputs shall have `TensorShape` set to [1] and appropriate `DataType`:
+Both inputs must have `TensorShape` set to [1] and appropriate `DataType`:
 - `DT_UINT64` for `sequence_id`
 - `DT_UINT32` for `sequence_control_input`
 
