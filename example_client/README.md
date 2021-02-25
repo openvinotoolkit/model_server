@@ -2,6 +2,8 @@
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
 
+[Stateful functionality examples](stateful) to run *Predict* functions over gRPC API and REST API on stateful models.
+
 It covers following topics:
 * <a href="#grpc-api">gRPC API Client Examples </a>
 * <a href="#rest-api">REST API Client Examples  </a>
