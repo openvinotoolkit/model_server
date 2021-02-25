@@ -222,9 +222,9 @@ Configuration options for server are defined only via command line options and d
 |---|---|---|---|
 | `port` | `integer` | Number of the port used by gRPC sever. | &check;|
 | `rest_port` | `integer` |  Number of the port used by HTTP server (if not provided or set to 0, HTTP server will not be launched). ||
-| `grpc_bind_address` | `string` | Network interface address or a hostname, to which gRPC server should bind to. Default: all interfaces: 0.0.0.0 ||
-| `rest_bind_address` | `string` | Network interface address or a hostname, to which REST server should bind to. Default: all interfaces: 0.0.0.0 ||
-| `grpc_workers` | `integer` |  Number of the gRPC server instances (should be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. ||
+| `grpc_bind_address` | `string` | Network interface address or a hostname, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 ||
+| `rest_bind_address` | `string` | Network interface address or a hostname, to which REST server will bind to. Default: all interfaces: 0.0.0.0 ||
+| `grpc_workers` | `integer` |  Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. ||
 | `rest_workers` | `integer` |  Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. ||
 | `file_system_poll_wait_seconds` | `integer` |  Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. ||
 | `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner.<br> See [idle sequence cleanup](stateful_models.md#stateful_cleanup). ||
