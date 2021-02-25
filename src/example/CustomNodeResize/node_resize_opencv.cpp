@@ -55,6 +55,14 @@ cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     return image;
 }
 
+cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
+    uint64_t H = input->dims[1];
+    uint64_t W = input->dims[2];
+    cv::Mat image(H, W, CV_32FC3);
+    std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
+    return image;
+}
+
 std::vector<float> reorder_to_chw(cv::Mat* mat) {
     assert(mat->channels() == 3);
     std::vector<float> data(mat->channels() * mat->rows * mat->cols);
@@ -91,21 +99,25 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         return 1;
     }
 
-    // if (!scoresTensor) {
-    //     std::cout << "Missing input: " << SCORES_TENSOR_NAME << std::endl;
-    //     return 1;
-    // }
+    if (!scoresTensor) {
+        std::cout << "Missing input: " << SCORES_TENSOR_NAME << std::endl;
+        return 1;
+    }
 
-    // if (!geometryTensor) {
-    //     std::cout << "Missing input: " << GEOMETRY_TENSOR_NAME << std::endl;
-    //     return 1;
-    // }
-    cv::Mat image = nchw_to_mat(imageTensor);
-    cv::imwrite("/workspace/east_utils/test2.jpg", image);
+    if (!geometryTensor) {
+        std::cout << "Missing input: " << GEOMETRY_TENSOR_NAME << std::endl;
+        return 1;
+    }
+
+    cv::Mat image = nhwc_to_mat(imageTensor);
+    //cv::imwrite("/workspace/east_utils/test2.jpg", image);
     cv::Mat resizedImage;
-    cv::resize(image, resizedImage, cv::Size(200, 50));
-    cv::imwrite("/workspace/east_utils/test.jpg", resizedImage);
-    std::vector<float> buffer = reorder_to_chw(&resizedImage);
+    cv::Mat ROI(image, cv::Rect(400,600,200,50));
+    cv::Mat croppedImage;
+    ROI.copyTo(croppedImage);
+    //cv::resize(image, resizedImage, cv::Size(200, 50));
+    //cv::imwrite("/workspace/east_utils/test.jpg", resizedImage);
+    std::vector<float> buffer = reorder_to_chw(&croppedImage);
     uint8_t* data = (uint8_t*)malloc(buffer.size() * sizeof(float));
     std::memcpy(data, buffer.data(), buffer.size() * sizeof(float));
 
@@ -126,7 +138,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
 }
 
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 1;
+    *infoLength = 3;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = IMAGE_TENSOR_NAME;
@@ -138,23 +150,23 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     (*info)[0].dims[3] = 1920;
     (*info)[0].precision = FP32;
 
-    // (*info)[1].name = SCORES_TENSOR_NAME;
-    // (*info)[1].dimsLength = 4;
-    // (*info)[1].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
-    // (*info)[1].dims[0] = 1;
-    // (*info)[1].dims[1] = 1;
-    // (*info)[1].dims[2] = 256;
-    // (*info)[1].dims[3] = 480;
-    // (*info)[1].precision = FP32;
+    (*info)[1].name = SCORES_TENSOR_NAME;
+    (*info)[1].dimsLength = 4;
+    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[1].dims[0] = 1;
+    (*info)[1].dims[1] = 1;
+    (*info)[1].dims[2] = 256;
+    (*info)[1].dims[3] = 480;
+    (*info)[1].precision = FP32;
 
-    // (*info)[2].name = GEOMETRY_TENSOR_NAME;
-    // (*info)[2].dimsLength = 4;
-    // (*info)[2].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
-    // (*info)[2].dims[0] = 1;
-    // (*info)[2].dims[1] = 5;
-    // (*info)[2].dims[2] = 256;
-    // (*info)[2].dims[3] = 480;
-    // (*info)[2].precision = FP32;
+    (*info)[2].name = GEOMETRY_TENSOR_NAME;
+    (*info)[2].dimsLength = 4;
+    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[2].dims[0] = 1;
+    (*info)[2].dims[1] = 5;
+    (*info)[2].dims[2] = 256;
+    (*info)[2].dims[3] = 480;
+    (*info)[2].precision = FP32;
     return 0;
 }
 
