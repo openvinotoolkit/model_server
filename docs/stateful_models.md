@@ -96,7 +96,7 @@ One is `sequence_cleaner_poll_wait_minutes` which holds the value of time interv
 `sequence_cleaner_poll_wait_minutes` is a server parameter and is common for all models. By default period of time between two consecutive cleaner scans is set to 5 minutes. Setting this value to 0 disables sequence cleaner.
 
 
-Stateful model can either be a subject to idle sequence cleanup or not.
+Stateful model can either be subject to idle sequence cleanup or not.
 You can set this **per model** with `idle_sequence_cleanup` parameter. 
 If set to `true` sequence cleaner will check that model. Otherwise sequence cleaner will ommit that model and its inactive sequences will not get removed. By default this value is set to `true`.
 
@@ -107,7 +107,7 @@ If set to `true` sequence cleaner will check that model. Otherwise sequence clea
 
 Stateful model works on consecutive inference requests that are associated with each other and form **sequence** of requests. Single stateful model can handle multiple sequences at a time. When model server receives requests for stateful model it needs to know which request belongs to which sequence. OVMS also needs to know where is the begging and the end of the sequence to properly manage its resources.
 
-To provide that information, requests to stateful models may contain additional inputs: 
+To provide that information, requests to stateful models must contain additional inputs: 
 - `sequence_id` - which is 64-bit unsigned integer identifying the sequence (unique in the scope of the model instance). Value 0 is equivalent to not providing this input at all.
 - `sequence_control_input` - which is 32-bit unsigned integer indicating sequence start and end. Accepted values are: 
    - 0 - no control input (has no effect - equivalent to not providing this input at all)
@@ -124,7 +124,7 @@ In order to successfully infer the sequence, perform these actions:
 
    To start the sequence you need to add `sequence_control_input` with value of 1 to your request's inputs. You can also:
       - add `sequence_id` with the value of your choice or
-      - add `sequence_id` with 0 or  do not add `sequence_id` at all - in this case model server will provide unique id for the sequence and since it'll be appended to the outputs, you'll be able to read it and use with the next requests. 
+      - add `sequence_id` with 0 or do not add `sequence_id` at all - in this case model server will provide unique id for the sequence and since it'll be appended to the outputs, you'll be able to read it and use with the next requests. 
 
 2. **Send remaining requests except the last one.**
 
@@ -220,11 +220,11 @@ See [grpc_stateful_client.py](../example_client/grpc_stateful_client.py) example
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md#predict-api) for reference_). The difference is that requests to stateful models shall containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md#predict-api) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
-`sequence_id` and `sequence_control_input` shall be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
+`sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 
-For both inputs value should be a single number in 1-dimensional array.
+For both inputs value must be a single number in 1-dimensional array.
 
 Example: (_using Python requests package_):
 
