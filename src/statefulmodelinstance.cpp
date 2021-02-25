@@ -69,9 +69,56 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
 }
 
+Status StatefulModelInstance::loadModel(const ModelConfig& config) {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    autoCleanupEnabled = config.getIdleSequenceCleanup();
+
+    Status status = ModelInstance::loadModel(config);
+    if (!status.ok())
+        return status;
+        
+    if (autoCleanupEnabled) {
+        status = globalSequencesViewer->registerForCleanup(getName(), getVersion(), sequenceManager);
+        if (!status.ok())
+            return status;
+    }
+    return StatusCode::OK;
+}
+
+Status StatefulModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    Status status;
+    if(autoCleanupEnabled) {
+        status = globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
+        if (!status.ok())
+            return status;
+    }
+    status = ModelInstance::reloadModel(config, parameter);
+    if (!status.ok())
+        return status;
+    autoCleanupEnabled = config.getIdleSequenceCleanup();
+
+    if (autoCleanupEnabled) {
+        status = globalSequencesViewer->registerForCleanup(getName(), getVersion(), sequenceManager);
+        if (!status.ok())
+            return status;
+    }
+    return StatusCode::OK;
+}
+
+void StatefulModelInstance::unloadModel(bool isPermanent) {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    if (isPermanent && autoCleanupEnabled) {
+        globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
+    }
+    ModelInstance::unloadModel(isPermanent);
+    sequenceManager.reset();
+}
+
+
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();
-    sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), config.getName(), config.getVersion());
+    sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), config.getName(), config.getVersion());
     return ModelInstance::loadModelImpl(config, parameter);
 }
 

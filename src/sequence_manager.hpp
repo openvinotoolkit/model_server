@@ -34,7 +34,6 @@ const uint32_t SEQUENCE_END = 2;
 
 class SequenceManager {
 private:
-    uint32_t timeout;
     uint32_t maxSequenceNumber;
     std::string modelName;
     model_version_t modelVersion;
@@ -55,8 +54,7 @@ protected:
 
 public:
     SequenceManager() = default;
-    SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
-        timeout(timeout),
+    SequenceManager(uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
         maxSequenceNumber(maxSequenceNumber),
         modelName(modelName),
         modelVersion(modelVersion),
@@ -65,10 +63,6 @@ public:
     uint64_t getSequencesCount() {
         return sequences.size();
     }
-
-    const uint32_t getTimeout() const;
-
-    void setTimeout(uint32_t timeout);
 
     const uint32_t getMaxSequenceNumber() const;
 
@@ -82,7 +76,7 @@ public:
 
     Status removeSequence(const uint64_t sequenceId);
 
-    Status removeTimedOutSequences();
+    Status removeIdleSequences();
 
     Status processRequestedSpec(SequenceProcessingSpec& sequenceProcessingSpec);
 };

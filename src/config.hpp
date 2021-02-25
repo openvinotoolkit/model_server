@@ -266,15 +266,12 @@ public:
     }
 
     /**
-     * @brief Get stateful sequence timeout
+     * @brief Get idle sequence cleanup flag
      *
      * @return uint
      */
-    uint32_t sequenceTimeoutSeconds() {
-        if (!result->count("sequence_timeout_seconds")) {
-            return DEFAULT_SEQUENCE_TIMEOUT_SECONDS;
-        }
-        return result->operator[]("sequence_timeout_seconds").as<uint32_t>();
+    bool idleSequenceCleanup() {
+        return result->operator[]("idle_sequence_cleanup").as<bool>();
     }
 
     /**
@@ -332,12 +329,21 @@ public:
     }
 
     /**
-     * @brief Get the filesystem pool wait time in seconds
+     * @brief Get the filesystem poll wait time in seconds
      * 
      * @return uint 
      */
     uint filesystemPollWaitSeconds() {
         return result->operator[]("file_system_poll_wait_seconds").as<uint>();
+    }
+
+    /**
+     * @brief Get the sequence cleaner poll wait time in minutes
+     * 
+     * @return uint 
+     */
+    uint32_t sequenceCleanerPollWaitMinutes() {
+        return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     }
 };
 }  // namespace ovms

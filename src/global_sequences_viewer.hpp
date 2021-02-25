@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <future>
 #include <limits>
 #include <map>
 #include <memory>
@@ -23,68 +24,42 @@
 #include <string>
 #include <unordered_map>
 
-#include "model.hpp"
-#include "modelconfig.hpp"
-#include "modelversion.hpp"
 #include "sequence_manager.hpp"
 #include "status.hpp"
 
 namespace ovms {
-
+const uint32_t DEFAULT_SEQUENCE_CLEANER_INTERVAL = 5; // in minutes
 class GlobalSequencesViewer {
 private:
-    std::mutex mutex;
-    std::map<std::string, SequenceManager*> registeredSequenceManagers;
+    // used to block parallel access to registered sequence managers map
+    std::mutex viewerMutex;
+    
+    // used to send exit signal to sequence cleaner thread and force termination
+    std::mutex cleanerControlMutex;
+    std::condition_variable cleanerControlCv;
 
-    /**
-         * @brief sequence Watcher thread for monitor changes in config
-         */
-    void sequenceWatcher(std::future<void> exit);
+    std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
 
-    /**
-         * @brief A thread object used for monitoring sequence timeouts
-         */
-    std::thread sequenceMonitor;
 
-    /**
-         * @brief An exit signal to notify watcher thread to exit
-         */
-    std::promise<void> exit;
+    void sequenceCleanerRoutine(uint32_t sequenceCleanerInterval);
 
-    /**
-         * Time interval between each sequence timeout check
-         */
-    uint32_t sequenceWatcherIntervalSec = std::numeric_limits<uint32_t>::max();
+    std::thread sequenceCleanerThread;
 
-    ovms::Status registerManager(std::string managerId, SequenceManager* sequenceManager);
+    Status removeIdleSequences();
 
-    ovms::Status unregisterManager(std::string managerId);
+protected:
 
-    ovms::Status removeTimedOutSequences();
-
-    void updateThreadInterval();
+std::cv_status waitTimeInterval(uint32_t sequenceCleanerInterval);
 
 public:
-    GlobalSequencesViewer();
 
-    void startWatcher();
+    void startCleanerThread(uint32_t sequenceCleanerInterval = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
 
-    ovms::Status addVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToAdd, std::shared_ptr<model_versions_t> versionsFailed);
-
-    ovms::Status retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire);
-
-    ovms::Status reloadVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
-
-    /**
-         *  @brief Gets the sequence watcher interval timestep in seconds
-         */
-    uint32_t getSequenceWatcherIntervalSec() {
-        return sequenceWatcherIntervalSec;
-    }
-
-    /**
-         * @brief Gracefully finish the thread
-         */
+	// Gracefully finish sequence cleaner thread
     void join();
+
+    Status registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager);
+
+    Status unregisterFromCleanup(std::string modelName, model_version_t modelVersion);
 };
 }  // namespace ovms

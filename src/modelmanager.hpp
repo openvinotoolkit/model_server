@@ -65,7 +65,7 @@ protected:
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
-    std::unique_ptr<GlobalSequencesViewer> sequenceViewer;
+    GlobalSequencesViewer globalSequencesViewer;
 
 private:
     /**
@@ -131,6 +131,11 @@ private:
     uint watcherIntervalSec = 1;
 
     /**
+     * Time interval between two consecutive sequence cleaner scans (in minutes)
+     */
+    uint32_t sequenceCleanerInterval = 5;
+
+    /**
      * @brief Time of last config change
      */
     int64_t lastConfigChangeTime;
@@ -180,7 +185,7 @@ public:
         return models;
     }
 
-    void startSequenceWatcher();
+    void startSequenceCleaner();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
@@ -293,7 +298,7 @@ public:
      * @return std::shared_ptr<Model> 
      */
     virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
-        return std::make_shared<Model>(name, isStateful);
+        return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
     }
 
     /**

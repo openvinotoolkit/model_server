@@ -28,130 +28,41 @@
 
 namespace ovms {
 
-static bool sequenceWatcherStarted = false;
+static bool sequenceCleanerStarted = false;
 static std::string separator = "_";
 
-ovms::Status GlobalSequencesViewer::addVersions(std::shared_ptr<ovms::Model>& model,
-    std::shared_ptr<model_versions_t> versionsToAdd,
-    std::shared_ptr<model_versions_t> versionsFailed) {
-    for (const auto version : *versionsToAdd) {
-        if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
-            continue;
-        auto modelInstance = model->getModelInstanceByVersion(version);
-        if (!modelInstance) {
-            Status status = StatusCode::UNKNOWN_ERROR;
-            SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
-                model->getName(),
-                version,
-                status.string());
-            continue;
-        }
-        auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
-        std::string managerId = model->getName() + separator + std::to_string(version);
-
-        auto status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
-        if (status.getCode() != ovms::StatusCode::OK)
-            return status;
-    }
-
-    updateThreadInterval();
-    return ovms::StatusCode::OK;
-}
-
-ovms::Status GlobalSequencesViewer::retireVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<model_versions_t> versionsToRetire) {
-    for (const auto version : *versionsToRetire) {
-        std::string managerId = model->getName() + separator + std::to_string(version);
-        auto status = unregisterManager(managerId);
-        if (status.getCode() != ovms::StatusCode::OK)
-            return status;
-    }
-
-    updateThreadInterval();
-    return ovms::StatusCode::OK;
-}
-
-ovms::Status GlobalSequencesViewer::reloadVersions(std::shared_ptr<ovms::Model>& model,
-    std::shared_ptr<model_versions_t> versionsToReload,
-    std::shared_ptr<model_versions_t> versionsFailed) {
-    for (const auto version : *versionsToReload) {
-        if (std::count(versionsFailed->begin(), versionsFailed->end(), version))
-            continue;
-        std::string managerId = model->getName() + separator + std::to_string(version);
-        auto status = unregisterManager(managerId);
-        if (status.getCode() != ovms::StatusCode::OK)
-            return status;
-
-        auto modelInstance = model->getModelInstanceByVersion(version);
-        if (!modelInstance) {
-            Status status = StatusCode::UNKNOWN_ERROR;
-            SPDLOG_ERROR("Error occurred while getting model instance for model: {}; version: {}; error: {}",
-                model->getName(),
-                version,
-                status.string());
-            continue;
-        }
-        auto stetefulModelInstance = std::static_pointer_cast<StatefulModelInstance>(modelInstance);
-
-        status = registerManager(managerId, stetefulModelInstance->getSequenceManager().get());
-        if (status.getCode() != ovms::StatusCode::OK)
-            return status;
-    }
-    updateThreadInterval();
-    return ovms::StatusCode::OK;
-}
-
-void GlobalSequencesViewer::updateThreadInterval() {
-    uint32_t lowestHalfTimeoutInterval = std::numeric_limits<uint32_t>::max();
-    for (auto const& [key, val] : registeredSequenceManagers) {
-        auto sequenceManager = val;
-        uint32_t newInterval = sequenceManager->getTimeout() / 2;
-        if (newInterval > 0 && newInterval < lowestHalfTimeoutInterval) {
-            lowestHalfTimeoutInterval = newInterval;
-        } else if (sequenceManager->getTimeout() == 1) {
-            lowestHalfTimeoutInterval = 1;
-        }
-    }
-
-    // In case we have not found any stateful models stop the watcher thread
-    if (lowestHalfTimeoutInterval == std::numeric_limits<uint32_t>::max()) {
-        sequenceWatcherIntervalSec = 0;
-        join();
-    } else {
-        sequenceWatcherIntervalSec = lowestHalfTimeoutInterval;
-        startWatcher();
-    }
-}
-
-ovms::Status GlobalSequencesViewer::registerManager(std::string managerId, SequenceManager* sequenceManager) {
-    std::unique_lock<std::mutex> viewerLock(mutex);
-    if (registeredSequenceManagers.count(managerId)) {
-        SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Sequence manager {} already exists", managerId);
+Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager) {
+    std::string registration_id = modelName + separator + std::to_string(modelVersion);
+    std::unique_lock<std::mutex> viewerLock(viewerMutex);
+    if (registeredSequenceManagers.count(registration_id)) {
+        SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Model: {}, version: {}, cannot register model instance in sequence cleaner. Already registered.", modelName, modelVersion);
         return StatusCode::INTERNAL_ERROR;
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} registered in the sequence timeout watcher", managerId);
-        registeredSequenceManagers.emplace(managerId, sequenceManager);
+        registeredSequenceManagers.emplace(registration_id, sequenceManager);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, has been successfully registered in sequence cleaner", modelName, modelVersion);
     }
 
     return StatusCode::OK;
 }
 
-ovms::Status GlobalSequencesViewer::unregisterManager(std::string managerId) {
-    std::unique_lock<std::mutex> viewerLock(mutex);
-    if (registeredSequenceManagers.count(managerId)) {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} unregistred from sequence timeout watcher", managerId);
-        registeredSequenceManagers.erase(managerId);
+Status GlobalSequencesViewer::unregisterFromCleanup(std::string modelName, model_version_t modelVersion) {
+    std::string registration_id = modelName + separator + std::to_string(modelVersion);
+    std::unique_lock<std::mutex> viewerLock(viewerMutex);
+    if (registeredSequenceManagers.count(registration_id)) {
+        registeredSequenceManagers.erase(registration_id);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, has been successfully unregistered from sequence cleaner", modelName, modelVersion);
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence manager {} does not exists", managerId);
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, cannot unregister model instance from sequence cleaner. It has not been registered.");
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
 }
 
-ovms::Status GlobalSequencesViewer::removeTimedOutSequences() {
-    std::unique_lock<std::mutex> viewerLock(mutex);
+Status GlobalSequencesViewer::removeIdleSequences() {
+    std::unique_lock<std::mutex> viewerLock(viewerMutex);
     for (auto it = registeredSequenceManagers.begin(); it != registeredSequenceManagers.end();) {
         auto sequenceManager = it->second;
-        auto status = sequenceManager->removeTimedOutSequences();
+        auto status = sequenceManager->removeIdleSequences();
         it++;
         if (status.getCode() != ovms::StatusCode::OK)
             return status;
@@ -160,40 +71,39 @@ ovms::Status GlobalSequencesViewer::removeTimedOutSequences() {
     return ovms::StatusCode::OK;
 }
 
-void GlobalSequencesViewer::sequenceWatcher(std::future<void> exit) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence timeout watcher thread");
+std::cv_status GlobalSequencesViewer::waitTimeInterval(uint32_t sequenceCleanerInterval) {
+    std::unique_lock<std::mutex> lock(cleanerControlMutex);
+    return cleanerControlCv.wait_for(lock, std::chrono::minutes(sequenceCleanerInterval));
+}
 
-    while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-        std::this_thread::sleep_for(std::chrono::seconds(sequenceWatcherIntervalSec));
-        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Sequence watcher thread check cycle begin");
+void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInterval) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner");
 
-        removeTimedOutSequences();
+    while (waitTimeInterval(sequenceCleanerInterval) == std::cv_status::timeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
 
-        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Sequence watcher thread check cycle end");
+        removeIdleSequences();
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan end");
     }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Exited sequence timeout watcher thread");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped sequence cleaner");
 }
 
 void GlobalSequencesViewer::join() {
-    if (sequenceWatcherStarted) {
-        exit.set_value();
-        if (sequenceMonitor.joinable()) {
-            sequenceMonitor.join();
-            sequenceWatcherStarted = false;
+    if (sequenceCleanerStarted) {
+        cleanerControlCv.notify_one();
+        if (sequenceCleanerThread.joinable()) {
+            sequenceCleanerThread.join();
+            sequenceCleanerStarted = false;
         }
     }
 }
 
-GlobalSequencesViewer::GlobalSequencesViewer() {
-    updateThreadInterval();
-}
-
-void GlobalSequencesViewer::startWatcher() {
-    if ((!sequenceWatcherStarted) && (sequenceWatcherIntervalSec > 0)) {
-        std::future<void> exitSignal = exit.get_future();
-        std::thread t(std::thread(&GlobalSequencesViewer::sequenceWatcher, this, std::move(exitSignal)));
-        sequenceWatcherStarted = true;
-        sequenceMonitor = std::move(t);
+void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerInterval) {
+    if ((!sequenceCleanerStarted) && (sequenceCleanerInterval > 0)) {
+        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerInterval));
+        sequenceCleanerStarted = true;
+        sequenceCleanerThread = std::move(t);
     }
 }
 

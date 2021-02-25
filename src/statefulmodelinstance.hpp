@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 
+#include "global_sequences_viewer.hpp"
 #include "modelconfig.hpp"
 #include "modelinstance.hpp"
 #include "sequence_manager.hpp"
@@ -27,17 +28,20 @@ namespace ovms {
 class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
     bool performLowLatencyTransformation;
+    bool autoCleanupEnabled;
+    GlobalSequencesViewer * globalSequencesViewer;
 
 public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version) :
-        ModelInstance(name, version) {
-        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), name, version);
+    StatefulModelInstance(const std::string& name, model_version_t version, GlobalSequencesViewer * globalSequencesViewer) :
+        ModelInstance(name, version),
+        globalSequencesViewer(globalSequencesViewer) {
+        sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
     }
 
-    const std::unique_ptr<SequenceManager>& getSequenceManager() const {
+    const std::shared_ptr<SequenceManager>& getSequenceManager() const {
         return this->sequenceManager;
     }
 
@@ -69,7 +73,7 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
 
 protected:
-    std::unique_ptr<SequenceManager> sequenceManager;
+    std::shared_ptr<SequenceManager> sequenceManager;
 
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
 
@@ -79,6 +83,12 @@ protected:
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
     Status loadOVExecutableNetwork(const ModelConfig& config) override;
+
+    Status loadModel(const ModelConfig& config) override;
+
+    Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
+
+    void unloadModel(bool isPermanent = true) override;
 
 private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);

@@ -112,7 +112,7 @@ void logConfig(Config& config) {
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
         SPDLOG_DEBUG("stateful: {}", config.stateful());
-        SPDLOG_DEBUG("sequence_timeout_seconds: {}", config.sequenceTimeoutSeconds());
+        SPDLOG_DEBUG("idle_sequence_cleanup: {}", config.idleSequenceCleanup());
         SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
         SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
@@ -128,6 +128,7 @@ void logConfig(Config& config) {
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
+    SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
 void onInterrupt(int status) {
