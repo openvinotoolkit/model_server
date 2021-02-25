@@ -20,6 +20,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <cmath>
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -30,6 +31,8 @@ static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
 static constexpr const char* GEOMETRY_TENSOR_NAME = "geometry";
 static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
+
+#define NODE_ASSERT(cond, msg) if (!(cond)) { std::cout << "Assert: " << msg << std::endl; return 1; }
 
 cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     // std::vector<float> data(input->dataLength / sizeof(float));
@@ -58,8 +61,8 @@ cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
 cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
     uint64_t H = input->dims[1];
     uint64_t W = input->dims[2];
-    cv::Mat image(H, W, CV_32FC3);
-    std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
+    cv::Mat image(H, W, CV_32FC3, input->data);
+    //std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
     return image;
 }
 
@@ -76,8 +79,20 @@ std::vector<float> reorder_to_chw(cv::Mat* mat) {
     return std::move(data);
 }
 
+struct Box {
+    uint64_t startX, endX, startY, endY;
+    float score;
+};
+
+// TODO
+void apply_non_max_suppression(std::vector<Box>& boxes) {
+    if (boxes.size() == 0) {
+        return;
+    }
+}
+
 int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
-    const CustomNodeTensor* imageTensor = nullptr;  // NCHW
+    const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
     const CustomNodeTensor* geometryTensor = nullptr;
 
@@ -94,45 +109,134 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         }
     }
 
-    if (!imageTensor) {
-        std::cout << "Missing input: " << IMAGE_TENSOR_NAME << std::endl;
-        return 1;
-    }
+    NODE_ASSERT(imageTensor->precision == FP32, "image input is not FP32");
+    NODE_ASSERT(scoresTensor->precision == FP32, "image input is not FP32");
+    NODE_ASSERT(geometryTensor->precision == FP32, "image input is not FP32");
 
-    if (!scoresTensor) {
-        std::cout << "Missing input: " << SCORES_TENSOR_NAME << std::endl;
-        return 1;
-    }
+    NODE_ASSERT(imageTensor, "Missing image input");
+    NODE_ASSERT(scoresTensor, "Missing scores input");
+    NODE_ASSERT(geometryTensor, "Missing geometry input");
 
-    if (!geometryTensor) {
-        std::cout << "Missing input: " << GEOMETRY_TENSOR_NAME << std::endl;
-        return 1;
-    }
+    // Image layout = NHWC 
+    uint64_t imageHeight = imageTensor->dims[1];
+    uint64_t imageWidth = imageTensor->dims[2];
+
+    std::cout << "Input image height: " << imageHeight << "; image width: " << imageWidth << std::endl;
 
     cv::Mat image = nhwc_to_mat(imageTensor);
-    //cv::imwrite("/workspace/east_utils/test2.jpg", image);
-    cv::Mat resizedImage;
-    cv::Mat ROI(image, cv::Rect(400,600,200,50));
-    cv::Mat croppedImage;
-    ROI.copyTo(croppedImage);
-    //cv::resize(image, resizedImage, cv::Size(200, 50));
-    //cv::imwrite("/workspace/east_utils/test.jpg", resizedImage);
-    std::vector<float> buffer = reorder_to_chw(&croppedImage);
-    uint8_t* data = (uint8_t*)malloc(buffer.size() * sizeof(float));
-    std::memcpy(data, buffer.data(), buffer.size() * sizeof(float));
+
+    NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
+    NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
+
+    uint64_t numRows = scoresTensor->dims[2];
+    uint64_t numCols = scoresTensor->dims[3];
+
+    std::cout << "Rows: " << numRows << "; Cols: " << numCols << std::endl;
+
+    NODE_ASSERT(scoresTensor->dims[1] == 1, "scores has dim 1 not equal to 1");
+    NODE_ASSERT(geometryTensor->dims[1] == 5, "geometry has dim 1 not equal to 5");
+
+    NODE_ASSERT(scoresTensor->dims[2] == geometryTensor->dims[2], "scores and geometry has not equal dim 2");
+    NODE_ASSERT(scoresTensor->dims[3] == geometryTensor->dims[3], "scores and geometry has not equal dim 3");
+
+    NODE_ASSERT((numRows * 4) == imageHeight, "image is not x4 larger than score/geometry data");
+    NODE_ASSERT((numCols * 4) == imageWidth, "image is not x4 larger than score/geometry data");
+
+    std::cout << "Scores bytes: " << scoresTensor->dataLength << std::endl;
+    std::cout << "Geometry bytes: " << geometryTensor->dataLength << std::endl;
+
+    std::vector<Box> boxes;
+
+    // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
+    for (uint64_t y = 0; y < numRows; y++) {
+
+        float* scoresData = (float*)scoresTensor->data + (y * numCols);
+        float* xData0 = (float*)geometryTensor->data + ((0 * numRows * numCols) + (y * numCols));
+        float* xData1 = (float*)geometryTensor->data + ((1 * numRows * numCols) + (y * numCols));
+        float* xData2 = (float*)geometryTensor->data + ((2 * numRows * numCols) + (y * numCols));
+        float* xData3 = (float*)geometryTensor->data + ((3 * numRows * numCols) + (y * numCols));
+        float* anglesData = (float*)geometryTensor->data + ((4 * numRows * numCols) + (y * numCols));
+
+        for (uint64_t x = 0; x < numCols; x++) {
+            static const float maxValInDataset = 0.000014516929;
+            float score = scoresData[x];
+            // If our score does not have sufficient probability, ignore it
+            if (score < (maxValInDataset * 0.4)) {
+                continue;
+            }
+            std::cout << "Found confidence: " << scoresData[x] << std::endl;
+
+            // Compute the offset factor as our resulting feature maps will be 4x smaller than the input image
+            uint64_t offsetX = x * 4;
+            uint64_t offsetY = y * 4;
+
+            std::cout << "For coordinate: offsetX: " << offsetX << "; offsetY: " << offsetY << std::endl;
+
+            // Extract the rotation angle for the prediction and then compute the sin and cosine
+            float angle = anglesData[x];
+            std::cout << "Angle: " << angle << std::endl;
+            float cos = std::cos(angle);
+            float sin = std::sin(angle);
+
+            // Use the geometry volume to derive the width and height of the bounding box
+            float h = xData0[x] + xData2[x];
+            float w = xData1[x] + xData3[x];
+
+            // Compute both the starting and ending (x, y)-coordinates for the text prediction bounding box
+            uint64_t endX = (((float)offsetX) + (cos * xData1[x]) + (sin * xData2[x]));
+            uint64_t endY = (((float)offsetY) - (sin * xData1[x]) + (cos * xData2[x]));
+            uint64_t startX = endX - (uint64_t)w;
+            uint64_t startY = endY - (uint64_t)h;
+            std::cout << "StartX: " << startX << "; StartY: " << startY << "; EndX: " << endX << "; EndY: " << endY << std::endl;
+
+            boxes.emplace_back(Box{startX, endX, startY, endY, score});
+
+            std::cout << "---------------------------" << std::endl;
+        }
+
+    }
+    
+    std::cout << "Total findings: " << boxes.size() << std::endl;
+
+    uint64_t outputBatch = boxes.size();
+    NODE_ASSERT(outputBatch > 0, "No findings");
+    uint64_t byteSize = sizeof(float) * 50 * 200 * 3 * outputBatch;
+
+    uint8_t* data = (uint8_t*)malloc(byteSize);
+
+    std::cout << "Original image size: " << image.size << std::endl; 
+
+    for (uint64_t i = 0; i < outputBatch; i++) {
+        if (boxes[i].endX >= image.size().width) {
+            boxes[i].endX = image.size().width - 1;
+        }
+        if (boxes[i].endY >= image.size().height) {
+            boxes[i].endY = image.size().height - 1;
+        }
+        uint64_t width = boxes[i].endX - boxes[i].startX;
+        uint64_t height = boxes[i].endY - boxes[i].startY;
+        cv::Rect myROI(boxes[i].startX, boxes[i].startY, width, height);
+        std::cout << myROI << std::endl;
+        cv::Mat croppedRef(image, myROI);
+        cv::Mat cropped;
+        croppedRef.copyTo(cropped);
+        cv::Mat resized;
+        cv::resize(cropped, resized, cv::Size(200, 50));
+        std::memcpy(((float*)data) + (i * 3 * 200 * 50), resized.data, byteSize / outputBatch);
+    }
 
     *outputsLength = 1;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
     CustomNodeTensor& resultTensor = **outputs;
     resultTensor.name = TEXT_IMAGES_TENSOR_NAME;
     resultTensor.data = data;
-    resultTensor.dataLength = buffer.size() * sizeof(float);
+    resultTensor.dataLength = byteSize;
     resultTensor.dimsLength = 4;
     resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
-    resultTensor.dims[0] = 1;
-    resultTensor.dims[1] = 3;
-    resultTensor.dims[2] = 50;
-    resultTensor.dims[3] = 200;
+    resultTensor.dims[0] = outputBatch;
+    resultTensor.dims[1] = 50;
+    resultTensor.dims[2] = 200;
+    resultTensor.dims[3] = 3;
     resultTensor.precision = FP32;
     return 0;
 }
@@ -145,9 +249,9 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     (*info)[0].dimsLength = 4;
     (*info)[0].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
     (*info)[0].dims[0] = 1;
-    (*info)[0].dims[1] = 3;
-    (*info)[0].dims[2] = 1024;
-    (*info)[0].dims[3] = 1920;
+    (*info)[0].dims[1] = 1024;
+    (*info)[0].dims[2] = 1920;
+    (*info)[0].dims[3] = 3;
     (*info)[0].precision = FP32;
 
     (*info)[1].name = SCORES_TENSOR_NAME;
@@ -177,15 +281,14 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const st
     (*info)->dimsLength = 4;
     (*info)->dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
     (*info)->dims[0] = 1;
-    (*info)->dims[0] = 3;
-    (*info)->dims[0] = 50;
-    (*info)->dims[0] = 200;
+    (*info)->dims[1] = 50;
+    (*info)->dims[2] = 200;
+    (*info)->dims[3] = 3;
     (*info)->precision = FP32;
     return 0;
 }
 
 int release(void* ptr) {
-    std::cout << "Test release" << std::endl;
     free(ptr);
     return 0;
 }
