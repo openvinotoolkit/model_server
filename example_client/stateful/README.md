@@ -15,28 +15,23 @@ pip3 install -r stateful_client_requirements.txt
 
 ### Getting ready with rm_lstm4f Kaldi stateful model
 
-The purpose of this example is to show how to run stateful models on OpenVino model server.
-
-- Pre-requisite
-
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
- 1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/2018_R3/models_contrib/GNA/rm_lstm4f/)
+ 1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+ ```bash mkdir models & cd models```
 
- 2. Setup [OpenVINO](https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux.html)
+ ```bash wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
 
- 3. Convert model to IR [How to convert](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
+ 2. Convert model to IR [How to convert](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
+ 
+ ```bash docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1 ```
 
- 4. Place ark files in the directories /home/download/rm_lstm4f/test_feat_1_10.ark /home/download/rm_lstm4f/test_score_1_10.ark
+ 3. Having rm_lstm4f model files .xml and .bin in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,
+    OVMS can be started using the command:
 
-Having rm_lstm4f model files .xml and .bin in the IR format present in /home/download/rm_lstm4f/model/1 directory,
-OVMS can be started using the command:
-```bash
-docker run -d -rm -v /home/rm_lstm4f/model:/tmp/model -p 8111:8111 -p 5555:5555 openvino/model_server:latest --stateful --port 8111 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model
-```
+```bash docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model ```
 
-### Getting ready with aspire_tdnn Kaldi stateful model
-
-1. Follow the [OpenVINO instructions](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_kaldi_specific_Aspire_Tdnn_Model.html)
+ 4. Return to the example_client/stateful directory
+ ```bash cd .. ```
 
 ## gRPC API Client Example <a name="grpc-api"></a>
 
@@ -80,7 +75,7 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-grpc_stateful_client.py --input_path /home/download/rm_lstm4f/test_feat_1_10.ark --score_path /home/download/rm_lstm4f/test_score_1_10.ark --grpc_address localhost --grpc_port 8111 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/rm_lstm4f/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
 
 ### Starting grpc_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -88,8 +83,8 @@ Context window right width cw_r: 0
 Starting sequence_id: 1
 Start processing:
 Model name: rm_lstm4f
-Reading input ark file /home/download/rm_lstm4f/test_feat_1_10.ark
-Reading scores ark file /home/download/rm_lstm4f/test_score_1_10.ark
+Reading input ark file /some_path/test_feat_1_10.ark
+Reading scores ark file /some_path/test_score_1_10.ark
 Adding input name Parameter
 Adding output name affinetransform/Fused_Add_
 	Sequence name: aem02_st0049_oct89
@@ -186,8 +181,8 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 | :---        |    :----   |
 | --input_path   |   Path to input ark file. Default 'rm_lstm4f/test_feat_1_10.ark'|
 | --score_path | Path to reference scores ark file. Default 'rm_lstm4f/test_score_1_10.ark' |
-| --rest_url GRPC_ADDRESS | Specify url to rest service. Default:localhost | 
-| --rest_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
+| --rest_url REST_URL | Specify url to rest service. Default:localhost | 
+| --rest_port REST_PORT | Specify port to grpc service. Default: 9000 |
 | --input_name | Specify input tensor name. Default: Parameter |
 | --output_name | Specify output name. Default: affinetransform/Fused_Add_ |
 | --model_name | Define model name, must be same as is in service. Default: rm_lstm4f|
@@ -204,7 +199,7 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 rest_stateful_client.py --input_path /home/download/rm_lstm4f/test_feat_1_10.ark --score_path /home/download/rm_lstm4f/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 rest_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
 
 ### Starting rest_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -212,8 +207,8 @@ Context window right width cw_r: 0
 Starting sequence_id: 1
 Start processing:
 Model name: rm_lstm4f
-Reading input ark file /home/download/rm_lstm4f/test_feat_1_10.ark
-Reading scores ark file /home/download/rm_lstm4f/test_score_1_10.ark
+Reading input ark file test_feat_1_10.ark
+Reading scores ark file test_score_1_10.ark
 Adding input name Parameter
 Adding output name affinetransform/Fused_Add_
 
