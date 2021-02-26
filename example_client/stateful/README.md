@@ -13,7 +13,7 @@ Install client dependencies using the command below in the example_client direct
 pip3 install -r stateful_client_requirements.txt
 ```
 
-### Getting ready with rm_lstm4f Kaldi stateful model
+### Getting ready with rm_lstm4f stateful model
 
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
