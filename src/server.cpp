@@ -65,7 +65,7 @@ bool isPortAvailable(uint64_t port) {
         return false;
     }
 
-    memset(&addr, 0, sizeof(addr));
+    memset_s(&addr, sizeof(addr), 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
 
