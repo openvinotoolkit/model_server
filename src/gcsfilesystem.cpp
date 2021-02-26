@@ -144,9 +144,11 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
         client_.ListObjects(bucket, gcs::Prefix(appendSlash(object)))) {
         if (meta) {
             *is_directory = true;
-            break;
+            return StatusCode::OK;
         }
     }
+
+    SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", path);
     return StatusCode::OK;
 }
 

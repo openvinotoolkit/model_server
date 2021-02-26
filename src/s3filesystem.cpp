@@ -208,7 +208,7 @@ StatusCode S3FileSystem::isDirectory(const std::string& path, bool* is_dir) {
 
     auto head_bucket_outcome = client_.HeadBucket(head_request);
     if (!head_bucket_outcome.IsSuccess()) {
-        SPDLOG_LOGGER_ERROR(s3_logger, "Couldn't get MetaData for bucket with name {}", bucket);
+        SPDLOG_LOGGER_ERROR(s3_logger, "Invalid or missing S3 credentials, or bucket does not exist - {}", bucket);
         SPDLOG_LOGGER_ERROR(s3_logger, "{}", head_bucket_outcome.GetError().GetMessage());
         return StatusCode::S3_METADATA_FAIL;
     }
