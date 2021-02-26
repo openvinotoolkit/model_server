@@ -269,10 +269,13 @@ int server_main(int argc, char** argv) {
         SPDLOG_INFO("Shutting down");
         for (const auto& g : grpc) {
             g->Shutdown();
+            SPDLOG_INFO("Shutdown gRPC server");
         }
 
         if (rest != nullptr) {
             rest->Terminate();
+            rest->WaitForTermination();
+            SPDLOG_INFO("Shutdown HTTP server");
         }
 
         ModelManager::getInstance().join();

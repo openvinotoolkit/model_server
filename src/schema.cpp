@@ -87,9 +87,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"stateful": {
 							"type": "boolean"
 						},
-						"sequence_timeout_seconds": {
-							"type": "integer",
-							"minimum": 0
+						"idle_sequence_cleanup": {
+							"type": "boolean"
 						},
 						"low_latency_transformation": {
 							"type": "boolean"

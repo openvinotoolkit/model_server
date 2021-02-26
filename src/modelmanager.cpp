@@ -585,6 +585,7 @@ void ModelManager::join() {
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
+            SPDLOG_INFO("Shutdown model manager");
         }
     }
 

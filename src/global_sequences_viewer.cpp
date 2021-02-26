@@ -95,6 +95,7 @@ void GlobalSequencesViewer::join() {
         if (sequenceCleanerThread.joinable()) {
             sequenceCleanerThread.join();
             sequenceCleanerStarted = false;
+            SPDLOG_INFO("Shutdown sequence cleaner");
         }
     }
 }
