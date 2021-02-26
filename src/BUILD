@@ -279,6 +279,17 @@ cc_binary(
     linkstatic=False
 )
 
+cc_binary(
+    name = "driver_app",
+    srcs = [
+        "test/driver_app.cpp",
+    ],
+    deps = [
+        "@openvino//:openvino",
+    ],
+    linkstatic=False
+)
+
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
