@@ -17,21 +17,27 @@ pip3 install -r stateful_client_requirements.txt
 
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
- ```bash mkdir models & cd models```
+     ```mkdir models & cd models```
 
- ```bash wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
+     ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
+
+     ```rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md``` rm_lstm4f model files in Kaldi format.
+
+     ```test_feat_1_10.ark``` [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
+
+     ```test_score_1_10.ark``` [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
  2. Convert model to IR [How to convert](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
  
- ```bash docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1 ```
+    ```docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1 ```
 
  3. Having rm_lstm4f model files .xml and .bin in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,
     OVMS can be started using the command:
 
-```bash docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model ```
+    ```docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model ```
 
  4. Return to the example_client/stateful directory
- ```bash cd .. ```
+    ```cd .. ```
 
 ## gRPC API Client Example <a name="grpc-api"></a>
 
@@ -59,17 +65,17 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 
 | Argument      | Description |
 | :---        |    :----   |
-| --input_path   |   Path to input ark file. Default 'rm_lstm4f/test_feat_1_10.ark'|
-| --score_path | Path to reference scores ark file. Default 'rm_lstm4f/test_score_1_10.ark' |
-| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost | 
-| --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
-| --input_name | Specify input tensor name. Default: Parameter |
-| --output_name | Specify output name. Default: affinetransform/Fused_Add_ |
-| --model_name | Define model name, must be same as is in service. Default: rm_lstm4f|
-| --cw_l | Number of requests for left context window. Works only with context window networks. Default: 0 |
-| --cw_r | Number of requests for right context window. Works only with context window networks. Default: 0 |
-| --debug DEBUG | Enabling debug prints. Set to 1 to enable debug prints. Default: 0 |
-| --sequence_id  | Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 0 |
+| --input_path   |   Path to input ark file. Default: ```rm_lstm4f/test_feat_1_10.ark```|
+| --score_path | Path to reference scores ark file. Default: ```rm_lstm4f/test_score_1_10.ark``` |
+| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:```localhost``` | 
+| --grpc_port GRPC_PORT | Specify port to grpc service. Default: ```9000``` |
+| --input_name | Specify input tensor name. Default: ```Parameter``` |
+| --output_name | Specify output name. Default: ```affinetransform/Fused_Add_``` |
+| --model_name | Define model name, must be same as is in service. Default: ```rm_lstm4f```|
+| --cw_l | Number of requests for left context window. Works only with context window networks. Default: ```0``` |
+| --cw_r | Number of requests for right context window. Works only with context window networks. Default: ```0``` |
+| --debug DEBUG | Enabling debug prints. Set to 1 to enable debug prints. Default: ```0``` |
+| --sequence_id  | Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: ```0``` |
 
 
 - Usage example
@@ -179,21 +185,21 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 
 | Argument      | Description |
 | :---        |    :----   |
-| --input_path   |   Path to input ark file. Default 'rm_lstm4f/test_feat_1_10.ark'|
-| --score_path | Path to reference scores ark file. Default 'rm_lstm4f/test_score_1_10.ark' |
-| --rest_url REST_URL | Specify url to rest service. Default:localhost | 
-| --rest_port REST_PORT | Specify port to grpc service. Default: 9000 |
-| --input_name | Specify input tensor name. Default: Parameter |
-| --output_name | Specify output name. Default: affinetransform/Fused_Add_ |
-| --model_name | Define model name, must be same as is in service. Default: rm_lstm4f|
-| --cw_l | Number of requests for left context window. Works only with context window networks. Default: 0 |
-| --cw_r | Number of requests for right context window. Works only with context window networks. Default: 0 |
-| --debug DEBUG | Enabling debug prints. Set to 1 to enable debug prints. Default: 0 |
-| --sequence_id  | Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 0 |
-| --client_cert CLIENT_CERT | Specify mTLS client certificate file. Default: None |
-| --client_key CLIENT_KEY | Specify mTLS client key file. Default: None |
-| --ignore_server_verification | Skip TLS host verification. Do not use in production. Default: False |
-| --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store |
+| --input_path   |   Path to input ark file. Default: ```rm_lstm4f/test_feat_1_10.ark```|
+| --score_path | Path to reference scores ark file. Default: ```rm_lstm4f/test_score_1_10.ark``` |
+| --rest_url REST_URL | Specify url to rest service. Default: ```localhost``` | 
+| --rest_port REST_PORT | Specify port to grpc service. Default: ```9000``` |
+| --input_name | Specify input tensor name. Default: ```Parameter``` |
+| --output_name | Specify output name. Default: ```affinetransform/Fused_Add_``` |
+| --model_name | Define model name, must be same as is in service. Default: ```rm_lstm4f```|
+| --cw_l | Number of requests for left context window. Works only with context window networks. Default: ```0``` |
+| --cw_r | Number of requests for right context window. Works only with context window networks. Default: ```0``` |
+| --debug DEBUG | Enabling debug prints. Set to 1 to enable debug prints. Default: ```0``` |
+| --sequence_id  | Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: ```0``` |
+| --client_cert CLIENT_CERT | Specify mTLS client certificate file. Default: ```None``` |
+| --client_key CLIENT_KEY | Specify mTLS client key file. Default: ```None``` |
+| --ignore_server_verification | Skip TLS host verification. Do not use in production. Default: ```False``` |
+| --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: ```None```, will use default system CA cert store |
 
 
 - Usage example
