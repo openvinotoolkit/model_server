@@ -1891,7 +1891,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
                 {"in_InputNumbers_1", "1,700;I32"},
                 {"in_InputNumbers_2", "1,8;FP32"},
                 {"out_OutputNumbers", "1,2000;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -1931,7 +1931,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
             parameters_t{
                 {"in_InputNumbers", "1,2000;FP32"},
                 {"out_OutputNumbers", "1,5;I32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1", "custom_node_2"}},
     };
 
     pipeline_connections_t connections;
