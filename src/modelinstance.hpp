@@ -161,7 +161,7 @@ protected:
          */
     virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
 
-     /**
+    /**
          * @brief Lock to disable concurrent modelinstance load/unload/reload
          */
     std::recursive_mutex loadingMutex;

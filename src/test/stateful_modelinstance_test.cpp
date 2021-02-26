@@ -28,6 +28,7 @@
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
+#include "../global_sequences_viewer.hpp"
 #include "../ov_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
@@ -39,8 +40,6 @@
 using testing::Return;
 
 namespace {
-
-static int sequenceTimeoutSleepSeconds = 7;
 static bool testWarningPrinted = false;
 
 enum SequenceTimeoutScenarios {
@@ -50,7 +49,7 @@ enum SequenceTimeoutScenarios {
     WAIT_AFTER_SEQUENCE_UNLOCKED,
     UNKNOWN
 };
-
+/*
 static const char* ToString(SequenceTimeoutScenarios scenario) {
     switch (scenario) {
     case WAIT_BEFORE_MANAGER_LOCKED:
@@ -65,6 +64,7 @@ static const char* ToString(SequenceTimeoutScenarios scenario) {
         return "[ERROR] Unknown sequence timeout scenario type";
     }
 }
+*/
 
 static const char* modelStatefulConfig = R"(
 {
@@ -78,14 +78,13 @@ static const char* modelStatefulConfig = R"(
                 "nireq": 100,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 0,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
         }
     ]
 })";
-
+/*
 static const char* modelStatefulConfigTimeout4 = R"(
 {
     "model_config_list": [
@@ -105,6 +104,7 @@ static const char* modelStatefulConfigTimeout4 = R"(
         }
     ]
 })";
+*/
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 class StatefulModelInstanceTempDir : public TestWithTempDir {
@@ -159,8 +159,9 @@ public:
 
 class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
+    ovms::GlobalSequencesViewer sequencesViewer;
     MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-        StatefulModelInstance(name, version) {}
+        StatefulModelInstance(name, version, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
         return validate(request, processingSpec);
@@ -169,9 +170,10 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
-    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy", 1);
+    ovms::GlobalSequencesViewer sequencesViewer;
+    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(60, "dummy", 1);
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-        StatefulModelInstance(name, version) {}
+        StatefulModelInstance(name, version, &sequencesViewer) {}
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
@@ -362,7 +364,7 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
 
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
 }
-
+/*
 void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
@@ -568,7 +570,8 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     // Wait for sequence timeout
     t1.join();
 }
-
+*/
+/*
 TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
@@ -600,6 +603,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     stetefulMockedModelInstance->getSequenceManager()->removeTimedOutSequences();
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
+
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTestAuto) {
     ConstructorEnabledModelManager manager;
@@ -681,6 +685,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout
 
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
+*/
 
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ConstructorEnabledModelManager manager;
@@ -780,6 +785,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
+/*
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
@@ -835,7 +841,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
     RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, true);
     RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
 }
-
+*/
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
@@ -964,7 +970,8 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
 }
 
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
-    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion);
+    ovms::GlobalSequencesViewer sequencesViewer;
+    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, &sequencesViewer);
 
     const ovms::ModelConfig config1{
         dummyModelName,
@@ -973,8 +980,8 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         "1",           // batchsize
         1,             // NIREQ
         true,          // is stateful
+        true,          // idle sequence cleanup enabled
         false,         // low latency transformation enabled
-        33,            // stateful sequence timeout
         44,            // steteful sequence max number
         modelVersion,  // version
         modelPath,     // local path
@@ -982,7 +989,6 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     auto status = modelInstance.loadModel(config1);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout(), 33);
     EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber(), 44);
     EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed(), false);
 
@@ -993,8 +999,8 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         "1",           // batchsize
         1,             // NIREQ
         true,          // is stateful
+        true,          // idle sequence cleanup enabled
         true,          // low latency transformation enabled
-        22,            // stateful sequence timeout
         11,            // steteful sequence max number
         modelVersion,  // version
         modelPath,     // local path
@@ -1002,7 +1008,6 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
     status = modelInstance.reloadModel(config2);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 
-    EXPECT_EQ(modelInstance.getSequenceManager()->getTimeout(), 22);
     EXPECT_EQ(modelInstance.getSequenceManager()->getMaxSequenceNumber(), 11);
     EXPECT_EQ(modelInstance.getModelConfig().isLowLatencyTransformationUsed(), true);
 }

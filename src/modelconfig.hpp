@@ -90,7 +90,6 @@ private:
          */
     bool stateful;
 
-    
     /**
          * @brief Flag determining if model will be a subject to sequence cleaner scans
          */

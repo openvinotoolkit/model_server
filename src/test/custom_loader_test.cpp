@@ -215,7 +215,7 @@ const char* custom_loader_config_model_multiple = R"({
 class MockModel : public ovms::Model {
 public:
     MockModel() :
-        Model("MOCK_NAME") {}
+        Model("MOCK_NAME", false, nullptr) {}
     MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
 };
 

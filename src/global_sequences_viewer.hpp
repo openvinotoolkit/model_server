@@ -28,18 +28,17 @@
 #include "status.hpp"
 
 namespace ovms {
-const uint32_t DEFAULT_SEQUENCE_CLEANER_INTERVAL = 5; // in minutes
+const uint32_t DEFAULT_SEQUENCE_CLEANER_INTERVAL = 5;  // in minutes
 class GlobalSequencesViewer {
 private:
     // used to block parallel access to registered sequence managers map
     std::mutex viewerMutex;
-    
+
     // used to send exit signal to sequence cleaner thread and force termination
     std::mutex cleanerControlMutex;
     std::condition_variable cleanerControlCv;
 
     std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
-
 
     void sequenceCleanerRoutine(uint32_t sequenceCleanerInterval);
 
@@ -48,14 +47,12 @@ private:
     Status removeIdleSequences();
 
 protected:
-
-std::cv_status waitTimeInterval(uint32_t sequenceCleanerInterval);
+    std::cv_status waitTimeInterval(uint32_t sequenceCleanerInterval);
 
 public:
-
     void startCleanerThread(uint32_t sequenceCleanerInterval = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
 
-	// Gracefully finish sequence cleaner thread
+    // Gracefully finish sequence cleaner thread
     void join();
 
     Status registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager);

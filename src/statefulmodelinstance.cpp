@@ -76,7 +76,7 @@ Status StatefulModelInstance::loadModel(const ModelConfig& config) {
     Status status = ModelInstance::loadModel(config);
     if (!status.ok())
         return status;
-        
+
     if (autoCleanupEnabled) {
         status = globalSequencesViewer->registerForCleanup(getName(), getVersion(), sequenceManager);
         if (!status.ok())
@@ -88,7 +88,7 @@ Status StatefulModelInstance::loadModel(const ModelConfig& config) {
 Status StatefulModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     Status status;
-    if(autoCleanupEnabled) {
+    if (autoCleanupEnabled) {
         status = globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
         if (!status.ok())
             return status;
@@ -114,7 +114,6 @@ void StatefulModelInstance::unloadModel(bool isPermanent) {
     ModelInstance::unloadModel(isPermanent);
     sequenceManager.reset();
 }
-
 
 Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     performLowLatencyTransformation = config.isLowLatencyTransformationUsed();

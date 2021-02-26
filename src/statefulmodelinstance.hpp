@@ -29,13 +29,13 @@ class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
     bool performLowLatencyTransformation;
     bool autoCleanupEnabled;
-    GlobalSequencesViewer * globalSequencesViewer;
+    GlobalSequencesViewer* globalSequencesViewer;
 
 public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, GlobalSequencesViewer * globalSequencesViewer) :
+    StatefulModelInstance(const std::string& name, model_version_t version, GlobalSequencesViewer* globalSequencesViewer) :
         ModelInstance(name, version),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
@@ -72,6 +72,12 @@ public:
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
 
+    Status loadModel(const ModelConfig& config) override;
+
+    Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
+
+    void unloadModel(bool isPermanent = true) override;
+
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;
 
@@ -83,12 +89,6 @@ protected:
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
     Status loadOVExecutableNetwork(const ModelConfig& config) override;
-
-    Status loadModel(const ModelConfig& config) override;
-
-    Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
-
-    void unloadModel(bool isPermanent = true) override;
 
 private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);

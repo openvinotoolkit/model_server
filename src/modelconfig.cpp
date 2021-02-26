@@ -448,11 +448,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             SPDLOG_ERROR("Idle sequence cleanup parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
-        if (!v["idle_sequence_cleanup"].IsBool()) {
-            SPDLOG_ERROR("Idle sequence cleanup parameter was set to non-boolean value for model {}.", v["name"].GetString());
-            return StatusCode::INVALID_SEQUENCE_TIMEOUT;
-        }
-
         this->setIdleSequenceCleanup(v["idle_sequence_cleanup"].GetBool());
     }
 
