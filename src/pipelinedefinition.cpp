@@ -804,7 +804,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
             auto it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [&connectedNode](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == connectedNode; });
             if (it->demultiplyCount) {
                 if (demultiplyStack.empty()) {
-                    return StatusCode::PIPELINE_DEMULTIPLEXER_WITHOUT_GATHER_NODE;
+                    return StatusCode::PIPELINE_PATH_DEMULTIPLEXER_WITHOUT_GATHER_NODE;
                 }
                 auto& lastGatherSet = demultiplyStack.back();
                 if (lastGatherSet.find(connectedNode) == lastGatherSet.end()) {
@@ -819,7 +819,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 demultiplyStack.emplace_back(it->gatherFromNode);
             }
             if (it->kind == NodeKind::ENTRY && !demultiplyStack.empty()) {
-                return StatusCode::PIPELINE_GATHER_WITHOUT_DEMULTIPLEXER_NODE;
+                return StatusCode::PIPELINE_PATH_GATHER_WITHOUT_DEMULTIPLEXER_NODE;
             }
             if (std::find(visited.begin(), visited.end(), connectedNode) == visited.end()) {
                 nodesToCheck.emplace_back(std::pair{connectedNode, demultiplyStack});

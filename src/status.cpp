@@ -141,8 +141,8 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_WITHOUT_GATHER_NODE, "Demultiplexer without gather node in pipeline path"},
-    {StatusCode::PIPELINE_GATHER_WITHOUT_DEMULTIPLEXER_NODE, "Gather node without demultiplexer in pipeline path"},
+    {StatusCode::PIPELINE_PATH_DEMULTIPLEXER_WITHOUT_GATHER_NODE, "Demultiplexer without gather node in pipeline path"},
+    {StatusCode::PIPELINE_PATH_GATHER_WITHOUT_DEMULTIPLEXER_NODE, "Gather node without demultiplexer in pipeline path"},
 
     // Storage errors
     // S3
