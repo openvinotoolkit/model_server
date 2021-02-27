@@ -91,7 +91,7 @@ spec:
         - name: S3_ENDPOINT
           value: {{ .Values.s3_compat_api_endpoint }}
         {{- end }}
-        {{- if .Values.aws_secret_access_key }}
+        {{- if .Values.azure_storage_connection_string }}
         - name: AZURE_STORAGE_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
