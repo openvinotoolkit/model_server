@@ -35,6 +35,7 @@
 #pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
+#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
@@ -187,3 +188,12 @@ protected:
 };
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
+
+template <typename T>
+static ovms::NodeLibrary createLibraryMock() {
+    return ovms::NodeLibrary{
+        T::execute,
+        T::getInputsInfo,
+        T::getOutputsInfo,
+        T::release};
+}

@@ -49,6 +49,8 @@ cc_library(
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
+        "global_sequences_viewer.hpp",
+        "global_sequences_viewer.cpp",
         "http_rest_api_handler.cpp",
         "http_rest_api_handler.hpp",
         "http_server.cpp",
@@ -230,6 +232,18 @@ cc_binary(
     srcs = [
         "test/custom_nodes/node_perform_different_operations.cpp",
         "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
+    name = "libnode_resize_opencv.so",
+    srcs = [
+        "example/CustomNodeResize/node_resize_opencv.cpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+            "@opencv//:opencv"
     ],
     linkshared = 1,
 )

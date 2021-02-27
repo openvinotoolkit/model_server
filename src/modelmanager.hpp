@@ -32,6 +32,7 @@
 
 #include "customloaders.hpp"
 #include "filesystem.hpp"
+#include "global_sequences_viewer.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
@@ -63,6 +64,8 @@ protected:
     PipelineFactory pipelineFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    std::unique_ptr<GlobalSequencesViewer> sequenceViewer;
 
 private:
     /**
@@ -118,9 +121,9 @@ private:
     void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
     /**
-     * @brief Mutex for blocking concurrent add & find of model
+     * @brief Mutex for protecting concurrent reloading config
      */
-    mutable std::shared_mutex modelsMtx;
+    mutable std::recursive_mutex configMtx;
 
     /**
      * Time interval between each config file check
@@ -134,9 +137,9 @@ private:
 
 public:
     /**
-     * @brief Mutex for protecting concurrent reloading config
+     * @brief Mutex for blocking concurrent add & find of model
      */
-    mutable std::recursive_mutex configMtx;
+    mutable std::shared_mutex modelsMtx;
 
     /**
      * @brief Gets the instance of ModelManager
@@ -176,6 +179,8 @@ public:
     const std::map<std::string, std::shared_ptr<Model>>& getModels() {
         return models;
     }
+
+    void startSequenceWatcher();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;

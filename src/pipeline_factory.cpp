@@ -111,4 +111,13 @@ void PipelineFactory::revalidatePipelines(ModelManager& manager) {
         }
     }
 }
+const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(definitionsMtx);
+    names.reserve(definitions.size());
+    for (auto& [name, definition] : definitions) {
+        names.push_back(definition->getName());
+    }
+    return names;
+}
 }  // namespace ovms

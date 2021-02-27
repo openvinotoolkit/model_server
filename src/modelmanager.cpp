@@ -54,6 +54,7 @@ static bool watcherStarted = false;
 
 ModelManager::ModelManager() {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
+    this->sequenceViewer = std::make_unique<GlobalSequencesViewer>();
 }
 
 ModelManager::~ModelManager() = default;
@@ -82,6 +83,12 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
+
+    startSequenceWatcher();
+}
+
+void ModelManager::startSequenceWatcher() {
+    sequenceViewer->startWatcher();
 }
 
 Status ModelManager::startFromConfig() {
@@ -577,6 +584,8 @@ void ModelManager::join() {
             watcherStarted = false;
         }
     }
+
+    sequenceViewer->join();
 }
 
 void ModelManager::getVersionsToChange(
@@ -727,6 +736,16 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->addVersions(model, versionsToStart, versionsFailed);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while registering model versions to sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
@@ -743,6 +762,17 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->reloadVersions(model, versionsToReload, versionsFailed);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading version in sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
@@ -854,6 +884,16 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->retireVersions(model, versionsToRetire);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while retiring version in sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     }
     return blocking_status;
@@ -902,5 +942,4 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }
-
 }  // namespace ovms

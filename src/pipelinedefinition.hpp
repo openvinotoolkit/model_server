@@ -86,8 +86,6 @@ private:
 
     Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
-    Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback) const;
-
     const NodeInfo& findNodeByName(const std::string& name) const;
     shape_t getNodeGatherShape(const NodeInfo& info) const;
 
@@ -131,12 +129,16 @@ public:
 
     virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
     virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
+
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
         const shape_t& gatherShape) const;
+
     Status populateOutputsInfoWithCustomNodeOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
