@@ -2661,7 +2661,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, GatherNodeWithoutDemult
 
     connections["custom_node_2"] = {
         {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
-    
+
     connections["custom_node_3"] = {
         {"custom_node_1", {{"out", "in_InputNumbers1"}}},
         {"custom_node_2", {{"out", "in_InputNumbers2"}}}};
@@ -2706,7 +2706,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGat
 
     connections["custom_node_2"] = {
         {"custom_node_1", {{"out", "in_InputNumbers"}}}};
-    
+
     connections["custom_node_3"] = {
         {"custom_node_1", {{"out", "in_InputNumbers"}}}};
 

@@ -796,35 +796,36 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
     if (!it->gatherFromNode.empty()) {
         nodesToCheck.back().second.emplace_back(it->gatherFromNode);
     }
-    std::vector<std::string> visited;
+    std::set<std::string> visited;
     while (!nodesToCheck.empty()) {
         auto [node, demultiplyStack] = nodesToCheck.back();
         nodesToCheck.pop_back();
         for (auto& [connectedNode, aliasName] : connections[node]) {
+            auto newDemultiplyStack(demultiplyStack);
             auto it = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [&connectedNode](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == connectedNode; });
             if (it->demultiplyCount) {
-                if (demultiplyStack.empty()) {
+                if (newDemultiplyStack.empty()) {
                     return StatusCode::PIPELINE_PATH_DEMULTIPLEXER_WITHOUT_GATHER_NODE;
                 }
-                auto& lastGatherSet = demultiplyStack.back();
+                auto& lastGatherSet = newDemultiplyStack.back();
                 if (lastGatherSet.find(connectedNode) == lastGatherSet.end()) {
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
                 lastGatherSet.erase(connectedNode);
                 if (lastGatherSet.empty()) {
-                    demultiplyStack.pop_back();
+                    newDemultiplyStack.pop_back();
                 }
             }
             if (!it->gatherFromNode.empty()) {
-                demultiplyStack.emplace_back(it->gatherFromNode);
+                newDemultiplyStack.emplace_back(it->gatherFromNode);
             }
-            if (it->kind == NodeKind::ENTRY && !demultiplyStack.empty()) {
+            if (it->kind == NodeKind::ENTRY && !newDemultiplyStack.empty()) {
                 return StatusCode::PIPELINE_PATH_GATHER_WITHOUT_DEMULTIPLEXER_NODE;
             }
             if (std::find(visited.begin(), visited.end(), connectedNode) == visited.end()) {
-                nodesToCheck.emplace_back(std::pair{connectedNode, demultiplyStack});
+                nodesToCheck.emplace_back(std::pair{connectedNode, std::move(newDemultiplyStack)});
+                visited.emplace(node);
             }
-            visited.emplace_back(node);
         }
     }
     return StatusCode::OK;
