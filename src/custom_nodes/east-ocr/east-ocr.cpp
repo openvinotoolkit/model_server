@@ -14,25 +14,30 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
 #include <vector>
-#include <cmath>
+
+#include "custom_node_interface.h"
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
-#include "custom_node_interface.h"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
 static constexpr const char* GEOMETRY_TENSOR_NAME = "geometry";
 static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 
-#define NODE_ASSERT(cond, msg) if (!(cond)) { std::cout << "Assert: " << msg << std::endl; return 1; }
+#define NODE_ASSERT(cond, msg)                       \
+    if (!(cond)) {                                   \
+        std::cout << "Assert: " << msg << std::endl; \
+        return 1;                                    \
+    }
 
 cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     // std::vector<float> data(input->dataLength / sizeof(float));
@@ -69,9 +74,9 @@ cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
 std::vector<float> reorder_to_chw(cv::Mat* mat) {
     assert(mat->channels() == 3);
     std::vector<float> data(mat->channels() * mat->rows * mat->cols);
-    for(int y = 0; y < mat->rows; ++y) {
-        for(int x = 0; x < mat->cols; ++x) {
-            for(int c = 0; c < mat->channels(); ++c) {
+    for (int y = 0; y < mat->rows; ++y) {
+        for (int x = 0; x < mat->cols; ++x) {
+            for (int c = 0; c < mat->channels(); ++c) {
                 data[c * (mat->rows * mat->cols) + y * mat->cols + x] = mat->at<cv::Vec3f>(y, x)[c];
             }
         }
@@ -193,7 +198,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
 
             std::cout << "---------------------------" << std::endl;
         }
-
     }
 
     std::cout << "Total findings: " << boxes.size() << std::endl;

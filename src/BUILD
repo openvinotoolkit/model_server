@@ -237,18 +237,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "libnode_resize_opencv.so",
-    srcs = [
-        "example/CustomNodeResize/node_resize_opencv.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-            "@opencv//:opencv"
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
     name = "libcustom-node-east-ocr.so",
     srcs = [
         "custom_nodes/east-ocr/east-ocr.cpp",
@@ -358,6 +346,7 @@ cc_test(
         "//src:lib_node_add_sub.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
+        "//src:libcustom-node-east-ocr.so"
         "@com_google_googletest//:gtest",
     ],
     copts = [
