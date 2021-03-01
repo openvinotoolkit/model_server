@@ -105,18 +105,18 @@ If set to `true` sequence cleaner will check that model. Otherwise sequence clea
 
 ### Special inputs for sequence handling <a name="stateful_inputs"></a>
 
-Stateful model works on consecutive inference requests that are associated with each other and form **sequence** of requests. Single stateful model can handle multiple sequences at a time. When model server receives requests for stateful model it needs to know which request belongs to which sequence. OVMS also needs to know where is the begging and the end of the sequence to properly manage its resources.
+Stateful model works on consecutive inference requests that are associated with each other and form a **sequence** of requests. Single stateful model can handle multiple independent sequences at a time. When the model server receives requests for stateful model, it maps each request to the proper sequence and its memory state. OVMS also tracks the beginning and the end of the sequence to properly manage system resources.
 
-To provide that information, requests to stateful models must contain additional inputs: 
+Requests to stateful models must contain additional inputs beside the data for prediction:
 - `sequence_id` - which is 64-bit unsigned integer identifying the sequence (unique in the scope of the model instance). Value 0 is equivalent to not providing this input at all.
 - `sequence_control_input` - which is 32-bit unsigned integer indicating sequence start and end. Accepted values are: 
    - 0 - no control input (has no effect - equivalent to not providing this input at all)
    - 1 - indicates start of the sequence
    - 2 - indicates end of the sequence
 
-**Note**: Model server also appends `sequence_id` to every response.
+**Note**: Model server also appends `sequence_id` to every response - the name and format of `sequence_id` output is exactly the same as in `sequence_id` input.
 
-**Both `sequence_id` and `sequence_control_input` must be provided as 1-dimensional arrays of size 1.**  
+**Both `sequence_id` and `sequence_control_input` shall be provided as tensors with 1 element array (shape:[1]) and appropriate precision.**  
 _See examples for gRPC and HTTP below_.
 
 In order to successfully infer the sequence, perform these actions:
@@ -126,9 +126,13 @@ In order to successfully infer the sequence, perform these actions:
       - add `sequence_id` with the value of your choice or
       - add `sequence_id` with 0 or do not add `sequence_id` at all - in this case model server will provide unique id for the sequence and since it'll be appended to the outputs, you'll be able to read it and use with the next requests. 
 
+      If the provided `sequence_id` is already occupied, OVMS will return an [error](#stateful_errors) to avoid conflicts.
+
 2. **Send remaining requests except the last one.**
 
    To send requests in the middle of the sequence you need to add `sequence_id` of your sequence. In this case `sequence_id` is mandatory and not providing this input or setting it's value to 0 is not allowed.
+
+   In this case `sequence_control_input` must be empty or 0.
 
 3. **Send the last request in the sequence and signal sequence end.**
 
@@ -288,7 +292,7 @@ sequence_id = response_body["outputs"]["sequence_id"]
 ```
 See [rest_stateful_client.py](../example_client/rest_stateful_client.py) example client for reference.
 
-### Error codes
+### Error codes <a name="stateful_errors"></a>
 
 When request is invalid or couldn't be processed you can expect following errors specific to inference on stateful models:
 
@@ -309,9 +313,10 @@ When request is invalid or couldn't be processed you can expect following errors
 
 There are following limitations when using stateful models with OVMS:
 
- - Support for CPU only
+ - Support inference execution only using CPU as the target device.
  - Support for Kaldi models with memory layers
  - Support for non-Kaldi models with Tensor Iterator (with low latency transformation performed)
- - Dynamic batch size and shape are **not** available in stateful models
- - Stateful model instances **cannot** be used in DAGs (model ensemble)
- - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might produce bad results.
+ - [Auto batch size and shape](shape_and_batch_size.md) are **not** available in stateful models
+ - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md)
+ - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
+ 
