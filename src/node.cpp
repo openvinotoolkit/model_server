@@ -174,6 +174,9 @@ std::vector<session_key_t> Node::getReadySessions() const {
 }
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
+    if (!demultiplexCount) {
+        throw std::logic_error("Called demultiplyOutputs but node does not have demultiplexCount set");
+    }
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
     if (tensorDesc.getDims()[1] > DEMULTIPLY_LIMIT) {
@@ -193,8 +196,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
 
-        if (demultiplexCount &&
-            (demultiplexCount.value() != 0) &&
+        if ((demultiplexCount.value() != 0) &&
             (newDims[1] != demultiplexCount.value())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} of blob: {} expected: {} to demultiply",
                 newDims[1], blobName, demultiplexCount.value());
@@ -220,8 +222,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return status;
             }
             if (dividedBlob->byteSize() != step) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob have wrong byte size: {}, expected: {}",
-                    getName(), metadata.getSessionKey(), dividedBlob->byteSize(), step);
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
+                    getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);

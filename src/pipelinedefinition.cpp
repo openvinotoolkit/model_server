@@ -478,8 +478,8 @@ public:
             if (!result.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of gather_from node: {} does not match tensor second dimenson value: {} of node: {}",
                     this->pipelineName,
-                    (*demultiplicatorNode).demultiplyCount.value(),
-                    (*demultiplicatorNode).nodeName,
+                    demultiplicatorNode->demultiplyCount.value(),
+                    demultiplicatorNode->nodeName,
                     tensorInputShape[1],
                     dependencyNodeInfo.nodeName);
                 return result;
@@ -1075,8 +1075,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
-            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value() ? someNodeInfo.demultiplyCount.value() : 0;
-            demultiplyCount = demultiplyCount ? demultiplyCount : 0;
+            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
                 auto result = PipelineDefinition::getCustomNodeMetadata(
@@ -1085,9 +1084,16 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     someNodeInfo.library.getOutputsInfo,
                     this->pipelineName);
                 if (!result.ok()) {
-                    return;  // TODO return
+                    SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
+                    return;
                 }
-                // TODO error handling
+                if (nodeOutputsInfo.size() == 0) {
+                    SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
+                    return;
+                } else if (nodeOutputsInfo.begin()->second->getShape().size() <= 3) {
+                    SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
+                    return;
+                }
                 demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[1];
             }
 
@@ -1097,7 +1103,6 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             search(previousNodeName);
         }
     };
-    // TODO return
     search(info.nodeName);
 
     if (info.gatherFromNode.size() != shape.size()) {

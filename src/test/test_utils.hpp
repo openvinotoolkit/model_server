@@ -198,4 +198,4 @@ static ovms::NodeLibrary createLibraryMock() {
         T::release};
 }
 
-extern std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&)> isShapeTheSame;
+extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);

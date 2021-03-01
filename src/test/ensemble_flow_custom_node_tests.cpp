@@ -2172,7 +2172,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     EXPECT_EQ(output->getShape(), shape_t({1, 12, 10}));
 }
 
-TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationFixedDemultiplexerDynamicLibraryFirstMetadataCheckShouldWarn) {
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationFixedDemultiplexerDynamicLibraryFirstMetadataCheckShouldAlsoWarnInLog) {
     std::optional<uint32_t> demultiplyCount = 12;
 
     std::vector<NodeInfo> info{
@@ -2210,7 +2210,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     EXPECT_EQ(output->getShape(), shape_t({1, 12, 10}));
 }
 
-TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationDynamicLibraryShapesMetadataCheckShouldWarn) {
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationDynamicLibraryShapesMetadataCheckShouldAlsoWarnInLog) {
     std::optional<uint32_t> demultiplyCount = std::nullopt;
 
     std::vector<NodeInfo> info{
@@ -3159,7 +3159,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
     std::unique_ptr<Pipeline> pipeline;
-    const uint64_t demultiplyLimit = 10'000; // node.cpp
+    const uint64_t demultiplyLimit = 10'000;  // node.cpp
     uint64_t dynamicDemultiplyCount = demultiplyLimit + 1;
     ASSERT_GT(dynamicDemultiplyCount, demultiplyLimit) << "Current demultiply count type";
     std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};

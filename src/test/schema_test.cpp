@@ -1443,8 +1443,6 @@ TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsZeroAllowed) {
 }
 
 TEST(SchemaTest, DemultiplexerConfigDemultiplyCountEqualsOneAllowed) {
-    // this is to allow dynamic demultiplexing. We could invalidate 1 and still accept 0, [2,3, ...]
-    // but this is just probably not efficient - unnecessary to have demultiply_count == 1
     const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
     const std::string demultiplyCount{"\"demultiply_count\": 1"};
     std::string config(demultiplexerConfig);

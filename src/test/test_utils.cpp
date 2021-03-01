@@ -85,9 +85,7 @@ std::string readableError(const float* expected_output, const float* actual_outp
     return ss.str();
 }
 
-std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&)> isShapeTheSame =
-    [](const tensorflow::TensorShapeProto& actual,
-        const std::vector<int64_t>&& expected) -> bool {
+bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
         SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
         return false;
@@ -99,4 +97,4 @@ std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_
         }
     }
     return true;
-};
+}
