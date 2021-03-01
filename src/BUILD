@@ -346,7 +346,7 @@ cc_test(
         "//src:lib_node_add_sub.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
-        "//src:libcustom-node-east-ocr.so"
+        "//src:libcustom-node-east-ocr.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
