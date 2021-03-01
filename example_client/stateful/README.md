@@ -21,6 +21,8 @@ To run this example you will need to download the rm_lstm4f model with input and
 
      ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
 
+This command downloads following files:
+
      ```rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md``` rm_lstm4f model files in Kaldi format.
 
      ```test_feat_1_10.ark``` [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
