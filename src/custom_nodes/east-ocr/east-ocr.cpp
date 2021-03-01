@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "custom_node_interface.h"
+#include "./custom_node_interface.h"
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -58,7 +58,7 @@ cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     uint64_t H = input->dims[1];
     uint64_t W = input->dims[2];
     cv::Mat image(H, W, CV_32FC3);
-    //std::memcpy((void*)image.data, (void*)data.data(), input->dataLength);
+    // std::memcpy((void*)image.data, (void*)data.data(), input->dataLength);
     std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
     return image;
 }
@@ -67,7 +67,7 @@ cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
     uint64_t H = input->dims[1];
     uint64_t W = input->dims[2];
     cv::Mat image(H, W, CV_32FC3, input->data);
-    //std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
+    // std::memcpy((void*)image.data, (void*)input->data, input->dataLength);
     return image;
 }
 
@@ -154,7 +154,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
 
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
     for (uint64_t y = 0; y < numRows; y++) {
-
         float* scoresData = (float*)scoresTensor->data + (y * numCols);
         float* xData0 = (float*)geometryTensor->data + ((0 * numRows * numCols) + (y * numCols));
         float* xData1 = (float*)geometryTensor->data + ((1 * numRows * numCols) + (y * numCols));
