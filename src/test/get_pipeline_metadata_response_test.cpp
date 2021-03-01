@@ -68,9 +68,9 @@ protected:
     tensorflow::serving::GetModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
 
-    std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&)> isShape = [](
-                                                                                                         const tensorflow::TensorShapeProto& actual,
-                                                                                                         const std::vector<int64_t>&& expected) -> bool {
+    std::function<bool(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&)> isShapeTheSame =
+        [](const tensorflow::TensorShapeProto& actual,
+            const std::vector<int64_t>&& expected) -> bool {
         if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
             SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
             return false;
@@ -217,22 +217,22 @@ TEST_F(GetPipelineMetadataResponseBuild, HasCorrectShape) {
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_FP32_1_3_224_224").tensor_shape(),
         {1, 3, 224, 224}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_U8_1_3_62_62").tensor_shape(),
         {1, 3, 62, 62}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_Unspecified").tensor_shape(),
         {}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_I32_1_2000").tensor_shape(),
         {1, 2000}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_FP32_2_20_3").tensor_shape(),
         {2, 20, 3}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_Unspecified").tensor_shape(),
         {}));
 }
@@ -304,16 +304,16 @@ TEST_F(GetPipelineMetadataResponseBuildWithDynamicShapes, HandleDynamicShapes) {
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_FP32_1_-1_224_224").tensor_shape(),
         {1, -1, 224, 224}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_U8_1_3_-1_-1").tensor_shape(),
         {1, 3, -1, -1}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_I32_1_-1").tensor_shape(),
         {1, -1}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_FP32_1_-1_-1_3").tensor_shape(),
         {1, -1, -1, 3}));
 }
