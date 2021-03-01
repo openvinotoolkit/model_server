@@ -22,5 +22,5 @@ docker_build:
 	@cp ../../custom_node_interface.h .
 	@docker build -t custom_node_build_image:latest .
 	@rm -Rf lib
-	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_node/lib/ ./lib/
+	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ ./lib/
 	@rm custom_node_interface.h

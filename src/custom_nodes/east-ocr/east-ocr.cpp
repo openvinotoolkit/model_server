@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "./custom_node_interface.h"
+#include "../../custom_node_interface.h"
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgcodecs.hpp"
