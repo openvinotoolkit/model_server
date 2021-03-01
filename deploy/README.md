@@ -185,42 +185,42 @@ The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
 Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
-$ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name data --output_name prob
+$ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
+Start processing:
 	Model name: resnet
 	Images list file: input_images.txt
-
 images/airliner.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 73.00 ms; speed 2.00 fps 13.79
-Detected: 895  Should be: 404
-images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 7.0 : 255.0
-Processing time: 52.00 ms; speed 2.00 fps 19.06
+Processing time: 25.56 ms; speed 39.13 fps
+Detected: 404  Should be: 404
+images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
+Processing time: 20.95 ms; speed 47.72 fps
 Detected: 279  Should be: 279
 images/bee.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 82.00 ms; speed 2.00 fps 12.2
+Processing time: 21.90 ms; speed 45.67 fps
 Detected: 309  Should be: 309
 images/golden_retriever.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 86.00 ms; speed 2.00 fps 11.69
+Processing time: 21.84 ms; speed 45.78 fps
 Detected: 207  Should be: 207
 images/gorilla.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 65.00 ms; speed 2.00 fps 15.39
+Processing time: 20.26 ms; speed 49.36 fps
 Detected: 366  Should be: 366
 images/magnetic_compass.jpeg (1, 3, 224, 224) ; data range: 0.0 : 247.0
-Processing time: 51.00 ms; speed 2.00 fps 19.7
+Processing time: 20.68 ms; speed 48.36 fps
 Detected: 635  Should be: 635
 images/peacock.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 61.00 ms; speed 2.00 fps 16.28
+Processing time: 21.57 ms; speed 46.37 fps
 Detected: 84  Should be: 84
 images/pelican.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 61.00 ms; speed 2.00 fps 16.41
+Processing time: 20.53 ms; speed 48.71 fps
 Detected: 144  Should be: 144
 images/snail.jpeg (1, 3, 224, 224) ; data range: 0.0 : 248.0
-Processing time: 56.00 ms; speed 2.00 fps 17.74
+Processing time: 22.34 ms; speed 44.75 fps
 Detected: 113  Should be: 113
 images/zebra.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 73.00 ms; speed 2.00 fps 13.68
+Processing time: 21.27 ms; speed 47.00 fps
 Detected: 340  Should be: 340
-
-Overall accuracy= 90.0
+Overall accuracy= 100.0 %
+Average latency= 21.1 ms
 ```
 
 ## Cleanup
