@@ -263,7 +263,7 @@ TEST(SequenceManager, RemoveOneIdleSequence) {
     ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId2));
 }
 
-/*
+
 TEST(SequenceManager, RemoveAllIdleSequences) {
     MockedSequenceManager sequenceManager(24, "dummy", 1);
     uint64_t sequenceId1 = 42;
@@ -275,7 +275,8 @@ TEST(SequenceManager, RemoveAllIdleSequences) {
 
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId2));
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    sequenceManager.getSequence(sequenceId1).setIdle();
+    sequenceManager.getSequence(sequenceId2).setIdle();
     sequenceManager.removeIdleSequences();
     ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId2));
@@ -294,8 +295,8 @@ TEST(SequenceManager, MultiManagersAllIdleSequences) {
         ASSERT_TRUE(managers[i]->sequenceExists(i + 1));
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(4));
     for (int i = 0; i < 10; i++) {
+        managers[i]->getSequence(i + 1).setIdle();
         ASSERT_EQ(managers[i]->removeIdleSequences(), ovms::StatusCode::OK);
     }
 
@@ -307,7 +308,7 @@ TEST(SequenceManager, MultiManagersAllIdleSequences) {
         delete managers[i];
     }
 }
-*/
+
 
 TEST(SequenceManager, ExceedMaxSequenceNumber) {
     MockedSequenceManager sequenceManager(5, "dummy", 1);
