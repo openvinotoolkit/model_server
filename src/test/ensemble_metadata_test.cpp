@@ -376,6 +376,7 @@ TEST(EnsembleMetadata, OneCustomNode) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
@@ -431,6 +432,7 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
@@ -591,6 +593,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
