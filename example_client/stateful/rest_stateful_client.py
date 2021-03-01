@@ -16,17 +16,19 @@
 
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray, expand_dims
-import classes
 import datetime
 import argparse
 import math
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
 import json
 import requests
+import importlib
 
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
+client_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(client_utils)
 
 def print_debug(msg):
     global debug_mode
@@ -54,13 +56,13 @@ def parse_arguments():
     # Example commands:
     # RM_LSTM4F
     # rest_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
-    #     --rest_address http://localhost --rest_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
+    #     --rest_url http://localhost --rest_port 5555 --input_name Parameter --output_name affinetransform/Fused_Add_
     #     --model_name rm_lstm4f --debug
 
     # ASPIRE_TDNN
     # rest_stateful_client.py --input_path aspire_tdnn/mini_feat_1_10.ark,aspire_tdnn/mini_feat_1_10_ivector.ark
     #     --score_path aspire_tdnn/aspire_tdnn_mini_feat_1_10_kaldi_score.ark
-    #     --rest_address http://localhost --rest_port 9000 --input_name input,ivector --output_name Final_affine
+    #     --rest_url http://localhost --rest_port 5555 --input_name input,ivector --output_name Final_affine
     #     --model_name aspire_tdnn --cw_l 17 --cw_r 12 --debug
 
     parser = argparse.ArgumentParser(
@@ -78,15 +80,15 @@ def parse_arguments():
         default='rm_lstm4f/test_score_1_10.ark',
         help='Path to reference scores ark file')
     parser.add_argument(
-        '--rest_address',
-        required=False,
-        default='localhost',
-        help='Specify url to rest service. default:http://localhost')
-    parser.add_argument(
         '--rest_port',
         required=False,
         default=5555,
         help='Specify port to rest service. default: 5555')
+    parser.add_argument(
+        '--rest_url',
+        required=False,
+        default='http://localhost',
+        help='Specify url to REST API service. default: http://localhost')
     parser.add_argument(
         '--input_name',
         required=False,
@@ -102,7 +104,6 @@ def parse_arguments():
         default='rm_lstm4f',
         help='Define model name, must be same as is in service. default: rm_lstm4f',
         dest='model_name')
-
     parser.add_argument(
         '--debug',
         required=False,
@@ -147,11 +148,6 @@ def parse_arguments():
         required=False,
         default=None,
         help='Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store.')
-    parser.add_argument(
-        '--rest_url',
-        required=False,
-        default='http://localhost',
-        help='Specify url to REST API service. default: http://localhost')
     print('### Starting rest_stateful_client.py client ###')
 
     args = vars(parser.parse_args())
@@ -396,7 +392,6 @@ def main():
                     "ERROR: Model result validation error. Adding end sequence inference request for the model and exiting.")
                 exit(1)
 
-            print(result_dict)
             result_dict = result_dict["outputs"]
 
             # Unique sequence_id provided by OVMS
@@ -455,7 +450,7 @@ def main():
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
-    print_statistics(processing_times, sequence_size / 1000)
+    client_utils.print_statistics(processing_times, sequence_size / 1000)
     print('### Finished rest_stateful_client.py client processing ###')
 
 
