@@ -17,11 +17,12 @@ pip3 install -r stateful_client_requirements.txt
 
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+     
      ```mkdir models & cd models```
 
      ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
 
-This command downloads following files:
+     This command downloads following files:
 
      ```rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md``` rm_lstm4f model files in Kaldi format.
 
