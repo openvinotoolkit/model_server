@@ -416,6 +416,9 @@ public:
     }
 
     Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+        if (!demultiplicatorNodeInfo.demultiplyCount) {
+            return StatusCode::OK;
+        }
         if (shape.size() < 3) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node: {} demultiply cannot occur due to not enough shape dimensions: {}",
                 this->pipelineName,
