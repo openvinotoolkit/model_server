@@ -281,7 +281,6 @@ TEST_F(GetPipelineMetadataResponseBuild, serialize2Json) {
 }
 
 class GetPipelineMetadataResponseBuildWithDynamicShapes : public GetPipelineMetadataResponseBuild {
-
 protected:
     void prepare() override {
         GetPipelineMetadataResponse::prepare();

@@ -169,8 +169,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
-    uint32_t demultiplyCount = tensorDesc.getDims()[1];
-    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplyCount));
+    uint32_t resultsDemultiplyCount = tensorDesc.getDims()[1];
+    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
 
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
@@ -183,11 +183,11 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         if (demultiplexCount &&
             (demultiplexCount.value() != 0) &&
             (newDims[1] != demultiplexCount.value())) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} expected: {} to demultiply",
-                newDims[1], demultiplexCount.value());
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} of blob: {} expected: {} to demultiply",
+                newDims[1], blobName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
-        if (demultiplyCount == 0) {
+        if (resultsDemultiplyCount == 0) {
             // TODO handle dynamic demultiply_count == 0
             nodeSessionOutputs.erase(metadata.getSessionKey());
             return StatusCode::NOT_IMPLEMENTED;
@@ -198,7 +198,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             tensorDesc.getPrecision(),
             newDims,
             InferenceEngine::Layout::ANY);
-        const auto step = blob->byteSize() / demultiplyCount;
+        const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
             auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
