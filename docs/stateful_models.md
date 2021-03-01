@@ -6,11 +6,11 @@
 * [Load and serve stateful model](#stateful_serve)
    * [Run model server with stateful model](#stateful_run)
    * [Configuration options for stateful models](#stateful_params)
-   * [Idle sequence cleanup](#stateful_cleanup)
 * [Run inference on stateful model](#stateful_inference)
     * [Special inputs for sequence handling](#stateful_inputs)
     * [Inference via gRPC](#stateful_grpc)
     * [Inference via HTTP](#stateful_http)
+* [Idle sequence cleanup](#stateful_cleanup)
 * [Known limitations](#stateful_limitations)
 
 ## Stateless vs stateful models <a name="stateful_models"></a>
@@ -85,21 +85,6 @@ docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -
 | `sequence_cleaner_poll_wait_minutes` | `uint32` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner.<br> See [idle sequence cleanup](#stateful_cleanup). | 5 |
 
 See also [all server and model configuration options](docker_container.md#params) to have a complete setup.
-
-### Idle sequence cleanup <a name="stateful_cleanup"></a>
-
-Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, model server launches sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
-
-There are two parameters that regulate sequence cleanup. 
-One is `sequence_cleaner_poll_wait_minutes` which holds the value of time interval between next scans. If there has been not a single valid request with particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted. 
-
-`sequence_cleaner_poll_wait_minutes` is a server parameter and is common for all models. By default period of time between two consecutive cleaner scans is set to 5 minutes. Setting this value to 0 disables sequence cleaner.
-
-
-Stateful model can either be subject to idle sequence cleanup or not.
-You can set this **per model** with `idle_sequence_cleanup` parameter. 
-If set to `true` sequence cleaner will check that model. Otherwise sequence cleaner will ommit that model and its inactive sequences will not get removed. By default this value is set to `true`.
-
 
 ## Run inference on stateful model <a name="stateful_inference"></a>
 
@@ -308,6 +293,19 @@ When request is invalid or couldn't be processed you can expect following errors
 | Could not find sequence control input in expected tensor proto field uint32_val. | INVALID_ARGUMENT | N/A |
 | Special input proto does not contain tensor shape information. | INVALID_ARGUMENT | N/A |
 
+### Idle sequence cleanup <a name="stateful_cleanup"></a>
+
+Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, model server launches sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
+
+There are two parameters that regulate sequence cleanup. 
+One is `sequence_cleaner_poll_wait_minutes` which holds the value of time interval between next scans. If there has been not a single valid request with particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted. 
+
+`sequence_cleaner_poll_wait_minutes` is a server parameter and is common for all models. By default period of time between two consecutive cleaner scans is set to 5 minutes. Setting this value to 0 disables sequence cleaner.
+
+
+Stateful model can either be subject to idle sequence cleanup or not.
+You can set this **per model** with `idle_sequence_cleanup` parameter. 
+If set to `true` sequence cleaner will check that model. Otherwise sequence cleaner will ommit that model and its inactive sequences will not get removed. By default this value is set to `true`.
 
 ## Known limitations <a name="stateful_limitations"></a>
 
