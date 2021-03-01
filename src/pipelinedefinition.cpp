@@ -827,8 +827,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 if (visitedNode->second != newDemultiplyStack) {
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
-            }
-            else {
+            } else {
                 nodesToCheck.emplace_back(std::pair{connectedNodeName, newDemultiplyStack});
                 visited.emplace(connectedNodeName, std::move(newDemultiplyStack));
             }
