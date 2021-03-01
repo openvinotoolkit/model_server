@@ -237,9 +237,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "libcustom-node-east-ocr.so",
+    name = "libcustom_node_east_ocr.so",
     srcs = [
-        "custom_nodes/east-ocr/east-ocr.cpp",
+        "custom_nodes/east_ocr/east_ocr.cpp",
         "custom_node_interface.h",
     ],
     deps = [
@@ -346,7 +346,7 @@ cc_test(
         "//src:lib_node_add_sub.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
-        "//src:libcustom-node-east-ocr.so",
+        "//src:libcustom_node_east_ocr.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
