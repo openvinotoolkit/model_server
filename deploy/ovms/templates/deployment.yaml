@@ -40,7 +40,7 @@ spec:
     spec:
       {{- if .Values.security_context }}
       securityContext:
-{{ toYaml .Values.security_context | indent 6 }}
+{{ toYaml .Values.security_context | indent 8 }}
       {{- end }}
       containers:
       - name: ovms
