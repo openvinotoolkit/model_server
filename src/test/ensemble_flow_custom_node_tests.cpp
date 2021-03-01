@@ -2112,12 +2112,14 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,0,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,0,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -2136,12 +2138,14 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,12,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,12,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
@@ -2172,12 +2176,14 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,0,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,0,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
@@ -2208,9 +2214,10 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,0,0,0;FP32"},
-            {"out_OutputNumbers_1", "1,0,0;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,0,0,0;FP32"},
+                {"out_OutputNumbers_1", "1,0,0;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {}},
     };
 
@@ -2239,9 +2246,10 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,0,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,0,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -2258,15 +2266,18 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::optional<uint32_t> demultiplyCount = 0;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,0,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_2", "1,10;FP32"},
-            {"out_OutputNumbers_2", "1,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_3", "1,0,10;FP32"},
-            {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,0,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "1,0,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -2285,15 +2296,18 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::optional<uint32_t> demultiplyCount = 12;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,12,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_2", "1,10;FP32"},
-            {"out_OutputNumbers_2", "1,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_3", "1,0,10;FP32"},
-            {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,12,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "1,0,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -2312,15 +2326,18 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::optional<uint32_t> demultiplyCount = 0;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,0,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_2", "1,10;FP32"},
-            {"out_OutputNumbers_2", "1,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_3", "1,12,10;FP32"},
-            {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,0,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "1,12,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -2340,12 +2357,14 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers", "1,10;FP32"},
-            {"out_OutputNumbers_1", "1,12,10;FP32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary, parameters_t{
-            {"in_InputNumbers_1", "1,10;FP32"},
-            {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "1,12,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
