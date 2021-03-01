@@ -25,16 +25,24 @@
 #include "ov_utils.hpp"
 #include "status.hpp"
 
+const uint64_t DEMULTIPLY_LIMIT = 10'000;
+
 namespace ovms {
+
+static std::string demultiplyCountSettingToString(std::optional<uint32_t> demultiplyCount) {
+    if (!demultiplyCount) {
+        return "NA";
+    }
+    return demultiplyCount.value() != 0 ? std::to_string(demultiplyCount.value()) : "dynamic";
+}
 
 Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
     nodeName(nodeName),
     demultiplexCount(demultiplyCount),
     gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
-    // TODO fix logs
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create node: {} with demultiply: {}, gatherFrom: {}.",
         getName(),
-        demultiplexCount ? std::to_string(demultiplexCount.value()) : "NA",
+        demultiplyCountSettingToString(demultiplexCount),
         std::accumulate(gatherFromNode.begin(), gatherFromNode.end(), std::string("NA"), [](const std::string& lhs, const std::string& rhs) {
             if (lhs == "NA") {
                 return rhs;
@@ -52,8 +60,8 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         return StatusCode::UNKNOWN_ERROR;
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
-    if (status.ok() && demultiplexCount) {  // TODO fix logs
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
+    if (status.ok() && demultiplexCount) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
         status = demultiplyOutputs(nodeSessionOutputs);
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
@@ -167,9 +175,14 @@ std::vector<session_key_t> Node::getReadySessions() const {
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
+    if (tensorDesc.getDims()[1] > DEMULTIPLY_LIMIT) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
+            tensorDesc.getDims()[1], blobMap.begin()->first, DEMULTIPLY_LIMIT);
+        return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
+    }
     uint32_t resultsDemultiplyCount = tensorDesc.getDims()[1];
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
 
     for (auto& [blobName, blob] : blobMap) {
@@ -189,6 +202,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
         if (resultsDemultiplyCount == 0) {
             // TODO handle dynamic demultiply_count == 0
+            SPDLOG_ERROR("Dynamic demultiplexer with demultiply == 0 is not supported yet");
             nodeSessionOutputs.erase(metadata.getSessionKey());
             return StatusCode::NOT_IMPLEMENTED;
         }

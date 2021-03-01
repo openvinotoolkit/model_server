@@ -51,7 +51,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         std::cout << "lacking inputs" << std::endl;
         return 1;
     }
-    uint32_t demultiplyCount = static_cast<uint32_t>(inputTensor[0]);
+    uint64_t demultiplyCount = static_cast<uint64_t>(inputTensor[0]);
     ss << "Will demultiply with count = " << demultiplyCount << std::endl;
 
     // prepare outputs
@@ -75,12 +75,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
         for (size_t dummyPos = 0; dummyPos < valuesPerTensor; ++dummyPos) {
             auto resultIndex = demultiplyCopyId * valuesPerTensor + dummyPos;
             result[resultIndex] = inputTensor[dummyPos];
-            ss << "demultiplyCopyId:" << demultiplyCopyId
-               << " dummyPos:" << dummyPos
-               << " resultIndex:" << resultIndex
-               << " result:" << result[resultIndex]
-               << " inputTensor:" << inputTensor[dummyPos]
-               << std::endl;
+            if (demultiplyCount < 100 || ((demultiplyCopyId % 100) == 0)) {
+                ss << "demultiplyCopyId:" << demultiplyCopyId
+                   << " dummyPos:" << dummyPos
+                   << " resultIndex:" << resultIndex
+                   << " result:" << result[resultIndex]
+                   << " inputTensor:" << inputTensor[dummyPos]
+                   << std::endl;
+            }
         }
     }
     std::cout << ss.str() << std::endl;

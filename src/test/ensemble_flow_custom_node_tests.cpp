@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <array>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <utility>
 
@@ -3154,6 +3155,19 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedOutput, {1, dynamicDemultiplyCount, 10});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
+    std::unique_ptr<Pipeline> pipeline;
+    const uint64_t demultiplyLimit = 10'000; // node.cpp
+    uint64_t dynamicDemultiplyCount = demultiplyLimit + 1;
+    ASSERT_GT(dynamicDemultiplyCount, demultiplyLimit) << "Current demultiply count type";
+    std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY) << status.string();
 }
 
 // TODO handle results with 0 batch for dynamic demultiplexer
