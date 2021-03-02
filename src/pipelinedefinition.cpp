@@ -1090,7 +1090,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                 if (nodeOutputsInfo.size() == 0) {
                     SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                     return;
-                } else if (nodeOutputsInfo.begin()->second->getShape().size() <= 3) {
+                } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
                     SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                     return;
                 }
