@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../../custom_node_interface.h"
@@ -62,7 +63,11 @@ std::vector<float> mat_to_nchw(cv::Mat mat) {
     for (int y = 0; y < mat.rows; ++y) {
         for (int x = 0; x < mat.cols; ++x) {
             for (int c = 0; c < mat.channels(); ++c) {
-                data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<cv::Vec3f>(y, x)[c];
+                if (mat.channels() == 1) {
+                    data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<float>(y, x);
+                } else {
+                    data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<cv::Vec3f>(y, x)[c];
+                }
             }
         }
     }

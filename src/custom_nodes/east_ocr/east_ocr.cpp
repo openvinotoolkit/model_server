@@ -55,12 +55,19 @@ int extract_text_images_into_output(struct CustomNodeTensor* output, const std::
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataLength = byteSize;
-    output->dimsLength = 4;
+    output->dimsLength = 5;
     output->dims = (uint64_t*)malloc(output->dimsLength * sizeof(uint64_t));
-    output->dims[0] = outputBatch;
-    output->dims[1] = channels;
-    output->dims[2] = targetImageHeight;
-    output->dims[3] = targetImageWidth;
+    output->dims[0] = 1;
+    output->dims[1] = outputBatch;
+    if (imageLayout == "NCHW") {
+        output->dims[2] = channels;
+        output->dims[3] = targetImageHeight;
+        output->dims[4] = targetImageWidth;
+    } else {
+        output->dims[2] = targetImageHeight;
+        output->dims[3] = targetImageWidth;
+        output->dims[4] = channels;
+    }
     output->precision = FP32;
     return 0;
 }
@@ -355,17 +362,18 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const st
     *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = TEXT_IMAGES_TENSOR_NAME;
-    (*info)[0].dimsLength = 4;
+    (*info)[0].dimsLength = 5;
     (*info)[0].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
-    (*info)[0].dims[0] = 0;
+    (*info)[0].dims[0] = 1;
+    (*info)[0].dims[1] = 0;
     if (imageLayout == "NCHW") {
-        (*info)[0].dims[1] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[2] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[3] = targetImageHeight;
+        (*info)[0].dims[4] = targetImageWidth;
+    } else {
         (*info)[0].dims[2] = targetImageHeight;
         (*info)[0].dims[3] = targetImageWidth;
-    } else {
-        (*info)[0].dims[1] = targetImageHeight;
-        (*info)[0].dims[2] = targetImageWidth;
-        (*info)[0].dims[3] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[4] = convertToGrayScale ? 1 : 3;
     }
     (*info)[0].precision = FP32;
 
