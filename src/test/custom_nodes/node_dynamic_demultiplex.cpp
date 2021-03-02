@@ -119,7 +119,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const st
 }
 
 int release(void* ptr) {
-    std::cout << "DifferentOperationsCustomLibrary release" << std::endl;
+    std::cout << "Dynamic demultiplexer release" << std::endl;
     free(ptr);
     return 0;
 }
