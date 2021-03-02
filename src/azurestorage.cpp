@@ -697,7 +697,7 @@ StatusCode AzureStorageFile::isDirectory(bool* is_directory) {
                 tmp_dir = tmp_dir + (i == 0 ? "" : "/") + subdirs_[i];
                 as::cloud_file_directory as_tmp_subdir = as_share_.get_directory_reference(tmp_dir);
                 if (!as_tmp_subdir.exists()) {
-                    return StatusCode::AS_FILE_NOT_FOUND;
+                    return StatusCode::OK;
                 }
             }
 
