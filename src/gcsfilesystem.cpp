@@ -136,7 +136,7 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
         return status;
     }
     if (path.empty()) {
-        SPDLOG_LOGGER_ERROR(gcs_logger, "Directory {} is empty. Model versions are missing", path);
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Path {} is empty", path);
         *is_directory = true;
         return StatusCode::OK;
     }
