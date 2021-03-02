@@ -249,20 +249,17 @@ TEST(SequenceManager, RemoveOneIdleSequence) {
 
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId2));
-    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     sequenceManager.removeIdleSequences();
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId2));
 
     sequenceManager.getSequence(sequenceId1).updateMemoryState(newState);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     sequenceManager.removeIdleSequences();
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_FALSE(sequenceManager.sequenceExists(sequenceId2));
 }
-
 
 TEST(SequenceManager, RemoveAllIdleSequences) {
     MockedSequenceManager sequenceManager(24, "dummy", 1);
@@ -308,7 +305,6 @@ TEST(SequenceManager, MultiManagersAllIdleSequences) {
         delete managers[i];
     }
 }
-
 
 TEST(SequenceManager, ExceedMaxSequenceNumber) {
     MockedSequenceManager sequenceManager(5, "dummy", 1);
