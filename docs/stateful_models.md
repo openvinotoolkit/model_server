@@ -1,27 +1,27 @@
-# Serving stateful models with OpenVINO Model Server
+# Serving Stateful Models with OpenVINO&trade; Model Server
 
-## Table of contents
+## Table of Contents
 
-* [Stateless vs stateful models](#stateful_models)
-* [Load and serve stateful model](#stateful_serve)
-   * [Run model server with stateful model](#stateful_run)
-   * [Configuration options for stateful models](#stateful_params)
-* [Run inference on stateful model](#stateful_inference)
-    * [Special inputs for sequence handling](#stateful_inputs)
+* [Stateless vs Stateful Models](#stateful_models)
+* [Load and Serve Stateful Model](#stateful_serve)
+   * [Run Model Server with Stateful Model](#stateful_run)
+   * [Configuration Options for Stateful Models](#stateful_params)
+* [Run Inference on Stateful Model](#stateful_inference)
+    * [Special Inputs for Sequence Handling](#stateful_inputs)
     * [Inference via gRPC](#stateful_grpc)
     * [Inference via HTTP](#stateful_http)
-* [Idle sequence cleanup](#stateful_cleanup)
-* [Known limitations](#stateful_limitations)
+* [Idle Sequence Cleanup](#stateful_cleanup)
+* [Known Limitations](#stateful_limitations)
 
-## Stateless vs stateful models <a name="stateful_models"></a>
+## Stateless vs Stateful Models <a name="stateful_models"></a>
 
 ### Stateless model
 
-A stateless model treats every inference request independently and does not recognize dependencies between consecutive inference requests. Therefore it  does not maintain state between inference requests. Examples of stateless models could be image classification and object detection CNNs.
+A stateless model treats every inference request independently and does not recognize dependencies between consecutive inference requests. Therefore it  does not maintain state between inference requests. Examples of stateless models could be image classification and object detection Convolutional Neural Networks (CNN).
 
 ### Stateful model
 
-A stateful model recognizes dependencies between consecutive inference requests. It maintains state between inference requests so that next inference depends on the results of previous ones. Examples of stateful models could be online speech recogniton models like LSTMs.
+A stateful model recognizes dependencies between consecutive inference requests. It maintains state between inference requests so that next inference depends on the results of previous ones. Examples of stateful models could be online speech recogniton models like Long Short Term Memory (LSTM).
 
 ---
 
@@ -29,9 +29,9 @@ A stateful model recognizes dependencies between consecutive inference requests.
 
 Some models might take the whole sequence of data as an input and iterate over the elements of that sequence internally, keeping the state between iterations. Such models are considered stateless since they perform inference on the whole sequence **in just one inference request**.
 
-## Load and serve stateful model <a name="stateful_serve"></a>
+## Load and Serve Stateful Model <a name="stateful_serve"></a>
 
-### Run model server with stateful model <a name="stateful_run"></a>
+### Run Model Server with Stateful Model <a name="stateful_run"></a>
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in model configuration.
 
@@ -65,7 +65,7 @@ docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -
 
  Optionally, you can also set additional parameters specific for stateful models. 
  
- ### Configuration options for stateful models <a name="stateful_params"></a>
+ ### Configuration Options for Stateful Models <a name="stateful_params"></a>
 
 **Model configuration**:
 
@@ -86,9 +86,9 @@ docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -
 
 See also [all server and model configuration options](docker_container.md#params) to have a complete setup.
 
-## Run inference on stateful model <a name="stateful_inference"></a>
+## Run Inference on Stateful Model <a name="stateful_inference"></a>
 
-### Special inputs for sequence handling <a name="stateful_inputs"></a>
+### Special Inputs for Sequence Handling <a name="stateful_inputs"></a>
 
 Stateful model works on consecutive inference requests that are associated with each other and form a **sequence** of requests. Single stateful model can handle multiple independent sequences at a time. When the model server receives requests for stateful model, it maps each request to the proper sequence and its memory state. OVMS also tracks the beginning and the end of the sequence to properly manage system resources.
 
@@ -277,7 +277,7 @@ sequence_id = response_body["outputs"]["sequence_id"]
 ```
 See [rest_stateful_client.py](../example_client/rest_stateful_client.py) example client for reference.
 
-### Error codes <a name="stateful_errors"></a>
+### Error Codes <a name="stateful_errors"></a>
 
 When request is invalid or couldn't be processed you can expect following errors specific to inference on stateful models:
 
@@ -293,7 +293,7 @@ When request is invalid or couldn't be processed you can expect following errors
 | Could not find sequence control input in expected tensor proto field uint32_val. | INVALID_ARGUMENT | N/A |
 | Special input proto does not contain tensor shape information. | INVALID_ARGUMENT | N/A |
 
-### Idle sequence cleanup <a name="stateful_cleanup"></a>
+### Idle Sequence Cleanup <a name="stateful_cleanup"></a>
 
 Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, model server launches sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
 
@@ -307,7 +307,7 @@ Stateful model can either be subject to idle sequence cleanup or not.
 You can set this **per model** with `idle_sequence_cleanup` parameter. 
 If set to `true` sequence cleaner will check that model. Otherwise sequence cleaner will ommit that model and its inactive sequences will not get removed. By default this value is set to `true`.
 
-## Known limitations <a name="stateful_limitations"></a>
+## Known Limitations <a name="stateful_limitations"></a>
 
 There are following limitations when using stateful models with OVMS:
 
