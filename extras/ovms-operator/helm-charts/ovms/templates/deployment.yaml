@@ -23,12 +23,12 @@ metadata:
     heritage: {{ .Release.Service | quote }}
     release: {{ .Release.Name | quote }}
     chart: {{ template "ovms.chart" . }}
-    app: {{ template "ovms.name" . }}
+    app: {{ template "ovms.fullname" . }}
 spec:
   selector:
     matchLabels:
       release: {{ .Release.Name | quote }}
-      app: {{ template "ovms.name" . }}
+      app: {{ template "ovms.fullname" . }}
   replicas: {{ .Values.replicas }}
   template:
     metadata:
@@ -36,7 +36,7 @@ spec:
         heritage: {{ .Release.Service | quote }}
         release: {{ .Release.Name | quote }}
         chart: {{ template "ovms.chart" . }}
-        app: {{ template "ovms.name" . }}
+        app: {{ template "ovms.fullname" . }}
     spec:
       {{- if .Values.security_context }}
       securityContext:

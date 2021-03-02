@@ -22,7 +22,7 @@ metadata:
     heritage: {{ .Release.Service | quote }}
     release: {{ .Release.Name | quote }}
     chart: {{ template "ovms.chart" . }}
-    app: {{ template "ovms.name" . }}
+    app: {{ template "ovms.fullname" . }}
 spec:
   ports:
     - port: {{ .Values.grpc_port }}
@@ -34,5 +34,5 @@ spec:
       targetPort: 8081
       name: rest
   selector:
-    app: {{ template "ovms.name" . }}
+    app: {{ template "ovms.fullname" . }}
   type: {{ .Values.service_type }}
