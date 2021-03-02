@@ -46,7 +46,7 @@ int extract_text_images_into_output(struct CustomNodeTensor* output, const std::
             image = apply_grayscale(image);
         }
         if (imageLayout == "NCHW") {
-            auto imgBuffer = mat_to_nchw(image);
+            auto imgBuffer = reorder_to_nchw((float*)image.data, image.rows, image.cols, image.channels());
             std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), imgBuffer.data(), byteSize / outputBatch);
         } else {
             std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), image.data, byteSize / outputBatch);

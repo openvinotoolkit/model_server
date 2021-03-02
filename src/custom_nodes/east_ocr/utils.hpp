@@ -47,31 +47,11 @@ std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int chan
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             for (int c = 0; c < channels; ++c) {
-                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<T*>(nhwcVector)[y * channels * cols + x * channels + c];
+                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
             }
         }
     }
     return std::move(nchwVector);
-}
-
-void* mat_to_nhwc(cv::Mat mat) {
-    return (void*)(mat.data);
-}
-
-std::vector<float> mat_to_nchw(cv::Mat mat) {
-    std::vector<float> data(mat.channels() * mat.rows * mat.cols);
-    for (int y = 0; y < mat.rows; ++y) {
-        for (int x = 0; x < mat.cols; ++x) {
-            for (int c = 0; c < mat.channels(); ++c) {
-                if (mat.channels() == 1) {
-                    data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<float>(y, x);
-                } else {
-                    data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<cv::Vec3f>(y, x)[c];
-                }
-            }
-        }
-    }
-    return std::move(data);
 }
 
 const cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
