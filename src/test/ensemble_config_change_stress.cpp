@@ -758,19 +758,6 @@ public:
         if (!inputsSizeCorrect || !outputsSizeCorrect) {
             return false;
         }
-        auto isShape = [](
-                           const tensorflow::TensorShapeProto& actual,
-                           const std::vector<size_t>&& expected) -> bool {
-            if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
-                return false;
-            }
-            for (int i = 0; i < actual.dim_size(); i++) {
-                if (static_cast<unsigned int>(actual.dim(i).size()) != expected[i]) {
-                    return false;
-                }
-            }
-            return true;
-        };
         SPDLOG_ERROR("ExpectedInputsCount:{}", expectedInputs.size());
         for (auto& [expectedInputName, shapeTypeTuple] : expectedInputs) {
             bool inputNameExist = inputs.find(expectedInputName.c_str()) != inputs.end();
@@ -788,7 +775,7 @@ public:
             if (!inputTypeCorrect) {
                 return false;
             }
-            bool inputShapeCorrect{isShape(
+            bool inputShapeCorrect{isShapeTheSame(
                 inputs.at(pipelineInputName.c_str()).tensor_shape(),
                 {1, 10})};
             EXPECT_TRUE(inputShapeCorrect);
@@ -811,7 +798,7 @@ public:
         if (!outputTypeCorrect) {
             return false;
         }
-        bool outputShapeCorrect{isShape(
+        bool outputShapeCorrect{isShapeTheSame(
             outputs.at(pipelineOutputName.c_str()).tensor_shape(),
             {1, 10})};
         EXPECT_TRUE(outputShapeCorrect);

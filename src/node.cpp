@@ -25,15 +25,24 @@
 #include "ov_utils.hpp"
 #include "status.hpp"
 
+const uint64_t DEMULTIPLY_LIMIT = 10'000;
+
 namespace ovms {
 
-Node::Node(const std::string& nodeName, uint32_t demultiplyCount, std::set<std::string> gatherFromNode) :
+static std::string demultiplyCountSettingToString(std::optional<uint32_t> demultiplyCount) {
+    if (!demultiplyCount) {
+        return "NA";
+    }
+    return demultiplyCount.value() != 0 ? std::to_string(demultiplyCount.value()) : "dynamic";
+}
+
+Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
     nodeName(nodeName),
-    demultiplexCount(demultiplyCount ? std::optional<uint32_t>(demultiplyCount) : std::nullopt),
+    demultiplexCount(demultiplyCount),
     gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create node: {} with demultiply: {}, gatherFrom: {}.",
         getName(),
-        demultiplyCount,
+        demultiplyCountSettingToString(demultiplexCount),
         std::accumulate(gatherFromNode.begin(), gatherFromNode.end(), std::string("NA"), [](const std::string& lhs, const std::string& rhs) {
             if (lhs == "NA") {
                 return rhs;
@@ -52,7 +61,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
     }
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
     if (status.ok() && demultiplexCount) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), demultiplexCount.value());
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
         status = demultiplyOutputs(nodeSessionOutputs);
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
@@ -165,8 +174,20 @@ std::vector<session_key_t> Node::getReadySessions() const {
 }
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
+    if (!demultiplexCount) {
+        throw std::logic_error("Called demultiplyOutputs but node does not have demultiplexCount set");
+    }
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), demultiplexCount.value()));
+    auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
+    if (tensorDesc.getDims()[1] > DEMULTIPLY_LIMIT) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
+            tensorDesc.getDims()[1], blobMap.begin()->first, DEMULTIPLY_LIMIT);
+        return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
+    }
+    uint32_t resultsDemultiplyCount = tensorDesc.getDims()[1];
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
+    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
+
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
@@ -174,17 +195,26 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if (newDims[1] != demultiplexCount.value()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} expected: {} to demultiply",
-                newDims[1], demultiplexCount.value());
+
+        if ((demultiplexCount.value() != 0) &&
+            (newDims[1] != demultiplexCount.value())) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} of blob: {} expected: {} to demultiply",
+                newDims[1], blobName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
+        if (resultsDemultiplyCount == 0) {
+            // TODO handle dynamic demultiply_count == 0
+            SPDLOG_ERROR("Dynamic demultiplexer with demultiply == 0 is not supported yet");
+            nodeSessionOutputs.erase(metadata.getSessionKey());
+            return StatusCode::NOT_IMPLEMENTED;
+        }
+
         newDims.erase(newDims.begin() + 1);
         const InferenceEngine::TensorDesc dividedBlobDesc(
             tensorDesc.getPrecision(),
             newDims,
             InferenceEngine::Layout::ANY);
-        const auto step = blob->byteSize() / demultiplexCount.value();
+        const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
             auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
@@ -192,8 +222,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return status;
             }
             if (dividedBlob->byteSize() != step) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Created blob have wrong byte size: {}, expected: {}",
-                    dividedBlob->byteSize(), step);
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
+                    getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);

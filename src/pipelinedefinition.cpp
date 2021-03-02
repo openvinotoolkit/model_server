@@ -170,7 +170,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.modelVersion,
                                              manager,
                                              info.outputNameAliases,
-                                             info.demultiplyCount.value_or(0),
+                                             info.demultiplyCount,
                                              info.gatherFromNode));
             break;
         case NodeKind::CUSTOM:
@@ -179,7 +179,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.library,
                                              info.parameters,
                                              info.outputNameAliases,
-                                             info.demultiplyCount.value_or(0),
+                                             info.demultiplyCount,
                                              info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
@@ -363,12 +363,24 @@ public:
         for (const auto& gather : dependantNodeInfo.gatherFromNode) {
             auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
             if (it == nodeInfos.end()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Node name: {}, have gather_from: {} which does not exist in pipeline",
+                    pipelineName,
+                    dependantNodeInfo.nodeName,
+                    gather);
                 return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE;
             }
             if (!it->demultiplyCount) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Node name: {}, have gather_from: {} which is not demultiplexer node",
+                    pipelineName,
+                    dependantNodeInfo.nodeName,
+                    gather);
                 return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
             }
             if (it->kind == NodeKind::ENTRY) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Node name: {}, have gather_from: {}. Gathering from entry node is not implemented yet",
+                    pipelineName,
+                    dependantNodeInfo.nodeName,
+                    gather);
                 return StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE;
             }
         }
@@ -404,6 +416,9 @@ public:
     }
 
     Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+        if (!demultiplicatorNodeInfo.demultiplyCount) {
+            return StatusCode::OK;
+        }
         if (shape.size() < 3) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node: {} demultiply cannot occur due to not enough shape dimensions: {}",
                 this->pipelineName,
@@ -411,13 +426,29 @@ public:
                 shape.size());
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if (shape[1] != demultiplicatorNodeInfo.demultiplyCount.value()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor second dimenson value: {}",
+        if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
+            if (shape[1] != 0) {
+                // 0 means that node accepts dynamic shape
+                if (shape[1] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor second dimenson value: {}",
+                        this->pipelineName,
+                        demultiplicatorNodeInfo.demultiplyCount.value(),
+                        demultiplicatorNodeInfo.nodeName,
+                        shape[1]);
+                    return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
+                }
+            } else {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while second dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                    demultiplicatorNodeInfo.demultiplyCount.value(),
+                    demultiplicatorNodeInfo.nodeName,
+                    shape[1]);
+            }
+        } else if (shape[1] != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while second dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
                 shape[1]);
-            return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
         }
         shape.erase(shape.begin() + 1);
         return StatusCode::OK;
@@ -445,6 +476,12 @@ public:
             }
             result = influenceShapeWithDemultiplexer(tensorInputShape, *demultiplicatorNode);
             if (!result.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of gather_from node: {} does not match tensor second dimenson value: {} of node: {}",
+                    this->pipelineName,
+                    demultiplicatorNode->demultiplyCount.value(),
+                    demultiplicatorNode->nodeName,
+                    tensorInputShape[1],
+                    dependencyNodeInfo.nodeName);
                 return result;
             }
         } else if (dependantNodeInfo.gatherFromNode.size() > 1) {
@@ -660,6 +697,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
             if (!dependantNodeInfo.library.isValid()) {
+                // TODO check if there is log
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
 
@@ -1036,13 +1074,35 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             return;
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
-            shape.emplace_back(this->findNodeByName(nodeName).demultiplyCount.value());
+            auto someNodeInfo = this->findNodeByName(nodeName);
+            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
+            if (demultiplyCount == 0) {
+                tensor_map_t nodeOutputsInfo;
+                auto result = PipelineDefinition::getCustomNodeMetadata(
+                    someNodeInfo,
+                    nodeOutputsInfo,
+                    someNodeInfo.library.getOutputsInfo,
+                    this->pipelineName);
+                if (!result.ok()) {
+                    SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
+                    return;
+                }
+                if (nodeOutputsInfo.size() == 0) {
+                    SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
+                    return;
+                } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
+                    SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
+                    return;
+                }
+                demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[1];
+            }
+
+            shape.emplace_back(demultiplyCount);
         }
         for (const auto& [previousNodeName, _] : this->connections.at(nodeName)) {
             search(previousNodeName);
         }
     };
-
     search(info.nodeName);
 
     if (info.gatherFromNode.size() != shape.size()) {
