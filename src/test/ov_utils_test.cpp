@@ -105,3 +105,14 @@ TEST(OVUtils, ConstCopyBlob) {
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
     EXPECT_NE((void*)copyBlob->buffer(), (const void*)originalBlob->cbuffer());
 }
+
+TEST(OVUtils, CreateBlobWithSecondDimensionEqual0) {
+    const std::vector<size_t> shape{1, 0, 3, 224, 224};
+    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
+    const InferenceEngine::Layout layout{InferenceEngine::Layout::ANY};
+
+    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+    std::vector<float> data(0);
+    InferenceEngine::Blob::Ptr originalBlob = InferenceEngine::make_shared_blob<float>(desc, data.data());
+    EXPECT_NE(originalBlob, nullptr);
+}
