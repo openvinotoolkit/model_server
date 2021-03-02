@@ -29,83 +29,6 @@ static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
 static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
 
-#define NODE_ASSERT(cond, msg)                       \
-    if (!(cond)) {                                   \
-        std::cout << "Assert: " << msg << std::endl; \
-        return 1;                                    \
-    }
-
-template <typename T>
-std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int channels) {
-    std::vector<T> nhwcVector(rows * cols * channels);
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            for (int c = 0; c < channels; ++c) {
-                nhwcVector[y * channels * cols + x * channels + c] = nchwVector[c * (rows * cols) + y * cols + x];
-            }
-        }
-    }
-    return std::move(nhwcVector);
-}
-
-template <typename T>
-std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
-    std::vector<T> nchwVector(rows * cols * channels);
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            for (int c = 0; c < channels; ++c) {
-                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<T*>(nhwcVector)[y * channels * cols + x * channels + c];
-            }
-        }
-    }
-    return std::move(nchwVector);
-}
-
-void* mat_to_nhwc(cv::Mat mat) {
-    return (void*)(mat.data);
-}
-
-std::vector<float> mat_to_nchw(cv::Mat mat) {
-    std::vector<float> data(mat.channels() * mat.rows * mat.cols);
-    for (int y = 0; y < mat.rows; ++y) {
-        for (int x = 0; x < mat.cols; ++x) {
-            for (int c = 0; c < mat.channels(); ++c) {
-                data[c * (mat.rows * mat.cols) + y * mat.cols + x] = mat.at<cv::Vec3f>(y, x)[c];
-            }
-        }
-    }
-    return std::move(data);
-}
-
-const cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
-    uint64_t height = input->dims[1];
-    uint64_t width = input->dims[2];
-    return cv::Mat(height, width, CV_32FC3, input->data);
-}
-
-const cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
-    uint64_t channels = input->dims[1];
-    uint64_t rows = input->dims[2];
-    uint64_t cols = input->dims[3];
-    auto nhwcVector = reorder_to_nhwc<float>((float*)input->data, rows, cols, channels);
-
-    cv::Mat image(rows, cols, CV_32FC3);
-    std::memcpy(image.data, nhwcVector.data(), nhwcVector.size() * sizeof(float));
-    return image;
-}
-
-cv::Mat crop_and_resize(cv::Mat originalImage, cv::Rect roi, cv::Size targetShape) {
-    cv::Mat resized;
-    cv::resize(originalImage(roi), resized, targetShape);
-    return resized;
-}
-
-cv::Mat apply_grayscale(cv::Mat image) {
-    cv::Mat grayscaled;
-    cv::cvtColor(image, grayscaled, cv::COLOR_BGR2GRAY);
-    return grayscaled;
-}
-
 int extract_text_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, const std::string& imageLayout) {
     uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
@@ -345,7 +268,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     }
 
     if (debugMode)
-        std::cout << "Total findings after NMS filter: " << filteredBoxes.size() << std::endl;
+        std::cout << "Total findings after NMS2 (non max suppression) filter: " << filteredBoxes.size() << std::endl;
 
     *outputsLength = 3;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
