@@ -2,6 +2,8 @@
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
 
+[Stateful model example](stateful) to run *Predict* functions over gRPC and REST API on stateful Kaldi model.
+
 It covers following topics:
 * <a href="#grpc-api">gRPC API Client Examples </a>
 * <a href="#rest-api">REST API Client Examples  </a>
@@ -33,7 +35,7 @@ usage: get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
 
 ```
 
-- Optional Arguments
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -71,7 +73,7 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 
 ```
 
-- Optional Arguments
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -112,10 +114,14 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--iterations ITERATIONS]
                               [--batchsize BATCHSIZE]
                               [--model_name MODEL_NAME]
-                              [--pipeline_name PIPELINE_NAME]
+                              [--pipeline_name PIPELINE_NAME] 
+                              [--tls]
+                              [--server_cert SERVER_CERT]
+                              [--client_cert CLIENT_CERT]
+                              [--client_key CLIENT_KEY]
 ```
 
-- Optional Arguments
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -132,6 +138,10 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 | --batchsize | Number of images in a single request. Default: 1 |
 | --model_name | Define model name, must be same as is in service. Default: resnet|
 | --pipeline_name | Define pipeline name, must be same as is in service |
+| --tls | enables TLS communication with gRPC endpoint |
+| --server_cert SERVER_CERT | Path to the server certificate, used only with TLS communication |
+| --client_cert CLIENT_CERT | Path to the client certificate, used only with TLS communication |
+| --client_key CLIENT_KEY | Path to the client key, used only with TLS communication |
 
 
 - Usage example
@@ -199,9 +209,10 @@ usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
                               [--model_name MODEL_NAME] [--size SIZE]
+                              [--rgb_image RGB_IMAGE]
 ```
 
-- Optional Argument
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -213,7 +224,7 @@ usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
 | --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
 | --model_name | Define model name, must be same as is in service. Default: resnet|
 | --size SIZE  | The size of the image in the model|
-
+| --rgb_image RGB_IMAGE | Convert BGR channels to RGB channels in the input image |
 
 - Usage example
 
@@ -274,7 +285,7 @@ to install and run them (provided for Linux OS):
 python multi_inputs.py --help
 ```
 
-- Optional Arguments
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -341,7 +352,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
 ```
-- Optional arguements 
+- Arguments 
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -376,7 +387,7 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
                            [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 ```
-- Optional arguements 
+- Arguments 
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -471,9 +482,13 @@ usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--model_name MODEL_NAME]
                               [--request_format {row_noname,row_name,column_noname,column_name}]
                               [--model_version MODEL_VERSION]
+                              [--client_cert CLIENT_CERT]
+                              [--client_key CLIENT_KEY]
+                              [--ignore_server_verification]
+                              [--server_cert SERVER_CERT]
 ```
 
-- Optional Arguments :
+- Arguments :
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -491,6 +506,10 @@ usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 | --model_name MODEL_NAME| Define model name, must be same as is in service. Default: resnet|
 | --request_format {row_noname,row_name,column_noname,column_name}| Request format according to TF Serving API:row_noname,row_name,column_noname,column_name|
 | --model_version MODEL_VERSION| Model version to be used. Default: LATEST |
+| --client_cert CLIENT_CERT | Specify mTLS client certificate file. Default: None |
+| --client_key CLIENT_KEY | Specify mTLS client key file. Default: None |
+| --ignore_server_verification | Skip TLS host verification. Do not use in production. Default: False |
+| --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store |
 
 - Usage Example
 ```bash

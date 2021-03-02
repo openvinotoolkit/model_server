@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,27 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+
+#include "node_library.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-struct SequenceProcessingSpec {
-    uint32_t sequenceControlInput;
-    uint64_t sequenceId;
-    SequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) :
-        sequenceControlInput(sequenceControlInput),
-        sequenceId(sequenceId) {}
-};
-
-class ProcessingSpec {
-private:
-    std::shared_ptr<SequenceProcessingSpec> sequenceProcessingSpec;
+class CustomNodeLibraryManager {
+    std::unordered_map<std::string, NodeLibrary> libraries;
 
 public:
-    std::shared_ptr<SequenceProcessingSpec> getSequenceProcessingSpecPtr() { return sequenceProcessingSpec; }
-
-    void setSequenceProcessingSpec(uint32_t sequenceControlInput, uint64_t sequenceId) {
-        sequenceProcessingSpec = std::make_shared<SequenceProcessingSpec>(sequenceControlInput, sequenceId);
-    }
+    Status loadLibrary(const std::string& name, const std::string& basePath);
+    Status getLibrary(const std::string& name, NodeLibrary& library) const;
+    void unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig);
 };
+
 }  // namespace ovms

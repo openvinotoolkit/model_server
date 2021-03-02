@@ -16,16 +16,43 @@
 #include "pipeline_factory.hpp"
 
 #include "logging.hpp"
+#include "pipeline.hpp"
+#include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 
 namespace ovms {
+
+bool PipelineFactory::definitionExists(const std::string& name) const {
+    std::shared_lock lock(definitionsMtx);
+    return definitions.count(name) == 1;
+}
+
+PipelineDefinition* PipelineFactory::findDefinitionByName(const std::string& name) const {
+    std::shared_lock lock(definitionsMtx);
+    auto it = definitions.find(name);
+    if (it == std::end(definitions)) {
+        return nullptr;
+    } else {
+        return it->second.get();
+    }
+}
+
+void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
+    std::for_each(definitions.begin(),
+        definitions.end(),
+        [&pipelinesInConfigFile, &manager](auto& nameDefinitionPair) {
+            if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
+                nameDefinitionPair.second->retire(manager);
+            }
+        });
+}
 
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,
     const pipeline_connections_t& connections,
     ModelManager& manager) {
     if (definitionExists(pipelineName)) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Two pipelines with the same name: {} defined in config file. Ignoring the second definition", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "pipeline definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
@@ -83,5 +110,14 @@ void PipelineFactory::revalidatePipelines(ModelManager& manager) {
             }
         }
     }
+}
+const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(definitionsMtx);
+    names.reserve(definitions.size());
+    for (auto& [name, definition] : definitions) {
+        names.push_back(definition->getName());
+    }
+    return names;
 }
 }  // namespace ovms

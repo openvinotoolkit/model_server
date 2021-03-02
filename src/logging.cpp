@@ -24,8 +24,9 @@ std::shared_ptr<spdlog::logger> azurestorage_logger = std::make_shared<spdlog::l
 std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3");
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
+std::shared_ptr<spdlog::logger> sequence_manager_logger = std::make_shared<spdlog::logger>("sequence_manager");
 
-const std::string default_pattern = "[%Y-%m-%d %T.%e][%n][%l][%s:%#] %v";
+const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
 void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
     logger->set_level(spdlog::level::info);
@@ -48,12 +49,14 @@ void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr>
     s3_logger->set_pattern(default_pattern);
     modelmanager_logger->set_pattern(default_pattern);
     dag_executor_logger->set_pattern(default_pattern);
+    sequence_manager_logger->set_pattern(default_pattern);
     for (auto sink : sinks) {
         gcs_logger->sinks().push_back(sink);
         azurestorage_logger->sinks().push_back(sink);
         s3_logger->sinks().push_back(sink);
         modelmanager_logger->sinks().push_back(sink);
         dag_executor_logger->sinks().push_back(sink);
+        sequence_manager_logger->sinks().push_back(sink);
     }
     set_log_level(log_level, serving_logger);
     set_log_level(log_level, gcs_logger);
@@ -61,6 +64,7 @@ void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr>
     set_log_level(log_level, s3_logger);
     set_log_level(log_level, modelmanager_logger);
     set_log_level(log_level, dag_executor_logger);
+    set_log_level(log_level, sequence_manager_logger);
     spdlog::set_default_logger(serving_logger);
 }
 

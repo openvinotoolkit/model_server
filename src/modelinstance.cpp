@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,9 +29,17 @@
 
 #include "config.hpp"
 #include "customloaders.hpp"
+#include "deserialization.hpp"
+#include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "logging.hpp"
+#include "prediction_service_utils.hpp"
+#include "serialization.hpp"
 #include "stringutils.hpp"
+#include "tensorinfo.hpp"
+
+#define DEBUG
+#include "timer.hpp"
 
 using namespace InferenceEngine;
 
@@ -543,6 +551,30 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
     return status;
 }
 
+Status ModelInstance::reloadModelIfRequired(
+    Status validationStatus,
+    const tensorflow::serving::PredictRequest* requestProto,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    Status status = validationStatus;
+    if (status.batchSizeChangeRequired()) {
+        status = reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed. Status Code: {}, Error {}",
+                getName(), getVersion(), status.getCode(), status.string());
+        }
+    } else if (status.reshapeRequired()) {
+        status = reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
+        if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
+            SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
+                getName(), getVersion(), status.getCode(), status.string());
+        }
+    } else if (!status.ok()) {
+        SPDLOG_WARN("Model: {}, version: {} validation of inferRequest failed. Status Code: {}, Error: {}",
+            getName(), getVersion(), status.getCode(), status.string());
+    }
+    return status;
+}
+
 Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard) {
     // order is important here for performance reasons
@@ -630,6 +662,27 @@ void ModelInstance::unloadModel(bool isPermanent) {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+}
+
+const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput) {
+    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        if (requestInput.tensor_shape().dim(i).size() < 0) {
+            const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+            return Status(StatusCode::INVALID_SHAPE, details);
+        }
+    }
+    return StatusCode::OK;
+}
+const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
+    if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
+        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+    }
+    return StatusCode::OK;
 }
 
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,
@@ -744,13 +797,10 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
     Status finalStatus = StatusCode::OK;
 
     // Network and request must have the same amount of inputs
-    if (request->inputs_size() < 0 || getInputsInfo().size() != static_cast<size_t>(request->inputs_size())) {
-        std::stringstream ss;
-        ss << "Expected: " << getInputsInfo().size() << "; Actual: " << request->inputs_size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of inputs - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
-    }
+    auto expectedNumberOfInputs = getInputsInfo().size();
+    finalStatus = validateNumberOfInputs(request, expectedNumberOfInputs);
+    if (!finalStatus.ok())
+        return finalStatus;
 
     for (const auto& pair : getInputsInfo()) {
         const auto& name = pair.first;
@@ -770,7 +820,11 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         Mode batchingMode = getModelConfig().getBatchingMode();
         Mode shapeMode = getModelConfig().isShapeAuto(name) ? AUTO : FIXED;
 
-        auto status = validatePrecision(*networkInput, requestInput);
+        auto status = checkIfShapeValuesNegative(requestInput);
+        if (!status.ok())
+            return status;
+
+        status = validatePrecision(*networkInput, requestInput);
         if (!status.ok())
             return status;
 
@@ -808,5 +862,68 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             return status;
     }
     return finalStatus;
+}
+
+Status ModelInstance::performInference(InferenceEngine::InferRequest& inferRequest) {
+    try {
+        inferRequest.StartAsync();
+        InferenceEngine::StatusCode sts = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+        if (sts != InferenceEngine::StatusCode::OK) {
+            Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+            SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
+            return status;
+        }
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
+        return status;
+    }
+    return StatusCode::OK;
+}
+
+Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
+    tensorflow::serving::PredictResponse* responseProto,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    Timer timer;
+    using std::chrono::microseconds;
+
+    auto status = validate(requestProto);
+    status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
+    if (!status.ok())
+        return status;
+
+    timer.start("get infer request");
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    int executingInferId = executingStreamIdGuard.getId();
+    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    timer.stop("get infer request");
+    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+
+    timer.start("deserialize");
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
+    timer.stop("deserialize");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+
+    timer.start("prediction");
+    status = performInference(inferRequest);
+    timer.stop("prediction");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+
+    timer.start("serialize");
+    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    timer.stop("serialize");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+
+    return StatusCode::OK;
 }
 }  // namespace ovms

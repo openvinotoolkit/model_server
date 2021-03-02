@@ -24,38 +24,11 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelinstance.hpp"
-#include "modelmanager.hpp"
+#include "shapeinfo.hpp"
 
 namespace ovms {
-
-const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
 size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
-Status getModelInstance(ModelManager& manager,
-    const std::string& modelName,
-    model_version_t modelVersionId,
-    std::shared_ptr<ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
-
-Status getPipeline(ModelManager& manager,
-    std::unique_ptr<Pipeline>& pipelinePtr,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response);
-
-Status performInference(ovms::OVInferRequestsQueue& inferRequestsQueue, const int executingInferId, InferenceEngine::InferRequest& inferRequest);
-
-Status inference(
-    ModelInstance& modelVersion,
-    const tensorflow::serving::PredictRequest* requestProto,
-    tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
-Status reloadModelIfRequired(
-    Status validationStatus,
-    ModelInstance& modelInstance,
-    const tensorflow::serving::PredictRequest* requestProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 }  // namespace ovms

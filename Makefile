@@ -48,9 +48,9 @@ INSTALL_RPMS_FROM_URL ?=
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= releases/2021/2
 
-DLDT_PACKAGE_URL ?= ""
+DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_latest.tgz
 OV_USE_BINARY ?= 1
-YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7-*
+YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt

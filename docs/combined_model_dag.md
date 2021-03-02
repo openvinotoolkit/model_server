@@ -1,4 +1,4 @@
-## Image classification with models ensemble
+## DAG Scheduler combining results from two models
 
 This document presents a models ensemble as an example of [DAG Scheduler](dag_scheduler.md) implementation.
 It describes how to combine several models to perform multiple inference operations with a single prediction call.

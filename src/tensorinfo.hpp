@@ -18,17 +18,23 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <inference_engine.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelconfig.hpp"
+#include "shapeinfo.hpp"
 
 namespace ovms {
+
+class TensorInfo;
+
+using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 /**
      * @brief Class containing information about the tensor
@@ -81,11 +87,7 @@ public:
          */
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
-        const shape_t& shape) :
-        name(name),
-        mapping(""),
-        precision(precision),
-        shape(shape) {}
+        const shape_t& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -94,17 +96,14 @@ public:
          * @param precision 
          * @param shape
          * @param layout 
-         * @param tensorDesc 
          */
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout) :
-        name(name),
-        mapping(""),
-        precision(precision),
-        shape(shape),
-        layout(layout) {}
+        const InferenceEngine::Layout& layout);
+
+    TensorInfo(const std::string& name,
+        const InferenceEngine::TensorDesc& tensorDesc);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -118,148 +117,55 @@ public:
         const std::string& mapping,
         const InferenceEngine::Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout) :
-        name(name),
-        mapping(mapping),
-        precision(precision),
-        shape(shape),
-        layout(layout) {}
+        const InferenceEngine::Layout& layout);
 
     /**
          * @brief Get the Name object
          * 
          * @return const std::string& 
          */
-    const std::string& getName() const {
-        return name;
-    }
+    const std::string& getName() const;
 
     /**
          * @brief Get the tensor name - as in network model or mapped name
          * 
          * @return const std::string& 
          */
-    const std::string& getMappedName() const {
-        return mapping.size() == 0 ? name : mapping;
-    }
+    const std::string& getMappedName() const;
 
     /**
          * @brief Get the Precision object
          * 
          * @return const InferenceEngine::Precision
          */
-    const InferenceEngine::Precision getPrecision() const {
-        return precision;
-    }
+    const InferenceEngine::Precision getPrecision() const;
 
     /**
          * @brief Set the Precision object
          * 
          * @return const InferenceEngine::Precision
          */
-    void setPrecision(const InferenceEngine::Precision& requestedPrecision) {
-        precision = requestedPrecision;
-    }
+    void setPrecision(const InferenceEngine::Precision& requestedPrecision);
 
     /**
          * @brief Get the Precision As DataType object
          * 
          * @return const tensorflow::DataType
          */
-    const tensorflow::DataType getPrecisionAsDataType() const {
-        return getPrecisionAsDataType(precision);
-    }
+    const tensorflow::DataType getPrecisionAsDataType() const;
 
-    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision) {
-        switch (precision) {
-        case InferenceEngine::Precision::FP32:
-            return tensorflow::DataType::DT_FLOAT;
-        case InferenceEngine::Precision::FP16:
-            return tensorflow::DataType::DT_HALF;
-        // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-        case InferenceEngine::Precision::I16:
-            return tensorflow::DataType::DT_INT16;
-        case InferenceEngine::Precision::U8:
-            return tensorflow::DataType::DT_UINT8;
-        case InferenceEngine::Precision::I8:
-            return tensorflow::DataType::DT_INT8;
-        case InferenceEngine::Precision::U16:
-            return tensorflow::DataType::DT_UINT16;
-        case InferenceEngine::Precision::I32:
-            return tensorflow::DataType::DT_INT32;
-        case InferenceEngine::Precision::U64:
-            return tensorflow::DataType::DT_UINT64;
-        case InferenceEngine::Precision::I64:
-            return tensorflow::DataType::DT_INT64;
-        // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
-        case InferenceEngine::Precision::BOOL:
-            return tensorflow::DataType::DT_BOOL;
-        default:
-            return tensorflow::DataType::DT_INVALID;
-        }
-    }
+    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
 
     /**
         * @brief Get the Precision As String object
         *
         * @return const std::string
         */
-    const std::string getPrecisionAsString() const {
-        return getPrecisionAsString(precision);
-    }
+    const std::string getPrecisionAsString() const;
 
-    static const std::string getPrecisionAsString(InferenceEngine::Precision precision) {
-        switch (precision) {
-        case InferenceEngine::Precision::FP32:
-            return "FP32";
-        case InferenceEngine::Precision::FP16:
-            return "FP16";
-            // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-        case InferenceEngine::Precision::I16:
-            return "I16";
-        case InferenceEngine::Precision::U8:
-            return "U8";
-        case InferenceEngine::Precision::I8:
-            return "I8";
-        case InferenceEngine::Precision::U16:
-            return "U16";
-        case InferenceEngine::Precision::I32:
-            return "I32";
-        case InferenceEngine::Precision::I64:
-            return "I64";
-        case InferenceEngine::Precision::BOOL:
-            return "BOOL";
-        default:
-            return "DT_INVALID";
-        }
-    }
+    static const std::string getPrecisionAsString(const InferenceEngine::Precision precision);
 
-    static const std::string getDataTypeAsString(tensorflow::DataType dataType) {
-        switch (dataType) {
-        case tensorflow::DataType::DT_FLOAT:
-            return "FP32";
-        case tensorflow::DataType::DT_HALF:
-            return "FP16";
-        case tensorflow::DataType::DT_INT16:
-            return "I16";
-        case tensorflow::DataType::DT_UINT8:
-            return "U8";
-        case tensorflow::DataType::DT_INT8:
-            return "I8";
-        case tensorflow::DataType::DT_UINT16:
-            return "U16";
-        case tensorflow::DataType::DT_INT32:
-            return "I32";
-        case tensorflow::DataType::DT_UINT64:
-            return "U64";
-        case tensorflow::DataType::DT_INT64:
-            return "I64";
-        case tensorflow::DataType::DT_BOOL:
-            return "BOOL";
-        default:
-            return "DT_INVALID";
-        }
-    }
+    static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
     /**
          * @brief Get the InferenceEngine Layout From String 
@@ -267,42 +173,7 @@ public:
          * @param layout 
          * @return InferenceEngine::Layout 
          */
-    static InferenceEngine::Layout getLayoutFromString(const std::string& layout) {
-        if (layout == "ANY")
-            return InferenceEngine::Layout::ANY;
-        if (layout == "NCHW")
-            return InferenceEngine::Layout::NCHW;
-        if (layout == "NHWC")
-            return InferenceEngine::Layout::NHWC;
-        if (layout == "NCDHW")
-            return InferenceEngine::Layout::NCDHW;
-        if (layout == "NDHWC")
-            return InferenceEngine::Layout::NDHWC;
-        if (layout == "OIHW")
-            return InferenceEngine::Layout::OIHW;
-        if (layout == "GOIHW")
-            return InferenceEngine::Layout::GOIHW;
-        if (layout == "OIDHW")
-            return InferenceEngine::Layout::OIDHW;
-        if (layout == "GOIDHW")
-            return InferenceEngine::Layout::GOIDHW;
-        if (layout == "SCALAR")
-            return InferenceEngine::Layout::SCALAR;
-        if (layout == "C")
-            return InferenceEngine::Layout::C;
-        if (layout == "CHW")
-            return InferenceEngine::Layout::CHW;
-        if (layout == "HW")
-            return InferenceEngine::Layout::HW;
-        if (layout == "NC")
-            return InferenceEngine::Layout::NC;
-        if (layout == "CN")
-            return InferenceEngine::Layout::CN;
-        if (layout == "BLOCKED")
-            return InferenceEngine::Layout::BLOCKED;
-
-        return InferenceEngine::Layout::ANY;
-    }
+    static InferenceEngine::Layout getLayoutFromString(const std::string& layout);
 
     /**
          * @brief Get the layout name from InferenceEngine Layout
@@ -310,106 +181,39 @@ public:
          * @param InferenceEngine::Layout
          * @return std::string
          */
-    static std::string getStringFromLayout(InferenceEngine::Layout layout) {
-        switch (layout) {
-        case InferenceEngine::Layout::ANY:
-            return "ANY";
-        case InferenceEngine::Layout::NCHW:
-            return "NCHW";
-        case InferenceEngine::Layout::NHWC:
-            return "NHWC";
-        case InferenceEngine::Layout::NCDHW:
-            return "NCDHW";
-        case InferenceEngine::Layout::NDHWC:
-            return "NDHWC";
-        case InferenceEngine::Layout::OIHW:
-            return "OIHW";
-        case InferenceEngine::Layout::GOIHW:
-            return "GOIHW";
-        case InferenceEngine::Layout::OIDHW:
-            return "OIDHW";
-        case InferenceEngine::Layout::GOIDHW:
-            return "GOIDHW";
-        case InferenceEngine::Layout::SCALAR:
-            return "SCALAR";
-        case InferenceEngine::Layout::C:
-            return "C";
-        case InferenceEngine::Layout::CHW:
-            return "CHW";
-        case InferenceEngine::Layout::HW:
-            return "HW";
-        case InferenceEngine::Layout::NC:
-            return "NC";
-        case InferenceEngine::Layout::CN:
-            return "CN";
-        case InferenceEngine::Layout::BLOCKED:
-            return "BLOCKED";
-        }
-        return "";
-    }
+    static std::string getStringFromLayout(const InferenceEngine::Layout layout);
 
     /**
          * @brief Get the Layout enum
-         * 
+         *
          * @return const InferenceEngine::Layout
          */
-    const InferenceEngine::Layout& getLayout() const {
-        return layout;
-    }
+    const InferenceEngine::Layout& getLayout() const;
 
     /**
          * @brief Gets input shape
          *
          * @return shape
          */
-    const shape_t& getShape() const {
-        return shape;
-    }
+    const shape_t& getShape() const;
+
+    void setShape(const shape_t& shape);
+
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shapee) const;
 
     /**
          * @brief Get the Tensor Desc object
-         * 
-         * @return const InferenceEngine::TensorDesc& 
+         *
+         * @return const InferenceEngine::TensorDesc&
          */
-    const InferenceEngine::TensorDesc getTensorDesc() const {
-        return InferenceEngine::TensorDesc{precision, shape, layout};
-    }
+    const InferenceEngine::TensorDesc getTensorDesc() const;
 
-    static std::string shapeToString(const shape_t& shape) {
-        std::ostringstream oss;
-        oss << "(";
-        size_t i = 0;
-        if (shape.size() > 0) {
-            for (; i < shape.size() - 1; i++) {
-                oss << shape[i] << ",";
-            }
-            oss << shape[i];
-        }
-        oss << ")";
+    static std::string shapeToString(const shape_t& shape);
 
-        return oss.str();
-    }
+    static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
 
-    static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape) {
-        std::ostringstream oss;
-        oss << "(";
-        int i = 0;
-        if (tensorShape.dim_size() > 0) {
-            for (; i < tensorShape.dim_size() - 1; i++) {
-                oss << tensorShape.dim(i).size() << ",";
-            }
-            oss << tensorShape.dim(i).size();
-        }
-        oss << ")";
+    static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
-        return oss.str();
-    }
-
-    static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo() {
-        static std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>("", InferenceEngine::Precision::UNSPECIFIED, shape_t{});
-        return info;
-    }
+    static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
 };
-
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 }  // namespace ovms

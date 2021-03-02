@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,14 +28,21 @@
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "customloaders.hpp"
 #include "filesystem.hpp"
+#include "global_sequences_viewer.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 
 namespace ovms {
+
+const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+
 class IVersionReader;
+class CustomNodeLibraryManager;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -44,9 +51,9 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager() = default;
+    ModelManager();
 
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
 
     /**
      * @brief A collection of models
@@ -56,23 +63,22 @@ protected:
 
     PipelineFactory pipelineFactory;
 
+    std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    std::unique_ptr<GlobalSequencesViewer> sequenceViewer;
+
 private:
     /**
      * @brief Private copying constructor
      */
     ModelManager(const ModelManager&) = delete;
 
-    /**
-     * @brief Reads models from configuration file
-     * 
-     * @param jsonFilename configuration file
-     * @return Status 
-     */
-    Status loadConfig(const std::string& jsonFilename);
-    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload);
-    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart);
+    Status cleanupModelTmpFiles(ModelConfig& config);
+    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
+    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
+    Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
@@ -80,6 +86,7 @@ private:
      * @brief creates customloader from the loader configuration
      */
     Status createCustomLoader(CustomLoaderConfig& loaderConfig);
+
     /**
      * @brief Watcher thread for monitor changes in config
      */
@@ -114,16 +121,26 @@ private:
     void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
 
     /**
-     * @brief Mutex for blocking concurrent add & find of model
+     * @brief Mutex for protecting concurrent reloading config
      */
-    mutable std::shared_mutex modelsMtx;
+    mutable std::recursive_mutex configMtx;
 
     /**
      * Time interval between each config file check
      */
     uint watcherIntervalSec = 1;
 
+    /**
+     * @brief Time of last config change
+     */
+    int64_t lastConfigChangeTime;
+
 public:
+    /**
+     * @brief Mutex for blocking concurrent add & find of model
+     */
+    mutable std::shared_mutex modelsMtx;
+
     /**
      * @brief Gets the instance of ModelManager
      */
@@ -143,7 +160,7 @@ public:
      * @brief Destroy the Model Manager object
      * 
      */
-    virtual ~ModelManager() {}
+    virtual ~ModelManager();
 
     /**
      * @brief Gets config filename
@@ -163,9 +180,13 @@ public:
         return models;
     }
 
+    void startSequenceWatcher();
+
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+
+    const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 
     /**
      * @brief Finds model with specific name
@@ -175,6 +196,15 @@ public:
      * @return pointer to Model or nullptr if not found 
      */
     const std::shared_ptr<Model> findModelByName(const std::string& name) const;
+
+    Status getModelInstance(const std::string& modelName,
+        ovms::model_version_t modelVersionId,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+
+    Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response);
 
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)
@@ -262,8 +292,8 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name) {
-        return std::make_shared<Model>(name);
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
+        return std::make_shared<Model>(name, isStateful);
     }
 
     /**
@@ -297,6 +327,24 @@ public:
         std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
+
+    /**
+     * @brief Check if configuration file reload is needed.
+     */
+    bool configFileReloadNeeded();
+
+    /**
+     * @brief Reads models from configuration file
+     * 
+     * @param jsonFilename configuration file
+     * @return Status 
+     */
+    Status loadConfig(const std::string& jsonFilename);
+
+    /**
+     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
+     */
+    void updateConfigurationWithoutConfigFile();
 };
 
 }  // namespace ovms

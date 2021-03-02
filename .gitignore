@@ -3,6 +3,7 @@
 .vscode
 .vs
 .idea
+.gdb_history
 version
 __pycache__/
 report.json

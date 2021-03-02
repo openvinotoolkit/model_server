@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
 #pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
+#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
@@ -48,6 +49,10 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "CPU",                 // target device
     "1",                   // batchsize
     1,                     // NIREQ
+    false,                 // is stateful
+    false,                 // low latency transformation enabled
+    60,                    // stateful sequence timeout
+    500,                   // steteful sequence max number
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
 };
@@ -58,6 +63,10 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     "CPU",               // target device
     "1",                 // batchsize
     1,                   // NIREQ
+    false,               // is stateful
+    false,               // low latency transformation enabled
+    60,                  // stateful sequence timeout
+    500,                 // steteful sequence max number
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
 };
@@ -66,6 +75,7 @@ constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
+constexpr const float DUMMY_ADDITION_VALUE = 1.0;
 
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
@@ -77,18 +87,9 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-static ovms::tensor_map_t prepareTensors(
+ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32) {
-    ovms::tensor_map_t result;
-    for (const auto& kv : tensors) {
-        result[kv.first] = std::make_shared<ovms::TensorInfo>(
-            kv.first,
-            precision,
-            kv.second);
-    }
-    return result;
-}
+    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32);
 
 static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs) {
     tensorflow::serving::PredictRequest request;
@@ -108,6 +109,12 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
     return request;
 }
 
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
+
+std::string readableError(const float* expected_output, const float* actual_output, const size_t size);
+
 static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
     std::vector<int> shape;
     for (int i = 0; i < proto.dim_size(); i++) {
@@ -123,18 +130,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 }
 
 // returns path to a file.
-static std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json") {
-    std::ofstream configFile{filename};
-    spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
-    configFile << content << std::endl;
-    configFile.close();
-    if (configFile.fail()) {
-        spdlog::info("Closing configFile failed");
-    } else {
-        spdlog::info("Closing configFile succeed");
-    }
-    return filename;
-}
+std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -157,6 +153,16 @@ public:
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+    }
+    ovms::Status loadConfig(const std::string& jsonFilename) {
+        return ModelManager::loadConfig(jsonFilename);
+    }
+
+    /**
+     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
+     */
+    void updateConfigurationWithoutConfigFile() {
+        ModelManager::updateConfigurationWithoutConfigFile();
     }
 };
 class TestWithTempDir : public ::testing::Test {
@@ -182,3 +188,12 @@ protected:
 };
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
+
+template <typename T>
+static ovms::NodeLibrary createLibraryMock() {
+    return ovms::NodeLibrary{
+        T::execute,
+        T::getInputsInfo,
+        T::getOutputsInfo,
+        T::release};
+}

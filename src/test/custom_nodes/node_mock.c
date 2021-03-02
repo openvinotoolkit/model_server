@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,22 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include "ovinferrequestsqueue.hpp"
+#include "../../custom_node_interface.h"
+int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+    return 1;
+}
 
-namespace ovms {
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream().get()) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    return 2;
+}
 
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-};
-}  //  namespace ovms
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    return 3;
+}
+
+int release(void* ptr) {
+    return 4;
+}

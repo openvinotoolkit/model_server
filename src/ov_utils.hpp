@@ -15,12 +15,30 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+
 #include <inference_engine.hpp>
+#include <spdlog/spdlog.h>
 
 #include "status.hpp"
 
 namespace ovms {
 
-Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob);
+Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc);
 
+template <typename T>
+Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {
+    auto& description = sourceBlob->getTensorDesc();
+    auto status = createSharedBlob(destinationBlob, description);
+    if (!status.ok()) {
+        return status;
+    }
+
+    if (destinationBlob->byteSize() != sourceBlob->byteSize()) {
+        destinationBlob = nullptr;
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    }
+    std::memcpy((void*)destinationBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
+    return StatusCode::OK;
+}
 }  // namespace ovms

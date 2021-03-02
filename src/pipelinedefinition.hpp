@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <set>
 #include <shared_mutex>
@@ -30,47 +31,20 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "model_version_policy.hpp"
-#include "node.hpp"
-#include "pipeline.hpp"
+#include "aliases.hpp"
+#include "modelversion.hpp"
+#include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
 class ModelManager;
+class Pipeline;
 
-using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, InputPairs>>;
-
-enum class NodeKind {
-    ENTRY,
-    DL,
-    EXIT
-};
-
-const std::string DL_NODE_CONFIG_TYPE = "DL model";
-
-Status toNodeKind(const std::string& str, NodeKind& nodeKind);
-
-struct NodeInfo {
-    NodeKind kind;
-    std::string nodeName;
-    std::string modelName;
-    std::optional<model_version_t> modelVersion;
-    std::unordered_map<std::string, std::string> outputNameAliases;
-
-    NodeInfo(NodeKind kind,
-        const std::string& nodeName,
-        const std::string& modelName = "",
-        std::optional<model_version_t> modelVersion = std::nullopt,
-        std::unordered_map<std::string, std::string> outputNameAliases = {}) :
-        kind(kind),
-        nodeName(nodeName),
-        modelName(modelName),
-        modelVersion(modelVersion),
-        outputNameAliases(outputNameAliases) {}
-};
+using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class PipelineDefinition {
     struct ValidationResultNotifier {
@@ -110,10 +84,13 @@ protected:
 private:
     std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
-    Status validateNode(ModelManager& manager, const NodeInfo& node);
+    Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
+
+    const NodeInfo& findNodeByName(const std::string& name) const;
+    shape_t getNodeGatherShape(const NodeInfo& info) const;
 
 public:
-    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 1000;
+    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections) :
@@ -143,11 +120,31 @@ public:
         return this->status;
     }
 
+    const std::vector<NodeInfo>& getNodeInfos() {
+        return this->nodeInfos;
+    }
+
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
     virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
     virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
+
+    Status populateOutputsInfoWithDLModelOutputs(
+        const NodeInfo& dependencyNodeInfo,
+        const ModelManager& manager,
+        tensor_map_t& outputsInfo,
+        const Aliases& aliases,
+        const shape_t& gatherShape) const;
+
+    Status populateOutputsInfoWithCustomNodeOutputs(
+        const NodeInfo& dependencyNodeInfo,
+        const ModelManager& manager,
+        tensor_map_t& outputsInfo,
+        const Aliases& aliases,
+        const shape_t& gatherShape) const;
 
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;

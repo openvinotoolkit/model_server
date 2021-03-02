@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,19 +33,31 @@
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
+#include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
+#include "entry_node.hpp"  // need for ENTRY_NODE_NAME
+#include "exit_node.hpp"   // need for EXIT_NODE_NAME
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "node_library.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
+#include "pipelinedefinition.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 
 namespace ovms {
 
 static bool watcherStarted = false;
+
+ModelManager::ModelManager() {
+    this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
+    this->sequenceViewer = std::make_unique<GlobalSequencesViewer>();
+}
+
+ModelManager::~ModelManager() = default;
 
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
@@ -71,6 +83,12 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
+
+    startSequenceWatcher();
+}
+
+void ModelManager::startSequenceWatcher() {
+    sequenceViewer->startWatcher();
 }
 
 Status ModelManager::startFromConfig() {
@@ -83,7 +101,11 @@ Status ModelManager::startFromConfig() {
             config.modelPath(),
             config.targetDevice(),
             config.batchSize(),
-            config.nireq()});
+            config.nireq(),
+            config.stateful(),
+            config.lowLatencyTransformation(),
+            config.sequenceTimeoutSeconds(),
+            config.maxSequenceNumber()});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
@@ -177,8 +199,33 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     }
 }
 
+void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
+    info.modelName = nodeConfig["model_name"].GetString();
+    if (nodeConfig.HasMember("version")) {
+        info.modelVersion = nodeConfig["version"].GetUint64();
+    }
+}
+
+Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
+    std::string libraryName = nodeConfig["library_name"].GetString();
+    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
+    }
+    if (nodeConfig.HasMember("params")) {
+        for (const auto& param : nodeConfig["params"].GetObject()) {
+            info.parameters.emplace(param.name.GetString(), param.value.GetString());
+        }
+    }
+    return StatusCode::OK;
+}
+
 void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
+    if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);
+        return;
+    }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
 
@@ -186,43 +233,70 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         {NodeKind::ENTRY, ENTRY_NODE_NAME}};
     processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
     pipeline_connections_t connections;
+    std::set<std::string> nonGatheredDemultiplexerNodes;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
 
-        std::string modelName;
-        modelName = nodeConfig["model_name"].GetString();
-
         const std::string nodeKindStr = nodeConfig["type"].GetString();
+        NodeKind nodeKind;
+        auto status = toNodeKind(nodeKindStr, nodeKind);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {} for pipeline: {}", nodeKindStr, pipelineName);
+            return;
+        }
+
+        DLNodeInfo dlNodeInfo;
+        CustomNodeInfo customNodeInfo;
+        if (nodeKind == NodeKind::DL) {
+            processDLNodeConfig(nodeConfig, dlNodeInfo);
+        } else if (nodeKind == NodeKind::CUSTOM) {
+            status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
+            if (!status.ok()) {
+                return;
+            }
+        } else {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline {} contains unknown node kind", pipelineName);
+            throw std::invalid_argument("unknown node kind");
+        }
+
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
             return;
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
-        processNodeOutputs(nodeOutputsItr, nodeName, modelName, nodeOutputNameAlias);
-        std::optional<model_version_t> modelVersion;
-        if (nodeConfig.HasMember("version")) {
-            modelVersion = nodeConfig["version"].GetUint64();
-        } else {
-            modelVersion = std::nullopt;
+        processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
+        std::optional<size_t> demultiplyCount;
+        if (nodeConfig.HasMember("demultiply_count")) {
+            demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
+            nonGatheredDemultiplexerNodes.insert(nodeName);
         }
-        NodeKind nodeKind;
-        auto status = toNodeKind(nodeKindStr, nodeKind);
-        if (!status.ok()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {}", nodeKindStr);
-            return;
+        std::set<std::string> gatherFromNode;
+        if (nodeConfig.HasMember("gather_from_node")) {
+            std::string nodeToGatherFrom = nodeConfig["gather_from_node"].GetString();
+            gatherFromNode.insert(nodeToGatherFrom);
+            nonGatheredDemultiplexerNodes.erase(nodeToGatherFrom);
         }
-        SPDLOG_DEBUG("Creating node: {} type: {} model_name: {} modelVersion: {}",
-            nodeName, nodeKindStr, modelName, modelVersion.value_or(0));
-        info.emplace_back(std::move(NodeInfo{nodeKind, nodeName, modelName, modelVersion, nodeOutputNameAlias}));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Creating node: {} type: {} model_name: {} modelVersion: {}",
+            nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
+        info.emplace_back(
+            nodeKind,
+            nodeName,
+            dlNodeInfo.modelName,
+            dlNodeInfo.modelVersion,
+            nodeOutputNameAlias,
+            demultiplyCount,
+            gatherFromNode,
+            customNodeInfo.library,
+            customNodeInfo.parameters);
         auto nodeInputItr = nodeConfig.FindMember("inputs");
         processNodeInputs(nodeName, nodeInputItr, connections);
     }
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
     // pipeline outputs are node exit inputs
     processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
-    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {})));
+    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
@@ -235,6 +309,23 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::move(connections),
         manager);
     pipelinesInConfigFile.insert(pipelineName);
+}
+
+Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
+    const auto doc = configJson.FindMember("custom_node_library_config_list");
+    if (doc == configJson.MemberEnd()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
+        return StatusCode::OK;
+    }
+    std::set<std::string> librariesInConfig;
+    for (const auto& libraryConfig : doc->value.GetArray()) {
+        librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
+        this->customNodeLibraryManager->loadLibrary(
+            libraryConfig.FindMember("name")->value.GetString(),
+            libraryConfig.FindMember("base_path")->value.GetString());
+    }
+    this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
@@ -332,11 +423,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
-        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
             continue;
         }
+
+        const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
             continue;
@@ -351,9 +443,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
-        if (status != StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
-            newModelConfigs.emplace(modelName, std::move(modelConfig));
-        } else {
+        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = this->servedModelConfigs.find(modelName);
             if (it == this->servedModelConfigs.end()) {
@@ -362,6 +452,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
             this->servedModelConfigs.erase(modelName);
+        } else {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
@@ -387,6 +479,8 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
@@ -416,8 +510,13 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
+    status = loadCustomNodeLibrariesConfig(configJson);
     status = loadPipelinesConfig(configJson);
     tryReloadGatedModelConfigs(gatedModelConfigs);
+
+    struct stat statTime;
+    stat(configFilename.c_str(), &statTime);
+    lastConfigChangeTime = statTime.st_ctime;
     return StatusCode::OK;
 }
 
@@ -442,24 +541,39 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
     }
 }
 
+void ModelManager::updateConfigurationWithoutConfigFile() {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
+    for (auto& [name, config] : servedModelConfigs) {
+        reloadModelWithVersions(config);
+    }
+    pipelineFactory.revalidatePipelines(*this);
+}
+
+bool ModelManager::configFileReloadNeeded() {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    struct stat statTime;
+
+    stat(configFilename.c_str(), &statTime);
+    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+        return false;
+    }
+    return true;
+}
+
 void ModelManager::watcher(std::future<void> exit) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started config watcher thread");
-    int64_t lastTime;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastTime = statTime.st_ctime;
+
     while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
         std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
-        stat(configFilename.c_str(), &statTime);
-        if (lastTime != statTime.st_ctime) {
-            lastTime = statTime.st_ctime;
+
+        std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+        if (configFileReloadNeeded()) {
             loadConfig(configFilename);
         }
-        for (auto& [name, config] : servedModelConfigs) {
-            reloadModelWithVersions(config);
-        }
-        pipelineFactory.revalidatePipelines(*this);
+        updateConfigurationWithoutConfigFile();
+
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");
@@ -473,6 +587,8 @@ void ModelManager::join() {
             watcherStarted = false;
         }
     }
+
+    sequenceViewer->join();
 }
 
 void ModelManager::getVersionsToChange(
@@ -484,9 +600,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    SPDLOG_DEBUG("Currently registered versions count: {}", modelVersionsInstances.size());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        SPDLOG_DEBUG("version: {} state: {}", version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -538,11 +654,11 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
-std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
+std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models.insert({modelName, modelFactory(modelName)});
+        models.insert({modelName, modelFactory(modelName, isStateful)});
     }
     return models[modelName];
 }
@@ -615,14 +731,24 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart) {
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs);
+        status = model->addVersions(versionsToStart, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->addVersions(model, versionsToStart, versionsFailed);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while registering model versions to sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
@@ -630,15 +756,26 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     return status;
 }
 
-Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload) {
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs);
+        auto status = model->reloadVersions(versionsToReload, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->reloadVersions(model, versionsToReload, versionsFailed);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading version in sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
@@ -648,24 +785,41 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
-    auto model = getModelIfExistCreateElse(config.getName());
-    if (model->isAnyVersionSubscribed() && config.isDynamicParameterEnabled()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
-        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+
+    if (config.isStateful() && config.isDynamicParameterEnabled()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());
+        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL;
+    }
+    if (!config.isStateful()) {
+        if (config.isLowLatencyTransformationUsed()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested low latency transformation parameter for non stateful model {}.", config.getName());
+            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
+        }
+    }
+    auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
+    if (model->isAnyVersionSubscribed()) {
+        if (config.isDynamicParameterEnabled()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+            return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
+        if (config.isStateful()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
+            return StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
     }
 
     auto fs = ModelManager::getFilesystem(config.getBasePath());
-    std::vector<model_version_t> requestedVersions;
-    auto blocking_status = readAvailableVersions(fs, config.getBasePath(), requestedVersions);
+    std::vector<model_version_t> availableVersions;
+    Status blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
     if (!blocking_status.ok()) {
         return blocking_status;
     }
-    requestedVersions = config.getModelVersionPolicy()->filter(requestedVersions);
-
+    auto requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     std::shared_ptr<model_versions_t> versionsToStart;
     std::shared_ptr<model_versions_t> versionsToReload;
     std::shared_ptr<model_versions_t> versionsToRetire;
-
+    std::shared_ptr<model_versions_t> versionsFailed = std::make_shared<model_versions_t>();
     // first reset custom loader name to empty string so that any changes to name can be captured
     model->resetCustomLoaderName();
 
@@ -694,24 +848,55 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
+
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
-    if (versionsToStart->size() > 0) {
-        auto blocking_status = addModelVersions(model, fs, config, versionsToStart);
+    while (versionsToStart->size() > 0) {
+        blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
-            return blocking_status;
+            for (const auto version : *versionsFailed) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure; ", version);
+                if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+                    availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+                }
+            }
+            requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+            getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+        } else {
+            break;
         }
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload);
+        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
     }
+    for (const auto version : *versionsFailed) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
+        if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+            availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+        }
+    }
+    // refresh versions to retire based on failed reloads
+    requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+
     if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
+        }
+        if (config.isStateful()) {
+            status = sequenceViewer->retireVersions(model, versionsToRetire);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while retiring version in sequence timeout watcher: {}; versions; error: {}",
+                    config.getName(),
+                    status.string());
+                return status;
+            }
         }
     }
     return blocking_status;
@@ -723,4 +908,41 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     return it != models.end() ? it->second : nullptr;
 }
 
+Status ModelManager::getModelInstance(const std::string& modelName,
+    ovms::model_version_t modelVersionId,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
+
+    auto model = findModelByName(modelName);
+    if (model == nullptr) {
+        return StatusCode::MODEL_NAME_MISSING;
+    }
+    if (modelVersionId != 0) {
+        modelInstance = model->getModelInstanceByVersion(modelVersionId);
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    } else {
+        modelInstance = model->getDefaultModelInstance();
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    }
+
+    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+}
+
+Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response) {
+
+    SPDLOG_DEBUG("Requesting pipeline: {};", request->model_spec().name());
+    auto status = createPipeline(pipelinePtr, request->model_spec().name(), request, response);
+    return status;
+}
+
+const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
+    return *customNodeLibraryManager;
+}
 }  // namespace ovms

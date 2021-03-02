@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 #include <vector>
 
 #include <cxxopts.hpp>
+
+#include "modelconfig.hpp"
 
 namespace ovms {
 /**
@@ -252,6 +254,48 @@ public:
         if (result->count("plugin_config"))
             return result->operator[]("plugin_config").as<std::string>();
         return empty;
+    }
+
+    /**
+         * @brief Get stateful flag
+         *
+         * @return bool
+         */
+    bool stateful() {
+        return result->operator[]("stateful").as<bool>();
+    }
+
+    /**
+     * @brief Get stateful sequence timeout
+     *
+     * @return uint
+     */
+    uint32_t sequenceTimeoutSeconds() {
+        if (!result->count("sequence_timeout_seconds")) {
+            return DEFAULT_SEQUENCE_TIMEOUT_SECONDS;
+        }
+        return result->operator[]("sequence_timeout_seconds").as<uint32_t>();
+    }
+
+    /**
+         * @brief Get low latency transformation flag
+         *
+         * @return bool
+         */
+    bool lowLatencyTransformation() {
+        return result->operator[]("low_latency_transformation").as<bool>();
+    }
+
+    /**
+     * @brief Get max number of sequences that can be processed concurrently 
+     *
+     * @return uint
+     */
+    uint32_t maxSequenceNumber() {
+        if (!result->count("max_sequence_number")) {
+            return DEFAULT_MAX_SEQUENCE_NUMBER;
+        }
+        return result->operator[]("max_sequence_number").as<uint32_t>();
     }
 
     /**

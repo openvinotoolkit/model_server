@@ -14,7 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
+#include <memory>
+#include <set>
 #include <string>
 
 #pragma GCC diagnostic push
@@ -33,19 +34,20 @@ class ExitNode : public Node {
     tensorflow::serving::PredictResponse* response;
 
 public:
-    ExitNode(tensorflow::serving::PredictResponse* response) :
-        Node(EXIT_NODE_NAME),
+    ExitNode(tensorflow::serving::PredictResponse* response, std::set<std::string> gatherFromNode = {}) :
+        Node(EXIT_NODE_NAME, 0, gatherFromNode),
         response(response) {
     }
 
     // Exit node does not have execute logic.
     // It serializes its received input blobs to proto in ::fetchResults
-    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override {
-        notifyEndQueue.push(*this);
-        return StatusCode::OK;
-    }
+    Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(BlobMap& outputs) override;
+protected:
+    Status fetchResults(const BlobMap& outputs);
+
+public:
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {
@@ -53,6 +55,7 @@ public:
     }
 
     Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

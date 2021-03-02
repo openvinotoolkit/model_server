@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"
+#include "pipelinedefinition.hpp"
 
 namespace ovms {
 
@@ -110,8 +111,13 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
 }
 
 std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
-    SPDLOG_DEBUG("Producing new ModelInstance");
-    return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
+    if (isStateful) {
+        SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
+        return std::move(std::static_pointer_cast<ModelInstance>(std::make_shared<StatefulModelInstance>(modelName, modelVersion)));
+    } else {
+        SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
+        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
+    }
 }
 
 Status Model::addVersion(const ModelConfig& config) {
@@ -130,9 +136,10 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
+    versionsFailed->clear();
     for (const auto version : *versionsToStart) {
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
@@ -143,6 +150,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
                 getName(),
                 version,
                 status.string());
+            versionsFailed->push_back(version);
             result = status;
             cleanupModelTmpFiles(config);
         }
@@ -192,7 +200,7 @@ void Model::retireAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
@@ -224,6 +232,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
                 version,
                 status.string());
             result = status;
+            versionsFailed->push_back(version);
             continue;
         }
         updateDefaultVersion();

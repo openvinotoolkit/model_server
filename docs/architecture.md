@@ -14,7 +14,7 @@
 
 **<div align="center">Figure 1: Docker Container (VM or Bare Metal Host)</div>**
 
-- OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Both Google Cloud Storage and S3 compatible storage are supported. Refer to [Preparing the Models Repository](./models_repository.md) for more details.
+- OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Google Cloud, S3 and Azure compatible storage is supported. Refer to [Preparing the Models Repository](./models_repository.md) for more details.
 
 - OpenVINO&trade; Model Server is suitable for landing in Kubernetes environment. It can be also hosted on a bare metal server, virtual machine or inside a docker container. 
 

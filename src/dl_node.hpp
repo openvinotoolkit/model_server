@@ -17,10 +17,11 @@
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 
-#include "executinstreamidguard.hpp"
+#include "executingstreamidguard.hpp"
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -32,6 +33,7 @@ namespace ovms {
 class ModelManager;
 
 class DLNode : public Node {
+protected:
     std::string modelName;
     std::optional<model_version_t> modelVersion;
     ModelManager& modelManager;
@@ -44,64 +46,50 @@ class DLNode : public Node {
 public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
-        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {}) :
-        Node(nodeName),
+        std::unordered_map<std::string, std::string> nodeOutputNameAlias = {},
+        uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {}) :
+        Node(nodeName, demultiplyCount, gatherFromNode),
         modelName(modelName),
         modelVersion(modelVersion),
         modelManager(modelManager),
         nodeOutputNameAlias(nodeOutputNameAlias) {
     }
 
-    Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) override;
+    Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(BlobMap& outputs) override;
-
-    Status validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info);
-
-    /**
-     * @brief
-     * Prepare inputs - if required, perform precision conversion
-     * Prepare model - if required, perform model reload with new batch size and/or shape
-     * Possibly abort pipeline execution if unable to do the preparation
-     */
-    Status prepareInputsAndModelForInference();
-
-    bool tryDisarmStreamIdGuard(const uint microseconds = 1) override {
-        SPDLOG_DEBUG("Trying to disarm stream id guard of node: {}", getName());
-        if (this->nodeStreamIdGuard == nullptr) {
-            return true;
-        }
-        return this->nodeStreamIdGuard->tryDisarm(microseconds);
-    }
-
-    void release() override {
-        SPDLOG_DEBUG("Releasing resources for node {}", getName());
-        this->nodeStreamIdGuard.reset();
-        this->model.reset();
-        this->modelUnloadGuard.reset();
-    }
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 private:
-    Status getRealInputName(const std::string& alias, std::string* result) const {
-        if (this->model->getInputsInfo().count(alias) == 0) {
+    Status fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
+
+public:
+    Status validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info);
+
+    void release(session_key_t sessionId) override;
+
+private:
+    Status getRealInputName(ModelInstance& model, const std::string& alias, std::string* result) const {
+        if (model.getInputsInfo().count(alias) == 0) {
             return StatusCode::INVALID_MISSING_INPUT;
         }
-        *result = this->model->getInputsInfo().at(alias)->getName();
+        *result = model.getInputsInfo().at(alias)->getName();
         return StatusCode::OK;
     }
 
-    Status getRealOutputName(const std::string& alias, std::string* result) const {
+    Status getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const {
         const auto& modelOutputName = nodeOutputNameAlias.count(alias) == 1 ? nodeOutputNameAlias.at(alias) : alias;
-        if (this->model->getOutputsInfo().count(modelOutputName) == 0) {
+        if (model.getOutputsInfo().count(modelOutputName) == 0) {
             return StatusCode::INVALID_MISSING_OUTPUT;
         }
-        *result = this->model->getOutputsInfo().at(modelOutputName)->getName();
+        *result = model.getOutputsInfo().at(modelOutputName)->getName();
         return StatusCode::OK;
     }
 
-    Status requestExecuteRequiredResources();
-    Status setInputsForInference(InferenceEngine::InferRequest& infer_request);
-    Status executeInference(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
+    Status executeInference(PipelineEventQueue& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
+    bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
+
+protected:
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -111,6 +111,10 @@ void logConfig(Config& config) {
         SPDLOG_DEBUG("nireq: {}", config.nireq());
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
+        SPDLOG_DEBUG("stateful: {}", config.stateful());
+        SPDLOG_DEBUG("sequence_timeout_seconds: {}", config.sequenceTimeoutSeconds());
+        SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
+        SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }

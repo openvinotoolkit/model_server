@@ -33,7 +33,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7-*
+ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
@@ -138,6 +138,9 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true 
 
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; \
     ln -s /opt/intel/openvino_2021 /opt/intel/openvino
+
+# install sample apps including benchmark_app
+RUN ln -s /usr/bin/cmake3 /usr/bin/cmake && /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build OpenVINO Model Server
@@ -206,9 +209,7 @@ COPY release_files/ /ovms/release_files/
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's:REPLACE_OPENVINO_NAME:`echo "$YUM_OV_PACKAGE" | sed -e 's/intel-openvino-runtime-centos7-//g' | sed 's/.x86_64//g'`:g' /ovms/src/version.hpp" 
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ] ; then true ; else exit 0 ; fi ;bash -c "sed -i -e 's#REPLACE_OPENVINO_NAME#`echo "$OPENVINO_NAME" | sed -e 's;http://repository.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_;;g'|sed 's:.tgz::g'`#g' /ovms/src/version.hpp"
-
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/
 
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
@@ -220,4 +221,5 @@ RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_
 
 COPY ${ovms_metadata_file} metadata.json
 
+RUN ./bazel-bin/src/./ovms --version
 RUN ./bazel-bin/src/./ovms
