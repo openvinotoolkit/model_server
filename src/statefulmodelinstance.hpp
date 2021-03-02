@@ -27,9 +27,6 @@ namespace ovms {
 
 class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
-    bool performLowLatencyTransformation;
-    bool autoCleanupEnabled;
-    GlobalSequencesViewer* globalSequencesViewer;
 
 public:
     /**
@@ -80,6 +77,12 @@ public:
 
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;
+
+    bool performLowLatencyTransformation;
+
+    bool autoCleanupEnabled;
+
+    GlobalSequencesViewer* globalSequencesViewer;
 
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
 

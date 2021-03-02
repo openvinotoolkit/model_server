@@ -44,9 +44,9 @@ private:
 
     std::thread sequenceCleanerThread;
 
+protected:
     Status removeIdleSequences();
 
-protected:
     std::cv_status waitTimeInterval(uint32_t sequenceCleanerInterval);
 
 public:

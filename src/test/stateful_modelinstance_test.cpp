@@ -147,14 +147,26 @@ public:
 };
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
+    class MockedGlobalSequencesViewer : public ovms::GlobalSequencesViewer {
+    public:
+        ovms::Status removeIdleSequences() {
+            return ovms::GlobalSequencesViewer::removeIdleSequences();
+        }
+    };
+
 public:
     ovms::GlobalSequencesViewer sequencesViewer;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(60, "dummy", 1);
+
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version, &sequencesViewer) {}
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
+    }
+
+    MockedGlobalSequencesViewer* getSequencesViewer() {
+        return static_cast<MockedGlobalSequencesViewer*>(this->globalSequencesViewer);
     }
 
     void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
@@ -348,7 +360,7 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
     // Cleaner scan before tested inference
-    modelInstance->getSequenceManager()->removeIdleSequences();
+    modelInstance->getSequencesViewer()->removeIdleSequences();
 
     // START
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
@@ -372,7 +384,7 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
     // Cleaner scan mid inference
     std::thread cleanerThread([&modelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
         cleanerStartFuture.get();
-        modelInstance->getSequenceManager()->removeIdleSequences();
+        modelInstance->getSequencesViewer()->removeIdleSequences();
         cleanerEndPromise.set_value();
     });
 
@@ -409,7 +421,7 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
     t1.join();
 
     // Cleaner scan after tested inference
-    modelInstance->getSequenceManager()->removeIdleSequences();
+    modelInstance->getSequencesViewer()->removeIdleSequences();
 
     // END
     request = preparePredictRequest(modelInput);
@@ -449,7 +461,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
 
     // Cleaner scan before tested inference
-    modelInstance->getSequenceManager()->removeIdleSequences();
+    modelInstance->getSequencesViewer()->removeIdleSequences();
 
     // NO CONTROL
     request = preparePredictRequest(modelInput);
@@ -473,7 +485,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     // Cleaner scan mid inference
     std::thread cleanerThread([&modelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
         cleanerStartFuture.get();
-        modelInstance->getSequenceManager()->removeIdleSequences();
+        modelInstance->getSequencesViewer()->removeIdleSequences();
         cleanerEndPromise.set_value();
     });
 
@@ -510,7 +522,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     t1.join();
 
     // Cleaner scan after tested inference
-    modelInstance->getSequenceManager()->removeIdleSequences();
+    modelInstance->getSequencesViewer()->removeIdleSequences();
 
     // END
     request = preparePredictRequest(modelInput);
@@ -551,7 +563,7 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
 
     // Cleaner scan before tested inference
-    modelInstance->getSequenceManager()->removeIdleSequences();
+    modelInstance->getSequencesViewer()->removeIdleSequences();
 
     // END
     request = preparePredictRequest(modelInput);
@@ -587,7 +599,7 @@ void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulMod
     // Cleaner scan mid inference
     std::thread cleanerThread([&modelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
         cleanerStartFuture.get();
-        modelInstance->getSequenceManager()->removeIdleSequences();
+        modelInstance->getSequencesViewer()->removeIdleSequences();
         cleanerEndPromise.set_value();
     });
 
@@ -648,7 +660,7 @@ TEST_F(StatefulModelInstanceTempDir, idleSequencesCleanup) {
 
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
     // First sequence cleaner check sets idle flag on each sequence to true
-    stetefulMockedModelInstance->getSequenceManager()->removeIdleSequences();
+    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
     uint64_t activeSequencesNumber = 7;
     for (uint64_t i = 1; i < activeSequencesNumber + 1; i++) {
         tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
@@ -662,7 +674,7 @@ TEST_F(StatefulModelInstanceTempDir, idleSequencesCleanup) {
     }
 
     // Second sequence cleaner check removes sequences with idle flag == true
-    stetefulMockedModelInstance->getSequenceManager()->removeIdleSequences();
+    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
     ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), activeSequencesNumber);
 }
 
@@ -695,11 +707,11 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     std::future<void> cleanerEndFuture = cleanerEndPromise.get_future();
     std::thread cleanerThread([&stetefulMockedModelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
         cleanerStartFuture.get();
-        stetefulMockedModelInstance->getSequenceManager()->removeIdleSequences();
+        stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
         cleanerEndPromise.set_value();
     });
 
-    stetefulMockedModelInstance->getSequenceManager()->removeIdleSequences();
+    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
     std::unique_lock<std::mutex> sequenceManagerLock(stetefulMockedModelInstance->getSequenceManager()->getMutex());
     cleanerStartPromise.set_value();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
