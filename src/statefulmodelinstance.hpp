@@ -26,7 +26,6 @@ namespace ovms {
 
 class StatefulModelInstance : public ModelInstance {
     static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
-    std::unique_ptr<SequenceManager> sequenceManager;
     bool performLowLatencyTransformation;
 
 public:
@@ -35,7 +34,7 @@ public:
          */
     StatefulModelInstance(const std::string& name, model_version_t version) :
         ModelInstance(name, version) {
-        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber());
+        sequenceManager = std::make_unique<SequenceManager>(config.getSequenceTimeout(), config.getMaxSequenceNumber(), name, version);
     }
 
     const std::unique_ptr<SequenceManager>& getSequenceManager() const {
@@ -70,6 +69,8 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
 
 protected:
+    std::unique_ptr<SequenceManager> sequenceManager;
+
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
 
     const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,

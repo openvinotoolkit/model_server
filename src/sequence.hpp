@@ -39,7 +39,6 @@ private:
     std::chrono::steady_clock::time_point lastActivityTime;
     std::mutex mutex;
     bool terminated;
-
     void updateLastActivityTime();
 
 public:

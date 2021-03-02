@@ -376,6 +376,7 @@ TEST(EnsembleMetadata, OneCustomNode) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
@@ -451,55 +452,6 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
         EXPECT_EQ(output->getShape(), shape_t({1, 50}));
         EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
     }
-}
-
-struct LibraryMetadataError {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int release(void* ptr) {
-        return 1;
-    }
-};
-
-TEST(EnsembleMetadata, CustomNodeMetadataCallError) {
-    ConstructorEnabledModelManager manager;
-    NodeLibrary library{
-        LibraryMetadataError::execute,
-        LibraryMetadataError::getInputsInfo,
-        LibraryMetadataError::getOutputsInfo,
-        LibraryMetadataError::release};
-    ASSERT_TRUE(library.isValid());
-
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
-        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"output_numbers", "output_numbers"}}, std::nullopt, {}, library, parameters_t{{"add_value", "0.5"}, {"sub_value", "1.2"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
-    };
-
-    pipeline_connections_t connections;
-
-    connections["custom_node"] = {
-        {ENTRY_NODE_NAME, {{"request_input_name", "input_numbers"}}}};
-
-    connections[EXIT_NODE_NAME] = {
-        {"custom_node", {{"output_numbers", "request_output_name"}}}};
-
-    auto def = std::make_unique<PipelineDefinition>(
-        "my_new_pipeline", info, connections);
-
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
-    ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
-
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
 }
 
 struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
@@ -661,4 +613,79 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     const auto& output = outputs.at("request_output_name");
     EXPECT_EQ(output->getShape(), shape_t({1, 3, 4, 10}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
+}
+
+TEST(EnsembleMetadata, GatherFromNotExistingNode) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, {"no_node"}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE);
+}
+
+TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, {"request"}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER);
+}
+
+TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}, 4},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE);
 }

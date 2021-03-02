@@ -144,15 +144,23 @@ public:
 
 class MockedSequenceManager : public ovms::SequenceManager {
 public:
-    MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
-        ovms::SequenceManager(timeout, maxSequenceNumber) {}
+    MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber, std::string name, ovms::model_version_t version) :
+        ovms::SequenceManager(timeout, maxSequenceNumber, name, version) {}
+
+    void setSequenceIdCounter(uint64_t newValue) {
+        this->sequenceIdCounter = newValue;
+    }
+
+    uint64_t mockGetUniqueSequenceId() {
+        return ovms::SequenceManager::getUniqueSequenceId();
+    }
 
     ovms::Status mockHasSequence(const uint64_t& sequenceId) {
         return ovms::SequenceManager::hasSequence(sequenceId);
     }
 
-    ovms::Status mockCreateSequence(const uint64_t& sequenceId) {
-        return ovms::SequenceManager::createSequence(sequenceId);
+    ovms::Status mockCreateSequence(ovms::SequenceProcessingSpec& sequenceProcessingSpec) {
+        return ovms::SequenceManager::createSequence(sequenceProcessingSpec);
     }
 
     ovms::Status mockTerminateSequence(const uint64_t& sequenceId) {

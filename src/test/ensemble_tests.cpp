@@ -591,8 +591,9 @@ class DLNodeFailInFetch : public DLNode {
 public:
     DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
-    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults&) override {
+    ovms::Status fetchResults(NodeSession& nodeSession, SessionResults& sessionResults) override {
         // no release is called as in dl_node.cpp when on error path
+        DLNode::fetchResults(nodeSession, sessionResults);
         return StatusCode::UNKNOWN_ERROR;
     }
 };
@@ -2680,7 +2681,7 @@ static const char* dummyWithStatefulModelType = R"(
                 "nireq": 1,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 2,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
@@ -2987,4 +2988,112 @@ TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
     auto& nodeInfos = manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getNodeInfos();
     ASSERT_FALSE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode"; }) == nodeInfos.end());
     ASSERT_TRUE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode2"; }) == nodeInfos.end());
+}
+
+static const char* pipelineDemultiplexerBatchSize = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "batch_size": 2,
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ],
+                    "demultiply_count": 2
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineDemultiplexerBatchSize, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+}
+
+static const char* pipelineDemultiplexerShape = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(3, 10) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ],
+                    "demultiply_count": 2
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineDemultiplexerShape, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
 }

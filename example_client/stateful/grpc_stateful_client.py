@@ -17,15 +17,17 @@
 import grpc
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray, expand_dims
-import classes
 import datetime
 import argparse
 import math
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from client_utils import print_statistics, prepare_certs
 from kaldi_python_io import ArchiveReader
+import importlib
 
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
+client_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(client_utils)
 
 def print_debug(msg):
     global debug_mode
@@ -113,8 +115,8 @@ def parse_arguments():
     parser.add_argument(
         '--sequence_id',
         required=False,
-        default=1,
-        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 1')
+        default=0,
+        help='Sequence ID used by every sequence provided in ARK files. Setting to 0 means sequence will obtain its ID from OVMS. Default: 0')
 
     print('### Starting grpc_stateful_client.py client ###')
 
@@ -338,7 +340,7 @@ def main():
 
             # Unique sequence_id provided by OVMS
             if get_sequence_id:
-                sequence_id = np.uint64(result.outputs['sequence_id'])
+                sequence_id = result.outputs['sequence_id'].uint64_val[0]
                 get_sequence_id = False
 
             duration = (end_time - start_time).total_seconds() * 1000
@@ -391,7 +393,7 @@ def main():
 
     print("Global average rms error: {:.10f}\n".format(
         final_avg_rms_error_sum))
-    print_statistics(processing_times, sequence_size / 1000)
+    client_utils.print_statistics(processing_times, sequence_size / 1000)
     print('### Finished grpc_stateful_client.py client processing ###')
 
 

@@ -77,6 +77,7 @@ enum class StatusCode {
     SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
     SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
     SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
+    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
@@ -148,11 +149,12 @@ enum class StatusCode {
     AS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
     // REST handler
-    REST_NOT_FOUND,               /*!< Requested REST resource not found */
-    REST_COULD_NOT_PARSE_VERSION, /*!< Could not parse model version in request */
-    REST_INVALID_URL,             /*!< Malformed REST request url */
-    REST_UNSUPPORTED_METHOD,      /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,       /*!< Malformed REST request */
+    REST_NOT_FOUND,                  /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
+    REST_INVALID_URL,                /*!< Malformed REST request url */
+    REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
+    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
+    UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,                 /*!< REST body should be JSON object */
@@ -196,11 +198,19 @@ enum class StatusCode {
     PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY,
     PIPELINE_NAME_OCCUPIED,
     PIPELINE_DEFINITION_INVALID_NODE_LIBRARY,
+    PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE,
     PIPELINE_INCONSISTENT_SHARD_DIMENSIONS,
     PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY,
     PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY,
     PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE,
     PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER,
+    PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE,
+    PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER,
+    PIPELINE_NODE_GATHER_FROM_ENTRY_NODE,
+    PIPELINE_DEMULTIPLY_ENTRY_NODE,
+    PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT,
+    PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED,
+    PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY,
 
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,
@@ -227,6 +237,7 @@ enum class StatusCode {
 
     // Model control API
     OK_CONFIG_FILE_RELOAD_NOT_NEEDED, /*!< Operation succeeded but no config reload was needed */
+    OK_CONFIG_FILE_RELOAD_NEEDED,     /*!< Operation succeeded but no config reload was needed */
 
     STATUS_CODE_END
 };

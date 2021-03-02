@@ -41,6 +41,9 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
     // TODO handle multiple sessions later on
     BlobMap outputs;
     auto status = fetchResults(outputs);
+    if (!status.ok()) {
+        return status;
+    }
     SessionResult metaOutputsPair{nodeSession.getNodeSessionMetadata(), std::move(outputs)};
     auto it = nodeSessionOutputs.emplace(nodeSession.getSessionKey(), std::move(metaOutputsPair));
     if (!it.second) {
@@ -63,7 +66,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name", getName(), details);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
             const auto& tensor_proto = request->inputs().at(output_name);
@@ -73,10 +76,8 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             if (!status.ok()) {
                 return status;
             }
-
             outputs[output_name] = blob;
-
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name {} has been prepared", getName(), output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), output_name, TensorInfo::tensorDescToString(blob->getTensorDesc()));
         }
     }
 
@@ -155,7 +156,6 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             getName(), status.string(), e.what());
         return status;
     }
-
     return StatusCode::OK;
 }
 }  // namespace ovms

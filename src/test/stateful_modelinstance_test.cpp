@@ -25,16 +25,46 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include "../deserialization.hpp"
+#include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../ov_utils.hpp"
 #include "../sequence_processing_spec.hpp"
+#include "../serialization.hpp"
 #include "../statefulmodelinstance.hpp"
+#include "../timer.hpp"
 #include "stateful_test_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Return;
 
 namespace {
+
+static int sequenceTimeoutSleepSeconds = 7;
+static bool testWarningPrinted = false;
+
+enum SequenceTimeoutScenarios {
+    WAIT_BEFORE_MANAGER_LOCKED,
+    WAIT_BEFORE_SEQUENCE_LOCKED,
+    WAIT_BEFORE_SEQUENCE_UNLOCKED,
+    WAIT_AFTER_SEQUENCE_UNLOCKED,
+    UNKNOWN
+};
+
+static const char* ToString(SequenceTimeoutScenarios scenario) {
+    switch (scenario) {
+    case WAIT_BEFORE_MANAGER_LOCKED:
+        return "WAIT_BEFORE_MANAGER_LOCKED";
+    case WAIT_BEFORE_SEQUENCE_LOCKED:
+        return "WAIT_BEFORE_SEQUENCE_LOCKED";
+    case WAIT_BEFORE_SEQUENCE_UNLOCKED:
+        return "WAIT_BEFORE_SEQUENCE_UNLOCKED";
+    case WAIT_AFTER_SEQUENCE_UNLOCKED:
+        return "WAIT_AFTER_SEQUENCE_UNLOCKED";
+    default:
+        return "[ERROR] Unknown sequence timeout scenario type";
+    }
+}
 
 static const char* modelStatefulConfig = R"(
 {
@@ -48,7 +78,27 @@ static const char* modelStatefulConfig = R"(
                 "nireq": 100,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 120,
+                "sequence_timeout_seconds": 0,
+                "max_sequence_number": 1000,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ]
+})";
+
+static const char* modelStatefulConfigTimeout4 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "stateful": true,
+                "low_latency_transformation": true,
+                "sequence_timeout_seconds": 4,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
@@ -119,7 +169,7 @@ public:
 
 class MockedStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
-    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60);
+    std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(120, 60, "dummy", 1);
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
         StatefulModelInstance(name, version) {}
 
@@ -128,8 +178,100 @@ public:
     }
 
     void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-        getMockedSequenceManager()->mockCreateSequence(sequenceId);
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
+        getMockedSequenceManager()->mockCreateSequence(spec);
         getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
+    }
+
+    // This method must be kept up to date with StatefulModelInstance::infer for tests to function properly.
+    ovms::Status infer(const tensorflow::serving::PredictRequest* requestProto,
+        tensorflow::serving::PredictResponse* responseProto,
+        std::unique_ptr<ovms::ModelInstanceUnloadGuard>& modelUnloadGuardPtr,
+        std::future<void>* waitBeforeManagerLock,
+        std::future<void>* waitBeforeSequenceLock,
+        std::future<void>* waitBeforeSequenceUnlocked) {
+        if (!testWarningPrinted) {
+            std::cout << "[WARNING] This method must be kept up to date with StatefulModelInstance::infer for tests to function properly." << std::endl;
+            testWarningPrinted = true;
+        }
+        Timer timer;
+        using std::chrono::microseconds;
+        ovms::SequenceProcessingSpec sequenceProcessingSpec;
+        auto status = validate(requestProto, sequenceProcessingSpec);
+        if (!status.ok())
+            return status;
+
+        if (waitBeforeManagerLock) {
+            std::cout << "Waiting before sequenceManagerLock" << std::endl;
+            waitBeforeManagerLock->get();
+        }
+        std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager->getMutex());
+        status = sequenceManager->processRequestedSpec(sequenceProcessingSpec);
+        if (!status.ok())
+            return status;
+        const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
+        if (!sequenceManager->sequenceExists(sequenceId))
+            return ovms::StatusCode::INTERNAL_ERROR;
+        ovms::Sequence& sequence = sequenceManager->getSequence(sequenceId);
+
+        if (waitBeforeSequenceLock) {
+            std::cout << "Waiting before waitBeforeSequenceLock" << std::endl;
+            waitBeforeSequenceLock->get();
+        }
+
+        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
+        sequenceManagerLock.unlock();
+
+        timer.start("get infer request");
+        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+
+        InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+        timer.stop("get infer request");
+
+        timer.start("preprocess");
+        status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
+        timer.stop("preprocess");
+        if (!status.ok())
+            return status;
+
+        timer.start("deserialize");
+        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
+        timer.stop("deserialize");
+        if (!status.ok())
+            return status;
+
+        timer.start("prediction");
+        status = performInference(inferRequest);
+        timer.stop("prediction");
+        if (!status.ok())
+            return status;
+
+        timer.start("serialize");
+        status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+        timer.stop("serialize");
+        if (!status.ok())
+            return status;
+
+        timer.start("postprocess");
+        status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
+        timer.stop("postprocess");
+        if (!status.ok())
+            return status;
+
+        if (waitBeforeSequenceUnlocked) {
+            std::cout << "Waiting before waitBeforeSequenceUnlocked" << std::endl;
+            waitBeforeSequenceUnlocked->get();
+        }
+
+        sequenceLock.unlock();
+        if (sequenceProcessingSpec.getSequenceControlInput() == ovms::SEQUENCE_END) {
+            sequenceManagerLock.lock();
+            status = sequenceManager->removeSequence(sequenceId);
+            if (!status.ok())
+                return status;
+        }
+
+        return ovms::StatusCode::OK;
     }
 };
 
@@ -221,6 +363,325 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
 }
 
+void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
+
+    // START
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+    std::cout << "Executing timeout scenario : " << ToString(sequenceTimeoutScenario) << std::endl;
+    tensorflow::serving::PredictResponse response;
+    // Do the inference
+    std::thread t1(
+        [&waitBeforeSequenceStarted, &waitAfterSequenceStarted, &waitBeforeSequenceFinished, seqId, &modelInstance, &unload_guard, &response, &request]() {
+            std::future<void> fut1 = waitBeforeSequenceStarted.get_future();
+            std::future<void> fut2 = waitAfterSequenceStarted.get_future();
+            std::future<void> fut3 = waitBeforeSequenceFinished.get_future();
+            modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
+        });
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitAfterSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceFinished.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+
+    // Wait for sequence timeout
+    t1.join();
+
+    // END
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
+
+    tensorflow::serving::PredictResponse response2;
+
+    auto status = modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr);
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
+}
+
+void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
+
+    // START
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+    tensorflow::serving::PredictResponse response3;
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+
+    // NO CONTROL
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
+
+    std::cout << "Executing timeout scenario : " << ToString(sequenceTimeoutScenario) << std::endl;
+    tensorflow::serving::PredictResponse response;
+    // Do the inference
+    std::thread t1(
+        [&waitBeforeSequenceStarted, &waitAfterSequenceStarted, &waitBeforeSequenceFinished, seqId, &modelInstance, &unload_guard, &response, &request]() {
+            std::future<void> fut1 = waitBeforeSequenceStarted.get_future();
+            std::future<void> fut2 = waitAfterSequenceStarted.get_future();
+            std::future<void> fut3 = waitBeforeSequenceFinished.get_future();
+            modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
+        });
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitAfterSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceFinished.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+
+    // Wait for sequence timeout
+    t1.join();
+
+    // END
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
+
+    tensorflow::serving::PredictResponse response2;
+
+    // Do the inference
+    auto status = modelInstance->infer(&request, &response2, unload_guard, nullptr, nullptr, nullptr);
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    }
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+    }
+}
+
+void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario, bool autoTimeout) {
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
+
+    // START
+    tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+    tensorflow::serving::PredictResponse response3;
+
+    // Do the inference
+    ASSERT_EQ(modelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+
+    // END
+    request = preparePredictRequest(modelInput);
+    setRequestSequenceId(&request, seqId);
+    setRequestSequenceControl(&request, ovms::SEQUENCE_END);
+
+    std::cout << "Executing timeout scenario : " << ToString(sequenceTimeoutScenario) << std::endl;
+    tensorflow::serving::PredictResponse response;
+    // Do the inference
+    std::thread t1(
+        [&waitBeforeSequenceStarted, &waitAfterSequenceStarted, &waitBeforeSequenceFinished, seqId, sequenceTimeoutScenario, &modelInstance, &unload_guard, &response, &request]() {
+            std::future<void> fut1 = waitBeforeSequenceStarted.get_future();
+            std::future<void> fut2 = waitAfterSequenceStarted.get_future();
+            std::future<void> fut3 = waitBeforeSequenceFinished.get_future();
+            auto status = modelInstance->infer(&request, &response, unload_guard, &fut1, &fut2, &fut3);
+            if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_MISSING);
+            }
+            if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
+            if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
+            if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+                ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+            }
+        });
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_MANAGER_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_LOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitAfterSequenceStarted.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_BEFORE_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+    waitBeforeSequenceFinished.set_value();
+
+    if (sequenceTimeoutScenario == SequenceTimeoutScenarios::WAIT_AFTER_SEQUENCE_UNLOCKED) {
+        std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    }
+
+    // Wait for sequence timeout
+    t1.join();
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    uint64_t sequenceCounter = 10;
+
+    for (uint64_t i = 1; i < sequenceCounter + 1; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        setRequestSequenceId(&request, i);
+        setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+        tensorflow::serving::PredictResponse response3;
+
+        // Do the inference
+        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+    }
+
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    std::unique_lock<std::mutex> sequenceManagerLock(stetefulMockedModelInstance->getSequenceManager()->getMutex());
+    std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    sequenceManagerLock.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    stetefulMockedModelInstance->getSequenceManager()->removeTimedOutSequences();
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTestAuto) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    manager.startSequenceWatcher();
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    uint64_t sequenceCounter = 10;
+
+    for (uint64_t i = 1; i < sequenceCounter + 1; i++) {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
+        setRequestSequenceId(&request, i);
+        setRequestSequenceControl(&request, ovms::SEQUENCE_START);
+
+        tensorflow::serving::PredictResponse response3;
+
+        // Do the inference
+        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+    }
+
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    std::unique_lock<std::mutex> sequenceManagerLock(stetefulMockedModelInstance->getSequenceManager()->getMutex());
+    std::this_thread::sleep_for(std::chrono::seconds(sequenceTimeoutSleepSeconds));
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    sequenceManagerLock.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    manager.startSequenceWatcher();
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+
+    uint64_t seqId = 0;
+    uint16_t numberOfThreads = 8;
+
+    std::vector<std::thread> inferThreads;
+    for (auto i = 0u; i < numberOfThreads; ++i) {
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, true);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
+                }));
+        seqId++;
+        inferThreads.emplace_back(
+            std::thread(
+                [this, seqId, stetefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, true);
+                }));
+    }
+
+    for (auto& thread : inferThreads) {
+        thread.join();
+    }
+
+    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
@@ -290,7 +751,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
                 }));
     }
 
-    // sleep to allow all threads to initialize
+    // Sleep to allow all threads to initialize
     for (auto& promise : releaseWaitBeforeSequenceStarted) {
         promise.set_value();
     }
@@ -304,7 +765,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         promise.set_value();
     }
 
-    // sleep to allow half threads to work
+    // Sleep to allow half threads to work
     std::this_thread::sleep_for(std::chrono::seconds(2));
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
@@ -317,6 +778,62 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     }
 
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    manager.startSequenceWatcher();
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    uint64_t seqId = 1;
+
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, true);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, true);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, true);
+    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    manager.startSequenceWatcher();
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    uint64_t seqId = 1;
+
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, true);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, true);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, true);
+    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
+}
+
+TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
+    SetUpConfig(modelStatefulConfigTimeout4);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    manager.startSequenceWatcher();
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    uint64_t seqId = 1;
+    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED, true);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED, true);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED, true);
+    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED, true);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
