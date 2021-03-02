@@ -210,7 +210,7 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     std::string libraryName = nodeConfig["library_name"].GetString();
     auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
     if (!status.ok()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers to non existing custom node library: {}", pipelineName, libraryName);
     }
     if (nodeConfig.HasMember("params")) {
         for (const auto& param : nodeConfig["params"].GetObject()) {
