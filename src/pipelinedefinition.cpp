@@ -183,7 +183,13 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, info.gatherFromNode);
+            tensor_map_t outputsInfo;
+            status = getOutputsInfo(outputsInfo, manager);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create ExitNode because of fail in getting output metadata of pipeline: {}", pipelineName);
+                return status; // TODO add test & status code
+            }
+            auto node = std::make_unique<ExitNode>(response, info.gatherFromNode, outputsInfo);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;

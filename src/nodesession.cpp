@@ -39,14 +39,14 @@ std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, c
     }
 }
 
-NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
+NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo) :
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
+NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo) :
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),

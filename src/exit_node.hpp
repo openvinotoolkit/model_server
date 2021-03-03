@@ -34,8 +34,8 @@ class ExitNode : public Node {
     tensorflow::serving::PredictResponse* response;
 
 public:
-    ExitNode(tensorflow::serving::PredictResponse* response, std::set<std::string> gatherFromNode = {}) :
-        Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
+    ExitNode(tensorflow::serving::PredictResponse* response, std::set<std::string> gatherFromNode = {}, tensor_map_t outputsInfo = {}) :
+        Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode, outputsInfo),
         response(response) {
     }
 

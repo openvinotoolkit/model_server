@@ -36,10 +36,11 @@ static std::string demultiplyCountSettingToString(std::optional<uint32_t> demult
     return demultiplyCount.value() != 0 ? std::to_string(demultiplyCount.value()) : "dynamic";
 }
 
-Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
+Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode, tensor_map_t inputsInfo) :
     nodeName(nodeName),
     demultiplexCount(demultiplyCount),
-    gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
+    gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt),
+    inputsInfo(inputsInfo) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create node: {} with demultiply: {}, gatherFrom: {}.",
         getName(),
         demultiplyCountSettingToString(demultiplexCount),
@@ -159,7 +160,7 @@ NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
 }
 
 std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), collapsingDetails, inputsInfo);
 }
 
 std::vector<session_key_t> Node::getReadySessions() const {
@@ -188,6 +189,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
 
+
+    bool dynamicZeroDemultiplication = false;
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
@@ -203,10 +206,11 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
         if (resultsDemultiplyCount == 0) {
-            // TODO handle dynamic demultiply_count == 0
-            SPDLOG_ERROR("Dynamic demultiplexer with demultiply == 0 is not supported yet");
-            nodeSessionOutputs.erase(metadata.getSessionKey());
-            return StatusCode::NOT_IMPLEMENTED;
+            SPDLOG_DEBUG("Dynamic demultiplexer with demultiply == 0 is not supported yet"); // TODO
+            dynamicZeroDemultiplication = true;
+            continue;
+        } else if(dynamicZeroDemultiplication) {
+            return StatusCode::UNKNOWN_ERROR; // TODO log
         }
 
         newDims.erase(newDims.begin() + 1);
@@ -234,6 +238,11 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 it->second.second.emplace(blobName, dividedBlob);
             }
         }
+    }
+    if (dynamicZeroDemultiplication) { // TODO check if first did demultiply
+        // nodeSessionOutputs.erase(metadata.getSessionKey());
+        // nodeSessionOutputs.emplace(metadata.getSessionKey(), SessionResults{metadata, blobMap});
+        return StatusCode::PIPELINE_DYNAMIC_DEMULTIPLEXER_0_BATCH;
     }
     nodeSessionOutputs.erase(metadata.getSessionKey());
     return StatusCode::OK;

@@ -26,9 +26,6 @@
 
 namespace ovms {
 
-using session_id_t = uint32_t;
-using session_key_t = std::string;
-
 struct CollapseDetails {
     std::vector<std::string> collapsedSessionNames;
     std::vector<session_id_t> collapsedSessionSizes;
@@ -37,6 +34,7 @@ struct CollapseDetails {
 class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
     std::vector<std::string> sessionsLevels;
+    const bool dynamicDemultiplexer0Shards;
 
 public:
     std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;

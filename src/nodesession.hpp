@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -27,6 +28,8 @@
 namespace ovms {
 struct NodeInputHandler;
 struct NodeOutputHandler;
+struct TensorInfo;
+using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class NodeSession {
     NodeSessionMetadata metadata;
@@ -38,8 +41,8 @@ protected:
     std::unique_ptr<NodeOutputHandler> outputHandler;
 
 public:
-    NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
+    NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo);
+    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
     Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr&, session_id_t shardId);

@@ -29,12 +29,14 @@
 #include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
+#include "session_id.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
 using BlobNames = std::vector<std::string>;
-using session_key_t = std::string;
+// struct TensorInfo;
+// using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class Node {
 protected:
@@ -52,12 +54,15 @@ protected:
     const std::optional<uint32_t> demultiplexCount;
     const std::optional<std::set<std::string>> gatherFrom;
 
+    const tensor_map_t inputsInfo;
+
 public:
-    Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
+    Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {}, tensor_map_t outputsInfo = {});
 
     virtual ~Node() = default;
 
     const std::string& getName() const { return this->nodeName; }
+    const std::optional<std::set<std::string>>& getGatherFrom() const { return gatherFrom; }
 
     virtual Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) = 0;
     Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs);

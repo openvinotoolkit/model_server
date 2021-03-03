@@ -79,6 +79,30 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
             getName(), NODE.getName(), sessionKey, status.getCode(), status.string());                                                     \
     }
 
+Status Pipeline::propagateDemultiplexer0Batch(const std::string& demultiplexerNodeName, Node& propagateFrom, NodeSessionMetadata& metadata, PipelineEventQueue& finishedNodeQueue) {
+    for (auto& nextNode : propagateFrom.getNextNodes()) {
+        if (nextNode.get().getGatherFrom() &&
+            (nextNode.get().getGatherFrom().value().find(demultiplexerNodeName) !=
+             nextNode.get().getGatherFrom().value().end())) {
+            //nextNode.setInputs(propagateFrom
+            // get propagateFrom output metadata
+            // create blob with gathered dimension == 0
+            // set input < HOW TO? gathernodinputhandler`
+            // check is ready
+            // if ready execute
+            // if deffered defer
+        } else {
+            auto status = propagateDemultiplexer0Batch(demultiplexerNodeName, nextNode, metadata, finishedNodeQueue);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Propagating dynamic demultiplexing with batch 0 failed for pipeline: {}, demultiplexerNode: {}, session key: {}",
+                    getName(), demultiplexerNodeName, metadata.getSessionKey());
+                return status;
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status Pipeline::execute() {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
     PipelineEventQueue finishedNodeQueue;
@@ -118,6 +142,10 @@ Status Pipeline::execute() {
             SessionResults sessionResults;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Fetching results of pipeline: {} node: {} session: {}", getName(), finishedNode.getName(), sessionKey);
             status = finishedNode.fetchResults(sessionKey, sessionResults);
+            if (status == StatusCode::PIPELINE_DYNAMIC_DEMULTIPLEXER_0_BATCH) {
+                propagateDemultiplexer0Batch(finishedNode.getName(), finishedNode, sessionResults.begin()->second.first, finishedNodeQueue);
+                continue;
+            }
             CHECK_AND_LOG_ERROR(finishedNode)
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             auto& nextNodesFromFinished = finishedNode.getNextNodes();

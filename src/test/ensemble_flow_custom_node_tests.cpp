@@ -3171,7 +3171,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
 }
 
 // TODO handle results with 0 batch for dynamic demultiplexer
-TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DISABLED_JustDynamicDemultiplexerConfigReturning0Batch) {
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, JustDynamicDemultiplexerConfigReturning0Batch) {
     std::unique_ptr<Pipeline> pipeline;
     uint8_t dynamicDemultiplyCount = 0;
     std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};

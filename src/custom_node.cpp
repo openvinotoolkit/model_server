@@ -95,7 +95,7 @@ Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
 }
 
 std::unique_ptr<NodeSession> CustomNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<CustomNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+    return std::make_unique<CustomNodeSession>(metadata, getName(), previous.size(), collapsingDetails, inputsInfo);
 }
 
 }  // namespace ovms

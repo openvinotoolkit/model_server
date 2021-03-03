@@ -22,13 +22,19 @@
 #include <vector>
 
 #include "aliases.hpp"
+#include "session_id.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-struct Node;
 struct EntryNode;
 struct ExitNode;
+struct Node;
+struct NodeSessionMetadata;
+
+template <typename> class ThreadSafeQueue;
+
+using PipelineEventQueue = ThreadSafeQueue<std::pair<std::reference_wrapper<Node>, session_key_t>>;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 
@@ -56,6 +62,6 @@ public:
 
 private:
     std::map<const std::string, bool> prepareStatusMap() const;
+    Status propagateDemultiplexer0Batch(const std::string& demultiplexerNodeName, Node& propagateFrom, NodeSessionMetadata& metadata, PipelineEventQueue& finishedNodeQueue);
 };
-
 }  // namespace ovms

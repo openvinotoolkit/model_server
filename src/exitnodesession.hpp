@@ -31,8 +31,8 @@ class TensorInfo;
 
 class ExitNodeSession : public NodeSession {
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
+    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo);
+    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, const tensor_map_t& inputsInfo);
     virtual ~ExitNodeSession();
 
     const BlobMap& getInputBlobs() const;

@@ -142,6 +142,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
+    {StatusCode::PIPELINE_DYNAMIC_DEMULTIPLEXER_0_BATCH, "Demultiplication wih 0 batch"},
 
     // Storage errors
     // S3
