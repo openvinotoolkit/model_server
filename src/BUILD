@@ -249,6 +249,8 @@ cc_binary(
     name = "libcustom_node_east_ocr.so",
     srcs = [
         "custom_nodes/east_ocr/east_ocr.cpp",
+        "custom_nodes/east_ocr/utils.hpp",
+        "custom_nodes/east_ocr/nms.hpp",
         "custom_node_interface.h",
     ],
     deps = [
