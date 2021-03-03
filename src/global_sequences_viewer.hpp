@@ -44,10 +44,10 @@ private:
 
     std::thread sequenceCleanerThread;
 
+    std::cv_status waitFor(uint32_t sequenceCleanerInterval);
+
 protected:
     Status removeIdleSequences();
-
-    std::cv_status waitFor(uint32_t sequenceCleanerInterval);
 
 public:
     void startCleanerThread(uint32_t sequenceCleanerInterval = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
