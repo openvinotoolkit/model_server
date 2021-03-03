@@ -205,7 +205,7 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](../example_client/grpc_stateful_client.py) example client for reference.
+See [grpc_stateful_client.py](../example_client/stateful/grpc_stateful_client.py) example client for reference.
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
@@ -275,7 +275,7 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](../example_client/rest_stateful_client.py) example client for reference.
+See [rest_stateful_client.py](../example_client/stateful/rest_stateful_client.py) example client for reference.
 
 ### Error Codes <a name="stateful_errors"></a>
 
@@ -293,7 +293,7 @@ When request is invalid or couldn't be processed you can expect following errors
 | Could not find sequence control input in expected tensor proto field uint32_val. | INVALID_ARGUMENT | N/A |
 | Special input proto does not contain tensor shape information. | INVALID_ARGUMENT | N/A |
 
-### Idle Sequence Cleanup <a name="stateful_cleanup"></a>
+## Idle Sequence Cleanup <a name="stateful_cleanup"></a>
 
 Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, model server launches sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
 
@@ -312,9 +312,7 @@ If set to `true` sequence cleaner will check that model. Otherwise sequence clea
 There are following limitations when using stateful models with OVMS:
 
  - Support inference execution only using CPU as the target device.
- - Support for Kaldi models with memory layers
- - Support for non-Kaldi models with Tensor Iterator (with low latency transformation performed)
+ - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO
  - [Auto batch size and shape](shape_and_batch_size.md) are **not** available in stateful models
  - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md)
  - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
- 
