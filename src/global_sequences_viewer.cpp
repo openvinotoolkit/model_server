@@ -71,7 +71,7 @@ Status GlobalSequencesViewer::removeIdleSequences() {
     return ovms::StatusCode::OK;
 }
 
-std::cv_status GlobalSequencesViewer::waitTimeInterval(uint32_t sequenceCleanerInterval) {
+std::cv_status GlobalSequencesViewer::waitFor(uint32_t sequenceCleanerInterval) {
     std::unique_lock<std::mutex> lock(cleanerControlMutex);
     return cleanerControlCv.wait_for(lock, std::chrono::minutes(sequenceCleanerInterval));
 }
@@ -79,7 +79,7 @@ std::cv_status GlobalSequencesViewer::waitTimeInterval(uint32_t sequenceCleanerI
 void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInterval) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner");
 
-    while (waitTimeInterval(sequenceCleanerInterval) == std::cv_status::timeout) {
+    while (waitFor(sequenceCleanerInterval) == std::cv_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
 
         removeIdleSequences();
