@@ -303,7 +303,11 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             getVersion(),
             this->config.getCustomLoaderOptionsConfigStr(), model, weights);
 
-        if ((res == CustomLoaderStatus::MODEL_LOAD_ERROR) || (res == CustomLoaderStatus::INTERNAL_ERROR)) {
+        if (res == CustomLoaderStatus::MODEL_LOAD_ERROR) {
+            return StatusCode::FILE_INVALID;
+        }
+        
+        if (res == CustomLoaderStatus::INTERNAL_ERROR) {
             return StatusCode::INTERNAL_ERROR;
         }
 
