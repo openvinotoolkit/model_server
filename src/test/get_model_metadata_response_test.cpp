@@ -223,30 +223,16 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    auto isShape = [](
-                       const tensorflow::TensorShapeProto& actual,
-                       const std::vector<size_t>&& expected) -> bool {
-        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
-            return false;
-        }
-        for (int i = 0; i < actual.dim_size(); i++) {
-            if (static_cast<unsigned int>(actual.dim(i).size()) != expected[i]) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_FP32_1_3_224_224").tensor_shape(),
         {1, 3, 224, 224}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         inputs.at("Input_U8_1_3_62_62").tensor_shape(),
         {1, 3, 62, 62}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_I32_1_2000").tensor_shape(),
         {1, 2000}));
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_FP32_2_20_3").tensor_shape(),
         {2, 20, 3}));
 }

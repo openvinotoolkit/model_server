@@ -23,6 +23,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
     {StatusCode::FILE_INVALID, "File not found or cannot open"},
+    {StatusCode::NOT_IMPLEMENTED, "Functionality not implemented"},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
     {StatusCode::NETWORK_NOT_LOADED, "Error while loading a network"},
     {StatusCode::JSON_INVALID, "The file is not valid json"},
@@ -140,6 +141,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
+    {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_PATH_DEMULTIPLEXER_WITHOUT_GATHER_NODE, "Demultiplexer without gather node in pipeline path"},
     {StatusCode::PIPELINE_PATH_GATHER_WITHOUT_DEMULTIPLEXER_NODE, "Gather node without demultiplexer in pipeline path"},

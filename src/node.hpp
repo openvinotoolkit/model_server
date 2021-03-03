@@ -53,7 +53,7 @@ protected:
     const std::optional<std::set<std::string>> gatherFrom;
 
 public:
-    Node(const std::string& nodeName, uint32_t demultiplyCount = 0, std::set<std::string> gatherFromNode = {});
+    Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
 
     virtual ~Node() = default;
 
