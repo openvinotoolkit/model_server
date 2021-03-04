@@ -162,6 +162,11 @@ protected:
     virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
 
     /**
+         * @brief Lock to disable concurrent modelinstance load/unload/reload
+         */
+    std::recursive_mutex loadingMutex;
+
+    /**
          * @brief Load OV Engine
          */
     void loadOVEngine();
@@ -261,11 +266,6 @@ private:
          * Needed for gating model unloading.
          */
     std::atomic<uint64_t> predictRequestsHandlesCount = 0;
-
-    /**
-         * @brief Lock to disable concurrent modelinstance load/unload/reload
-         */
-    std::recursive_mutex loadingMutex;
 
     /**
          * @brief Internal method for loading inputs

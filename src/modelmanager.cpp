@@ -54,7 +54,6 @@ static bool watcherStarted = false;
 
 ModelManager::ModelManager() {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
-    this->sequenceViewer = std::make_unique<GlobalSequencesViewer>();
 }
 
 ModelManager::~ModelManager() = default;
@@ -62,6 +61,7 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
+    sequenceCleanerInterval = config.sequenceCleanerPollWaitMinutes();
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -84,11 +84,11 @@ void ModelManager::startWatcher() {
         monitor = std::move(t);
     }
 
-    startSequenceWatcher();
+    startSequenceCleaner();
 }
 
-void ModelManager::startSequenceWatcher() {
-    sequenceViewer->startWatcher();
+void ModelManager::startSequenceCleaner() {
+    globalSequencesViewer.startCleanerThread(sequenceCleanerInterval);
 }
 
 Status ModelManager::startFromConfig() {
@@ -103,8 +103,8 @@ Status ModelManager::startFromConfig() {
             config.batchSize(),
             config.nireq(),
             config.stateful(),
+            config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.sequenceTimeoutSeconds(),
             config.maxSequenceNumber()});
 
     if (!success) {
@@ -585,10 +585,11 @@ void ModelManager::join() {
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
+            SPDLOG_INFO("Shutdown model manager");
         }
     }
 
-    sequenceViewer->join();
+    globalSequencesViewer.join();
 }
 
 void ModelManager::getVersionsToChange(
@@ -741,15 +742,6 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
                 status.string());
             return status;
         }
-        if (config.isStateful()) {
-            status = sequenceViewer->addVersions(model, versionsToStart, versionsFailed);
-            if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while registering model versions to sequence timeout watcher: {}; versions; error: {}",
-                    config.getName(),
-                    status.string());
-                return status;
-            }
-        }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
     }
@@ -767,15 +759,6 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
                 status.string());
 
             return status;
-        }
-        if (config.isStateful()) {
-            status = sequenceViewer->reloadVersions(model, versionsToReload, versionsFailed);
-            if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading version in sequence timeout watcher: {}; versions; error: {}",
-                    config.getName(),
-                    status.string());
-                return status;
-            }
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
@@ -888,15 +871,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 config.getName(),
                 status.string());
             return status;
-        }
-        if (config.isStateful()) {
-            status = sequenceViewer->retireVersions(model, versionsToRetire);
-            if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while retiring version in sequence timeout watcher: {}; versions; error: {}",
-                    config.getName(),
-                    status.string());
-                return status;
-            }
         }
     }
     return blocking_status;

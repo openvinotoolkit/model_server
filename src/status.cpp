@@ -51,7 +51,6 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
     {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
-    {StatusCode::INVALID_SEQUENCE_TIMEOUT, "Sequence timeout parameter too high"},
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
 
     // Sequence management

@@ -35,14 +35,6 @@ uint64_t SequenceManager::getUniqueSequenceId() {
     return this->sequenceIdCounter;
 }
 
-const uint32_t SequenceManager::getTimeout() const {
-    return timeout;
-}
-
-void SequenceManager::setTimeout(uint32_t timeout) {
-    this->timeout = timeout;
-}
-
 const uint32_t SequenceManager::getMaxSequenceNumber() const {
     return maxSequenceNumber;
 }
@@ -59,7 +51,7 @@ bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
     return sequences.count(sequenceId);
 }
 
-Status SequenceManager::removeTimedOutSequences() {
+Status SequenceManager::removeIdleSequences() {
     std::unique_lock<std::mutex> sequenceManagerLock(mutex);
     for (auto it = sequences.begin(); it != sequences.end();) {
         Sequence& sequence = it->second;
@@ -68,12 +60,12 @@ Status SequenceManager::removeTimedOutSequences() {
         if (!sequence.isTerminated() && sequenceLock.owns_lock()) {
             sequenceLock.unlock();
             // We hold sequence manager lock before lock and after unlock so no other thread even attempts accessing that sequence at that moment
-            std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-            auto timeDiff = currentTime - sequence.getLastActivityTime();
-            if (std::chrono::duration_cast<std::chrono::seconds>(timeDiff).count() > timeout) {
-                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence watcher thread for model {} version {} Sequence timeouted and removed Id: {}", modelName, modelVersion, sequence.getId());
+            if (sequence.isIdle()) {
+                SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "[Idle sequence cleanup] Removing sequence with id: {} on model {}, version: {}", sequence.getId(), modelName, modelVersion);
                 it = sequences.erase(it);
                 continue;
+            } else {
+                sequence.setIdle();
             }
         }
         ++it;

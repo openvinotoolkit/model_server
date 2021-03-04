@@ -51,7 +51,7 @@ public:
 class MockModelWithInstancesJustChangingStates : public ovms::Model {
 public:
     MockModelWithInstancesJustChangingStates(const std::string& name = "UNUSED_NAME") :
-        Model(name) {}
+        Model(name, false, nullptr) {}
     virtual ~MockModelWithInstancesJustChangingStates() {}
 
 protected:

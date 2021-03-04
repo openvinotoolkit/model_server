@@ -21,16 +21,20 @@ using namespace InferenceEngine;
 
 namespace ovms {
 
-void Sequence::updateLastActivityTime() {
-    lastActivityTime = std::chrono::steady_clock::now();
-}
-
 const uint64_t Sequence::getId() const {
     return sequenceId;
 }
 
 const sequence_memory_state_t& Sequence::getMemoryState() const {
     return memoryState;
+}
+
+const bool Sequence::isIdle() const {
+    return idle;
+}
+
+void Sequence::setIdle(bool idle) {
+    this->idle = idle;
 }
 
 Status Sequence::updateMemoryState(model_memory_state_t& newState) {
@@ -44,13 +48,8 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
         }
         memoryState[stateName] = copyBlobPtr;
     }
-    updateLastActivityTime();
-
+    setIdle(false);
     return StatusCode::OK;
-}
-
-std::chrono::steady_clock::time_point Sequence::getLastActivityTime() const {
-    return lastActivityTime;
 }
 
 std::mutex& Sequence::getMutex() {

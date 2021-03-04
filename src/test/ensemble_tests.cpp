@@ -2681,7 +2681,6 @@ static const char* dummyWithStatefulModelType = R"(
                 "nireq": 1,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 2,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }

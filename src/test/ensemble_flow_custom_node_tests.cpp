@@ -2529,7 +2529,7 @@ class ModelWithDummyModelWithMockedMetadata : public ovms::Model {
 
 public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
-        Model(name),
+        Model(name, false, nullptr),
         modelInstance(modelInstance) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return modelInstance;
