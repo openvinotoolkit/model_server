@@ -1283,7 +1283,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
 
     // Remove status file
     std::filesystem::remove(status_file);
-    //remove binary file
+    // remove binary file
     std::string bin_file = status_file_path + "/dummy.bin";
     std::filesystem::remove(bin_file);
 
@@ -1307,7 +1307,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     ASSERT_EQ(error_status, StatusCode::OK);
     EXPECT_EQ(json_output, expected_json_end);
 
-    //try reload
+    // try reload
     sleep(10);
     manager.startFromFile(fileToReload);
 
