@@ -197,16 +197,73 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     createConfigFileWithContent(configBefore, fileToReload);
     status = manager.loadConfig(fileToReload);
     ASSERT_EQ(status, StatusCode::OK);
+    // Expect lib1 not to change and lib2 to be removed
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Entry), StatusCode::OK);
-    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Entry), StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Entry), StatusCode::NODE_LIBRARY_MISSING);
 
-    // Expect lib1 not to change and lib2 to still be loaded
     EXPECT_EQ(lib1After.execute, lib1Entry.execute);
     EXPECT_EQ(lib1After.getInputsInfo, lib1Entry.getInputsInfo);
     EXPECT_EQ(lib1After.getOutputsInfo, lib1Entry.getOutputsInfo);
     EXPECT_EQ(lib1After.release, lib1Entry.release);
-    EXPECT_EQ(lib2After.execute, lib2Entry.execute);
-    EXPECT_EQ(lib2After.getInputsInfo, lib2Entry.getInputsInfo);
-    EXPECT_EQ(lib2After.getOutputsInfo, lib2Entry.getOutputsInfo);
-    EXPECT_EQ(lib2After.release, lib2Entry.release);
+    EXPECT_EQ(lib2Entry.execute, nullptr);
+    EXPECT_EQ(lib2Entry.getInputsInfo, nullptr);
+    EXPECT_EQ(lib2Entry.getOutputsInfo, nullptr);
+    EXPECT_EQ(lib2Entry.release, nullptr);
+}
+
+TEST_F(ModelManagerNodeLibraryTest, AddRemoveAndAddLibraryInConfigReload) {
+    const char* configBefore = R"({
+        "model_config_list": [],
+        "custom_node_library_config_list": [
+            {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"}
+        ]})";
+    const char* configRemove = R"({
+        "model_config_list": [],
+        "custom_node_library_config_list": [
+        ]})";
+    const char* configAfter = R"({
+        "model_config_list": [],
+        "custom_node_library_config_list": [
+            {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"}
+        ]})";
+    std::string fileToReload = directoryPath + "/ovms_config_file1.json";
+
+    // Start with configBefore
+    createConfigFileWithContent(configBefore, fileToReload);
+    ConstructorEnabledModelManager manager;
+    NodeLibrary lib1Before;
+    auto status = manager.startFromFile(fileToReload);
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Before), StatusCode::OK);
+
+    // Expect lib1 to be loaded
+    EXPECT_TRUE(lib1Before.isValid());
+
+    // Reload with configRemove
+    NodeLibrary lib1Remove;
+    createConfigFileWithContent(configRemove, fileToReload);
+    status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Remove), StatusCode::NODE_LIBRARY_MISSING);
+
+    // Expect lib1 to be removed
+    EXPECT_EQ(lib1Remove.execute, nullptr);
+    EXPECT_EQ(lib1Remove.getInputsInfo, nullptr);
+    EXPECT_EQ(lib1Remove.getOutputsInfo, nullptr);
+    EXPECT_EQ(lib1Remove.release, nullptr);
+
+    // Reload with configAfter
+    NodeLibrary lib1After;
+    createConfigFileWithContent(configAfter, fileToReload);
+    status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::OK);
+
+    // Expect lib1 to be added with different library
+    ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1After), StatusCode::OK);
+
+    EXPECT_TRUE(lib1After.isValid());
+    EXPECT_NE(lib1Before.execute, lib1After.execute);
+    EXPECT_NE(lib1Before.getInputsInfo, lib1After.getInputsInfo);
+    EXPECT_NE(lib1Before.getOutputsInfo, lib1After.getOutputsInfo);
+    EXPECT_NE(lib1Before.release, lib1After.release);
 }

@@ -117,6 +117,9 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     CollapseDetails collapsingDetails;
     std::tie(metaCollapsedOnExtract1st, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract2nd"});
     auto hashCollapsed = metaCollapsedOnExtract1st.getSessionKey();
+    // need to ensure that generated collapsed session key before collapsing and after are the same
+    EXPECT_EQ(hashCollapsed, demultiplexedMetaLev3.getSessionKey({std::string("extract2nd")}));
+
     ASSERT_THAT(hashCollapsed, HasSubstr("request_2"));
     ASSERT_THAT(hashCollapsed, HasSubstr("extract1st_0"));
     ASSERT_THAT(hashCollapsed, Not(HasSubstr("extract2nd_2")));
@@ -355,5 +358,28 @@ TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
     for (size_t i = 0; i < subsessionsLevel4.size(); ++i) {
         EXPECT_EQ(subsessionsLevel4[i].getShardId({subsessionName2, subsessionName3, subsessionName4}),
             i + subsessionSize4 * (subsessionLev3Index + subsessionSize3 * (subsessionLev2Index)));
+    }
+}
+
+TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse1) {
+    NodeSessionMetadata metaStart;
+    uint subsessionSize1 = 13;
+    uint subsessionSize2 = 9;
+    uint subsessionSize3 = 7;
+    uint subsessionSize4 = 5;
+    const std::string subsessionName1 = "subsession1";
+    const std::string subsessionName2 = "subsession2";
+    const std::string subsessionName3 = "subsession3";
+    const std::string subsessionName4 = "subsession4";
+    const int subsessionLev1Index = 4;
+    const int subsessionLev2Index = 6;
+    const int subsessionLev3Index = 3;
+    auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1, subsessionSize1);
+    auto subsessionsLevel2 = subsessionsLevel1[subsessionLev1Index].generateSubsessions(subsessionName2, subsessionSize2);
+    auto subsessionsLevel3 = subsessionsLevel2[subsessionLev2Index].generateSubsessions(subsessionName3, subsessionSize3);
+    auto subsessionsLevel4 = subsessionsLevel3[subsessionLev3Index].generateSubsessions(subsessionName4, subsessionSize4);
+    for (size_t i = 0; i < subsessionsLevel4.size(); ++i) {
+        EXPECT_EQ(subsessionsLevel4[i].getShardId({subsessionName4}),
+            i);
     }
 }

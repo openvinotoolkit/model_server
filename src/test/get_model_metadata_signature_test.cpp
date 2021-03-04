@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../get_model_metadata_impl.hpp"
+#include "test_utils.hpp"
 
 class GetModelMetadataSignature : public ::testing::Test {
     struct Info {
@@ -81,25 +82,11 @@ TEST_F(GetModelMetadataSignature, ConvertCorrectPrecision) {
 TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
 
-    auto isShape = [](
-                       const tensorflow::TensorShapeProto& actual,
-                       const std::vector<size_t>&& expected) -> bool {
-        if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
-            return false;
-        }
-        for (int i = 0; i < actual.dim_size(); i++) {
-            if (static_cast<unsigned int>(actual.dim(i).size()) != expected[i]) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         signature["Input_FP32_1_3_224_224"].tensor_shape(),
         {1, 3, 224, 224}));
 
-    EXPECT_TRUE(isShape(
+    EXPECT_TRUE(isShapeTheSame(
         signature["Input_I64_1_6_128_128_16"].tensor_shape(),
         {1, 6, 128, 128, 16}));
 }

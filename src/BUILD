@@ -237,9 +237,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "lib_node_dynamic_demultiplex.so",
+    srcs = [
+        "test/custom_nodes/node_dynamic_demultiplex.cpp",
+        "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "libcustom_node_east_ocr.so",
     srcs = [
         "custom_nodes/east_ocr/east_ocr.cpp",
+        "custom_nodes/east_ocr/utils.hpp",
+        "custom_nodes/east_ocr/nms.hpp",
         "custom_node_interface.h",
     ],
     deps = [
@@ -344,6 +355,7 @@ cc_test(
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
         "//src:lib_node_add_sub.so",
+        "//src:lib_node_dynamic_demultiplex.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
         "//src:libcustom_node_east_ocr.so",

@@ -61,7 +61,16 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for blob results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
-    auto ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+    InferenceEngine::StatusCode ov_status;
+    try {
+        ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        return StatusCode::INTERNAL_ERROR;
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} infer request finished", getName(), sessionKey);
 
     static_cast<DLNodeSession&>(this->getNodeSession(sessionKey)).clearInputs();
@@ -82,7 +91,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
             try {
                 std::string realModelOutputName;
                 if (!getRealOutputName(model, output_name, &realModelOutputName).ok()) {
-                    SPDLOG_LOGGER_WARN(dag_executor_logger, "Node: {} session: {} Cannot find real model output name for alias{}", getName(), sessionKey, output_name);
+                    SPDLOG_LOGGER_WARN(dag_executor_logger, "Node: {} session: {} Cannot find real model output name for alias: {}", getName(), sessionKey, output_name);
                     return StatusCode::INTERNAL_ERROR;
                 }
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting blob from model: {}, inferRequestStreamId: {}, blobName: {}",
