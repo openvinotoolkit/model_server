@@ -33,8 +33,6 @@ int extract_text_images_into_output(struct CustomNodeTensor* output, const std::
     uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
-    NODE_ASSERT(outputBatch > 0, "No findings");
-
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);
@@ -173,7 +171,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     }
 
     if (debugMode) {
-        std::cout << "Processing input tensor image resolution: " << cv::Size(imageHeight, imageWidth) << "; expected resolution: " << cv::Size(originalImageHeight, originalImageHeight) << std::endl;
+        std::cout << "Processing input tensor image resolution: " << cv::Size(imageHeight, imageWidth) << "; expected resolution: " << cv::Size(originalImageHeight, originalImageWidth) << std::endl;
     }
 
     NODE_ASSERT(imageHeight == originalImageHeight, "original image size parameter differs from original image tensor size");
