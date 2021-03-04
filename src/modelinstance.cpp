@@ -306,7 +306,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         if (res == CustomLoaderStatus::MODEL_LOAD_ERROR) {
             return StatusCode::FILE_INVALID;
         }
-        
+
         if (res == CustomLoaderStatus::INTERNAL_ERROR) {
             return StatusCode::INTERNAL_ERROR;
         }
