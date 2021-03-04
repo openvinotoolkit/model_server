@@ -3,7 +3,7 @@
 This document demonstrate how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
 [CRNN](https://github.com/MaybeShewill-CV/CRNN_Tensorflow) text recognition combined with a custom node implementation.
 
-Thanks to such pipeline, a single request to OVMS can perform a complex set of operations with a response containing
+Using such pipeline, a single request to OVMS can perform a complex set of operations with a response containing
 recognized characters for all detected text boxes. 
 
 ## OCR Graph
@@ -14,15 +14,15 @@ Below is depicted the graph implementing a complete OCR pipelines.
 
 It includes the following Nodes:
 - Model east-resent50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
-- Custom node east_ocr - it includes C++ implementation of east-resnet50 model results interpretation. It analyses the detected boxes coordinates include the angle, filters the results
+- Custom node east_ocr - it includes C++ implementation of east-resnet50 model results interpretation. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
 from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom model](TBD)
 - demuliplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node
 - Model crnn - this model recognize the characters included in the input image in the grayscale. 
-- Collector - This node combines the inference responses from all detected boxes and generates a single output of text_detection. Each batch in the response represents recognized text in a detected text box.
-- Response - the output of the hole pipeline combines the recognized texts with their labels. Labels include the metadata about each detected text like geometry and score results
+- Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
+The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
 ## Preparing the Models
 

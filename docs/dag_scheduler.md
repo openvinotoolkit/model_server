@@ -36,8 +36,8 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
 a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](../src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or in could include other third-party components. Custom node libraries are integrated with OVMS
- by adding it definition the the pipeline configuration including a path to the compiled binary with `.so` extension. Unlike models, custom nodes
-are not versioned.
+ by adding its definition to the pipeline configuration. The configuration includes a path to the compiled binary with `.so` extension. 
+Unlike models, custom nodes are not versioned.
 
 Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
 
@@ -52,7 +52,9 @@ Nodes in the pipelines can reference only the models configured in model_config_
 Below is depicted a basic pipeline section template:
 
 ```
+
 {
+    "model_config_list": [...],
     "custom_node_library_config_list": [
         {
             "name": "custom_node_lib",
@@ -157,7 +159,7 @@ the same way. Custom node functions just like a standard mode in that respect. T
 |:---|:---|:---|:---|
 |`"library_name"`|string|Name of the custom node library defined in `custom_node_library_config_list`|&check;|
 |`"type"`|string|Must be set to `custom`|&check;|
-|`"params"`| list of string maps| a list of parameters and their values which could be used in the custom node implementation|&check;|
+|`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation|&check;|
 
 ## Using the pipelines <a name="using-pipelines"></a>
 

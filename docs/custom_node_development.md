@@ -4,13 +4,13 @@
 
 Custom node in OpenVINO Model Server simplifies linking deep learning models into a complete pipelines even if the inputs and output
 of the sequential models do not fit. In many cases, output of one model can not be directly passed to another one.
-The data might need to be analysed, filtered or converted to difference format. Those operations can not be easily implemented
-in AI frameworks or are just not supported. Custom node address this challenge. They allows employing a dynamic library
+The data might need to be analysed, filtered or converted to different format. Those operations can not be easily implemented
+in AI frameworks or are simply not supported. Custom node addresses this challenge. They allows employing a dynamic library
 developed in C++ or C to perform arbitrary data transformations. 
 
 ## Custom Node API
 
-The custom node library must implemented the API interface defined in [custom_node_interface.h](../src/custom_node_interface.h).
+The custom node library must implement the API interface defined in [custom_node_interface.h](../src/custom_node_interface.h).
 The interface is defined in `C` to simplify compatibility with various compilers. The library could use third party components
 linked statically or dynamically. OpenCV is a built in component in OVMS which could be used to perform manipulation on the image
 data. 
@@ -20,8 +20,9 @@ Below are explained the data structures and functions defined in the API header.
 ### "CustomNodeTensor" struct 
 
 The CustomNodeTensor struct consist of several fields defining the data in the output and input of the node execution.
-Because it has constant length, it can carry multiple inputs. Custom node can generate results based on multiple inputs 
-from one or more other nodes. Each input can be referenced using an index:
+Custom node can generate results based on multiple inputs from one or more other nodes. 
+CustomNodeTensor object can store multiple inputs to be processed in the execute function.
+Each input can be referenced using an index or you can search by name:
 ```
 inputTensor0 = &(inputs[0])
 ```
@@ -29,19 +30,19 @@ Every CustomNodeTensor struct include the following fields:
 `const char* name`  - pointer to the string representing the input name
 `uint8_t* data` - pointer to data buffer. Data is stored as bytes.
 `uint64_t dataBytes` - the size of the data allocation in bytes
-`uint64_t* dims` - pointer to the buffer storing array shape size. Size of each dimension consumes 8bytes
-`uint64_t dimsCount` - number of dimension on the data array
-`CustomNodeTensorPrecision precision` - data precision selector
+`uint64_t* dims` - pointer to the buffer storing array shape size. Size of each dimension consumes 8 bytes
+`uint64_t dimsCount` - number of dimension in the data array
+`CustomNodeTensorPrecision precision` - data precision enumeration
 
 ### CustomNodeTensorInfo struct
 
-The fields in struct CustomNodeTensorInfo are similar like in CustomNodeTensor. It just holds information about 
+The fields in struct CustomNodeTensorInfo are similar to CustomNodeTensor. It just holds information about 
 the metadata of the custom node interfaces: inputs and outputs.
 
 ### "CustomNodeParam" struct
 
 Struct CustomNodeParam stores a list of pairs with pointers to parameter and and value strings.
-Each parameter can be references in such object using an index.
+Each parameter can be references in such object using an index you can search by key name by iterating the structure.
 
 ### "execute" function
 ```
@@ -62,12 +63,11 @@ The results of the data transformation should be returned by the outputs pointer
 CustomNodeTensor struct. Number of outputs is to be defined during the function execution in the `outputsCount` argument.
 
 Note that during the function execution all the output data buffers needs to be allocated. They will be released by OVMS after 
-the request processing is completed and returned to the user. The cleanup is triggered by calling `release` function.
+the request processing is completed and returned to the user. The cleanup is triggered by calling `release` function 
+which also needs to be implemented in custom library.
 
-Execute function returns an integer which value defines the success (0) or failure (1). When the function 
-reports error, the pipeline execution is stopped and error is returned to the user.
-A special response is returned (2) when the execute doesn't return any results. It could be the case when object detection 
-model doesn't detect any valid objects in the input image.
+Execute function returns an integer which value defines the success (`0` value) or failure ( greater than 0). When the function 
+reports error, the pipeline execution is stopped and error is returned to the user. 
 
 ### "getInputsInfo" function
 This function returns information about the metadata of the expected inputs. Returned CustomNodeTensorInfo object is used 
@@ -75,15 +75,16 @@ to create a response for getModelMetadata calls. It is also used in the user req
 configuration validation.
 
 Custom nodes can generate the results which have dynamic size depending on the input data and the custom node parameters.
-In such case function getInputsInfo should return value `-1` on the dimension with dynamic size. It could be an input with
-variable resolution or a batch size.
+In such case function getInputsInfo should return value `0` on the dimension with dynamic size. It could be an input with
+variable resolution or a batch size. 
 
 ### "getOutputInfo" function
 Similar to previous function but defining the outputs metadata.
 
 ### "release" function
-This function is called by OVMS at the end of the pipeline processing. It should clear all memory allocations used during the 
-node execution.
+This function is called by OVMS at the end of the pipeline processing. It clear all memory allocations used during the 
+node execution. This function should only call `free`. OVMS decides when to free and what to free.
+
 
 ## Using OpenCV
 The custom node library can use any third-party dependencies which could be linked statically or dynamically.
@@ -95,9 +96,7 @@ Just add include statement like:
 
 ## Building
 Custom node library can be compiled using any tool but for simplicity there are prepared a method based on a g++ compiled 
-inside a docker container.
-Also bazel could be adopted like in the example
-
+inside a docker container. A simple example is described in this [Makefile](../src/custom_nodes/east_ocr/Makefile). 
 
 ## Testing 
 Recommended method for tesing the custom library is via OVMS execution:
