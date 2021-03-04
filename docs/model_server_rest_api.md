@@ -9,6 +9,9 @@ This document covers following API:
 * <a href="#model-status">Model Status API</a>
 * <a href="#model-metadata">Model MetaData API </a>
 * <a href="#predict">Predict API </a>
+* <a href="#config-reload">Config Reload API </a>
+* <a href="#config-status">Config Status API </a>
+
 
 > **Note** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
@@ -181,3 +184,102 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
 }
 ```
 Read more about *Predict API* usage [here](./../example_client/README.md#predict-api-1)
+
+## Config Reload API <a name="config-reload"></a>
+* Description
+
+Sends requests via RESTful API to trigger config reloading and get models and DAGs statuses as a response.
+Flow after receiving request:
+1) If config file was changed - reload config. (If reload was needed return code is 201, otherwise 200)
+2) If any model version directory was changed or new version directory was added - reload this model.
+3) If any model that is part of a pipeline was changed or new version dir was added - reload this pipeline.
+4) Trigger Get Model Status API for all models and pipelines, aggregate all responses into one and return it with proper code.
+
+If any of above steps fail - error message with code 412 is returned.
+
+* URL
+```
+POST http://${REST_URL}:${REST_PORT}/v1/config/reload
+```
+* Request
+To trigger reload HTTP POST request should be sent on given URL.
+
+
+* Response
+In case of config reload success response contains aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+```Bash
+{ 
+"<model name>": 
+{ 
+  "model_version_status": [     
+  { 
+     "version": <model version>|<string>,
+     "state": <model state>|<string>, 
+     "status":
+{ 
+  "error_code": <error code>|<string>, 
+  "error_message": <error message>|<string>       
+} 
+  }, 
+  ...  
+] 
+}, 
+... 
+} 
+```
+
+In case of any failure during execution: 
+ 
+```Bash
+{ 
+  "error": <error message>|<string> 
+} 
+```
+When operation succeeded HTTP response status code should be
+  - 201 when config file was reloaded 
+  - 200 when reload was not required, already applied or OVMS was started in single model mode
+For failure status code is 412.
+
+## Config Status API <a name="config-status"></a>
+* Description
+
+Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and DAGs.
+
+* URL
+```
+GET http://${REST_URL}:${REST_PORT}/v1/config
+```
+* Request
+To trigger this API HTTP GET request should be sent on given URL.
+
+* Response
+In case of success response contains aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+```Bash
+{ 
+"<model name>": 
+{ 
+  "model_version_status": [     
+  { 
+     "version": <model version>|<string>,
+     "state": <model state>|<string>, 
+     "status":
+{ 
+  "error_code": <error code>|<string>, 
+  "error_message": <error message>|<string>       
+} 
+  }, 
+  ...  
+] 
+}, 
+... 
+} 
+```
+
+In case of any failure during execution:
+ 
+```Bash
+{ 
+  "error": <error message>|<string> 
+} 
+```
+When operation succeeded HTTP response status code should be 200. For failure status code is 412.
