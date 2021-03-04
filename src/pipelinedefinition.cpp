@@ -63,6 +63,12 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+
+    validationResult = validateDemultiplexerGatherNodesOrder();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     return validationResult;
@@ -816,6 +822,72 @@ Status PipelineDefinition::validateForCycles() {
             } else {
                 nodeName = parentNodes.back();
                 parentNodes.pop_back();
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
+    auto exitNode = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), [](const NodeInfo& nodeInfo) { return nodeInfo.kind == NodeKind::EXIT; });
+    using gatherFromNode_t = std::set<std::string>;
+    using demultiplyStack_t = std::vector<gatherFromNode_t>;
+    std::vector<std::pair<std::string, demultiplyStack_t>> nodesToCheck{{exitNode->nodeName, {exitNode->gatherFromNode}}};
+    if (exitNode->gatherFromNode.empty()) {
+        nodesToCheck.back().second.clear();
+    }
+    std::map<std::string, demultiplyStack_t> visitedNodes;
+    while (!nodesToCheck.empty()) {
+        auto [nodeName, demultiplyStack] = nodesToCheck.back();
+        nodesToCheck.pop_back();
+        for (auto& [connectedNodeName, aliasName] : connections[nodeName]) {
+            auto newDemultiplyStack(demultiplyStack);
+            auto& connectedNodeInfo = findNodeByName(connectedNodeName);
+            if (connectedNodeInfo.demultiplyCount) {
+                if (newDemultiplyStack.empty()) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that doesn't gather from demultiplexer node: {}.", getName(), connectedNodeName);
+                    return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+                }
+                auto& lastGatherSet = newDemultiplyStack.back();
+                if (lastGatherSet.find(connectedNodeName) == lastGatherSet.end()) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path where after demultiplexer node: {} there is gathering from different nodes: {}.",
+                        getName(),
+                        connectedNodeName,
+                        std::accumulate(lastGatherSet.begin(), lastGatherSet.end(), std::string{}, [](const std::string& lhs, const std::string& rhs) {
+                            if (lhs.empty()) {
+                            return rhs;
+                            }
+                            return lhs + ", " + rhs; }));
+                    return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+                }
+                lastGatherSet.erase(connectedNodeName);
+                if (lastGatherSet.empty()) {
+                    newDemultiplyStack.pop_back();
+                }
+            }
+            if (!connectedNodeInfo.gatherFromNode.empty()) {
+                newDemultiplyStack.emplace_back(connectedNodeInfo.gatherFromNode);
+            }
+            if (connectedNodeInfo.kind == NodeKind::ENTRY && !newDemultiplyStack.empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from demultiplexer nodes that are not in path: {}.",
+                    getName(),
+                    std::accumulate(newDemultiplyStack.back().begin(), newDemultiplyStack.back().end(), std::string{}, [](const std::string& lhs, const std::string& rhs) {
+                        if (lhs.empty()) {
+                            return rhs;
+                        }
+                        return lhs + ", " + rhs; }));
+                return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+            }
+            auto visitedNode = std::find_if(std::begin(visitedNodes), std::end(visitedNodes),
+                [&connectedNodeName](const auto& visitedNode) { return visitedNode.first == connectedNodeName; });
+            if (visitedNode != visitedNodes.end()) {
+                if (visitedNode->second != newDemultiplyStack) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels", getName(), connectedNodeName);
+                    return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
+                }
+            } else {
+                nodesToCheck.emplace_back(std::pair{connectedNodeName, newDemultiplyStack});
+                visitedNodes.emplace(connectedNodeName, std::move(newDemultiplyStack));
             }
         }
     }

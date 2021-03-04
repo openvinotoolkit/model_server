@@ -2088,7 +2088,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
                 {"in_InputNumbers_1", "1,700;I32"},
                 {"in_InputNumbers_2", "1,8;FP32"},
                 {"out_OutputNumbers", "1,2000;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -2121,7 +2121,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
             parameters_t{
                 {"in_InputNumbers_1", "1,10;FP32"},
                 {"out_OutputNumbers", "1,10;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -2251,7 +2251,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
             parameters_t{
                 {"in_InputNumbers", "1,10;FP32"},
                 {"out_OutputNumbers_1", "1,0,10;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -2410,7 +2410,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
             parameters_t{
                 {"in_InputNumbers", "1,2000;FP32"},
                 {"out_OutputNumbers", "1,5;I32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1", "custom_node_2"}},
     };
 
     pipeline_connections_t connections;
@@ -3067,6 +3067,138 @@ TEST_F(EnsembleConfigurationValidationWithGather, DemultiplyCountNotMatchingInpu
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultipliersGatherNodesNotInLIFOOrder) {
+    const size_t demultiplyCount1 = 11;
+    const size_t demultiplyCount2 = 43;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,11,700;I32"},
+                {"out_OutputNumbers_2", "1,11,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount2, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,43,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,11,2000;FP32"},
+                {"out_OutputNumbers", "1,100;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_2"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, GatherNodeWithoutDemultiplexerPath) {
+    const size_t demultiplyCount1 = 11;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "1,11,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers1", "1,700;FP32"},
+                {"in_InputNumbers2", "1,700;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers1"}}},
+        {"custom_node_2", {{"out", "in_InputNumbers2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGatherNodePath) {
+    const size_t demultiplyCount1 = 11;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "1,11,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,11,700;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,700;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_4", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers1", "1,700;FP32"},
+                {"in_InputNumbers2", "1,700;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["custom_node_4"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers1"}}},
+        {"custom_node_3", {{"out", "in_InputNumbers2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_4", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
 }
 
 class EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
