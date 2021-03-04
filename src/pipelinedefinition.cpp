@@ -846,7 +846,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
             if (connectedNodeInfo.demultiplyCount) {
                 if (newDemultiplyStack.empty()) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that doesn't gather from demultiplexer node: {}.", getName(), connectedNodeName);
-                    return StatusCode::PIPELINE_PATH_DEMULTIPLEXER_WITHOUT_GATHER_NODE;
+                    return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
                 auto& lastGatherSet = newDemultiplyStack.back();
                 if (lastGatherSet.find(connectedNodeName) == lastGatherSet.end()) {
@@ -876,7 +876,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                             return rhs;
                         }
                         return lhs + ", " + rhs; }));
-                return StatusCode::PIPELINE_PATH_GATHER_WITHOUT_DEMULTIPLEXER_NODE;
+                return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
             }
             auto visitedNode = std::find_if(std::begin(visitedNodes), std::end(visitedNodes),
                 [&connectedNodeName](const auto& visitedNode) { return visitedNode.first == connectedNodeName; });
