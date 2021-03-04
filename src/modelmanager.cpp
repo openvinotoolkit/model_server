@@ -607,6 +607,29 @@ void ModelManager::getVersionsToChange(
         registeredModelVersions.push_back(version);
     }
 
+    if (newModelConfig.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = newModelConfig.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(loaderName);
+        if (loaderPtr != nullptr) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
+
+            // check existing version for blacklist
+            for (const auto& [version, versionInstance] : modelVersionsInstances) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} checking for blacklist", versionInstance->getName());
+                CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
+                if (bres != CustomLoaderStatus::OK) {
+                    SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
+                    requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+                } else {
+                  SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} is not blacklisted", versionInstance->getName());
+                }
+            }
+        }
+    }
+
     model_versions_t alreadyRegisteredVersionsWhichAreRequested(requestedVersions.size());
     model_versions_t::iterator it = std::set_intersection(
         requestedVersions.begin(), requestedVersions.end(),
@@ -815,16 +838,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         if (loaderPtr != nullptr) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
             model->setCustomLoaderName(loaderName);
-
-            // check existing version for blacklist
-            for (const auto& [version, versionInstance] : model->getModelVersions()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} checking for blacklist", versionInstance->getName());
-                CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
-                if (bres != CustomLoaderStatus::OK) {
-                    SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
-                    requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
-                }
-            }
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
             model->retireAllVersions();

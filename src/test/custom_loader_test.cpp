@@ -212,6 +212,66 @@ const char* custom_loader_config_model_multiple = R"({
       ]
     })";
 
+const char* custom_loader_config_model_blacklist = R"({
+       "custom_loader_config_list":[
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         },
+         {
+          "config":{
+            "loader_name":"sample-loader",
+            "library_path": "/ovms/bazel-bin/src/libsampleloader.so"
+          }
+         }
+       ],
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/tmp/test_cl_models/model1",
+            "nireq": 1,
+            "custom_loader_options": {"loader_name":  "sample-loader", "model_file":  "dummy.xml", "bin_file": "dummy.bin", "enable_file": "dummy.status"}
+          }
+        }
+      ]
+    })";
+
+const char* empty_config = R"({
+      "custom_loader_config_list":[],
+      "model_config_list":[]
+    })";
+
+const char* expected_json_available = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+)";
+
+const char* expected_json_end = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+)";
+
 class MockModel : public ovms::Model {
 public:
     MockModel() :
@@ -246,8 +306,14 @@ public:
         std::filesystem::create_directories(cl_model_1_path);
     }
     void TearDown() {
-        // Clean up temporary destination
-        std::filesystem::remove_all(cl_models_path);
+        std::string configStr = empty_config;
+       // Create config file
+       std::string fileToReload = cl_models_path + "/cl_config.json";
+       createConfigFileWithContent(configStr, fileToReload);
+       ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+       manager.startFromFile(fileToReload);
+       // Clean up temporary destination
+       std::filesystem::remove_all(cl_models_path);
     }
     /**
      * @brief This function should mimic most closely predict request to check for thread safety
@@ -271,7 +337,7 @@ public:
         auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
         ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
         std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
-        // skipped temporarily EXPECT_THAT(output, Each(Eq(2.)));
+	EXPECT_THAT(output, Each(Eq(2.)));
     }
 
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
@@ -1016,6 +1082,251 @@ TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     performPredict("dummy", 1, request);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
+        // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_blacklist;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(1);
+
+    ::grpc::Status ret = test_PerformModelStatusRequestForCustomLoader(s, req, res);
+
+    const tensorflow::serving::GetModelStatusResponse response_const = res;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+
+    // copy status file
+    std::string status_file_path = cl_model_1_path + "1";
+    std::string status_str = "DISABLED";
+    std::string status_file = status_file_path + "/dummy.status";
+    createConfigFileWithContent(status_str, status_file);
+
+    sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl sx;
+    tensorflow::serving::GetModelStatusRequest reqx;
+    tensorflow::serving::GetModelStatusResponse resx;
+
+    auto model_specx = reqx.mutable_model_spec();
+    model_specx->Clear();
+    model_specx->set_name("dummy");
+    model_specx->mutable_version()->set_value(1);
+
+    ::grpc::Status retx = test_PerformModelStatusRequestForCustomLoader(sx, reqx, resx);
+
+    const tensorflow::serving::GetModelStatusResponse response_constx = resx;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_constx, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_blacklist;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(1);
+
+    ::grpc::Status ret = test_PerformModelStatusRequestForCustomLoader(s, req, res);
+
+    const tensorflow::serving::GetModelStatusResponse response_const = res;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+
+    // copy status file
+
+    std::string status_file_path = cl_model_1_path + "1";
+    std::string status_str = "DISABLED";
+    std::string status_file = status_file_path + "/dummy.status";
+    createConfigFileWithContent(status_str, status_file);
+
+    sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s1;
+    tensorflow::serving::GetModelStatusRequest req1;
+    tensorflow::serving::GetModelStatusResponse res1;
+
+    auto model_spec1 = req1.mutable_model_spec();
+    model_spec1->Clear();
+    model_spec1->set_name("dummy");
+    model_spec1->mutable_version()->set_value(1);
+
+    ::grpc::Status ret1 = test_PerformModelStatusRequestForCustomLoader(s1, req1, res1);
+
+    const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_const1, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
+
+    // Remove status file
+    std::filesystem::remove(status_file);
+
+    sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s2;
+    tensorflow::serving::GetModelStatusRequest req2;
+    tensorflow::serving::GetModelStatusResponse res2;
+
+    auto model_spec2 = req2.mutable_model_spec();
+    model_spec2->Clear();
+    model_spec2->set_name("dummy");
+    model_spec2->mutable_version()->set_value(1);
+
+    ::grpc::Status ret2 = test_PerformModelStatusRequestForCustomLoader(s2, req2, res2);
+
+    const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_const2, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+}
+
+TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_blacklist;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s;
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(1);
+
+    ::grpc::Status ret = test_PerformModelStatusRequestForCustomLoader(s, req, res);
+
+    const tensorflow::serving::GetModelStatusResponse response_const = res;
+    std::string json_output;
+    Status error_status = GetModelStatusImpl::serializeResponse2Json(&response_const, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_available);
+
+    // copy status file
+    std::string status_file_path = cl_model_1_path + "1";
+    std::string status_str = "DISABLED";
+    std::string status_file = status_file_path + "/dummy.status";
+    createConfigFileWithContent(status_str, status_file);
+
+    sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s1;
+    tensorflow::serving::GetModelStatusRequest req1;
+    tensorflow::serving::GetModelStatusResponse res1;
+
+    auto model_spec1 = req1.mutable_model_spec();
+    model_spec1->Clear();
+    model_spec1->set_name("dummy");
+    model_spec1->mutable_version()->set_value(1);
+
+    ::grpc::Status ret1 = test_PerformModelStatusRequestForCustomLoader(s1, req1, res1);
+
+    const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_const1, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
+
+	// Remove status file
+    std::filesystem::remove(status_file);
+	//remove binary file
+	std::string bin_file = status_file_path + "/dummy.bin";
+	std::filesystem::remove(bin_file);
+
+    sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s2;
+    tensorflow::serving::GetModelStatusRequest req2;
+    tensorflow::serving::GetModelStatusResponse res2;
+
+    auto model_spec2 = req2.mutable_model_spec();
+    model_spec2->Clear();
+    model_spec2->set_name("dummy");
+    model_spec2->mutable_version()->set_value(1);
+
+    ::grpc::Status ret2 = test_PerformModelStatusRequestForCustomLoader(s2, req2, res2);
+
+    const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_const2, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
+
+    //try reload
+	sleep(10);
+    manager.startFromFile(fileToReload);
+
+    ModelServiceImpl s3;
+    tensorflow::serving::GetModelStatusRequest req3;
+    tensorflow::serving::GetModelStatusResponse res3;
+
+    auto model_spec3 = req3.mutable_model_spec();
+    model_spec3->Clear();
+    model_spec3->set_name("dummy");
+    model_spec3->mutable_version()->set_value(1);
+
+    ::grpc::Status ret3 = test_PerformModelStatusRequestForCustomLoader(s3, req3, res3);
+
+    const tensorflow::serving::GetModelStatusResponse response_const3 = res3;
+    json_output = "";
+    error_status = GetModelStatusImpl::serializeResponse2Json(&response_const3, &json_output);
+    ASSERT_EQ(error_status, StatusCode::OK);
+    EXPECT_EQ(json_output, expected_json_end);
 }
 
 #pragma GCC diagnostic pop

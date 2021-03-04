@@ -275,7 +275,7 @@ void custSampleLoader::checkModelStatus() {
         }
 
         if (stateStr == "DISABLED") {
-            std::cout << "Balcklisting Model:: " << it.first.first << std::endl;
+            std::cout << "Blacklisting Model:: " << it.first.first << std::endl;
             models_blacklist_local.insert({it.first, true});
         }
     }
