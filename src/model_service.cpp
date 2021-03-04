@@ -135,7 +135,7 @@ Status GetModelStatusImpl::getModelStatus(
 }
 
 Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
-    std::shared_lock manager_lock(manager.modelsMtx);
+    std::shared_lock lock(manager.modelsMtx);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
 
     const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
@@ -152,7 +152,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         }
         modelsStatusesTmp.insert({model.first, response});
     }
-    manager_lock.unlock();
+    lock.unlock();
 
     const std::vector<std::string>& pipelinesNames = manager.getPipelineFactory().getPipelinesNames();
     for (auto const& pipelineName : pipelinesNames) {
