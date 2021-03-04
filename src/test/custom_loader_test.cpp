@@ -307,13 +307,13 @@ public:
     }
     void TearDown() {
         std::string configStr = empty_config;
-       // Create config file
-       std::string fileToReload = cl_models_path + "/cl_config.json";
-       createConfigFileWithContent(configStr, fileToReload);
-       ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-       manager.startFromFile(fileToReload);
-       // Clean up temporary destination
-       std::filesystem::remove_all(cl_models_path);
+        // Create config file
+        std::string fileToReload = cl_models_path + "/cl_config.json";
+        createConfigFileWithContent(configStr, fileToReload);
+        ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+        manager.startFromFile(fileToReload);
+        // Clean up temporary destination
+        std::filesystem::remove_all(cl_models_path);
     }
     /**
      * @brief This function should mimic most closely predict request to check for thread safety
@@ -337,7 +337,7 @@ public:
         auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
         ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
         std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
-	EXPECT_THAT(output, Each(Eq(2.)));
+        EXPECT_THAT(output, Each(Eq(2.)));
     }
 
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
@@ -1085,7 +1085,7 @@ TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
-        // Copy dummy model to temporary destination
+    // Copy dummy model to temporary destination
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
     // Replace model path in the config string
     std::string configStr = custom_loader_config_model_blacklist;
@@ -1281,11 +1281,11 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     ASSERT_EQ(error_status, StatusCode::OK);
     EXPECT_EQ(json_output, expected_json_end);
 
-	// Remove status file
+    // Remove status file
     std::filesystem::remove(status_file);
-	//remove binary file
-	std::string bin_file = status_file_path + "/dummy.bin";
-	std::filesystem::remove(bin_file);
+    //remove binary file
+    std::string bin_file = status_file_path + "/dummy.bin";
+    std::filesystem::remove(bin_file);
 
     sleep(10);
     manager.startFromFile(fileToReload);
@@ -1308,7 +1308,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     EXPECT_EQ(json_output, expected_json_end);
 
     //try reload
-	sleep(10);
+    sleep(10);
     manager.startFromFile(fileToReload);
 
     ModelServiceImpl s3;

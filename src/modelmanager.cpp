@@ -624,7 +624,7 @@ void ModelManager::getVersionsToChange(
                     SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
                 } else {
-                  SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} is not blacklisted", versionInstance->getName());
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} is not blacklisted", versionInstance->getName());
                 }
             }
         }
