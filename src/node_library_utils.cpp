@@ -86,30 +86,30 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std
     for (const auto& [name, blob] : blobMap) {
         inputTensors[i].name = static_cast<const char*>(name.c_str());
         inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());
-        inputTensors[i].dataLength = static_cast<uint64_t>(blob->byteSize());
+        inputTensors[i].dataBytes = static_cast<uint64_t>(blob->byteSize());
         inputTensors[i].dims = static_cast<uint64_t*>(blob->getTensorDesc().getDims().data());
-        inputTensors[i].dimsLength = static_cast<uint64_t>(blob->getTensorDesc().getDims().size());
+        inputTensors[i].dimsCount = static_cast<uint64_t>(blob->getTensorDesc().getDims().size());
         inputTensors[i].precision = toCustomNodeTensorPrecision(blob->getTensorDesc().getPrecision());
         i++;
     }
     return std::move(inputTensors);
 }
 
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoLength, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback) {
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback) {
     if (info == nullptr) {
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
-    if (infoLength <= 0) {
+    if (infoCount <= 0) {
         freeCallback(info);
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
     // At this point it is important to not exit before we iterate over every info object.
     // This is due to a fact that we need to ensure to free resources allocated by shared library using freeCallback.
-    for (int i = 0; i < infoLength; i++) {
+    for (int i = 0; i < infoCount; i++) {
         if (info[i].dims == nullptr) {
             continue;
         }
-        if (info[i].dimsLength == 0) {
+        if (info[i].dimsCount == 0) {
             freeCallback(info[i].dims);
             continue;
         }
@@ -119,7 +119,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoLength, st
 
         std::string name = std::string(info[i].name);
         InferenceEngine::Precision precision = toInferenceEnginePrecision(info[i].precision);
-        shape_t shape(info[i].dims, info[i].dims + info[i].dimsLength);
+        shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
         freeCallback(info[i].dims);
 

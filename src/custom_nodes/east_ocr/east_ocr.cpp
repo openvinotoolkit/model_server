@@ -54,9 +54,9 @@ int extract_text_images_into_output(struct CustomNodeTensor* output, const std::
     }
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataLength = byteSize;
-    output->dimsLength = 5;
-    output->dims = (uint64_t*)malloc(output->dimsLength * sizeof(uint64_t));
+    output->dataBytes = byteSize;
+    output->dimsCount = 5;
+    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
     output->dims[0] = 1;
     output->dims[1] = outputBatch;
     if (imageLayout == "NCHW") {
@@ -87,9 +87,9 @@ int extract_coordinates_into_output(struct CustomNodeTensor* output, const std::
         std::memcpy(buffer + (i * 4), entry, byteSize / outputBatch);
     }
     output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataLength = byteSize;
-    output->dimsLength = 3;
-    output->dims = (uint64_t*)malloc(output->dimsLength * sizeof(uint64_t));
+    output->dataBytes = byteSize;
+    output->dimsCount = 3;
+    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
     output->dims[0] = 1;
     output->dims[1] = outputBatch;
     output->dims[2] = 4;
@@ -105,9 +105,9 @@ int extract_scores_into_output(struct CustomNodeTensor* output, const std::vecto
     std::memcpy(buffer, scores.data(), byteSize);
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataLength = byteSize;
-    output->dimsLength = 3;
-    output->dims = (uint64_t*)malloc(output->dimsLength * sizeof(uint64_t));
+    output->dataBytes = byteSize;
+    output->dimsCount = 3;
+    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
     output->dims[0] = 1;
     output->dims[1] = outputBatch;
     output->dims[2] = 1;
@@ -115,34 +115,34 @@ int extract_scores_into_output(struct CustomNodeTensor* output, const std::vecto
     return 0;
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     // Parameters reading
-    int originalImageHeight = get_int_parameter("original_image_height", params, paramsLength, -1);
-    int originalImageWidth = get_int_parameter("original_image_width", params, paramsLength, -1);
+    int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
+    int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
     NODE_ASSERT(originalImageHeight > 0, "original image height must be larger than 0");
     NODE_ASSERT(originalImageWidth > 0, "original image width must be larger than 0");
     NODE_ASSERT((originalImageHeight % 4) == 0, "original image height must be divisible by 4");
     NODE_ASSERT((originalImageWidth % 4) == 0, "original image width must be divisible by 4");
-    int targetImageHeight = get_int_parameter("target_image_height", params, paramsLength, -1);
-    int targetImageWidth = get_int_parameter("target_image_width", params, paramsLength, -1);
+    int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
+    int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
-    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsLength) == "true";
-    float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsLength, -1.0);
+    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
+    float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
-    float overlapThreshold = get_float_parameter("overlap_threshold", params, paramsLength, 0.3);
+    float overlapThreshold = get_float_parameter("overlap_threshold", params, paramsCount, 0.3);
     NODE_ASSERT(overlapThreshold >= 0 && overlapThreshold <= 1.0, "non max suppression filtering overlap threshold must be in 0-1 range");
-    int maxOutputBatch = get_int_parameter("max_output_batch", params, paramsLength, 100);
+    int maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
-    bool debugMode = get_string_parameter("debug", params, paramsLength) == "true";
-    std::string imageLayout = get_string_parameter("image_layout", params, paramsLength, "NCHW");
+    bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
+    std::string imageLayout = get_string_parameter("image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(imageLayout == "NCHW" || imageLayout == "NHWC", "image layout can be either NCHW or NHWC for both inputs and outputs");
 
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
     const CustomNodeTensor* geometryTensor = nullptr;
 
-    for (int i = 0; i < inputsLength; i++) {
+    for (int i = 0; i < inputsCount; i++) {
         if (std::strcmp(inputs[i].name, IMAGE_TENSOR_NAME) == 0) {
             imageTensor = &(inputs[i]);
         } else if (std::strcmp(inputs[i].name, SCORES_TENSOR_NAME) == 0) {
@@ -277,8 +277,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     if (debugMode)
         std::cout << "Total findings after NMS2 (non max suppression) filter: " << filteredBoxes.size() << std::endl;
 
-    *outputsLength = 3;
-    *outputs = (struct CustomNodeTensor*)malloc(*outputsLength * sizeof(CustomNodeTensor));
+    *outputsCount = 3;
+    *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
 
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
@@ -301,22 +301,22 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    int originalImageHeight = get_int_parameter("original_image_height", params, paramsLength, -1);
-    int originalImageWidth = get_int_parameter("original_image_width", params, paramsLength, -1);
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
+    int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
     NODE_ASSERT(originalImageHeight > 0, "original image height must be larger than 0");
     NODE_ASSERT(originalImageWidth > 0, "original image width must be larger than 0");
     NODE_ASSERT((originalImageHeight % 4) == 0, "original image height must be divisible by 4");
     NODE_ASSERT((originalImageWidth % 4) == 0, "original image width must be divisible by 4");
-    std::string imageLayout = get_string_parameter("image_layout", params, paramsLength, "NCHW");
+    std::string imageLayout = get_string_parameter("image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(imageLayout == "NCHW" || imageLayout == "NHWC", "image layout can be either NCHW or NHWC for both inputs and outputs");
 
-    *infoLength = 3;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    *infoCount = 3;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = IMAGE_TENSOR_NAME;
-    (*info)[0].dimsLength = 4;
-    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 4;
+    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = 1;
     if (imageLayout == "NCHW") {
         (*info)[0].dims[1] = 3;
@@ -330,8 +330,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     (*info)[0].precision = FP32;
 
     (*info)[1].name = SCORES_TENSOR_NAME;
-    (*info)[1].dimsLength = 4;
-    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[1].dimsCount = 4;
+    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[1].dims[0] = 1;
     (*info)[1].dims[1] = 1;
     (*info)[1].dims[2] = originalImageHeight / 4;
@@ -339,8 +339,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     (*info)[1].precision = FP32;
 
     (*info)[2].name = GEOMETRY_TENSOR_NAME;
-    (*info)[2].dimsLength = 4;
-    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[2].dimsCount = 4;
+    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[2].dims[0] = 1;
     (*info)[2].dims[1] = 5;
     (*info)[2].dims[2] = originalImageHeight / 4;
@@ -349,21 +349,21 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    int targetImageHeight = get_int_parameter("target_image_height", params, paramsLength, -1);
-    int targetImageWidth = get_int_parameter("target_image_width", params, paramsLength, -1);
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
+    int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
-    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsLength) == "true";
-    std::string imageLayout = get_string_parameter("image_layout", params, paramsLength, "NCHW");
+    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
+    std::string imageLayout = get_string_parameter("image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(imageLayout == "NCHW" || imageLayout == "NHWC", "image layout can be either NCHW or NHWC for both inputs and outputs");
 
-    *infoLength = 3;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    *infoCount = 3;
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
     (*info)[0].name = TEXT_IMAGES_TENSOR_NAME;
-    (*info)[0].dimsLength = 5;
-    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[0].dimsCount = 5;
+    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[0].dims[0] = 1;
     (*info)[0].dims[1] = 0;
     if (imageLayout == "NCHW") {
@@ -378,16 +378,16 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const st
     (*info)[0].precision = FP32;
 
     (*info)[1].name = COORDINATES_TENSOR_NAME;
-    (*info)[1].dimsLength = 3;
-    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[1].dimsCount = 3;
+    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[1].dims[0] = 1;
     (*info)[1].dims[1] = 0;
     (*info)[1].dims[2] = 5;
     (*info)[1].precision = I32;
 
     (*info)[2].name = CONFIDENCE_TENSOR_NAME;
-    (*info)[2].dimsLength = 3;
-    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)[2].dimsCount = 3;
+    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)[2].dims[0] = 1;
     (*info)[2].dims[1] = 0;
     (*info)[2].dims[2] = 1;

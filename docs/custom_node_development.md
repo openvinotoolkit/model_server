@@ -25,7 +25,7 @@ from one or more other nodes. Each input can be referenced using an index:
 ```
 inputTensor0 = &(inputs[0])
 ```
-Every CustomNodeTensor struct inlcude the following fields:
+Every CustomNodeTensor struct include the following fields:
 `const char* name`  - pointer to the string representing the input name
 `uint8_t* data` - pointer to data buffer. Data is stored as bytes.
 `uint64_t dataBytes` - the size of the data allocation in bytes

@@ -606,9 +606,9 @@ struct LibraryMissingOutput {
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
         (*handle)->dims[0] = 1;
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = (uint8_t*)malloc(sizeof(float) * sizeof(uint8_t));
-        (*handle)->dataLength = sizeof(float);
+        (*handle)->dataBytes = sizeof(float);
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -635,9 +635,9 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::UNSPECIFIED;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataLength = 1;
+        (*handle)->dataBytes = 1;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -664,9 +664,9 @@ struct LibraryIncorrectOutputShape {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = nullptr;
-        (*handle)->dimsLength = 0;
+        (*handle)->dimsCount = 0;
         (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataLength = 1;
+        (*handle)->dataBytes = 1;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -693,9 +693,9 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = nullptr;
-        (*handle)->dataLength = 0;
+        (*handle)->dataBytes = 0;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -1651,18 +1651,18 @@ struct LibraryParamControlledMetadata {
         CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
         CustomNodeTensorInfo info;
         info.name = key;
-        info.dimsLength = shape.size();
-        info.dims = (uint64_t*)malloc(info.dimsLength * sizeof(uint64_t));
-        std::memcpy(info.dims, shape.data(), info.dimsLength * sizeof(uint64_t));
+        info.dimsCount = shape.size();
+        info.dims = (uint64_t*)malloc(info.dimsCount * sizeof(uint64_t));
+        std::memcpy(info.dims, shape.data(), info.dimsCount * sizeof(uint64_t));
         info.precision = precision;
         return info;
     }
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
         int inputs = 0;
-        for (int i = 0; i < paramsLength; i++) {
+        for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "in_")) {
                 inputs++;
             }
@@ -1670,10 +1670,10 @@ struct LibraryParamControlledMetadata {
         if (inputs == 0) {
             return 1;
         }
-        *infoLength = inputs;
+        *infoCount = inputs;
         *info = (struct CustomNodeTensorInfo*)malloc(inputs * sizeof(CustomNodeTensorInfo));
         int preparedInputsMetaCount = 0;
-        for (int i = 0; i < paramsLength; i++) {
+        for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "in_")) {
                 (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
                 preparedInputsMetaCount++;
@@ -1681,9 +1681,9 @@ struct LibraryParamControlledMetadata {
         }
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
         int outputs = 0;
-        for (int i = 0; i < paramsLength; i++) {
+        for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "out_")) {
                 outputs++;
             }
@@ -1691,10 +1691,10 @@ struct LibraryParamControlledMetadata {
         if (outputs == 0) {
             return 1;
         }
-        *infoLength = outputs;
+        *infoCount = outputs;
         *info = (struct CustomNodeTensorInfo*)malloc(outputs * sizeof(CustomNodeTensorInfo));
         int preparedInputsMetaCount = 0;
-        for (int i = 0; i < paramsLength; i++) {
+        for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "out_")) {
                 (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
                 preparedInputsMetaCount++;

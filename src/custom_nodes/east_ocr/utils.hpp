@@ -83,8 +83,8 @@ cv::Mat apply_grayscale(cv::Mat image) {
     return grayscaled;
 }
 
-float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsLength, float defaultValue = 0.0f) {
-    for (int i = 0; i < paramsLength; i++) {
+float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, float defaultValue = 0.0f) {
+    for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
             return std::stof(params[i].value);
         }
@@ -92,8 +92,8 @@ float get_float_parameter(const std::string& name, const struct CustomNodeParam*
     return defaultValue;
 }
 
-int get_int_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsLength, int defaultValue = 0) {
-    for (int i = 0; i < paramsLength; i++) {
+int get_int_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, int defaultValue = 0) {
+    for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
             return std::stoi(params[i].value);
         }
@@ -101,8 +101,8 @@ int get_int_parameter(const std::string& name, const struct CustomNodeParam* par
     return defaultValue;
 }
 
-std::string get_string_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsLength, const std::string& defaultValue = "") {
-    for (int i = 0; i < paramsLength; i++) {
+std::string get_string_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, const std::string& defaultValue = "") {
+    for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
             return params[i].value;
         }
