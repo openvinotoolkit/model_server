@@ -555,6 +555,7 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     struct stat statTime;
 
     if (stat(configFilename.c_str(), &statTime) != 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
         isNeeded = false;
         return StatusCode::FILE_INVALID;
     }
