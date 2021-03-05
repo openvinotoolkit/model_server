@@ -561,9 +561,7 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     }
     if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
         isNeeded = false;
-    }
-    else
-    {
+    } else {
         isNeeded = true;
     }
 

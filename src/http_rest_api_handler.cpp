@@ -363,7 +363,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
         response = createErrorJsonWithMessage("Config file not found or cannot open.");
         return status;
     }
-    
+
     if (isConfigFileReloadNeeded) {
         status = manager.loadConfig(config.configPath());
         if (!status.ok()) {
