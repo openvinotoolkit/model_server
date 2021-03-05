@@ -331,7 +331,7 @@ public:
     /**
      * @brief Check if configuration file reload is needed.
      */
-    bool configFileReloadNeeded();
+    Status configFileReloadNeeded(bool& isNeeded);
 
     /**
      * @brief Reads models from configuration file
