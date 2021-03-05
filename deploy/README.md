@@ -96,7 +96,7 @@ resources:
     memory: 512Mi
 ```
 Beside setting the CPU and memory resources, the same parameter can be used to assign AI accelerators like iGPU, or VPU.
-That assume using adequate Kubernetes device plugin from [Intel Device Plugin for Kubernetes](https://github.com/intel/intel-device-plugins-for-kubernetes).
+That assumes using adequate Kubernetes device plugin from [Intel Device Plugin for Kubernetes](https://github.com/intel/intel-device-plugins-for-kubernetes).
 ```yaml
 resources:
   limits:
