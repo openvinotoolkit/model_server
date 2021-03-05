@@ -72,7 +72,7 @@ Use the parameter `models_host_path` with the local path on the nodes. It will b
 
 While the models folder is mounted in the OVMS container, the parameter `model_path` should refer to the path starting with /models/... and point to the folder with the model versions.
 
-Note that the OVMS container starts, by default, with the security context of account `ovms` with pid 5000 ahd group 5000. 
+Note that the OVMS container starts, by default, with the security context of account `ovms` with pid 5000 and group 5000. 
 If the mounted models have restricted access permissions, change the security context of the OVMS service or adjust permissions to the models. OVMS requires read permissions on the model files and 
 list permission on the model version folders.
 
