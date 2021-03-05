@@ -354,11 +354,16 @@ public:
     Status checkForRestrictedBatchSize() {
         if (!isMultiBatchAllowed) {
             for (auto& [inputName, tensorInfo] : this->inputsInfo) {
-                if (!tensorInfo->getShape().empty() && tensorInfo->getShape()[0] >= 2) {
+                if (!tensorInfo->getShape().empty() &&
+                    dependantNodeInfo.gatherFromNode.empty() &&
+                    (tensorInfo->getShape()[0] >= 2)) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {}, node: {}, inputName: {}, inputShape: {}. Batch size >= 2 is not allowed for non gathering nodes",
+                        pipelineName, dependantNodeInfo.nodeName, inputName, TensorInfo::shapeToString(tensorInfo->getShape()));
                     return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
                 }
             }
             if (dependantModelInstance && dependantModelInstance->getBatchSize() >= 2) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Batch size >= 2 is not allowed for pipeline with demultiplexer. Pipeline: {} node: {}", pipelineName, dependantNodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
             }
         }
@@ -433,30 +438,30 @@ public:
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
-            if (shape[1] != 0) {
+            if (shape[0] != 0) {
                 // 0 means that node accepts dynamic shape
-                if (shape[1] != demultiplicatorNodeInfo.demultiplyCount.value()) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor second dimenson value: {}",
+                if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimenson value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
-                        shape[1]);
+                        shape[0]);
                     return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
                 }
             } else {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while second dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
-                    shape[1]);
+                    shape[0]);
             }
-        } else if (shape[1] != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while second dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+        } else if (shape[0] != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
-                shape[1]);
+                shape[0]);
         }
-        shape.erase(shape.begin() + 1);
+        shape.erase(shape.begin());
         return StatusCode::OK;
     }
 
@@ -845,7 +850,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
             auto& connectedNodeInfo = findNodeByName(connectedNodeName);
             if (connectedNodeInfo.demultiplyCount) {
                 if (newDemultiplyStack.empty()) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that doesn't gather from demultiplexer node: {}.", getName(), connectedNodeName);
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that doesn't gather from demultiplexer node: {}, connection to node: {}.", getName(), connectedNodeName, nodeName);
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
                 auto& lastGatherSet = newDemultiplyStack.back();
@@ -1020,7 +1025,7 @@ std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<Tens
         return tensorInfo;
     }
     shape_t newShape = tensorInfo->getShape();
-    newShape.insert(newShape.begin() + 1, gatherShape.begin(), gatherShape.end());
+    newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
     return tensorInfo->createCopyWithNewShape(newShape);
 }
 
@@ -1166,7 +1171,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                     return;
                 }
-                demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[1];
+                demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[0];
             }
 
             shape.emplace_back(demultiplyCount);

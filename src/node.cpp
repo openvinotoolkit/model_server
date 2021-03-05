@@ -24,6 +24,7 @@
 #include "nodesession.hpp"
 #include "ov_utils.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 const uint64_t DEMULTIPLY_LIMIT = 10'000;
 
@@ -179,12 +180,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     }
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
-    if (tensorDesc.getDims()[1] > DEMULTIPLY_LIMIT) {
+    if (tensorDesc.getDims()[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
-            tensorDesc.getDims()[1], blobMap.begin()->first, DEMULTIPLY_LIMIT);
+            tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
         return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
     }
-    uint32_t resultsDemultiplyCount = tensorDesc.getDims()[1];
+    uint32_t resultsDemultiplyCount = tensorDesc.getDims()[0];
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
     std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
 
@@ -197,9 +198,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
 
         if ((demultiplexCount.value() != 0) &&
-            (newDims[1] != demultiplexCount.value())) {
+            (newDims[0] != demultiplexCount.value())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} of blob: {} expected: {} to demultiply",
-                newDims[1], blobName, demultiplexCount.value());
+                newDims[0], blobName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
         if (resultsDemultiplyCount == 0) {
@@ -209,7 +210,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             return StatusCode::NOT_IMPLEMENTED;
         }
 
-        newDims.erase(newDims.begin() + 1);
+        newDims.erase(newDims.begin());
         const InferenceEngine::TensorDesc dividedBlobDesc(
             tensorDesc.getPrecision(),
             newDims,

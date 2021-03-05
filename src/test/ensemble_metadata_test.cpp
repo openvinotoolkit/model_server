@@ -487,16 +487,16 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
         (*info)[0].precision = FP32;
         (*info)[0].dimsLength = 3;
         (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[0].dims[0] = 1;
-        (*info)[0].dims[1] = 3;
+        (*info)[0].dims[0] = 3;
+        (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;
 
         (*info)[1].name = "output_B_1";
         (*info)[1].precision = FP32;
         (*info)[1].dimsLength = 3;
         (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[1].dims[0] = 1;
-        (*info)[1].dims[1] = 3;
+        (*info)[1].dims[0] = 3;
+        (*info)[1].dims[1] = 1;
         (*info)[1].dims[2] = 4;
         return 0;
     }
@@ -537,8 +537,8 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
         (*info)[0].precision = FP32;
         (*info)[0].dimsLength = 3;
         (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[0].dims[0] = 1;
-        (*info)[0].dims[1] = 4;
+        (*info)[0].dims[0] = 4;
+        (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;
         return 0;
     }
@@ -614,7 +614,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     EXPECT_EQ(input_B->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape(), shape_t({1, 3, 4, 10}));
+    EXPECT_EQ(output->getShape(), shape_t({3, 4, 1, 10}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 

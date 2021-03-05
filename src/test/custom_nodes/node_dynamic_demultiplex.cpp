@@ -64,8 +64,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     resultTensor.data = reinterpret_cast<uint8_t*>(result);
     resultTensor.dimsLength = 3;
     resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsLength * sizeof(uint64_t));
-    resultTensor.dims[0] = 1;
-    resultTensor.dims[1] = demultiplyCount;
+    resultTensor.dims[0] = demultiplyCount;
+    resultTensor.dims[1] = 1;
     resultTensor.dims[2] = valuesPerTensor;
     resultTensor.dataLength = resultTensor.dims[0] * resultTensor.dims[1] * resultTensor.dims[2] * sizeof(float);
     resultTensor.precision = FP32;
@@ -110,8 +110,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const st
     (*info)[0].name = "dynamic_demultiplex_results";
     (*info)[0].dimsLength = 3;
     (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-    (*info)[0].dims[0] = 1;
-    (*info)[0].dims[1] = 0;
+    (*info)[0].dims[0] = 0;
+    (*info)[0].dims[1] = 1;
     (*info)[0].dims[2] = 10;
     (*info)[0].precision = FP32;
 
