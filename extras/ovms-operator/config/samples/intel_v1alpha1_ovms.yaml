@@ -17,7 +17,7 @@ spec:
   models_host_path: ""
   models_volume_claim: ""
   nireq: ""
-  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"1"}'
+  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"1\"}'
   replicas: 1
   resources:
     limits:
