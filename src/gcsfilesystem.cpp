@@ -148,8 +148,7 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
                 return StatusCode::OK;
             }
         }
-    }
-    catch (std::exception & ex) {
+    } catch (std::exception& ex) {
         SPDLOG_LOGGER_DEBUG(gcs_logger, "GCS list objects exception {}", ex.what());
     }
 
@@ -188,7 +187,7 @@ GCSFileSystem::getDirectoryContents(const std::string& path,
             int name_end = name.find("/", name_start);
             contents->insert(name.substr(name_start, name_end - name_start));
         }
-    } catch (std::exception & ex) {
+    } catch (std::exception& ex) {
         SPDLOG_LOGGER_DEBUG(gcs_logger, "GCS list objects exception {}", ex.what());
         SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", full_directory);
         return StatusCode::GCS_INVALID_ACCESS;
