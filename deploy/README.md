@@ -79,7 +79,7 @@ list permission on the model version folders.
 ### Persistent Volume
 It is possible to deploy OVMS using Kubernetes [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-That opens a possibility of storing the using the models for OVMS on all Kubernetes [supported filesystems](https://kubernetes.io/docs/concepts/storage/storage-classes/).
+That opens a possibility of storing the models for OVMS on all Kubernetes [supported filesystems](https://kubernetes.io/docs/concepts/storage/storage-classes/).
 
 In the helm set the parameter `models_volume_claim` with the name of the `PersistentVolumeClaim` record with the models. While set, it will be mounted as `/models` folder inside the OVMS container.
 
