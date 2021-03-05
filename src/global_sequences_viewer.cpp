@@ -77,7 +77,7 @@ std::cv_status GlobalSequencesViewer::waitFor(uint32_t sequenceCleanerInterval) 
 }
 
 void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInterval) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner thread");
 
     while (waitFor(sequenceCleanerInterval) == std::cv_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
@@ -86,7 +86,7 @@ void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInter
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan end");
     }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped sequence cleaner");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped sequence cleaner thread");
 }
 
 void GlobalSequencesViewer::join() {
