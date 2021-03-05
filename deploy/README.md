@@ -77,7 +77,7 @@ If the mounted models have restricted access permissions, change the security co
 list permission on the model version folders.
 
 ### Persistent Volume
-If is possible to deploy OVMS using Kubernetes [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+It is possible to deploy OVMS using Kubernetes [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 That opens a possibility of storing the using the models for OVMS on all Kubernetes [supported filesystems](https://kubernetes.io/docs/concepts/storage/storage-classes/).
 
