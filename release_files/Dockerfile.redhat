@@ -66,3 +66,6 @@ RUN     set -e ; \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
+
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]
