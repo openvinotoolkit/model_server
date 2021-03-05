@@ -9,7 +9,7 @@ kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 
 ## Operator deployment
 Deploy the operator using the steps covered in [OperatorHub](https://operatorhub.io) (TBD)
-Alternatively you are are not using OLM component, run commands:
+Alternatively, if you are not using OLM component, run commands:
 ```bash
 export IMG=quay.io/openvino/ovms-operator:0.1.0
 make install
@@ -31,4 +31,3 @@ ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
 ## Before you start using the operator
 Depending on the deployment configuration there might be pre-requisites for additional records to be created in the cluster. 
 Refer to [Helm chart](../../deploy/ovms) parameters documentation.
-
