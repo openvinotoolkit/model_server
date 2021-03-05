@@ -87,7 +87,7 @@ Note that parameter `models_volume_claim` is mutually exclusive with `models_hos
 
 ## Assigning Resource Specs
 
-You can restrict assigned cluster resources to the OVMS container but setting the parameter `resources`.
+You can restrict assigned cluster resources to the OVMS container by setting the parameter `resources`.
 By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the values.yaml file:
 ```yaml
 resources:
