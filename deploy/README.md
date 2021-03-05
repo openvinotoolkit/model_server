@@ -70,7 +70,7 @@ helm install ovms-app ovms --set model_name=resnet,model_path=az://bucket/model_
 Beside the cloud storage, models could be stored locally on the kubernetes nodes filesystem.
 Use the parameter `models_host_path` with the local path on the nodes. It will be mounted in the OVMS container as `/models` folder.
 
-While the models folder is mounted in the OVMS container, the parameter `model_path` should refer to the path staring with /models/... and point to the folder with the model versions.
+While the models folder is mounted in the OVMS container, the parameter `model_path` should refer to the path starting with /models/... and point to the folder with the model versions.
 
 Note that the OVMS container starts, by default, with the security context of account `ovms` with pid 5000 ahd group 5000. 
 If the mounted models have restricted access permissions, change the security context of the OVMS service or adjust permissions to the models. OVMS requires read permissions on the model files and 
@@ -265,4 +265,3 @@ release "ovms-app" uninstalled
 | models_host_path      | mounts node local path in container as /models folder | Path should be created on all nodes and populated with the data | - |
 | models_volume_claim      | mounts k8s persistent volume claim in the container as /models | Persistent Volume Claim should be create in the same namespace and populated with the data | - |
 | https_proxy | proxy name to be used to connect to remote models | | - |
-
