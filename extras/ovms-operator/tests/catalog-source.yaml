@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: my-test-catalog
+  namespace: olm
+spec:
+  sourceType: grpc
+  image: ger-registry-pre.caas.intel.com/ovms/test-catalog:latest
