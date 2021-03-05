@@ -146,10 +146,13 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
         if (status != StatusCode::OK) {
+            // For now situation when getModelStatus return status other than OK cannot occur because we never remove models and pipelines from model manager.
+            // However, if something in this matter will change we should handle this somehow.
             continue;
         }
         modelsStatusesTmp.insert({model.first, response});
     }
+    lock.unlock();
 
     const std::vector<std::string>& pipelinesNames = manager.getPipelineFactory().getPipelinesNames();
     for (auto const& pipelineName : pipelinesNames) {
@@ -159,6 +162,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
         if (status != StatusCode::OK) {
+            // Same situation like with models.
             continue;
         }
         modelsStatusesTmp.insert({pipelineName, response});

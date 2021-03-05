@@ -550,15 +550,22 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
     pipelineFactory.revalidatePipelines(*this);
 }
 
-bool ModelManager::configFileReloadNeeded() {
+Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     struct stat statTime;
 
-    stat(configFilename.c_str(), &statTime);
-    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
-        return false;
+    if (stat(configFilename.c_str(), &statTime) != 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
+        isNeeded = false;
+        return StatusCode::FILE_INVALID;
     }
-    return true;
+    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+        isNeeded = false;
+    } else {
+        isNeeded = true;
+    }
+
+    return StatusCode::OK;
 }
 
 void ModelManager::watcher(std::future<void> exit) {
@@ -569,7 +576,9 @@ void ModelManager::watcher(std::future<void> exit) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
 
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-        if (configFileReloadNeeded()) {
+        bool isNeeded;
+        configFileReloadNeeded(isNeeded);
+        if (isNeeded) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
