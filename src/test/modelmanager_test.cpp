@@ -221,7 +221,9 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
     std::function<void()> func = [&manager]() {
-        EXPECT_EQ(manager.configFileReloadNeeded(), false);
+        bool isNeeded;
+        manager.configFileReloadNeeded(isNeeded);
+        EXPECT_EQ(isNeeded, false);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -248,11 +250,15 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
-    std::function<void()> func = [&manager]() {
-        EXPECT_EQ(manager.configFileReloadNeeded(), true);
+
+    bool isNeeded;
+    std::function<void()> func = [&manager, &isNeeded]() {
+        manager.configFileReloadNeeded(isNeeded);
+        EXPECT_EQ(isNeeded, true);
     };
 
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -277,11 +283,14 @@ TEST(ModelManager, configReloadNeededChange) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, true);
 
     manager.join();
     modelMock.reset();
@@ -325,15 +334,19 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, true);
 
     manager.loadConfig(configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     manager.join();
     modelMock.reset();
@@ -461,7 +474,9 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
-    ASSERT_EQ(manager.configFileReloadNeeded(), true);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });

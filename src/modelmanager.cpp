@@ -553,7 +553,6 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     struct stat statTime;
-    StatusCode::OK
 
     if (stat(configFilename.c_str(), &statTime) != 0) {
         isNeeded = false;

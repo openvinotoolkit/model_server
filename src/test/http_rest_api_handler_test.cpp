@@ -69,7 +69,8 @@ TEST_F(ConfigReload, nonExistingConfigFile) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     RemoveConfig();
     auto status = handler.processConfigReloadRequest(response);
-
+    const char* expectedJson = "{\n\t\"error\": \"Config file not found or cannot open.\"\n}";
+    EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
@@ -367,6 +368,10 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig();
+    RemoveConfig();
+    SetUpConfig(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_1 = R"({
