@@ -37,7 +37,7 @@ args = vars(parser.parse_args())
 
 def prepare_img_input_in_nchw_format(request, name, path, resize_to_shape):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (resize_to_shape[2], resize_to_shape[1]))
+    img = cv2.resize(img, (resize_to_shape[1], resize_to_shape[0]))
     target_shape = (img.shape[0], img.shape[1])
     img = img.transpose(2,0,1).reshape(1,3,target_shape[0],target_shape[1])
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
@@ -70,7 +70,7 @@ channel = grpc.insecure_channel(address,
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = args['pipeline_name']
-prepare_img_input_in_nchw_format(request, args['pipeline_input_name'], args['input_image_path'], (int(args['image_height']), int(args['image_width'])))
+prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 response = stub.Predict(request, 30.0)
 for name in response.outputs:
     print(f"Output: name[{name}]")
@@ -79,5 +79,5 @@ for name in response.outputs:
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
     if name == args['text_images_output_name'] and len(args['text_images_save_path']) > 0:
         nchw_to_image(output_nd, name, args['text_images_save_path'])
-    if name == args['texts']:
+    if name == args['texts_output_name']:
         crnn_output_to_text(output_nd)
