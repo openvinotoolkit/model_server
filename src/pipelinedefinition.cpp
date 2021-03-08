@@ -927,6 +927,21 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         return StatusCode::PIPELINE_MULTIPLE_EXIT_NODES;
     }
 
+    bool isAnyNodeDynamicDemultiplexer = (std::find_if(this->nodeInfos.begin(), this->nodeInfos.end(), [](const NodeInfo& info) {
+        if (info.demultiplyCount) {
+            return !info.demultiplyCount.value();
+        }
+        return false;
+    }) != this->nodeInfos.end());
+    int demultiplexerCount = std::count_if(
+        this->nodeInfos.begin(),
+        this->nodeInfos.end(),
+        [](const NodeInfo& info) { return info.demultiplyCount.has_value(); });
+    if (isAnyNodeDynamicDemultiplexer && (demultiplexerCount > 1)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple demultiplexers with at least one dynamic.", pipelineName);
+        return StatusCode::NOT_IMPLEMENTED;
+    }
+
     const bool isMultiBatchAllowed = !std::any_of(nodeInfos.begin(), nodeInfos.end(), [](const auto& node) { return node.demultiplyCount; });
     for (const auto& node : nodeInfos) {
         auto findByName = [node](const NodeInfo& nodeInfo) {
