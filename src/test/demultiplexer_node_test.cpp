@@ -67,7 +67,7 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
     std::vector<std::vector<float>> blobsData{
         {-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67, 0, 8},
         {4, 42, 35, -2, 13, 2, -1, 0.9, -0.3, 4.67, 100, 80}};
-    const std::vector<size_t> shape{1, demultiplyCount, blobsData[0].size()};
+    const std::vector<size_t> shape{demultiplyCount, 1, blobsData[0].size()};
     const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
     const InferenceEngine::Layout layout{InferenceEngine::Layout::CHW};
     const InferenceEngine::TensorDesc desc{precision, shape, layout};

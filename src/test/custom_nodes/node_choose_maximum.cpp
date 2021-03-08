@@ -68,8 +68,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     size_t numberOfOps = 0;
     if (INPUT_TENSOR_NAME == inputs[0].name) {
         if (inputs[0].dimsLength != 3 ||
-            inputs[0].dims[0] != 1 ||
-            inputs[0].dims[1] == 0 ||
+            inputs[0].dims[1] != 1 ||
+            inputs[0].dims[0] == 0 ||
             inputs[0].dims[2] == 0) {
             ss << "improper " << INPUT_TENSOR_NAME
                << " dimensions: [" << inputs[0].dims[0]
@@ -79,7 +79,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
             return 1;
         }
         ss << "Input valuesPerTensor: " << inputs[0].dims[1] << std::endl;
-        numberOfOps = inputs[0].dims[1];
+        numberOfOps = inputs[0].dims[0];
         valuesPerTensor = inputs[0].dims[2];
         inputTensor = reinterpret_cast<float*>(inputs[0].data);
     } else {
@@ -170,8 +170,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const str
     (*info)->name = "input_tensors";
     (*info)->dimsLength = 3;
     (*info)->dims = (uint64_t*)malloc((*info)->dimsLength * sizeof(uint64_t));
-    (*info)->dims[0] = 1;
-    (*info)->dims[1] = 4;
+    (*info)->dims[0] = 4;
+    (*info)->dims[1] = 1;
     (*info)->dims[2] = 10;
     (*info)->precision = FP32;
     return 0;
