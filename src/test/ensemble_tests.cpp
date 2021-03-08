@@ -888,8 +888,8 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     ASSERT_EQ(dummy_1x10.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(dummy_1x20.parseShapeParameter("(1,20)"), StatusCode::OK);
 
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x10).ok(), true);
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x20).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x10), StatusCode::OK_RELOADED);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x20), StatusCode::OK_RELOADED);
 
     PipelineFactory factory;
 
