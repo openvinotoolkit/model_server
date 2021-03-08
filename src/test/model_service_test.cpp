@@ -48,7 +48,7 @@ TEST(ModelService, config_reload) {
 TEST(ModelService, empty_request) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
     ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::MODEL_NAME_MISSING);
@@ -57,7 +57,7 @@ TEST(ModelService, empty_request) {
 TEST(ModelService, single_version_model) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
@@ -195,7 +195,7 @@ TEST_F(ModelServiceDummyWith2Versions, all_versions) {
     auto config = DUMMY_MODEL_CONFIG;
     config.setBasePath(modelPath);
     config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
@@ -220,7 +220,7 @@ TEST_F(ModelServiceDummyWith2Versions, all_versions) {
 TEST(ModelService, non_existing_model) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
@@ -234,7 +234,7 @@ TEST(ModelService, non_existing_model) {
 TEST(ModelService, non_existing_version) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
@@ -249,7 +249,7 @@ TEST(ModelService, non_existing_version) {
 TEST(ModelService, negative_version) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 

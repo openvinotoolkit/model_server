@@ -357,21 +357,24 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
     auto& config = ovms::Config::instance();
     auto& manager = ModelManager::getInstance();
 
-    bool isConfigFileReloadNeeded;
-    status = manager.configFileReloadNeeded(isConfigFileReloadNeeded);
+    bool reloadNeeded;
+    status = manager.configFileReloadNeeded(reloadNeeded);
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Config file not found or cannot open.");
         return status;
     }
 
-    if (isConfigFileReloadNeeded) {
+    if (reloadNeeded) {
         status = manager.loadConfig(config.configPath());
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;
         }
     }
-    manager.updateConfigurationWithoutConfigFile();
+    status = manager.updateConfigurationWithoutConfigFile();
+    if(status == StatusCode::OK_RELOAD_NEEDED){
+        reloadNeeded = true;
+    }
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
@@ -386,11 +389,11 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response) {
         return status;
     }
 
-    if (!isConfigFileReloadNeeded) {
+    if (!reloadNeeded) {
         SPDLOG_DEBUG("Config file reload was not needed.");
-        return StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED;
+        return StatusCode::OK_RELOAD_NOT_NEEDED;
     }
-    return StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED;
+    return StatusCode::OK_RELOAD_NEEDED;
 }
 
 Status HttpRestApiHandler::processConfigStatusRequest(std::string& response) {

@@ -35,6 +35,8 @@ static const char* configWith1Dummy = R"(
     ]
 })";
 
+class ModelManagerTest : public ovms::ModelManager {};
+
 class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
 
@@ -88,7 +90,7 @@ TEST_F(ConfigReload, removeConfigFileThenRestore) {
 
     SetUpConfig(configWith1Dummy);
     status = handler.processConfigReloadRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
 }
 
 TEST_F(ConfigReload, startWith1DummyThenReload) {
@@ -121,7 +123,83 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
     auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+}
+
+static const char* configWith1DummyInTmp = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/tmp/dummy"
+            }
+        }
+    ]
+})";
+
+TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
+    SetUpConfig(configWith1DummyInTmp);
+    std::filesystem::remove_all("/tmp/dummy");
+    std::filesystem::copy("/ovms/src/test/dummy", "/tmp/dummy", std::filesystem::copy_options::recursive);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson1 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    auto status = handler.processConfigReloadRequest(response);
+
+    EXPECT_EQ(expectedJson1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+
+    std::filesystem::copy("/ovms/src/test/dummy/1", "/tmp/dummy/2", std::filesystem::copy_options::recursive);
+
+    const char* expectedJson2 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  },
+  {
+   "version": "2",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    status = handler.processConfigReloadRequest(response);
+
+    EXPECT_EQ(expectedJson2, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    std::filesystem::remove_all("/tmp/dummy");
 }
 
 static const char* emptyConfig = R"(
@@ -154,7 +232,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 
     auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
 
     RemoveConfig();
     SetUpConfig(emptyConfig);
@@ -178,7 +256,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 
     status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
 }
 
 TEST_F(ConfigReload, reloadNotNeeded) {
@@ -189,7 +267,7 @@ TEST_F(ConfigReload, reloadNotNeeded) {
 
     LoadConfig();
     auto status = handler.processConfigReloadRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
 }
 
 TEST_F(ConfigReload, reloadNotNeededManyThreads) {
@@ -205,7 +283,7 @@ TEST_F(ConfigReload, reloadNotNeededManyThreads) {
     std::function<void()> func = [&handler]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string response;
-        EXPECT_EQ(handler.processConfigReloadRequest(response), ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+        EXPECT_EQ(handler.processConfigReloadRequest(response), ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -298,7 +376,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     auto status = handler.processConfigReloadRequest(response);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
 }
 
 static const char* configWith2DummyPipelines = R"(
@@ -405,7 +483,7 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 
     auto status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
 
     RemoveConfig();
     SetUpConfig(configWith2DummyPipelines);
@@ -455,7 +533,7 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 
     status = handler.processConfigReloadRequest(response);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
 }
 
 class ConfigStatus : public ConfigApi {};

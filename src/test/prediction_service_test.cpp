@@ -74,7 +74,7 @@ public:
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+        ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
         std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
@@ -124,7 +124,7 @@ public:
     void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
         config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+        ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
         std::vector<std::thread> predictThreads;
@@ -251,7 +251,7 @@ TEST_F(TestPredict, SuccesfullOnDummyModel) {
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     performPredict(config.getName(), config.getVersion(), request);
 }
 
@@ -262,7 +262,7 @@ TEST_F(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     const int initialBatchSize = config.getBatchSize();
     config.setBatchSize(initialBatchSize);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
     performPredict(config.getName(), config.getVersion(), request);
 }
 
@@ -277,7 +277,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
 
     config.setBatchingParams("auto");
     config.setNireq(2);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     std::promise<void> releaseWaitBeforePerformInferenceBs1, releaseWaitBeforeGetModelInstanceBs2;
     std::thread t1(
@@ -309,7 +309,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
 
     config.setBatchingParams("auto");
     config.setNireq(2);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     std::promise<void> releaseWaitBeforeGetModelInstanceBs1, releaseWaitBeforePerformInferenceBs2;
     std::thread t1(
@@ -370,7 +370,7 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
@@ -413,7 +413,7 @@ TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     tensorflow::serving::PredictResponse response;
 
@@ -424,7 +424,7 @@ TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
     // Reshape with model reload to Fixed=(1,11)
     config.setBatchingParams("0");
     config.parseShapeParameter("(1,11)");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     // Cannot do the inference with (1,12)
     ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::INVALID_SHAPE);
@@ -436,7 +436,7 @@ TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
     // Reshape back to AUTO, internal shape is (1,10)
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     // Perform reshape to (1,12) using request
     ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::OK);
@@ -460,7 +460,7 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     // Prepare model with shape=auto (initially (1,10) shape)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     tensorflow::serving::PredictResponse response;
 
@@ -470,7 +470,7 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
 
     // Change batch size with model reload to Fixed=4
     config.setBatchingParams("4");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     // Cannot do the inference with (3,10)
     ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::INVALID_BATCH_SIZE);
@@ -481,7 +481,7 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
 
     // Reshape back to AUTO, internal shape is (1,10)
     config.setBatchingParams("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
 
     // Perform batch change to 3 using request
     ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
