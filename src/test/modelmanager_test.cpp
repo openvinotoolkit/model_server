@@ -499,7 +499,7 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
 TEST(ModelManager, ConfigReloadingStatefulDynamic) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
 
     config.setStateful(true);
     config.setBatchingMode(ovms::Mode::AUTO);
@@ -513,7 +513,7 @@ TEST(ModelManager, ConfigReloadingStatefulDynamic) {
 TEST(ModelManager, ConfigReloadingNonStateful) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
 
     config.setStateful(false);
     config.setLowLatencyTransformation(true);
@@ -1167,7 +1167,7 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 2, modelInstance, modelInstanceUnloadGuardPtr);
@@ -1202,7 +1202,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
     model->retireVersions(versionsToRetire);
@@ -1216,7 +1216,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
     model->retireVersions(versionsToRetire);
@@ -1312,7 +1312,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS / 4);
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
@@ -1327,7 +1327,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     const auto MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS = 1.2 * ovms::WAIT_FOR_MODEL_LOADED_TIMEOUT_MS;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS);
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOAD_NEEDED);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelWithModelInstanceLoadedWaitInLoadingState->getModelInstanceByVersion(1)->getStatus().getState());
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
