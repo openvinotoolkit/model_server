@@ -26,6 +26,7 @@
 #pragma GCC diagnostic pop
 
 #include "rest_parser.hpp"
+#include "modelmanager.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -154,9 +155,9 @@ public:
         const std::optional<std::string_view>& model_version_label,
         std::string* response);
 
-    Status processConfigReloadRequest(std::string& response);
+    Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
-    Status processConfigStatusRequest(std::string& response);
+    Status processConfigStatusRequest(std::string& response, ModelManager& manager);
 
 private:
     const std::regex predictionRegex;
