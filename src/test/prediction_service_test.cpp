@@ -74,7 +74,7 @@ public:
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+        ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
         std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
