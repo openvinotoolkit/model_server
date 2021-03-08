@@ -125,6 +125,8 @@ Below is depicted a basic pipeline section template:
 |`"model_name"`|string|You can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
 |`"version"`|integer|You can specify model version for inference, available only for `DL model` nodes||
 |`"type"`|string|Node kind, currently there is only `DL model` kind available|&check;|
+|`"demultiply_count"`|integer|Splits node outputs to desired chunks and branches pipeline execution||
+|`"gather_from_node"`|string|Setups node to converge pipeline and collect results into one input before execution||
 |`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|&check;|
 |`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
 
