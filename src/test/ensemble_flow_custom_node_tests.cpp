@@ -3321,3 +3321,72 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedOutput, {1, dynamicDemultiplyCount, 10});
 }
+
+static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_demultiplex",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "custom_node2",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "custom_node",
+                                           "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node2",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
+    std::unique_ptr<Pipeline> pipeline;
+    createConfigFileWithContent(pipelineCustomNode2DynamicDemultiplexConfig, configJsonFilePath);
+    auto status = manager.createPipeline(pipeline, pipelineName, &request, &response);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
+}
