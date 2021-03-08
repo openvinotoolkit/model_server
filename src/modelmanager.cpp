@@ -61,6 +61,7 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
+    sequenceCleanerInterval = config.sequenceCleanerPollWaitMinutes();
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -82,6 +83,12 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
+
+    startSequenceCleaner();
+}
+
+void ModelManager::startSequenceCleaner() {
+    globalSequencesViewer.startCleanerThread(sequenceCleanerInterval);
 }
 
 Status ModelManager::startFromConfig() {
@@ -96,8 +103,8 @@ Status ModelManager::startFromConfig() {
             config.batchSize(),
             config.nireq(),
             config.stateful(),
+            config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.sequenceTimeoutSeconds(),
             config.maxSequenceNumber()});
 
     if (!success) {
@@ -203,7 +210,7 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     std::string libraryName = nodeConfig["library_name"].GetString();
     auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
     if (!status.ok()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers too non existing custom node library: {}", pipelineName, libraryName);
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers to non existing custom node library: {}", pipelineName, libraryName);
     }
     if (nodeConfig.HasMember("params")) {
         for (const auto& param : nodeConfig["params"].GetObject()) {
@@ -226,7 +233,8 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         {NodeKind::ENTRY, ENTRY_NODE_NAME}};
     processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
     pipeline_connections_t connections;
-    std::set<std::string> nonGatheredDemultiplexerNodes;
+    std::set<std::string> demultiplexerNodes;
+    std::set<std::string> gatheredDemultiplexerNodes;
     for (const auto& nodeConfig : itr2->value.GetArray()) {
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
@@ -263,13 +271,13 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::optional<size_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
             demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
-            nonGatheredDemultiplexerNodes.insert(nodeName);
+            demultiplexerNodes.insert(nodeName);
         }
         std::set<std::string> gatherFromNode;
         if (nodeConfig.HasMember("gather_from_node")) {
             std::string nodeToGatherFrom = nodeConfig["gather_from_node"].GetString();
             gatherFromNode.insert(nodeToGatherFrom);
-            nonGatheredDemultiplexerNodes.erase(nodeToGatherFrom);
+            gatheredDemultiplexerNodes.insert(nodeToGatherFrom);
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Creating node: {} type: {} model_name: {} modelVersion: {}",
             nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
@@ -289,6 +297,10 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
     // pipeline outputs are node exit inputs
     processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
+    std::set<std::string> nonGatheredDemultiplexerNodes;
+    std::set_difference(demultiplexerNodes.begin(), demultiplexerNodes.end(),
+        gatheredDemultiplexerNodes.begin(), gatheredDemultiplexerNodes.end(),
+        std::inserter(nonGatheredDemultiplexerNodes, nonGatheredDemultiplexerNodes.begin()));
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
@@ -310,11 +322,14 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
         return StatusCode::OK;
     }
+    std::set<std::string> librariesInConfig;
     for (const auto& libraryConfig : doc->value.GetArray()) {
+        librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
         this->customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
             libraryConfig.FindMember("base_path")->value.GetString());
     }
+    this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
 }
 
@@ -540,15 +555,22 @@ void ModelManager::updateConfigurationWithoutConfigFile() {
     pipelineFactory.revalidatePipelines(*this);
 }
 
-bool ModelManager::configFileReloadNeeded() {
+Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     struct stat statTime;
 
-    stat(configFilename.c_str(), &statTime);
-    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
-        return false;
+    if (stat(configFilename.c_str(), &statTime) != 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
+        isNeeded = false;
+        return StatusCode::FILE_INVALID;
     }
-    return true;
+    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+        isNeeded = false;
+    } else {
+        isNeeded = true;
+    }
+
+    return StatusCode::OK;
 }
 
 void ModelManager::watcher(std::future<void> exit) {
@@ -559,7 +581,9 @@ void ModelManager::watcher(std::future<void> exit) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
 
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-        if (configFileReloadNeeded()) {
+        bool isNeeded;
+        configFileReloadNeeded(isNeeded);
+        if (isNeeded) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
@@ -575,8 +599,11 @@ void ModelManager::join() {
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
+            SPDLOG_INFO("Shutdown model manager");
         }
     }
+
+    globalSequencesViewer.join();
 }
 
 void ModelManager::getVersionsToChange(
@@ -727,6 +754,7 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
@@ -743,6 +771,8 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+
+            return status;
         }
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
@@ -854,6 +884,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
                 status.string());
+            return status;
         }
     }
     return blocking_status;
@@ -902,5 +933,4 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }
-
 }  // namespace ovms

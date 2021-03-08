@@ -68,10 +68,6 @@ TEST(ModelConfig, getters_setters) {
     config.setMaxSequenceNumber(11);
     auto seq = config.getMaxSequenceNumber();
     EXPECT_EQ(seq, 11);
-
-    config.setSequenceTimeout(11);
-    seq = config.getSequenceTimeout();
-    EXPECT_EQ(seq, 11);
 }
 
 TEST(ModelConfig, layout_single) {
@@ -521,7 +517,7 @@ static std::string config_low_latency_non_stateful = R"#(
 }
 )#";
 
-static std::string config_sequence_timeout_non_stateful = R"#(
+static std::string config_idle_sequence_cleanup_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -529,7 +525,7 @@ static std::string config_sequence_timeout_non_stateful = R"#(
                 "name": "config_timeout_stateful",
                 "base_path": "/tmp/models/dummy1",
                 "stateful": false,
-                "sequence_timeout_seconds": 2
+                "idle_sequence_cleanup": true
             }
         }
     ]
@@ -574,7 +570,6 @@ static std::string config_stateful_should_pass = R"#(
                 "base_path": "/tmp/models/dummy1",
                 "stateful": true,
                 "max_sequence_number": 1,
-                "sequence_timeout_seconds": 2,
                 "low_latency_transformation": true
             }
         }
@@ -591,24 +586,6 @@ static std::string config_low_invalid_max_seq = R"#(
                 "base_path": "/tmp/models/dummy1",
                 "stateful": true,
                 "max_sequence_number": 5294967295,
-                "sequence_timeout_seconds": 2,
-                "low_latency_transformation": true
-            }
-        }
-    ]
-}
-)#";
-
-static std::string config_low_invalid_seq_timeout = R"#(
-    {
-    "model_config_list": [
-        {
-            "config": {
-                "name": "config_low_invalid_seq_timeout",
-                "base_path": "/tmp/models/dummy1",
-                "stateful": true,
-                "max_sequence_number": 1,
-                "sequence_timeout_seconds": 5294967295,
                 "low_latency_transformation": true
             }
         }
@@ -640,7 +617,6 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
         ASSERT_EQ(modelConfig.isLowLatencyTransformationUsed(), true);
         ASSERT_EQ(modelConfig.isStateful(), true);
         ASSERT_EQ(modelConfig.getMaxSequenceNumber(), 1);
-        ASSERT_EQ(modelConfig.getSequenceTimeout(), 2);
     }
 }
 
@@ -648,10 +624,9 @@ std::vector<std::pair<std::string, ovms::StatusCode>> configs = {
     {config_low_latency_no_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_max_sequence_number, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_max_sequence_number_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_sequence_timeout_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {config_idle_sequence_cleanup_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_low_latency_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
     {config_low_invalid_max_seq, ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
-    {config_low_invalid_seq_timeout, ovms::StatusCode::INVALID_SEQUENCE_TIMEOUT},
     {config_stateful_should_pass, ovms::StatusCode::OK}};
 
 INSTANTIATE_TEST_SUITE_P(

@@ -23,21 +23,21 @@ using namespace ovms;
 class NodeLibraryCheckingReleaseCalled {
 public:
     static bool releaseBufferCalled;
-    static int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-    static int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-    static int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
+    static int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
+    static int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
     static int release(void* ptr);
 };
 
-int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 1;
 }
 
-int NodeLibraryCheckingReleaseCalled::getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int NodeLibraryCheckingReleaseCalled::getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 2;
 }
 
-int NodeLibraryCheckingReleaseCalled::getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int NodeLibraryCheckingReleaseCalled::getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 3;
 }
 
@@ -95,15 +95,15 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
     EXPECT_TRUE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 1;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 2;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
+int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     return 3;
 }
 

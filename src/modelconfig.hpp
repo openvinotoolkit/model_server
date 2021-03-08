@@ -38,7 +38,6 @@ using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
-const uint32_t DEFAULT_SEQUENCE_TIMEOUT_SECONDS = 60;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
@@ -92,14 +91,14 @@ private:
     bool stateful;
 
     /**
+         * @brief Flag determining if model will be a subject to sequence cleaner scans
+         */
+    bool idleSequenceCleanup;
+
+    /**
          * @brief Flag determining if model will use low latency transformation
          */
     bool lowLatencyTransformation;
-
-    /**
-         * @brief Timeout for stateful model sequence
-         */
-    uint32_t sequenceTimeout;
 
     /**
          * @brief Number of maximum frames in one sequence
@@ -182,8 +181,8 @@ public:
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
         bool stateful = false,
+        bool idleSequenceCleanup = true,
         bool lowLatencyTransformation = false,
-        uint32_t sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT_SECONDS,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
         model_version_t version = 0,
         const std::string& localPath = "") :
@@ -194,8 +193,8 @@ public:
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
         stateful(stateful),
+        idleSequenceCleanup(idleSequenceCleanup),
         lowLatencyTransformation(lowLatencyTransformation),
-        sequenceTimeout(sequenceTimeout),
         maxSequenceNumber(maxSequenceNumber),
         version(version),
         pluginConfig({}),
@@ -514,8 +513,8 @@ public:
      *
      * @return uint
      */
-    uint64_t getSequenceTimeout() const {
-        return this->sequenceTimeout;
+    bool getIdleSequenceCleanup() const {
+        return this->idleSequenceCleanup;
     }
 
     /**
@@ -523,8 +522,8 @@ public:
      *
      * @return uint
      */
-    void setSequenceTimeout(const uint32_t sequenceTimeout) {
-        this->sequenceTimeout = sequenceTimeout;
+    void setIdleSequenceCleanup(const bool idleSequenceCleanup) {
+        this->idleSequenceCleanup = idleSequenceCleanup;
     }
 
     /**

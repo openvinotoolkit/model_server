@@ -54,7 +54,6 @@ static const char* modelStatefulChangedConfig = R"(
                 "nireq": 100,
                 "stateful": true,
                 "low_latency_transformation": true,
-                "sequence_timeout_seconds": 2,
                 "max_sequence_number": 1000,
                 "shape": {"b": "(1,10) "}
             }
@@ -98,10 +97,10 @@ TEST_F(StatefulConfigTest, DefaultValues) {
     ASSERT_EQ(is, false);
     is = modelConfig.isStateful();
     ASSERT_EQ(is, false);
-    auto seq = modelConfig.getMaxSequenceNumber();
-    ASSERT_EQ(seq, 500);
-    seq = modelConfig.getSequenceTimeout();
-    ASSERT_EQ(seq, 60);
+    auto maxSequenceNumber = modelConfig.getMaxSequenceNumber();
+    ASSERT_EQ(maxSequenceNumber, 500);
+    auto idleSequenceCleanup = modelConfig.getIdleSequenceCleanup();
+    ASSERT_EQ(idleSequenceCleanup, true);
 }
 
 TEST_F(StatefulConfigTest, ChangedValues) {
@@ -118,8 +117,8 @@ TEST_F(StatefulConfigTest, ChangedValues) {
     ASSERT_EQ(is, true);
     is = modelConfig.isStateful();
     ASSERT_EQ(is, true);
-    auto seq = modelConfig.getMaxSequenceNumber();
-    ASSERT_EQ(seq, 1000);
-    seq = modelConfig.getSequenceTimeout();
-    ASSERT_EQ(seq, 2);
+    auto maxSequenceNumber = modelConfig.getMaxSequenceNumber();
+    ASSERT_EQ(maxSequenceNumber, 1000);
+    auto idleSequenceCleanup = modelConfig.getIdleSequenceCleanup();
+    ASSERT_EQ(idleSequenceCleanup, true);
 }

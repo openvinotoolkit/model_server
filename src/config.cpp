@@ -70,7 +70,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
-                "Serving log level - one of DEBUG, INFO, ERROR",
+                "serving log level - one of DEBUG, INFO, WARNING, ERROR",
                 cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
             ("log_path",
                 "Optional path to the log file",
@@ -81,7 +81,11 @@ Config& Config::parse(int argc, char** argv) {
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint>()->default_value("1"),
-                "SECONDS");
+                "FILE_SYSTEM_POLL_WAIT_SECONDS")
+            ("sequence_cleaner_poll_wait_minutes",
+                "Time interval between two consecutive sequence cleaner scans. Default is 5. Zero value disables sequence cleaner.",
+                cxxopts::value<uint32_t>()->default_value("5"),
+                "SEQUENCE_CLEANER_POLL_WAIT_MINUTES");
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
@@ -128,10 +132,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
-            ("sequence_timeout_seconds",
-                "Determines how many seconds model will wait for next request in the sequence. Exceeding this time will cause sequence to expire.",
-                cxxopts::value<uint32_t>(),
-                "SEQUENCE_TIMEOUT_SECONDS")
+            ("idle_sequence_cleanup",
+                "Flag indicating if model is subject to sequence cleaner scans",
+                cxxopts::value<bool>()->default_value("true"),
+                "IDLE_SEQUENCE_CLEANUP")
             ("low_latency_transformation",
                 "Flag indicating that Model Server should perform low latency transformation on that model",
                 cxxopts::value<bool>()->default_value("false"),
@@ -259,9 +263,18 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
+    // check log_level values
+    if (result->count("log_level")) {
+        std::vector v({"DEBUG", "INFO", "WARNING", "ERROR"});
+        if (std::find(v.begin(), v.end(), this->logLevel()) == v.end()) {
+            std::cerr << "log_level should be on of: DEBUG, INFO, WARNING, ERROR" << std::endl;
+            exit(EX_USAGE);
+        }
+    }
+
     // check stateful flags:
-    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("sequence_timeout_seconds")) && !result->count("stateful")) {
-        std::cerr << "Setting low_latency_transformation, max_sequence_number and sequence_timeout_seconds require setting stateful flag for the model." << std::endl;
+    if ((result->count("low_latency_transformation") || result->count("max_sequence_number") || result->count("idle_sequence_cleanup")) && !result->count("stateful")) {
+        std::cerr << "Setting low_latency_transformation, max_sequence_number and idle_sequence_cleanup require setting stateful flag for the model." << std::endl;
         exit(EX_USAGE);
     }
     return;

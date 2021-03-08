@@ -37,20 +37,20 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersLength) {
+Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount) {
     const auto& blobMap = this->inputHandler->getInputs();
-    auto inputTensorsLength = blobMap.size();
+    auto inputTensorsCount = blobMap.size();
     auto inputTensors = createCustomNodeTensorArray(blobMap);
     struct CustomNodeTensor* outputTensors = nullptr;
-    int outputTensorsLength = 0;
+    int outputTensorsCount = 0;
 
     int result = library.execute(
         inputTensors.get(),
-        inputTensorsLength,
+        inputTensorsCount,
         &outputTensors,
-        &outputTensorsLength,
+        &outputTensorsCount,
         parameters.get(),
-        parametersLength);
+        parametersCount);
 
     // If result is not 0, it means execution has failed.
     // In this case shared library is responsible for cleaning up resources (memory).
@@ -59,7 +59,6 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_EXECUTION_FAILED;
     }
-
     // In other cases we are responsible of cleaning whatever is possible.
     if (outputTensors == nullptr) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted outputs handle", getName(), getSessionKey());
@@ -67,7 +66,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
 
-    if (outputTensorsLength <= 0) {
+    if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
         library.release(outputTensors);
         notifyEndQueue.push({node, getSessionKey()});
@@ -78,7 +77,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     // There will be memory leak if any tensor is not converted into blob.
     // Blob destructor is responsible for cleaning up resources.
     Status status = StatusCode::OK;
-    for (int i = 0; i < outputTensorsLength; i++) {
+    for (int i = 0; i < outputTensorsCount; i++) {
         InferenceEngine::Blob::Ptr resultBlob;
         auto result = this->createBlob(&outputTensors[i], resultBlob, library);
         if (outputTensors[i].name == nullptr) {
@@ -97,7 +96,6 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     }
 
     library.release(outputTensors);
-
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -148,18 +146,19 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
 
     InferenceEngine::Precision precision = toInferenceEnginePrecision(tensor->precision);
     if (precision == InferenceEngine::Precision::UNSPECIFIED) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node",
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node tensor: {}",
             this->getName(),
-            this->getSessionKey());
+            this->getSessionKey(),
+            tensor->name);
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
     desc.setPrecision(precision);
 
-    if (tensor->dims == nullptr || tensor->dimsLength == 0) {
+    if (tensor->dims == nullptr || tensor->dimsCount == 0) {
         std::string error;
         if (tensor->dims == nullptr) {
             error = "shape handle is null";
-        } else if (tensor->dimsLength == 0) {
+        } else if (tensor->dimsCount == 0) {
             error = "shape dimensions number is equal to 0";
         }
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; error: {}",
@@ -168,17 +167,17 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
             error);
         return StatusCode::NODE_LIBRARY_INVALID_SHAPE;
     }
-    InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsLength);
+    InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsCount);
     desc.setDims(shape);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
     size_t expectedDataLength = expectedElementsCount *= precision.size();
-    if (tensor->data == nullptr || tensor->dataLength != expectedDataLength) {
+    if (tensor->data == nullptr || tensor->dataBytes != expectedDataLength) {
         std::stringstream error;
         if (tensor->data == nullptr) {
             error << "data handle is null";
-        } else if (tensor->dataLength != expectedDataLength) {
-            error << "not expected data length: expected: " << expectedDataLength << " vs " << tensor->dataLength;
+        } else if (tensor->dataBytes != expectedDataLength) {
+            error << "not expected data length: expected: " << expectedDataLength << " vs " << tensor->dataBytes;
         }
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; error: {}",
             this->getName(),

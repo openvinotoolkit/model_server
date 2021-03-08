@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include <array>
 #include <functional>
+#include <limits>
+#include <numeric>
 #include <utility>
 
 #include <gmock/gmock.h>
@@ -26,7 +28,9 @@
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
 #include "../node_library.hpp"
+#include "../node_library_utils.hpp"
 #include "../pipelinedefinition.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -96,7 +100,7 @@ protected:
 
     template <typename T>
     void checkResponse(const std::string& outputName, const PredictResponse& response, const std::vector<T>& data, const shape_t& shape) {
-        ASSERT_TRUE(response.outputs().contains(outputName));
+        ASSERT_TRUE(response.outputs().contains(outputName)) << outputName;
         const auto& proto = response.outputs().at(outputName);
 
         ASSERT_EQ(proto.tensor_content().size(), data.size() * sizeof(T));
@@ -130,15 +134,6 @@ protected:
         for (size_t i = 0; i < actual.size(); i++) {
             EXPECT_NEAR(actual[i], data[i], 0.001);
         }
-    }
-
-    template <typename T>
-    static NodeLibrary createLibraryMock() {
-        return NodeLibrary{
-            T::execute,
-            T::getInputsInfo,
-            T::getOutputsInfo,
-            T::release};
     }
 
     PredictRequest request;
@@ -186,6 +181,200 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
         return value + addValue - subValue;
     });
+}
+
+class EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest : public EnsembleFlowCustomNodePipelineExecutionTest {
+protected:
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    CustomNodeLibraryManager manager;
+    NodeLibrary differentOpsLibrary;
+    NodeLibrary chooseMaxLibrary;
+    const std::string differentOpsLibraryName{"different_ops"};
+    const std::string chooseMaxLibraryName{"choose_max"};
+    const std::string differentOpsLibraryPath{"/ovms/bazel-bin/src/lib_node_perform_different_operations.so"};
+    const std::string chooseMaxLibraryPath{"/ovms/bazel-bin/src/lib_node_choose_maximum.so"};
+    const std::string pipelineInputName = "pipeline_input";
+    const std::string pipelineOutputName = "pipeline_output";
+    const std::string pipelineFactorsName = "pipeline_factors";
+    const std::string chooseMaxInputName = "input_tensors";
+    const std::string chooseMaxOutputName = "maximum_tensor";
+    const std::string differentOpsInputName = "input_numbers";
+    const std::string differentOpsFactorsInputName = "op_factors";
+    const std::string differentOpsOutputName = "different_ops_results";
+    const std::string differentOpsFactorsOutputName = "different_ops_factors_results";
+    const std::unordered_map<std::string, std::string> differentOpsOutputAlias{{differentOpsOutputName, differentOpsOutputName}};
+    const std::unordered_map<std::string, std::string> chooseMaxOutputAlias{{chooseMaxOutputName, chooseMaxOutputName}};
+    const std::string dummyNodeName = "dummy";
+    const std::string differentOpsNodeName{"different-ops-node"};
+    const std::string chooseMaxNodeName{"choose-max-node"};
+    const uint32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
+
+    void SetUp() override {
+        // increasing default nireq == 1 to speed up the tests
+        // in multilayered demultiplication we still will have more than
+        // 16 concurrent inferences
+        config.setNireq(16);
+        ASSERT_EQ(modelManager.reloadModelWithVersions(config), StatusCode::OK);
+        ASSERT_EQ(manager.loadLibrary(
+                      differentOpsLibraryName,
+                      differentOpsLibraryPath),
+            StatusCode::OK);
+        ASSERT_EQ(manager.getLibrary(
+                      differentOpsLibraryName,
+                      differentOpsLibrary),
+            StatusCode::OK);
+        ASSERT_EQ(manager.loadLibrary(
+                      chooseMaxLibraryName,
+                      chooseMaxLibraryPath),
+            StatusCode::OK);
+        ASSERT_EQ(manager.getLibrary(
+                      chooseMaxLibraryName,
+                      chooseMaxLibrary),
+            StatusCode::OK);
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerDummyGathersIntertwinedLevels) {
+    // Most basic configuration, just process single add-sub custom node pipeline request
+    // input  (differentOps    dummy   chooseMax ) XN    output
+    //  O-----(----->O---------->O------->O------>...----->O
+    const uint demultiplicationLayersCount = 10;
+    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
+    const std::vector<float> inputFactors{1, -1, 2, 2};
+    parameters_t parameters{
+        {"selection_criteria", "MAXIMUM_MAXIMUM"}};
+    // create expected output -> it is dependent from input values & DAG topology
+    auto expectedResult = inputValues;
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [demultiplicationLayersCount, inputFactors](float f) {
+            for (size_t iterations = 0; iterations < demultiplicationLayersCount; ++iterations) {
+                // input values are prepared in a way that the first layer will choose adding operation tensor
+                if (iterations == 0) {
+                    f += inputFactors[0];
+                } else {
+                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                }
+                f += 1;  // dummy
+            }
+            return f;
+        });
+    PredictRequest predictRequest;
+    this->prepareRequest(predictRequest, inputValues, pipelineInputName);
+    this->prepareRequest(predictRequest, inputFactors, pipelineFactorsName);
+
+    // create pipeline
+    std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    nodes[1] = std::make_unique<ExitNode>(&response);
+    size_t i = 2;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        nodes[i++] = std::make_unique<CustomNode>(differentOpsNodeName + "-" + std::to_string(demultiplicationLayer), differentOpsLibrary, parameters_t{}, differentOpsOutputAlias, demultiplyCount);
+        nodes[i++] = std::make_unique<DLNode>(dummyNodeName + "-" + std::to_string(demultiplicationLayer), "dummy", std::nullopt, modelManager);
+        nodes[i++] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
+    }
+
+    Pipeline pipeline(dynamic_cast<EntryNode&>(*nodes[0]), dynamic_cast<ExitNode&>(*nodes[1]));
+    i = 2;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        if (i == 2) {  // first node after entry
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}, {pipelineInputName, differentOpsInputName}});
+        } else {  // node inside pipeline
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}});
+        }
+        pipeline.connect(*nodes[i], *nodes[i + 1], {{differentOpsOutputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, chooseMaxInputName}});
+        if ((i + 3) != (2 + 3 * demultiplicationLayersCount)) {  // connect different ops to choose max
+            pipeline.connect(*nodes[i + 2], *nodes[i + 3], {{chooseMaxOutputName, differentOpsInputName}});
+        } else {  // if last connect to exit node
+            pipeline.connect(*nodes[i + 2], *nodes[1], {{chooseMaxOutputName, pipelineOutputName}});
+        }
+        i = i + 3;
+    }
+    for (auto& node : nodes) {
+        pipeline.push(std::move(node));
+    }
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(response.outputs().size(), 1);
+    this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerLevelsThenDummyThenMultipleGathers) {
+    // Most basic configuration, just process single add-sub custom node pipeline request
+    // input  (differentOps dummy)xN   chooseMax xN    output
+    //  O-----(----->O------->O---...----->O---->...----->O
+    const uint demultiplicationLayersCount = 4;
+    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
+    const std::vector<float> inputFactors{1, -1, 2, 2};
+    parameters_t parameters{
+        {"selection_criteria", "MAXIMUM_MAXIMUM"}};
+    // create expected output -> it is dependent from input values & DAG topology
+    auto expectedResult = inputValues;
+    std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
+        [demultiplicationLayersCount, inputFactors](float f) {
+            for (size_t iterations = 0; iterations < demultiplicationLayersCount; ++iterations) {
+                // input values are prepared in a way that the first layer will choose adding operation tensor
+                if (iterations == 0) {
+                    f += inputFactors[0];
+                } else {
+                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                }
+                f += 1;  // dummy
+            }
+            return f;
+        });
+    PredictRequest predictRequest;
+    this->prepareRequest(predictRequest, inputValues, pipelineInputName);
+    this->prepareRequest(predictRequest, inputFactors, pipelineFactorsName);
+
+    // create pipeline
+    size_t nodesCount = 2 + 3 * demultiplicationLayersCount;  // entry + exit + (choose + differentOps + dummy) * layerCount
+    std::vector<std::unique_ptr<Node>> nodes(nodesCount);
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response);
+    size_t i = 1;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        nodes[i++] = std::make_unique<CustomNode>(differentOpsNodeName + "-" + std::to_string(demultiplicationLayer), differentOpsLibrary, parameters_t{}, differentOpsOutputAlias, demultiplyCount);
+        nodes[i++] = std::make_unique<DLNode>(dummyNodeName + "-" + std::to_string(demultiplicationLayer), "dummy", std::nullopt, modelManager);
+        nodes[nodesCount - 1 - (i / 2)] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
+    }
+
+    Pipeline pipeline(dynamic_cast<EntryNode&>(*nodes[0]), dynamic_cast<ExitNode&>(*nodes[nodesCount - 1]));
+    i = 1;
+    for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
+        if (i == 1) {  // first node after entry needs to connect to entry
+            pipeline.connect(*nodes[0], *nodes[i], {{pipelineFactorsName, differentOpsFactorsInputName}, {pipelineInputName, differentOpsInputName}});
+        }
+        pipeline.connect(*nodes[i], *nodes[i + 1], {{differentOpsOutputName, DUMMY_MODEL_INPUT_NAME}});
+        // pass factors further if +2 node is differentOps
+        if (demultiplicationLayer != demultiplicationLayersCount - 1) {
+            pipeline.connect(*nodes[i], *nodes[i + 2], {{differentOpsFactorsOutputName, differentOpsFactorsInputName}});
+        }
+        // in between different ops & dummy node
+        if (demultiplicationLayer != demultiplicationLayersCount - 1) {  // all but last dummy connect to differentOps node
+            pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, differentOpsInputName}});
+        } else {  // last dummy connects to chooseMax node
+            pipeline.connect(*nodes[i + 1], *nodes[i + 2], {{DUMMY_MODEL_OUTPUT_NAME, chooseMaxInputName}});
+        }
+        if (demultiplicationLayer != 0) {  // in between choose max nodes
+            pipeline.connect(*nodes[nodesCount - 1 - (demultiplicationLayer + 1)],
+                *nodes[nodesCount - 1 - demultiplicationLayer], {{chooseMaxOutputName, chooseMaxInputName}});
+        } else {  // connect last choose max to exit node
+            pipeline.connect(*nodes[nodesCount - 1 - (demultiplicationLayer + 1)],
+                *nodes[nodesCount - 1 - demultiplicationLayer], {{chooseMaxOutputName, pipelineOutputName}});
+        }
+        i = i + 2;
+    }
+    for (auto& node : nodes) {
+        pipeline.push(std::move(node));
+    }
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(response.outputs().size(), 1);
+    this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
@@ -417,9 +606,9 @@ struct LibraryMissingOutput {
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
         (*handle)->dims[0] = 1;
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = (uint8_t*)malloc(sizeof(float) * sizeof(uint8_t));
-        (*handle)->dataLength = sizeof(float);
+        (*handle)->dataBytes = sizeof(float);
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -446,9 +635,9 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::UNSPECIFIED;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataLength = 1;
+        (*handle)->dataBytes = 1;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -475,9 +664,9 @@ struct LibraryIncorrectOutputShape {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = nullptr;
-        (*handle)->dimsLength = 0;
+        (*handle)->dimsCount = 0;
         (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataLength = 1;
+        (*handle)->dataBytes = 1;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -504,9 +693,9 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
         (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t));
-        (*handle)->dimsLength = 1;
+        (*handle)->dimsCount = 1;
         (*handle)->data = nullptr;
-        (*handle)->dataLength = 0;
+        (*handle)->dataBytes = 0;
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
@@ -802,13 +991,13 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
     this->checkResponseForCorrectConfiguration();
 }
 
-static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryConfig = R"(
+static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig = R"(
 {
     "model_config_list": [],
     "custom_node_library_config_list": [
         {
             "name": "lib_add_sub_new",
-            "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"
+            "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"
         }
     ],
     "pipeline_config_list": [
@@ -820,8 +1009,6 @@ static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryCo
                     "name": "custom_node",
                     "library_name": "lib_add_sub_new",
                     "params": {
-                        "add_value": "3.2",
-                        "sub_value": "2.7"
                     },
                     "type": "custom",
                     "inputs": [
@@ -855,7 +1042,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithExec
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeReferenceLibraryWithExecutionErrorLibraryConfig);
+    this->loadConfiguration(pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
     response.Clear();
@@ -1141,7 +1328,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
-    this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
+    this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
@@ -1220,7 +1407,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
-    this->checkResponse("pipeline_output", response, expectedOutput, {1, 4, 10});
+    this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
@@ -1421,6 +1608,7 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
         }
     ]
 })";
+
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumThenDummyAgain) {
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1440,4 +1628,1866 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
-// TODO: Validation tests (PipelineDefinition::validateNodes/validateForCycles)
+
+struct LibraryParamControlledMetadata {
+    static bool startsWith(const char* str, const char* prefix) {
+        size_t strLen = std::strlen(str);
+        size_t prefixLen = std::strlen(prefix);
+        return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
+    }
+    // Extract TensorInfo out of string in format: "1,3,500,500;FP32"
+    static CustomNodeTensorInfo extractMetadata(const char* key, const char* value) {
+        std::string keyStr = key;
+        std::string valueStr = value;
+        auto tokens = tokenize(valueStr, ';');
+        EXPECT_EQ(tokens.size(), 2);
+        std::string shapeStr = tokens[0];
+        std::string precisionStr = tokens[1];
+        tokens = tokenize(shapeStr, ',');
+        EXPECT_GE(tokens.size(), 1);
+        shape_t shape;
+        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
+            [](const std::string& str) { return std::stoull(str); });
+        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
+        CustomNodeTensorInfo info;
+        info.name = key;
+        info.dimsCount = shape.size();
+        info.dims = (uint64_t*)malloc(info.dimsCount * sizeof(uint64_t));
+        std::memcpy(info.dims, shape.data(), info.dimsCount * sizeof(uint64_t));
+        info.precision = precision;
+        return info;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+        return 1;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+        int inputs = 0;
+        for (int i = 0; i < paramsCount; i++) {
+            if (startsWith(params[i].key, "in_")) {
+                inputs++;
+            }
+        }
+        if (inputs == 0) {
+            return 1;
+        }
+        *infoCount = inputs;
+        *info = (struct CustomNodeTensorInfo*)malloc(inputs * sizeof(CustomNodeTensorInfo));
+        int preparedInputsMetaCount = 0;
+        for (int i = 0; i < paramsCount; i++) {
+            if (startsWith(params[i].key, "in_")) {
+                (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
+                preparedInputsMetaCount++;
+            }
+        }
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+        int outputs = 0;
+        for (int i = 0; i < paramsCount; i++) {
+            if (startsWith(params[i].key, "out_")) {
+                outputs++;
+            }
+        }
+        if (outputs == 0) {
+            return 1;
+        }
+        *infoCount = outputs;
+        *info = (struct CustomNodeTensorInfo*)malloc(outputs * sizeof(CustomNodeTensorInfo));
+        int preparedInputsMetaCount = 0;
+        for (int i = 0; i < paramsCount; i++) {
+            if (startsWith(params[i].key, "out_")) {
+                (*info)[preparedInputsMetaCount] = extractMetadata(params[i].key, params[i].value);
+                preparedInputsMetaCount++;
+            }
+        }
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
+        return 0;
+    }
+};
+
+class EnsembleConfigurationValidationWithCustomNode : public ::testing::Test {
+protected:
+    void SetUp() override {
+        mockedLibrary = createLibraryMock<LibraryParamControlledMetadata>();
+        ASSERT_TRUE(mockedLibrary.isValid());
+    }
+
+    NodeLibrary mockedLibrary;
+
+    const std::string customNodeInputName = "input_numbers";
+    const std::string customNodeOutputName = "output_numbers";
+    static constexpr const char* pipelineInputName = "pipeline_input";
+    const std::string pipelineOutputName = "pipeline_output";
+};
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, SuccessfulConfiguration) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node_1", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_2", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10,7;FP32"},  // 1,10 is correcct
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers", "1,2000;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_node_2"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node"] = {
+        {"dummy_node_1", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}},
+        {"dummy_node_2", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10,7;I32"},
+                {"out_OutputNumbers", "1,8;FP32"}  // 1,10 is correct
+            }},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenCustomNodes) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8,1;I32"},  // 1,8 is correct
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenDLModelAndCustomNode) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node_1", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_2", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"in_InputNumbers_2", "1,10;I32"},  // FP32 is correct
+                {"out_OutputNumbers", "1,2000;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_node_2"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node"] = {
+        {"dummy_node_1", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}},
+        {"dummy_node_2", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_PRECISION);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenCustomNodeAndDLNode) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10,7;I32"},
+                {"out_OutputNumbers", "1,10;I32"}  // FP32 is correct
+            }},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_PRECISION);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenCustomNodes) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;FP32"},  // I32 is correct
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_PRECISION);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeInputsAreConnected) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    // Missing connection {"1", "in_InputNumbers_1"}
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
+    NodeLibrary invalidLibrary{};
+    ASSERT_FALSE(invalidLibrary.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, invalidLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, invalidLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
+}
+
+struct LibraryErrorsOnMetadataCall {
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 1;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 1;
+    }
+    static int release(void* ptr) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, SharedLibraryErrorsOnMetadataCall) {
+    NodeLibrary libraryFailingOnMetadataCall = createLibraryMock<LibraryErrorsOnMetadataCall>();
+    ASSERT_TRUE(libraryFailingOnMetadataCall.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, libraryFailingOnMetadataCall,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "1,30,7;I32"},
+                {"out_OutputNumbers_2", "1,8;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, libraryFailingOnMetadataCall,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
+}
+
+class EnsembleConfigurationValidationWithDemultiplexer : public EnsembleConfigurationValidationWithCustomNode {};
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDemultiplexer) {
+    const size_t demultiplyCount = 7;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "7,1,700;I32"},
+                {"out_OutputNumbers_2", "7,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFirst) {
+    std::optional<uint32_t> demultiplyCount = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "0,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_1"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFixedLibraryFirstMetadataCheck) {
+    std::optional<uint32_t> demultiplyCount = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "12,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_1"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+
+    tensor_map_t inputs, outputs;
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({12, 1, 10}));
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationFixedDemultiplexerDynamicLibraryFirstMetadataCheckShouldAlsoWarnInLog) {
+    std::optional<uint32_t> demultiplyCount = 12;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "0,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_1"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+
+    tensor_map_t inputs, outputs;
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({12, 1, 10}));
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationDynamicLibraryShapesMetadataCheckShouldAlsoWarnInLog) {
+    std::optional<uint32_t> demultiplyCount = std::nullopt;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,0,0,0;FP32"},
+                {"out_OutputNumbers_1", "0,1,0;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_1", {{"1", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+
+    tensor_map_t inputs, outputs;
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 0, 0, 0}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({0, 1, 0}));
+}
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerLast) {
+    std::optional<uint32_t> demultiplyCount = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "0, 1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_1", {{"1", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerAndDynamicGather) {
+    std::optional<uint32_t> demultiplyCount = 0;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "0,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "0,1,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_2"}}}};
+    connections["custom_node_3"] = {{"custom_node_2", {{"2", "in_InputNumbers_3"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_3", {{"3", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleFixedDemultiplexerAndDynamicGather) {
+    std::optional<uint32_t> demultiplyCount = 12;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "12,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "0,1,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_2"}}}};
+    connections["custom_node_3"] = {{"custom_node_2", {{"2", "in_InputNumbers_3"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_3", {{"3", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerAndFixedGatherShouldWarnInLog) {
+    std::optional<uint32_t> demultiplyCount = 0;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers_1", "0,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_2", "1,10;FP32"},
+                {"out_OutputNumbers_2", "1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"3", "out_OutputNumbers_3"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_3", "12,1,10;FP32"},
+                {"out_OutputNumbers_3", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_2"}}}};
+    connections["custom_node_3"] = {{"custom_node_2", {{"2", "in_InputNumbers_3"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_3", {{"3", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFixedLibraryDynamicGatherMetadataCheck) {
+    std::optional<uint32_t> demultiplyCount = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers_1", "12,1,10;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+    connections["custom_node_1"] = {{ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+    connections["custom_node_2"] = {{"custom_node_1", {{"1", "in_InputNumbers_1"}}}};
+    connections[EXIT_NODE_NAME] = {{"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+
+    tensor_map_t inputs, outputs;
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({12, 1, 10}));
+}
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationMultipleDemultiplexers) {
+    const size_t demultiplyCount1 = 11;
+    const size_t demultiplyCount2 = 43;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "11,1,700;I32"},
+                {"out_OutputNumbers_2", "11,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount2, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "43,1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,2000;FP32"},
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1", "custom_node_2"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNodeRestricted) {
+    const size_t demultiplyCount = 9;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "3,3,10;FP32"},  // 1,3,10 is correct
+                {"out_OutputNumbers_1", "9,1,700;I32"},
+                {"out_OutputNumbers_2", "9,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    auto status = pipelineDefinition->validate(manager);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE) << status.string();
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEnoughDimensionsToDemultiply) {
+    const size_t demultiplyCount = 29;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, demultiplyCount},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "25,1,12;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY);
+}
+
+class DummyModelWithMockedMetadata : public ovms::ModelInstance {
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+
+public:
+    DummyModelWithMockedMetadata(const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+        ovms::ModelInstance("dummy", 1),
+        mockedInputsInfo(inputsInfo),
+        mockedOutputsInfo(outputsInfo) {}
+
+    size_t getBatchSize() const override {
+        return 1;
+    }
+
+    const ovms::ModelConfig& getModelConfig() const override {
+        return DUMMY_MODEL_CONFIG;
+    }
+
+    const ovms::tensor_map_t& getInputsInfo() const override {
+        return mockedInputsInfo;
+    }
+
+    const ovms::tensor_map_t& getOutputsInfo() const override {
+        return mockedOutputsInfo;
+    }
+};
+
+class ModelWithDummyModelWithMockedMetadata : public ovms::Model {
+    std::shared_ptr<DummyModelWithMockedMetadata> modelInstance;
+
+public:
+    ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
+        Model(name, false, nullptr),
+        modelInstance(modelInstance) {}
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+        return modelInstance;
+    }
+};
+
+std::shared_ptr<ModelWithDummyModelWithMockedMetadata> dummyModelWithMockedMetadata;
+
+class ModelManagerWithModelWithDummyModelWithMockedMetadata : public ovms::ModelManager {
+    std::shared_ptr<DummyModelWithMockedMetadata> modelInstance;
+
+public:
+    ModelManagerWithModelWithDummyModelWithMockedMetadata(std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
+        modelInstance(modelInstance) {}
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        return std::make_shared<ModelWithDummyModelWithMockedMetadata>("dummy", modelInstance);
+    }
+};
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    const size_t demultiplyCount = 33;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, demultiplyCount},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10;FP32"},
+                {"out_OutputNumbers", "1,25,12;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers_1"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{"out", pipelineOutputName}}}};
+
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         InferenceEngine::Precision::FP32,
+                                         shape_t{1, 10})}},
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          InferenceEngine::Precision::FP32,
+                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    const size_t demultiplyCount = 25;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,10,7;I32"},
+                {"out_OutputNumbers", "25,1,12;FP32"}  // 25,1,10 is correct
+            }},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenCustomNodes) {
+    const size_t demultiplyCount = 19;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_2", "19,1,8;I32"},
+                {"out_OutputNumbers_1", "19,1,30,7;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,10;I32"},  // 1,30,7 is correct
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatchingOutputSecondDimensionValue) {
+    const size_t demultiplyCount = 87;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_2", "87,1,8;I32"},
+                {"out_OutputNumbers_1", "86,1,30,7;I32"}  // 87,1,30,7 is correct
+            }},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,30,7;I32"},
+                {"in_InputNumbers_2", "1,8;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+}
+
+class EnsembleConfigurationValidationWithGather : public EnsembleConfigurationValidationWithCustomNode {};
+
+TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfiguration) {
+    const size_t demultiplyCount = 13;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "13,1,700;I32"},
+                {"out_OutputNumbers_2", "13,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, gatherFrom, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "13,1,2000;FP32"},
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLNodeAsDemultliplexer) {
+    const size_t demultiplyCount = 53;
+    const std::set<std::string> gatherFrom{"dummy_node"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, demultiplyCount},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, gatherFrom, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "53,1,2000;FP32"},
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node_1"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         InferenceEngine::Precision::FP32,
+                                         shape_t{1, demultiplyCount, 10})}},
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          InferenceEngine::Precision::FP32,
+                                          shape_t{demultiplyCount, 1, 10})}});
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLNodeAsGather) {
+    const size_t demultiplyCount = 102;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers", "102,1,2000;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,2000;I32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, gatherFrom},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node_2", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         InferenceEngine::Precision::FP32,
+                                         shape_t{demultiplyCount, 1, 10})}},
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          InferenceEngine::Precision::FP32,
+                                          shape_t{1, demultiplyCount, 10})}});
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleGathersNotAllowedInNonExitNode) {
+    const size_t demultiplyCount1 = 11;
+    const size_t demultiplyCount2 = 43;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "11,1,700;I32"},
+                {"out_OutputNumbers_2", "11,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount2, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "43,1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {"custom_node_1", "custom_node_2"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "11,43,1,2000;FP32"},
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAndCustomNode) {
+    const size_t demultiplyCount = 53;
+    const std::set<std::string> gatherFrom{"dummy_node"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, demultiplyCount},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, gatherFrom, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "53,1,2000;FP32"},
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["custom_node_1"] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         InferenceEngine::Precision::FP32,
+                                         shape_t{1, demultiplyCount, 10})}},
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          InferenceEngine::Precision::FP32,
+                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNodeAndDLNode) {
+    const size_t demultiplyCount = 102;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,10;FP32"},
+                {"out_OutputNumbers", "102,1,2000;I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,2000;I32"},
+                {"out_OutputNumbers", "1,10;FP32"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}, std::nullopt, gatherFrom},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node_2", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         InferenceEngine::Precision::FP32,
+                                         shape_t{demultiplyCount, 1, 11})}},  // 1, demultiplyCount, 10 is correct
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          InferenceEngine::Precision::FP32,
+                                          shape_t{1, demultiplyCount, 10})}});
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNodes) {
+    const size_t demultiplyCount = 51;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "51,1,700;I32"},
+                {"out_OutputNumbers_2", "51,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, gatherFrom, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "51,1,2001;FP32"},  // 51,1,2000 is correct
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleConfigurationValidationWithGather, DemultiplyCountNotMatchingInputSecondDimensionValue) {
+    const size_t demultiplyCount = 94;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "94,1,700;I32"},
+                {"out_OutputNumbers_2", "94,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, gatherFrom, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "95,1,2000;FP32"},  // 94,1,2000 is correct
+                {"out_OutputNumbers", "1,5;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultipliersGatherNodesNotInLIFOOrder) {
+    const size_t demultiplyCount1 = 11;
+    const size_t demultiplyCount2 = 43;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers_1", "11,1,700;I32"},
+                {"out_OutputNumbers_2", "11,1,8;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount2, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", "1,700;I32"},
+                {"in_InputNumbers_2", "1,8;FP32"},
+                {"out_OutputNumbers", "43,1,2000;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "11,1,2000;FP32"},
+                {"out_OutputNumbers", "1,100;I32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_2"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, GatherNodeWithoutDemultiplexerPath) {
+    const size_t demultiplyCount1 = 11;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "11,1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers1", "1,700;FP32"},
+                {"in_InputNumbers2", "1,700;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers1"}}},
+        {"custom_node_2", {{"out", "in_InputNumbers2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
+}
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGatherNodePath) {
+    const size_t demultiplyCount1 = 11;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount1, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "11,1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {"custom_node_1"}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "11,1,700;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,700;FP32"},
+                {"out_OutputNumbers", "1,700;FP32"}}},
+        {NodeKind::CUSTOM, "custom_node_4", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers1", "1,700;FP32"},
+                {"in_InputNumbers2", "1,700;FP32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["custom_node_3"] = {
+        {"custom_node_1", {{"out", "in_InputNumbers"}}}};
+
+    connections["custom_node_4"] = {
+        {"custom_node_2", {{"out", "in_InputNumbers1"}}},
+        {"custom_node_3", {{"out", "in_InputNumbers2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_4", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER);
+}
+
+class EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
+protected:
+    void SetUp() override {
+        EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
+        configJsonFilePath = directoryPath + "/ovms_config_file.json";
+    }
+    const std::string differentOpsInputName = "pipeline_input";
+};
+
+static const char* pipelineCustomNodeDynamicDemultiplexThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_demultiplex",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, JustDynamicDemultiplexerConfig) {
+    std::unique_ptr<Pipeline> pipeline;
+    uint8_t dynamicDemultiplyCount = 3;
+    std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(dynamicDemultiplyCount * DUMMY_MODEL_OUTPUT_SIZE);
+    for (size_t i = 0; i < dynamicDemultiplyCount; ++i) {
+        std::copy(input.begin(), input.end(), expectedOutput.begin() + i * DUMMY_MODEL_OUTPUT_SIZE);
+    }
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse("pipeline_output", response, expectedOutput, {dynamicDemultiplyCount, 1, 10});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
+    std::unique_ptr<Pipeline> pipeline;
+    const uint64_t demultiplyLimit = 10'000;  // node.cpp
+    uint64_t dynamicDemultiplyCount = demultiplyLimit + 1;
+    ASSERT_GT(dynamicDemultiplyCount, demultiplyLimit) << "Current demultiply count type";
+    std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY) << status.string();
+}
+
+static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumNotInOrderConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        },
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "custom_node",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MINIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                },
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumNotInOrderConfig) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumNotInOrderConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MINIMUM);
+    this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
+// TODO handle results with 0 batch for dynamic demultiplexer
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DISABLED_JustDynamicDemultiplexerConfigReturning0Batch) {
+    std::unique_ptr<Pipeline> pipeline;
+    uint8_t dynamicDemultiplyCount = 0;
+    std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(dynamicDemultiplyCount * DUMMY_MODEL_OUTPUT_SIZE);
+    for (size_t i = 0; i < dynamicDemultiplyCount; ++i) {
+        std::copy(input.begin(), input.end(), expectedOutput.begin() + i * DUMMY_MODEL_OUTPUT_SIZE);
+    }
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse("pipeline_output", response, expectedOutput, {1, dynamicDemultiplyCount, 10});
+}
+
+static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_demultiplex",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "custom_node2",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "custom_node",
+                                           "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node2",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
+    std::unique_ptr<Pipeline> pipeline;
+    createConfigFileWithContent(pipelineCustomNode2DynamicDemultiplexConfig, configJsonFilePath);
+    auto status = manager.createPipeline(pipeline, pipelineName, &request, &response);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
+}

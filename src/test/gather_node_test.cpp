@@ -84,7 +84,7 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     for (size_t i = 0; i < inputNames.size(); ++i) {
         const auto& blob = blobMap.at(inputNames[i]);
         EXPECT_EQ(blob->size(), blobsData[i].size() * shardsCount);
-        EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(1, shardsCount, blobsData[i].size()));
+        EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(shardsCount, 1, blobsData[i].size()));
         EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), resultBlobsData[i].data(), resultBlobsData[i].size() * sizeof(float)), 0);
     }
 }
@@ -131,7 +131,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     ASSERT_EQ(blobMap.size(), 1);
     const auto& blob = blobMap.at(inputName);
     EXPECT_EQ(blob->size(), blobsData.size());
-    EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(1, demultiplyCounts[0], demultiplyCounts[1], elementCountPerShard));
+    EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
     EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), blobsData.data(), blobsData.size() * sizeof(float)), 0);
 }
 

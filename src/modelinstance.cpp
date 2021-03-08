@@ -674,6 +674,7 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     }
     return StatusCode::OK;
 }
+
 const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
         std::stringstream ss;

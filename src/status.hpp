@@ -65,7 +65,6 @@ enum class StatusCode {
     REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
     REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
     INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
-    INVALID_SEQUENCE_TIMEOUT,                          /*!< Sequence timeout parameter too high */
     INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
 
     // Sequence management
@@ -149,11 +148,12 @@ enum class StatusCode {
     AS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
     // REST handler
-    REST_NOT_FOUND,               /*!< Requested REST resource not found */
-    REST_COULD_NOT_PARSE_VERSION, /*!< Could not parse model version in request */
-    REST_INVALID_URL,             /*!< Malformed REST request url */
-    REST_UNSUPPORTED_METHOD,      /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,       /*!< Malformed REST request */
+    REST_NOT_FOUND,                  /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
+    REST_INVALID_URL,                /*!< Malformed REST request url */
+    REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
+    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
+    UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,                 /*!< REST body should be JSON object */
@@ -207,6 +207,11 @@ enum class StatusCode {
     PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER,
     PIPELINE_NODE_GATHER_FROM_ENTRY_NODE,
     PIPELINE_DEMULTIPLY_ENTRY_NODE,
+    PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT,
+    PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED,
+    PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY,
+    PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY,
+    PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER,
 
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,

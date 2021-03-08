@@ -72,11 +72,11 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
         }                                                                               \
     }
 
-#define CHECK_AND_LOG_ERROR(NODE)                                                                  \
-    if (!status.ok()) {                                                                            \
-        setFailIfNotFailEarlier(firstErrorStatus, status);                                         \
-        SPDLOG_LOGGER_WARN(dag_executor_logger, "Executing pipeline: {} node: {} failed with: {}", \
-            getName(), NODE.getName(), status.string());                                           \
+#define CHECK_AND_LOG_ERROR(NODE)                                                                                                          \
+    if (!status.ok()) {                                                                                                                    \
+        setFailIfNotFailEarlier(firstErrorStatus, status);                                                                                 \
+        SPDLOG_LOGGER_WARN(dag_executor_logger, "Executing pipeline: {} node: {} session: {} failed with ret code: {}, error message: {}", \
+            getName(), NODE.getName(), sessionKey, status.getCode(), status.string());                                                     \
     }
 
 Status Pipeline::execute() {

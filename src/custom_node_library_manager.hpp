@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -29,6 +30,7 @@ class CustomNodeLibraryManager {
 public:
     Status loadLibrary(const std::string& name, const std::string& basePath);
     Status getLibrary(const std::string& name, NodeLibrary& library) const;
+    void unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig);
 };
 
 }  // namespace ovms

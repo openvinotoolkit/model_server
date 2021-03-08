@@ -19,12 +19,12 @@
 
 #include "../../custom_node_interface.h"
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength) {
-    if (paramsLength != 2) {
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+    if (paramsCount != 2) {
         return 1;
     }
 
-    if (inputsLength != 1) {
+    if (inputsCount != 1) {
         return 2;
     }
 
@@ -41,7 +41,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     float addValue = 0.0f;
     float subValue = 0.0f;
 
-    for (int i = 0; i < paramsLength; i++) {
+    for (int i = 0; i < paramsCount; i++) {
         if (strcmp(params[i].key, "add_value") == 0) {
             addValue = atof(params[i].value);
         }
@@ -51,25 +51,25 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
     }
 
     printf("CUSTOM ADD_SUB NODE => Parameters passed: add_value:(%f); sub_value:(%f)\n", addValue, subValue);
-    printf("CUSTOM ADD_SUB NODE => Number of input tensors passed: (%d)\n", inputsLength);
+    printf("CUSTOM ADD_SUB NODE => Number of input tensors passed: (%d)\n", inputsCount);
 
-    for (int i = 0; i < inputsLength; i++) {
-        printf("CUSTOM ADD_SUB NODE => Input Name(%s) DataLen(%ld) DimLen(%ld)\n", inputs[i].name, inputs[i].dataLength, inputs[i].dimsLength);
+    for (int i = 0; i < inputsCount; i++) {
+        printf("CUSTOM ADD_SUB NODE => Input Name(%s) DataLen(%ld) DimLen(%ld)\n", inputs[i].name, inputs[i].dataBytes, inputs[i].dimsCount);
     }
 
-    *outputsLength = 1;
-    *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor) * (*outputsLength));
+    *outputsCount = 1;
+    *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor) * (*outputsCount));
     struct CustomNodeTensor* output = (&(*outputs))[0];
 
     output->name = "output_numbers";
-    output->data = (uint8_t*)malloc(input->dataLength * sizeof(uint8_t));
-    output->dataLength = input->dataLength;
-    output->dims = (uint64_t*)malloc(input->dimsLength * sizeof(uint64_t));
-    output->dimsLength = input->dimsLength;
-    memcpy((void*)output->dims, (void*)input->dims, input->dimsLength * sizeof(uint64_t));
+    output->data = (uint8_t*)malloc(input->dataBytes * sizeof(uint8_t));
+    output->dataBytes = input->dataBytes;
+    output->dims = (uint64_t*)malloc(input->dimsCount * sizeof(uint64_t));
+    output->dimsCount = input->dimsCount;
+    memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
     output->precision = input->precision;
 
-    for (uint64_t i = 0; i < output->dataLength; i += sizeof(float)) {
+    for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
         *(float*)(output->data + i) = *(float*)(input->data + i) + addValue - subValue;
     }
 
@@ -79,24 +79,24 @@ int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct Cust
 
 // TODO: Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
 // This needs to be addressed before release.
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) { 
-    *infoLength = 1;
-    *info = (struct CustomNodeTensorInfo*) malloc (*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 1;
+    *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "input_numbers";
-    (*info)->dimsLength = 2;
-    (*info)->dims = (uint64_t*) malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)->dimsCount = 2;
+    (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 1;
     (*info)->dims[1] = 50;
     (*info)->precision = FP32;
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength) {
-    *infoLength = 1;
-    *info = (struct CustomNodeTensorInfo*) malloc (*infoLength * sizeof(struct CustomNodeTensorInfo));
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    *infoCount = 1;
+    *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "output_numbers";
-    (*info)->dimsLength = 2;
-    (*info)->dims = (uint64_t*) malloc((*info)->dimsLength * sizeof(uint64_t));
+    (*info)->dimsCount = 2;
+    (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 1;
     (*info)->dims[1] = 50;
     (*info)->precision = FP32;

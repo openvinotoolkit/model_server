@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
@@ -135,8 +136,9 @@ Status GetModelStatusImpl::getModelStatus(
 
 Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
     std::shared_lock lock(manager.modelsMtx);
-    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
+
+    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
     for (auto const& model : models) {
         std::optional<int64_t> noValueModelVersion;
         tensorflow::serving::GetModelStatusRequest request;
@@ -144,12 +146,29 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusResponse response;
         auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
         if (status != StatusCode::OK) {
+            // For now situation when getModelStatus return status other than OK cannot occur because we never remove models and pipelines from model manager.
+            // However, if something in this matter will change we should handle this somehow.
             continue;
         }
         modelsStatusesTmp.insert({model.first, response});
     }
-    modelsStatuses.merge(modelsStatusesTmp);
+    lock.unlock();
 
+    const std::vector<std::string>& pipelinesNames = manager.getPipelineFactory().getPipelinesNames();
+    for (auto const& pipelineName : pipelinesNames) {
+        std::optional<int64_t> noValueModelVersion;
+        tensorflow::serving::GetModelStatusRequest request;
+        GetModelStatusImpl::createGrpcRequest(pipelineName, noValueModelVersion, &request);
+        tensorflow::serving::GetModelStatusResponse response;
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        if (status != StatusCode::OK) {
+            // Same situation like with models.
+            continue;
+        }
+        modelsStatusesTmp.insert({pipelineName, response});
+    }
+
+    modelsStatuses.merge(modelsStatusesTmp);
     return StatusCode::OK;
 }
 

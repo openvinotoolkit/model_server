@@ -43,6 +43,8 @@ private:
      */
     bool isStateful;
 
+    GlobalSequencesViewer* globalSequencesViewer;
+
     /**
       * @brief Update default version
       *
@@ -105,8 +107,9 @@ public:
     /**
          * @brief Constructor
          */
-    Model(const std::string& name, bool isStateful = false) :
+    Model(const std::string& name, bool isStateful, GlobalSequencesViewer* globalSequencesViewer) :
         isStateful(isStateful),
+        globalSequencesViewer(globalSequencesViewer),
         name(name),
         defaultVersion(0),
         subscriptionManager(std::string("model: ") + name) {}

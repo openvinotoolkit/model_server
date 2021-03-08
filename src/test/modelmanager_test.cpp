@@ -72,7 +72,7 @@ const std::string model_2_path = "/tmp/models/dummy2/2";
 class MockModel : public ovms::Model {
 public:
     MockModel() :
-        Model("MOCK_NAME") {}
+        Model("MOCK_NAME", false, nullptr) {}
     MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
 };
 
@@ -221,7 +221,9 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
     std::function<void()> func = [&manager]() {
-        EXPECT_EQ(manager.configFileReloadNeeded(), false);
+        bool isNeeded;
+        manager.configFileReloadNeeded(isNeeded);
+        EXPECT_EQ(isNeeded, false);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -248,11 +250,15 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
-    std::function<void()> func = [&manager]() {
-        EXPECT_EQ(manager.configFileReloadNeeded(), true);
+
+    bool isNeeded;
+    std::function<void()> func = [&manager, &isNeeded]() {
+        manager.configFileReloadNeeded(isNeeded);
+        EXPECT_EQ(isNeeded, true);
     };
 
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -277,11 +283,14 @@ TEST(ModelManager, configReloadNeededChange) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, true);
 
     manager.join();
     modelMock.reset();
@@ -325,15 +334,19 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     createConfigFileWithContent(config_2_models, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), true);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, true);
 
     manager.loadConfig(configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(manager.configFileReloadNeeded(), false);
+    manager.configFileReloadNeeded(isNeeded);
+    EXPECT_EQ(isNeeded, false);
 
     manager.join();
     modelMock.reset();
@@ -461,7 +474,9 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
-    ASSERT_EQ(manager.configFileReloadNeeded(), true);
+    bool isNeeded;
+    manager.configFileReloadNeeded(isNeeded);
+    ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });
@@ -1151,7 +1166,7 @@ TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
 TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_unique<ovms::Model>(config.getName());
+    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -1175,7 +1190,7 @@ protected:
 class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
-        Model(name) {}
+        Model(name, false, nullptr) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<MockModelInstanceFakeLoad>();
     }
@@ -1186,7 +1201,7 @@ std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_unique<ovms::Model>(config.getName());
+    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
@@ -1200,7 +1215,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
 TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_shared<ovms::Model>(config.getName());
+    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
@@ -1227,7 +1242,7 @@ protected:
 class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
-        Model(name) {}
+        Model(name, false, nullptr) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>();
     }
@@ -1270,7 +1285,7 @@ private:
 class ModelWithModelInstanceLoadedWaitInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
-        Model(name),
+        Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(modelInstanceLoadDelayInMilliseconds);

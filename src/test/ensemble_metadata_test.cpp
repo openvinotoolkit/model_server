@@ -376,6 +376,8 @@ TEST(EnsembleMetadata, OneCustomNode) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
@@ -430,6 +432,7 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
@@ -453,96 +456,47 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     }
 }
 
-struct LibraryMetadataError {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
-        return 1;
-    }
-    static int release(void* ptr) {
-        return 1;
-    }
-};
-
-TEST(EnsembleMetadata, CustomNodeMetadataCallError) {
-    ConstructorEnabledModelManager manager;
-    NodeLibrary library{
-        LibraryMetadataError::execute,
-        LibraryMetadataError::getInputsInfo,
-        LibraryMetadataError::getOutputsInfo,
-        LibraryMetadataError::release};
-    ASSERT_TRUE(library.isValid());
-
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
-        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"output_numbers", "output_numbers"}}, std::nullopt, {}, library, parameters_t{{"add_value", "0.5"}, {"sub_value", "1.2"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
-    };
-
-    pipeline_connections_t connections;
-
-    connections["custom_node"] = {
-        {ENTRY_NODE_NAME, {{"request_input_name", "input_numbers"}}}};
-
-    connections[EXIT_NODE_NAME] = {
-        {"custom_node", {{"output_numbers", "request_output_name"}}}};
-
-    auto def = std::make_unique<PipelineDefinition>(
-        "my_new_pipeline", info, connections);
-
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
-    ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
-
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::NODE_LIBRARY_METADATA_FAILED);
-}
-
 struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "input_A_1";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 2;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 2;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 1;
         (*info)[0].dims[1] = 1000;
 
         (*info)[1].name = "input_B_1";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 2;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[1].dimsCount = 2;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[1].dims[0] = 1;
         (*info)[1].dims[1] = 400;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "output_A_1";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 3;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[0].dims[0] = 1;
-        (*info)[0].dims[1] = 3;
+        (*info)[0].dimsCount = 3;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
+        (*info)[0].dims[0] = 3;
+        (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;
 
         (*info)[1].name = "output_B_1";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 3;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[1].dims[0] = 1;
-        (*info)[1].dims[1] = 3;
+        (*info)[1].dimsCount = 3;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
+        (*info)[1].dims[0] = 3;
+        (*info)[1].dims[1] = 1;
         (*info)[1].dims[2] = 4;
         return 0;
     }
@@ -556,35 +510,35 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "input_A_2";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 2;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 2;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 1;
         (*info)[0].dims[1] = 10;
 
         (*info)[1].name = "input_B_2";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 2;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[1].dimsCount = 2;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[1].dims[0] = 1;
         (*info)[1].dims[1] = 4;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "output_A_2";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 3;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
-        (*info)[0].dims[0] = 1;
-        (*info)[0].dims[1] = 4;
+        (*info)[0].dimsCount = 3;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
+        (*info)[0].dims[0] = 4;
+        (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;
         return 0;
     }
@@ -639,6 +593,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
 
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
+    ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
 
     tensor_map_t inputs, outputs;
     ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
@@ -659,7 +614,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     EXPECT_EQ(input_B->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape(), shape_t({1, 3, 4, 10}));
+    EXPECT_EQ(output->getShape(), shape_t({3, 4, 1, 10}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 

@@ -215,7 +215,7 @@ const char* custom_loader_config_model_multiple = R"({
 class MockModel : public ovms::Model {
 public:
     MockModel() :
-        Model("MOCK_NAME") {}
+        Model("MOCK_NAME", false, nullptr) {}
     MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
 };
 
@@ -271,7 +271,7 @@ public:
         auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
         ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
         std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
-        // EXPECT_THAT(output, Each(Eq(2.)));
+        // skipped temporarily EXPECT_THAT(output, Each(Eq(2.)));
     }
 
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {

@@ -44,11 +44,11 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         return true;
     }
     if (this->stateful != rhs.stateful) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful flag mismatch", this->name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful mismatch", this->name);
         return true;
     }
-    if (this->sequenceTimeout != rhs.sequenceTimeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to sequenceTimeout mismatch", this->name);
+    if (this->idleSequenceCleanup != rhs.idleSequenceCleanup) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to idleSequenceCleanup mismatch", this->name);
         return true;
     }
     if (this->maxSequenceNumber != rhs.maxSequenceNumber) {
@@ -443,17 +443,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
     }
 
-    if (v.HasMember("sequence_timeout_seconds")) {
+    if (v.HasMember("idle_sequence_cleanup")) {
         if (!this->isStateful()) {
-            SPDLOG_ERROR("Sequence timeout parameter was set for non stateful model {}.", v["name"].GetString());
+            SPDLOG_ERROR("Idle sequence cleanup parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
-        if (!v["sequence_timeout_seconds"].IsUint()) {
-            SPDLOG_ERROR("Sequence timeout parameter was set above unsigned int value for model {}.", v["name"].GetString());
-            return StatusCode::INVALID_SEQUENCE_TIMEOUT;
-        }
-
-        this->setSequenceTimeout(v["sequence_timeout_seconds"].GetUint());
+        this->setIdleSequenceCleanup(v["idle_sequence_cleanup"].GetBool());
     }
 
     if (v.HasMember("max_sequence_number")) {
@@ -515,7 +510,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     SPDLOG_DEBUG("stateful: {}", isStateful());
     if (isStateful()) {
-        SPDLOG_DEBUG("sequence_timeout_seconds: {}", getSequenceTimeout());
+        SPDLOG_DEBUG("idle_sequence_cleanup: {}", getIdleSequenceCleanup());
         SPDLOG_DEBUG("max_sequence_number: {}", getMaxSequenceNumber());
         SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
     }

@@ -35,6 +35,7 @@
 #pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
+#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
@@ -49,8 +50,8 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "1",                   // batchsize
     1,                     // NIREQ
     false,                 // is stateful
+    true,                  // idle sequence cleanup enabled
     false,                 // low latency transformation enabled
-    60,                    // stateful sequence timeout
     500,                   // steteful sequence max number
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
@@ -63,8 +64,8 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     "1",                 // batchsize
     1,                   // NIREQ
     false,               // is stateful
+    true,                // idle sequence cleanup enabled
     false,               // low latency transformation enabled
-    60,                  // stateful sequence timeout
     500,                 // steteful sequence max number
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
@@ -187,3 +188,14 @@ protected:
 };
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
+
+template <typename T>
+static ovms::NodeLibrary createLibraryMock() {
+    return ovms::NodeLibrary{
+        T::execute,
+        T::getInputsInfo,
+        T::getOutputsInfo,
+        T::release};
+}
+
+extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);

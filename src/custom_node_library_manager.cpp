@@ -31,7 +31,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::PATH_INVALID;
     }
 
-    if (libraries.count(name) == 1) {
+    auto it = libraries.find(name);
+    if (it != libraries.end() && it->second.basePath == basePath) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
@@ -77,11 +78,12 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    libraries.emplace(name, NodeLibrary{
-                                execute,
-                                getInputsInfo,
-                                getOutputsInfo,
-                                release});
+    libraries[name] = NodeLibrary{
+        execute,
+        getInputsInfo,
+        getOutputsInfo,
+        release,
+        basePath};
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
@@ -94,6 +96,21 @@ Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary
     } else {
         library = it->second;
         return StatusCode::OK;
+    }
+}
+
+void CustomNodeLibraryManager::unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig) {
+    std::set<std::string> librariesCurrentlyLoaded;
+    for (auto& library : libraries) {
+        librariesCurrentlyLoaded.emplace(library.first);
+    }
+    std::set<std::string> librariesToUnload;
+    std::set_difference(
+        librariesCurrentlyLoaded.begin(), librariesCurrentlyLoaded.end(),
+        librariesInConfig.begin(), librariesInConfig.end(),
+        std::inserter(librariesToUnload, librariesToUnload.end()));
+    for (auto& library : librariesToUnload) {
+        libraries.erase(library);
     }
 }
 

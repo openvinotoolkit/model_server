@@ -31,16 +31,16 @@ typedef enum {
 struct CustomNodeTensor {
     const char* name;
     uint8_t* data;
-    uint64_t dataLength;
+    uint64_t dataBytes;
     uint64_t* dims;
-    uint64_t dimsLength;
+    uint64_t dimsCount;
     CustomNodeTensorPrecision precision;
 };
 
 struct CustomNodeTensorInfo {
     const char* name;
     uint64_t* dims;
-    uint64_t dimsLength;
+    uint64_t dimsCount;
     CustomNodeTensorPrecision precision;
 };
 
@@ -52,9 +52,9 @@ struct CustomNodeParam {
 extern "C" {
 #endif
 
-int execute(const struct CustomNodeTensor* inputs, int inputsLength, struct CustomNodeTensor** outputs, int* outputsLength, const struct CustomNodeParam* params, int paramsLength);
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength);
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam* params, int paramsLength);
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount);
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount);
 int release(void* ptr);
 
 #ifdef __cplusplus

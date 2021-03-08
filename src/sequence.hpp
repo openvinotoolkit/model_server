@@ -36,20 +36,21 @@ class Sequence {
 private:
     uint64_t sequenceId;
     sequence_memory_state_t memoryState;
-    std::chrono::steady_clock::time_point lastActivityTime;
     std::mutex mutex;
     bool terminated;
-    void updateLastActivityTime();
+    bool idle;
 
 public:
     Sequence(uint64_t sequenceId) :
         sequenceId(sequenceId),
-        terminated(false) { updateLastActivityTime(); }
+        terminated(false),
+        idle(false) {}
     const sequence_memory_state_t& getMemoryState() const;
     const uint64_t getId() const;
+    const bool isIdle() const;
+    void setIdle(bool idle = true);
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
-    std::chrono::steady_clock::time_point getLastActivityTime() const;
     std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();
