@@ -32,16 +32,8 @@ parser.add_argument('--text_images_output_name', required=False, default='text_i
 parser.add_argument('--text_images_save_path', required=False, default='', help='If specified, images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=1920, help='Original image width. default: 1920')
 parser.add_argument('--image_height', required=False, default=1024, help='Original image height. default: 1024')
-parser.add_argument('--layout', required=False, default='NCHW', help='Input layout (NCHW/NHWC). default: NCHW')
 
 args = vars(parser.parse_args())
-
-def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
-    img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (resize_to_shape[1], resize_to_shape[0]))
-    target_shape = (img.shape[0], img.shape[1])
-    img = img.reshape(1,target_shape[0],target_shape[1],3)
-    request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
 def prepare_img_input_in_nchw_format(request, name, path, resize_to_shape):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
@@ -54,11 +46,6 @@ def nchw_to_image(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
         out = out.transpose(1,2,0)
-        cv2.imwrite(location + name + '_' + str(i) + '.jpg', out)
-
-def nhwc_to_image(output_nd, name, location):
-    for i in range(output_nd.shape[0]):
-        out = output_nd[i]
         cv2.imwrite(location + name + '_' + str(i) + '.jpg', out)
 
 def crnn_output_to_text(output_nd):
@@ -83,10 +70,7 @@ channel = grpc.insecure_channel(address,
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = args['pipeline_name']
-if args['layout'] == 'NCHW':
-    prepare_img_input_in_nchw_format(request, args['pipeline_input_name'], args['input_image_path'], (int(args['image_height']), int(args['image_width'])))
-else:
-    prepare_img_input_in_nhwc_format(request, args['pipeline_input_name'], args['input_image_path'], (int(args['image_height']), int(args['image_width'])))
+prepare_img_input_in_nchw_format(request, args['pipeline_input_name'], args['input_image_path'], (int(args['image_height']), int(args['image_width'])))
 response = stub.Predict(request, 30.0)
 for name in response.outputs:
     print(f"Output: name[{name}]")
@@ -94,9 +78,6 @@ for name in response.outputs:
     output_nd = make_ndarray(tensor_proto)
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
     if name == args['text_images_output_name'] and len(args['text_images_save_path']) > 0:
-        if args['layout'] == 'NCHW':
-            nchw_to_image(output_nd, name, args['text_images_save_path'])
-        else:
-            nhwc_to_image(output_nd, name, args['text_images_save_path'])
+        nchw_to_image(output_nd, name, args['text_images_save_path'])
     if name == args['texts']:
         crnn_output_to_text(output_nd)
