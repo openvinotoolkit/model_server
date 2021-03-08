@@ -373,7 +373,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         }
     }
     status = manager.updateConfigurationWithoutConfigFile();
-    if(status == StatusCode::OK_RELOAD_NEEDED){
+    if (status == StatusCode::OK_RELOAD_NEEDED) {
         reloadNeeded = true;
     }
 

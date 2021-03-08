@@ -887,7 +887,7 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     dummy_1x20.setBatchSize(0);
     ASSERT_EQ(dummy_1x10.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(dummy_1x20.parseShapeParameter("(1,20)"), StatusCode::OK);
-    
+
     ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x10).ok(), true);
     ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x20).ok(), true);
 
