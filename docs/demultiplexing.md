@@ -72,7 +72,7 @@ Example configuration file with one demultiplexer:
 ```
 
 ## Dynamic demultiply_count parameter
-There might be use cases where one custom node library is used to produce unpredictable number of batch. To achieve it, `demultiply_count` can be set to `0`. This indicates that pipeline supports any number of batch returned by custom node: `(X,N,C,H,W,...)` - where `X` is dynamic `demultiply_count`. OpenVINO&trade; Model Server is capable of interpreting such dynamic batch and is able to split outputs into dynamic number of pipeline branches. When using dynamic `demultiply_count` parameters, only one demultiplexer can exist in pipeline. Important to note - when batch 0 is returned, pipeline stops its execution and reports an error to gRPC/REST response.
+There might be use cases where one custom node library is used to produce unpredictable number of batch. To achieve it, `demultiply_count` can be set to `0`. This indicates that pipeline supports any number of batch returned by custom node: `(X,N,C,H,W,...)` - where `X` is dynamic `demultiply_count`. OpenVINO&trade; Model Server is capable of interpreting such dynamic batch and is able to split outputs into dynamic number of pipeline branches. When using dynamic `demultiply_count` parameters, only one demultiplexer can exist in pipeline. Important to note - when batch 0 is returned, pipeline stops its execution and returns response with no content.
 
 ## Multiple demultiplexers
 Directed Acyclic Graph Scheduler is not limited to single demultiplexer node in one pipeline definition. Each demultiplexer node which is not referenced by `gather_from_node` parameter will be automatically gathered in `response` node - meaning each demultiplexer adds one new dimension equal to `demultiply_count` into all pipeline outputs shape. This must be taken into account when interpreting response data in client applications.
@@ -165,7 +165,8 @@ There are several rules for possible configurations in regards to demultiplexing
 - You can gather only from nodes with `demultiply_count` specified (demultiplexer nodes)
 - When pipeline with dynamic `demultiply_count` encounters 0 results execution is stopped and gRPC/REST response returns specific error with such information
 - For pipelines with dynamic `demultiply_count` only 1 demultiplexer node is allowed.
-- Demultiplexer nodes and gathering nodes should be in LIFO order. Meaning you need to gather nodes starting from closest demultiplexer going upstream in Directed Acyclic Graph
+- When pipeline contains at least one demultiplexer, only gathering nodes are allowed with input batch larger than 1
+- Demultiplexer nodes and gathering nodes should be in LIFO order. Meaning you need to gather nodes starting from closest demultiplexer going upstream in defined directed acyclic graph.
 
 ![diagram](demultiplexing_restriction_lifo.svg)
 
