@@ -72,7 +72,6 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         auto firstShardTensorDesc = shardMap.at(firstShardId)->getTensorDesc();
         auto shardDims = firstShardTensorDesc.getDims();
         auto newDims = shardDims;
-        // we leave batch size dimension untouched (pos=0) hence + 1
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
