@@ -140,12 +140,16 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
         *is_directory = true;
         return StatusCode::OK;
     }
-    for (auto&& meta :
-        client_.ListObjects(bucket, gcs::Prefix(appendSlash(object)))) {
-        if (meta) {
-            *is_directory = true;
-            return StatusCode::OK;
+    try {
+        for (auto&& meta :
+            client_.ListObjects(bucket, gcs::Prefix(appendSlash(object)))) {
+            if (meta) {
+                *is_directory = true;
+                return StatusCode::OK;
+            }
         }
+    } catch (std::exception& ex) {
+        SPDLOG_LOGGER_DEBUG(gcs_logger, "GCS list objects exception {}", ex.what());
     }
 
     SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", path);
@@ -164,24 +168,31 @@ GCSFileSystem::getDirectoryContents(const std::string& path,
         return status;
     }
     full_directory = appendSlash(directory_path);
-    for (auto&& meta : client_.ListObjects(bucket, gcs::Prefix(full_directory))) {
-        if (!meta) {
-            SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to get directory content -> object metadata "
-                                            "is empty. Error: {}",
-                meta.status().message());
-            return StatusCode::GCS_INVALID_ACCESS;
-        }
-        // ignore self:
-        if (meta->name() == full_directory) {
-            continue;
-        }
+    try {
+        for (auto&& meta : client_.ListObjects(bucket, gcs::Prefix(full_directory))) {
+            if (!meta) {
+                SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to get directory content -> object metadata "
+                                                "is empty. Error: {}",
+                    meta.status().message());
+                return StatusCode::GCS_INVALID_ACCESS;
+            }
+            // ignore self:
+            if (meta->name() == full_directory) {
+                continue;
+            }
 
-        // keep only basename:
-        std::string name = meta->name();
-        int name_start = name.find(full_directory) + full_directory.size();
-        int name_end = name.find("/", name_start);
-        contents->insert(name.substr(name_start, name_end - name_start));
+            // keep only basename:
+            std::string name = meta->name();
+            int name_start = name.find(full_directory) + full_directory.size();
+            int name_end = name.find("/", name_start);
+            contents->insert(name.substr(name_start, name_end - name_start));
+        }
+    } catch (std::exception& ex) {
+        SPDLOG_LOGGER_DEBUG(gcs_logger, "GCS list objects exception {}", ex.what());
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", full_directory);
+        return StatusCode::GCS_INVALID_ACCESS;
     }
+
     SPDLOG_LOGGER_TRACE(gcs_logger, "Directory contents fetched, items: {}", contents->size());
     return StatusCode::OK;
 }

@@ -24,7 +24,7 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Scheme $scheme;
     proxy_set_header Host $http_host;
-    listen              NGINX_LISTEN_GRPC_PORT ssl http2;
+    listen              *:NGINX_LISTEN_GRPC_PORT ssl http2;
     ssl_certificate     /certs/server.pem;
     ssl_certificate_key /certs/server.key;
     ssl_client_certificate /certs/client_cert_ca.pem;
@@ -53,7 +53,7 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Scheme $scheme;
     proxy_set_header Host $http_host;
-    listen              NGINX_LISTEN_REST_PORT ssl;
+    listen              *:NGINX_LISTEN_REST_PORT ssl;
     ssl_certificate     /certs/server.pem;
     ssl_certificate_key /certs/server.key;
     ssl_client_certificate /certs/client_cert_ca.pem;
