@@ -33,7 +33,6 @@ JOBS ?= $(shell nproc --all)
 BASE_OS ?= centos
 
 BASE_IMAGE ?= centos:7
-RELEASE_BASE_IMAGE ?= centos:7
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
@@ -79,11 +78,10 @@ ifeq ($(BASE_OS),clearlinux)
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.2/l_openvino_toolkit_runtime_rhel8_p_2021.2.185.tgz
+  DLDT_PACKAGE_URL=http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.3.323.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server

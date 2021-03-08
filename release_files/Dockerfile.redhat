@@ -27,7 +27,7 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8-minimal as release
+FROM registry.access.redhat.com/ubi8/ubi-minimal as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ARG GPU=1
