@@ -141,7 +141,6 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
-    {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
 
     // Storage errors
     // S3
@@ -254,8 +253,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
-    {StatusCode::OK_RELOAD_NEEDED, net_http::HTTPStatusCode::CREATED},
-    {StatusCode::OK_RELOAD_NOT_NEEDED, net_http::HTTPStatusCode::OK},
+    {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
+    {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},

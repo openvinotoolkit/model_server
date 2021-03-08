@@ -546,15 +546,15 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
     for (auto& [name, config] : servedModelConfigs) {
-        if (reloadModelWithVersions(config) == StatusCode::OK_RELOAD_NEEDED) {
+        if (reloadModelWithVersions(config) == StatusCode::OK_RELOADED) {
             reloadNeeded = true;
         }
     }
     pipelineFactory.revalidatePipelines(*this);
     if (reloadNeeded) {
-        return StatusCode::OK_RELOAD_NEEDED;
+        return StatusCode::OK_RELOADED;
     } else {
-        return StatusCode::OK_RELOAD_NOT_NEEDED;
+        return StatusCode::OK_NOT_RELOADED;
     }
 }
 
@@ -896,7 +896,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (blocking_status.ok() && reloadNeeded) {
-        return StatusCode::OK_RELOAD_NEEDED;
+        return StatusCode::OK_RELOADED;
     }
 
     return blocking_status;

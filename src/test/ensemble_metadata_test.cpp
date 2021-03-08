@@ -33,7 +33,7 @@ TEST(EnsembleMetadata, OneNode) {
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
@@ -82,10 +82,10 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
 
     ModelConfig increment_model_config = DUMMY_MODEL_CONFIG;
     increment_model_config.setName("increment");
-    ASSERT_EQ(manager.reloadModelWithVersions(increment_model_config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(increment_model_config), StatusCode::OK_RELOADED);
 
     ModelConfig sum_model_config = SUM_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config), StatusCode::OK_RELOADED);
 
     const std::string& INCREMENT_MODEL_INPUT_NAME = DUMMY_MODEL_INPUT_NAME;
     const std::string& INCREMENT_MODEL_OUTPUT_NAME = DUMMY_MODEL_OUTPUT_NAME;
@@ -204,7 +204,7 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     ConstructorEnabledModelManager manager;
 
     ModelConfig sum_model_config = SUM_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(sum_model_config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {
@@ -305,7 +305,7 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
@@ -327,14 +327,14 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
 
     config.setModelVersionPolicy(std::make_shared<SpecificModelVersionPolicy>(model_versions_t{UNAVAILABLE_DUMMY_VERSION}));
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     tensor_map_t inputs, outputs;
     EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_MISSING);
     EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_MISSING);
 
     config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     auto instance = manager.findModelInstance("dummy", 0);
     ASSERT_NE(instance, nullptr);
     instance->unloadModel();
@@ -551,7 +551,7 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
 TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     NodeLibrary libraryMatchingFollowingNode{
         MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::execute,
@@ -621,7 +621,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
 TEST(EnsembleMetadata, GatherFromNotExistingNode) {
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
@@ -646,7 +646,7 @@ TEST(EnsembleMetadata, GatherFromNotExistingNode) {
 TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
@@ -671,7 +671,7 @@ TEST(EnsembleMetadata, GatherFromNotDemultiplexer) {
 TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config).ok(), true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}, 4},

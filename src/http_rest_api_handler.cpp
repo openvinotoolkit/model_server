@@ -373,7 +373,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         }
     }
     status = manager.updateConfigurationWithoutConfigFile();
-    if (status == StatusCode::OK_RELOAD_NEEDED) {
+    if (status == StatusCode::OK_RELOADED) {
         reloadNeeded = true;
     }
 
@@ -392,9 +392,9 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
 
     if (!reloadNeeded) {
         SPDLOG_DEBUG("Config file reload was not needed.");
-        return StatusCode::OK_RELOAD_NOT_NEEDED;
+        return StatusCode::OK_NOT_RELOADED;
     }
-    return StatusCode::OK_RELOAD_NEEDED;
+    return StatusCode::OK_RELOADED;
 }
 
 Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, ModelManager& manager) {

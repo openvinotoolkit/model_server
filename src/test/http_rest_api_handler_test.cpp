@@ -91,7 +91,7 @@ TEST_F(ConfigReload, removeConfigFileThenRestore) {
 
     SetUpConfig(configWith1Dummy);
     status = handler.processConfigReloadRequest(response, manager);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 TEST_F(ConfigReload, startWith1DummyThenReload) {
@@ -125,7 +125,7 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
     auto status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 static const char* configWith1DummyInTmp = R"(
@@ -171,7 +171,7 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     auto status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 
     std::filesystem::copy("/ovms/src/test/dummy/1", "/tmp/dummy/2", std::filesystem::copy_options::recursive);
 
@@ -201,7 +201,7 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
     std::filesystem::remove_all("/tmp/dummy");
 }
 
@@ -236,7 +236,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 
     auto status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 
     RemoveConfig();
     SetUpConfig(emptyConfig);
@@ -260,7 +260,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 
     status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 TEST_F(ConfigReload, reloadNotNeeded) {
@@ -272,7 +272,7 @@ TEST_F(ConfigReload, reloadNotNeeded) {
 
     LoadConfig(manager);
     auto status = handler.processConfigReloadRequest(response, manager);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 }
 
 TEST_F(ConfigReload, reloadNotNeededManyThreads) {
@@ -289,7 +289,7 @@ TEST_F(ConfigReload, reloadNotNeededManyThreads) {
     std::function<void()> func = [&handler, &manager]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string response;
-        EXPECT_EQ(handler.processConfigReloadRequest(response, manager), ovms::StatusCode::OK_RELOAD_NOT_NEEDED);
+        EXPECT_EQ(handler.processConfigReloadRequest(response, manager), ovms::StatusCode::OK_NOT_RELOADED);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -383,7 +383,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     auto status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 static const char* configWith2DummyPipelines = R"(
@@ -491,7 +491,7 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 
     auto status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
     RemoveConfig();
     SetUpConfig(configWith2DummyPipelines);
@@ -541,7 +541,7 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 
     status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 class ConfigStatus : public ConfigApi {};
