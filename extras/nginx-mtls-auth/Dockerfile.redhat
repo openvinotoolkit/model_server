@@ -20,12 +20,11 @@ USER root
 RUN     set -e ; \
         set -x ; \
         mkdir /certs ; \
-        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm ;\
-        yum install -y nginx wget ; \
-        yum clean all ; \
+        microdnf install systemd wget; \
+        rpm -Uv http://nginx.org/packages/mainline/centos/8/x86_64/RPMS/nginx-1.19.7-1.el8.ngx.x86_64.rpm ; \
         wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 ; \
         chmod +x /usr/bin/dumb-init ; \
-        touch /run/nginx.pid ; \
+        touch /run/nginx.pid ; mkdir -p /var/lib/nginx/tmp/ ; \
         chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ ; \
         sed -i 's,listen       80 default_server;,listen       unix:/tmp/nginx-default.sock;,' /etc/nginx/nginx.conf ; \
         sed -i 's,listen       \[::\]:80 default_server;,,' /etc/nginx/nginx.conf ; \
