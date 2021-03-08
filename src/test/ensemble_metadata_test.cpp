@@ -460,41 +460,41 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "input_A_1";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 2;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 2;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 1;
         (*info)[0].dims[1] = 1000;
 
         (*info)[1].name = "input_B_1";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 2;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[1].dimsCount = 2;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[1].dims[0] = 1;
         (*info)[1].dims[1] = 400;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "output_A_1";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 3;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 3;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 3;
         (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;
 
         (*info)[1].name = "output_B_1";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 3;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[1].dimsCount = 3;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[1].dims[0] = 3;
         (*info)[1].dims[1] = 1;
         (*info)[1].dims[2] = 4;
@@ -510,33 +510,33 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 2;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 2;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "input_A_2";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 2;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 2;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 1;
         (*info)[0].dims[1] = 10;
 
         (*info)[1].name = "input_B_2";
         (*info)[1].precision = FP32;
-        (*info)[1].dimsLength = 2;
-        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[1].dimsCount = 2;
+        (*info)[1].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[1].dims[0] = 1;
         (*info)[1].dims[1] = 4;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoLength, const struct CustomNodeParam*, int) {
-        *infoLength = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoLength * sizeof(struct CustomNodeTensorInfo));
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = "output_A_2";
         (*info)[0].precision = FP32;
-        (*info)[0].dimsLength = 3;
-        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsLength * sizeof(uint64_t));
+        (*info)[0].dimsCount = 3;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
         (*info)[0].dims[0] = 4;
         (*info)[0].dims[1] = 1;
         (*info)[0].dims[2] = 10;

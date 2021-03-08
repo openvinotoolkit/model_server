@@ -71,7 +71,7 @@ RUN	set -e ; \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
-
+ENV LD_LIBRARY_PATH=/ovms/lib
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
 

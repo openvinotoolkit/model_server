@@ -246,6 +246,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libcustom_node_east_ocr.so",
+    srcs = [
+        "custom_nodes/east_ocr/east_ocr.cpp",
+        "custom_nodes/east_ocr/utils.hpp",
+        "custom_nodes/east_ocr/nms.hpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+            "@opencv//:opencv"
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -344,6 +358,7 @@ cc_test(
         "//src:lib_node_dynamic_demultiplex.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
+        "//src:libcustom_node_east_ocr.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [

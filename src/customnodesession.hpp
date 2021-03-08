@@ -43,7 +43,7 @@ public:
         Node& node,
         const NodeLibrary& library,
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
-        int parametersLength);
+        int parametersCount);
 
     Status fetchResult(const std::string& name, InferenceEngine::Blob::Ptr& resultBlob);
 

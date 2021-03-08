@@ -1135,16 +1135,16 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
 
 Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName) {
     struct CustomNodeTensorInfo* info = nullptr;
-    int infoLength = 0;
+    int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);  // TODO: not create it in every call? prepare it once?
     int paramArrayLength = customNodeInfo.parameters.size();
-    int result = callback(&info, &infoLength, paramArray.get(), paramArrayLength);
+    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength);
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);
         return StatusCode::NODE_LIBRARY_METADATA_FAILED;
     }
-    return createTensorInfoMap(info, infoLength, inputsInfo, customNodeInfo.library.release);
+    return createTensorInfoMap(info, infoCount, inputsInfo, customNodeInfo.library.release);
 }
 
 const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) const {
