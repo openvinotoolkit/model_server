@@ -78,8 +78,7 @@ Status ModelManager::start() {
 
 void ModelManager::startWatcher() {
     if ((!watcherStarted) && (watcherIntervalSec > 0)) {
-        std::future<void> exitSignal = exit.get_future();
-        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        std::thread t(std::thread(&ModelManager::watcher, this));
         watcherStarted = true;
         monitor = std::move(t);
     }
@@ -573,12 +572,16 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
-void ModelManager::watcher(std::future<void> exit) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started config watcher thread");
+std::cv_status ModelManager::waitFor(uint32_t filesystemWatcherInterval) {
+    std::unique_lock<std::mutex> lock(watcherControlMutex);
+    return watcherControlCv.wait_for(lock, std::chrono::seconds(filesystemWatcherInterval));
+}
 
-    while (exit.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-        std::this_thread::sleep_for(std::chrono::seconds(watcherIntervalSec));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle begin");
+void ModelManager::watcher() {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
+
+    while (waitFor(watcherIntervalSec) == std::cv_status::timeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle begin");
 
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
         bool isNeeded;
@@ -588,14 +591,14 @@ void ModelManager::watcher(std::future<void> exit) {
         }
         updateConfigurationWithoutConfigFile();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Watcher thread check cycle end");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exited config watcher thread");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
 void ModelManager::join() {
     if (watcherStarted) {
-        exit.set_value();
+        watcherControlCv.notify_one();
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;

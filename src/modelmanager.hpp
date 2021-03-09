@@ -87,10 +87,12 @@ private:
      */
     Status createCustomLoader(CustomLoaderConfig& loaderConfig);
 
+    std::cv_status waitFor(uint32_t filesystemWatcherInterval);
+
     /**
      * @brief Watcher thread for monitor changes in config
      */
-    void watcher(std::future<void> exit);
+    void watcher();
 
     /**
      * @brief A JSON configuration filename
@@ -103,9 +105,10 @@ private:
     std::thread monitor;
 
     /**
-     * @brief An exit signal to notify watcher thread to exit
+     * @brief Used to send exit signal to filesystem watcher thread and force termination
      */
-    std::promise<void> exit;
+    std::mutex watcherControlMutex;
+    std::condition_variable watcherControlCv;
 
     /**
      * @brief A current configurations of models
