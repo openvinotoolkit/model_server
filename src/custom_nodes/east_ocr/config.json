@@ -3,20 +3,20 @@
         {
             "config": {
                 "name": "east",
-                "base_path": "/models/east_icdar2015_resnet_v1_50_rbox"
+                "base_path": "/OCR/east_fp32"
             }
         },
         {
             "config": {
                 "name": "crnn",
-                "base_path": "/models/crnn_tf"
+                "base_path": "/OCR/crnn_tf"
             }
         }
     ],
     "custom_node_library_config_list": [
         {
             "name": "east_image_extractor",
-            "base_path": "/libs/libcustom_node_east_ocr.so"
+            "base_path": "/OCR//lib/libcustom_node_east_ocr.so"
         }
     ],
     "pipeline_config_list": [
@@ -54,7 +54,6 @@
                         "overlap_threshold": "0.2",
                         "max_output_batch": "100",
                         "debug": "true",
-                        "image_layout": "NCHW"
                     },
                     "inputs": [
                         {"image": {"node_name": "request",

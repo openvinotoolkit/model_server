@@ -101,12 +101,60 @@ The custom node east_ocr can be built inside a docker container via the followin
 This command will export the compiled library in `./lib` folder.
 Copy this `lib` folder to the same location with `CRNN_Tensorflow` and `east_icdar2015_resnet_v1_50_rbox`.
 
-
 ## OVMS Configuration File
 
+The configuration file for running the OCR demo is stored in [config.json](../src/custom_nodes/east_ocr/config.json)
+Copy this file along with the model files and the custom node library like presented below:
+```bash
+OCR
+├── config.json
+├── crnn_tf
+│   └── 1
+│       ├── frozen_graph.bin
+│       └── frozen_graph.xml
+├── east_fp32
+│   └── 1
+│       ├── model.bin
+│       └── model.xml
+└── lib
+    └── libcustom_node_east_ocr.so
+```
 
 ## Deploying OVMS
 
+Deploy OVMS with OCR demo pipeline using the following command:
+
+```bash
+docker run -p 7777:7777 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_path /OCR/config.json --port 7777
+```
 
 ## Requesting the Service
 
+While the OVMS is started with the pipeline loaded, you can query it using an exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py).
+
+From the context of [example_client](../example_client) folder install the python3 requirements:
+```bash
+pip install -r client_requirements.txt
+``` 
+Next download the image to process:
+```bash
+wget https://www.pxfuel.com/en/free-photo-quvji
+```
+Now you can run the client:
+```bash
+python east_ocr_client.py --image_input_path australia-road-signs-note-sunset.jpg --grpc_port 7777 --pipeline_name detect_text_images
+Output: name[confidence_levels]
+    numpy => shape[(5, 1, 1)] data[float32]
+Output: name[text_images]
+    numpy => shape[(5, 1, 3, 32, 100)] data[float32]
+Output: name[text_coordinates]
+    numpy => shape[(5, 1, 4)] data[int32]
+Output: name[texts]
+    numpy => shape[(5, 25, 1, 37)] data[float32]
+c____r___aa___f____t_____
+c__o_m__mm__u_n__iity____
+com___e__r__c_i_a_ll____e
+```
+
+With additional parameter `--text_images_save_path` the client script save all detected text boxes to jpeg file to confirm
+if the image was analyzed correctly.
