@@ -3495,9 +3495,60 @@ static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
     ]
 })";
 
+static const char* pipelineCustomNodeWrongDataBytesConfig = R"(
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_add_sub_wrong_dataBytes",
+            "base_path": "/ovms/bazel-bin/src/lib_node_add_sub_wrong_dataBytes.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_add_sub_wrong_dataBytes",
+                    "params": {
+                        "add_value": "3.2",
+                        "sub_value": "2.7"
+                    },
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
     std::unique_ptr<Pipeline> pipeline;
     createConfigFileWithContent(pipelineCustomNode2DynamicDemultiplexConfig, configJsonFilePath);
     auto status = manager.createPipeline(pipeline, pipelineName, &request, &response);
     ASSERT_EQ(status, StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
+}
+
+TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, AddSubCustomNodeWrongDataBytes) {
+    std::unique_ptr<Pipeline> pipeline;
+    const std::vector<float> inputValues{3.5, 2.1, -0.2};
+    this->prepareRequest(inputValues);
+    createConfigFileWithContent(pipelineCustomNodeWrongDataBytesConfig, configJsonFilePath);
+    ASSERT_EQ(manager.loadConfig(configJsonFilePath), StatusCode::OK);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
 }
