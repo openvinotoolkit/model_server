@@ -53,8 +53,7 @@
                         "confidence_threshold": "0.9",
                         "overlap_threshold": "0.2",
                         "max_output_batch": "100",
-                        "debug": "true",
-                        "image_layout": "NCHW"
+                        "debug": "true"
                     },
                     "inputs": [
                         {"image": {"node_name": "request",

@@ -142,7 +142,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from a node"},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
 
     // Storage errors
     // S3
