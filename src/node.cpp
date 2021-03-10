@@ -94,8 +94,17 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
 Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata) {
     // mapping for dependency - keeps mapping between dependency output name and this node input name
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
-    NodeSession& nodeSession = getNodeSession(metadata);
-    const session_id_t shardId = metadata.getShardId(gatherFrom.value_or(std::set<std::string>()));
+    NodeSession* nodeSession = getNodeSession(metadata);
+    if (!nodeSession) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    session_id_t shardId;
+    try {
+        shardId = metadata.getShardId(gatherFrom.value_or(std::set<std::string>()));
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get shardId for node: {}", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
     // assign all input blobs from inputs that are required by this node for future inference
     for (const auto& pair : mapping_for_dependency) {
         const auto& dependency_output_name = pair.first;
@@ -115,13 +124,13 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
-        auto status = nodeSession.setInput(current_node_input_name, it->second, shardId);
+        auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
             return status;
         }
     }
-    return nodeSession.notifyFinishedDependency();
+    return nodeSession->notifyFinishedDependency();
 }
 
 NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
@@ -130,32 +139,43 @@ NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to get non-existing node: {} session: {}.", getName(), sessionKey);
         throw std::runtime_error("Tried to get non existing session");
     }
-    return *(*it).second;
+    return *it->second;
 }
 
-NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
+NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     session_key_t sessionKey;
     if (gatherFrom) {
-        sessionKey = metadata.getSessionKey(gatherFrom.value());
+        try {
+            sessionKey = metadata.getSessionKey(gatherFrom.value());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata session key for node: {}, incomming session key: {}",
+                getName(), metadata.getSessionKey());
+            return nullptr;
+        }
     } else {
         sessionKey = metadata.getSessionKey();
     }
     auto it = nodeSessions.find(sessionKey);
     if (it != nodeSessions.end()) {
-        return *(*it).second;
+        return it->second.get();
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         sessionKey, getName());
     NodeSessionMetadata newSessionMetadata;
     CollapseDetails collapsingDetails;
     if (gatherFrom) {
-        std::tie(newSessionMetadata, collapsingDetails) = metadata.getCollapsedSessionMetadata(gatherFrom.value());
+        try {
+            std::tie(newSessionMetadata, collapsingDetails) = metadata.getCollapsedSessionMetadata(gatherFrom.value());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata for node: {}", getName());
+            return nullptr;
+        }
     } else {
         newSessionMetadata = metadata;
     }
     std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));
-    return *(emplacePair.first->second);
+    return emplacePair.first->second.get();
 }
 
 std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
@@ -175,18 +195,25 @@ std::vector<session_key_t> Node::getReadySessions() const {
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     if (!demultiplexCount) {
-        throw std::logic_error("Called demultiplyOutputs but node does not have demultiplexCount set");
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} called demultiplyOutputs but node does not have demultiplexCount set", getName());
+        return StatusCode::INTERNAL_ERROR;
     }
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
     if (tensorDesc.getDims()[0] > DEMULTIPLY_LIMIT) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
-            tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
+            getName(), tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
         return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
     }
     uint32_t resultsDemultiplyCount = tensorDesc.getDims()[0];
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
-    std::vector<NodeSessionMetadata> newSessionMetadatas(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
+    std::vector<NodeSessionMetadata> newSessionMetadatas;
+    try {
+        newSessionMetadatas = std::move(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} failed to generate subsessions due to error: {}", getName(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
 
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();

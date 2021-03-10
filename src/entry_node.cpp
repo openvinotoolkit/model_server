@@ -30,11 +30,14 @@ namespace ovms {
 
 Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     // this should be created in EntryNode::SetInputs, or special method for entry node called
-    // in event loop can be done in future release while implementing dynamic demultiplexing at 
+    // in event loop can be done in future release while implementing dynamic demultiplexing at
     // entry node
     NodeSessionMetadata metadata;
-    NodeSession& nodeSession = getNodeSession(metadata);  // call to create session
-    notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession.getSessionKey()));
+    auto nodeSession = getNodeSession(metadata);  // call to create session
+    if (!nodeSession) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession->getSessionKey()));
     return StatusCode::OK;
 }
 

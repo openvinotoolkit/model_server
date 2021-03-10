@@ -40,7 +40,8 @@ Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceE
         shard_map_t shardMap{{shardId, ptr}};
         auto itDidInsertPair = shardsStorage.emplace(inputName, std::move(shardMap));
         if (!itDidInsertPair.second) {
-            throw std::runtime_error("Tried to insert the same input twice with the same shard id");
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to insert the same input: {} twice with the same shardId: {}", inputName, shardId);
+            return StatusCode::INTERNAL_ERROR;
         }
     } else {
         auto firstShardTensor = inputsShardsIt->second.begin()->second;

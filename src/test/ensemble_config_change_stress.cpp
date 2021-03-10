@@ -1155,7 +1155,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetad
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-                                                StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
