@@ -125,7 +125,7 @@ OCR
 Deploy OVMS with OCR demo pipeline using the following command:
 
 ```bash
-docker run -p 7777:7777 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_path /OCR/config.json --port 7777
+docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_path /OCR/config.json --port 9000
 ```
 
 ## Requesting the Service
@@ -142,15 +142,15 @@ wget https://www.pxfuel.com/en/free-photo-quvji
 ```
 Now you can run the client:
 ```bash
-python east_ocr_client.py --image_input_path australia-road-signs-note-sunset.jpg --grpc_port 7777 --pipeline_name detect_text_images
+python east_ocr_client.py --image_input_path australia-road-signs-note-sunset.jpg --grpc_port 9000 --pipeline_name detect_text_images
 Output: name[confidence_levels]
-    numpy => shape[(5, 1, 1)] data[float32]
+    numpy => shape[(3, 1, 1)] data[float32]
 Output: name[text_images]
-    numpy => shape[(5, 1, 3, 32, 100)] data[float32]
+    numpy => shape[(3, 1, 3, 32, 100)] data[float32]
 Output: name[text_coordinates]
-    numpy => shape[(5, 1, 4)] data[int32]
+    numpy => shape[(3, 1, 4)] data[int32]
 Output: name[texts]
-    numpy => shape[(5, 25, 1, 37)] data[float32]
+    numpy => shape[(3, 25, 1, 37)] data[float32]
 c____r___aa___f____t_____
 c__o_m__mm__u_n__iity____
 com___e__r__c_i_a_ll____e

@@ -3,7 +3,10 @@
         {
             "config": {
                 "name": "east",
-                "base_path": "/OCR/east_fp32"
+                "base_path": "/OCR/east_fp32",
+                "plugin_config": {
+                    "CPU_THROUGHPUT_STREAMS":  "1"
+                }
             }
         },
         {
