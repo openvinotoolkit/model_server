@@ -29,8 +29,9 @@
 namespace ovms {
 
 Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
-    // TODO this should be created in EntryNode::SetInputs, or special method for entry node called
-    // in event loop can be done at the end of part 3 or in future release
+    // this should be created in EntryNode::SetInputs, or special method for entry node called
+    // in event loop can be done in future release while implementing dynamic demultiplexing at 
+    // entry node
     NodeSessionMetadata metadata;
     NodeSession& nodeSession = getNodeSession(metadata);  // call to create session
     notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession.getSessionKey()));
@@ -38,7 +39,6 @@ Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEnd
 }
 
 Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
-    // TODO handle multiple sessions later on
     BlobMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {

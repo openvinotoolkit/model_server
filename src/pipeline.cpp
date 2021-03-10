@@ -86,7 +86,7 @@ Status Pipeline::execute() {
     std::set<std::string> startedSessions;
     std::set<std::string> finishedSessions;
     NodeSessionMetadata meta;
-    // TODO -> entry node does not have setInputsCalled so it has no
+    // entry node does not have setInputsCalled so it has no
     // session created. Here is just assumption that this meta has the same key
     // that the one in EntryNode::execute();
     auto entrySessionKey = meta.getSessionKey();

@@ -1154,12 +1154,9 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we may hit during pipeline reload
-    // TODO replace above with the one below when removing libraries will be fully implemented.
-    // std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-    //    StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-    // std::set<StatusCode> allowedLoadResults = {};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+                                                StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::removeCustomLibraryUsed,

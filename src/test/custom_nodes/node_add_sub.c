@@ -77,7 +77,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-// TODO: Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
+// Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
 // This needs to be addressed before release.
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     *infoCount = 1;

@@ -708,7 +708,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
             if (!dependantNodeInfo.library.isValid()) {
-                // TODO check if there is log
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to incorrect library", pipelineName, dependantNodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
 
@@ -1136,7 +1136,7 @@ Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const Model
 Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName) {
     struct CustomNodeTensorInfo* info = nullptr;
     int infoCount = 0;
-    auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);  // TODO: not create it in every call? prepare it once?
+    auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
     int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength);
     if (result != 0) {

@@ -53,8 +53,8 @@ Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceE
         }
         auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);
         if (!itDidEmplacePair.second) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input shard twice");  // TODO  improve error msg
-            return StatusCode::UNKNOWN_ERROR;
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input: {} shard: {} twice", inputName, shardId);
+            return StatusCode::INTERNAL_ERROR;
         }
     }
     return StatusCode::OK;

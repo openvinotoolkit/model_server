@@ -128,13 +128,12 @@ NodeSession& Node::getNodeSession(const session_key_t& sessionKey) const {
     auto it = nodeSessions.find(sessionKey);
     if (it == nodeSessions.end()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to get non-existing node: {} session: {}.", getName(), sessionKey);
-        throw std::logic_error("Tried to get non existing session");  // TODO some other kind of error
+        throw std::runtime_error("Tried to get non existing session");
     }
     return *(*it).second;
 }
 
 NodeSession& Node::getNodeSession(const NodeSessionMetadata& metadata) {
-    // TODO check for exit node if no session levels remains
     session_key_t sessionKey;
     if (gatherFrom) {
         sessionKey = metadata.getSessionKey(gatherFrom.value());
@@ -204,8 +203,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
         if (resultsDemultiplyCount == 0) {
-            // TODO handle dynamic demultiply_count == 0
-            SPDLOG_DEBUG("Node: {} has no results. Dynamic demultiplexer with demultiply == 0 is not supported yet.", this->getName());
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} has no results. Dynamic demultiplexer with demultiply == 0 is not supported yet.", this->getName());
             nodeSessionOutputs.erase(metadata.getSessionKey());
             return StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS;
         }
