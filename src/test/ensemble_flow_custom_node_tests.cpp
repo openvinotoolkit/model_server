@@ -3290,6 +3290,16 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     this->checkResponse("pipeline_output", response, expectedOutput, {dynamicDemultiplyCount, 1, 10});
 }
 
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerNoResults) {
+    std::unique_ptr<Pipeline> pipeline;
+    uint8_t dynamicDemultiplyCount = 0;
+    std::vector<float> input{static_cast<float>(dynamicDemultiplyCount), 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
+}
+
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
     std::unique_ptr<Pipeline> pipeline;
     const uint64_t demultiplyLimit = 10'000;  // node.cpp

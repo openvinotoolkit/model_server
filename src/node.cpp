@@ -205,9 +205,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
         if (resultsDemultiplyCount == 0) {
             // TODO handle dynamic demultiply_count == 0
-            SPDLOG_ERROR("Dynamic demultiplexer with demultiply == 0 is not supported yet");
+            SPDLOG_DEBUG("Dynamic demultiplexer with demultiply == 0 is not supported yet");
             nodeSessionOutputs.erase(metadata.getSessionKey());
-            return StatusCode::NOT_IMPLEMENTED;
+            return StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS;
         }
 
         newDims.erase(newDims.begin());
