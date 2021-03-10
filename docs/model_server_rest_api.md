@@ -188,12 +188,12 @@ Read more about *Predict API* usage [here](./../example_client/README.md#predict
 ## Config Reload API <a name="config-reload"></a>
 * Description
 
-Sends requests via RESTful API to trigger config reloading and get models and DAGs statuses as a response.
+Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response.
 Flow after receiving request:
-1) If config file was changed - reload config. (If reload was needed return code is 201, otherwise 200)
-2) If any model version directory was changed or new version directory was added - reload this model.
+1) If config file was changed - reload config.
+2) If any model version directory was changed or new version was added - reload this model.
 3) If any model that is part of a pipeline was changed or new version dir was added - reload this pipeline.
-4) Trigger Get Model Status API for all models and pipelines, aggregate all responses into one and return it with proper code.
+4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs. If any of those first 3 steps causes reload - return code is 201, otherwise 200.
 
 If any of above steps fail - error message with code 412 is returned.
 
@@ -202,7 +202,7 @@ If any of above steps fail - error message with code 412 is returned.
 POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 ```
 * Request
-To trigger reload HTTP POST request should be sent on given URL.
+To trigger reload, HTTP POST request should be sent on given URL.
 
 
 * Response
@@ -236,14 +236,14 @@ In case of any failure during execution:
 } 
 ```
 When operation succeeded HTTP response status code should be
-  - 201 when config file was reloaded 
-  - 200 when reload was not required, already applied or OVMS was started in single model mode
-For failure status code is 412.
+  - `201` when config file was reloaded 
+  - `200` when reload was not required, already applied or OVMS was started in single model mode
+When operation fails, HTTP response status code is 412.
 
 ## Config Status API <a name="config-status"></a>
 * Description
 
-Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and DAGs.
+Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
 
 * URL
 ```
