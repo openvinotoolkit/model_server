@@ -23,8 +23,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
-
-#define DEBUG
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;

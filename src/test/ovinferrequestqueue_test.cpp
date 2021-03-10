@@ -24,7 +24,6 @@
 #include <gtest/gtest.h>
 
 #include "../ovinferrequestsqueue.hpp"
-#define DEBUG
 #include "../timer.hpp"
 
 using namespace testing;

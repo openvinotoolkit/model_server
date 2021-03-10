@@ -19,8 +19,6 @@
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "serialization.hpp"
-
-#define DEBUG
 #include "timer.hpp"
 
 using namespace InferenceEngine;

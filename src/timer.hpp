@@ -32,41 +32,18 @@ class Timer {
 
 public:
     void start(const std::string& name) {
-#ifdef DEBUG
         startTimestamps[name] = std::chrono::high_resolution_clock::now();
-#endif
     }
 
     void stop(const std::string& name) {
-#ifdef DEBUG
         stopTimestamps[name] = std::chrono::high_resolution_clock::now();
-#endif
     }
 
     template <typename T>
     double elapsed(const std::string& name) {
         static_assert(is_chrono_duration_type<T>::value, "Non supported type.");
         double duration_us = 0;
-#ifdef DEBUG
         duration_us = std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
-#endif
         return duration_us;
-    }
-
-    void print() {
-#ifdef DEBUG
-        std::cout << "-----\n";
-        for (const auto& pair : stopTimestamps) {
-            const auto& name = pair.first;
-            auto elapsed = std::to_string(std::chrono::duration<double, std::milli>(stopTimestamps[name] - startTimestamps[name]).count());
-
-            std::cout
-                << name
-                << ": "
-                << elapsed
-                << "ms"
-                << "\n";
-        }
-#endif
     }
 };
