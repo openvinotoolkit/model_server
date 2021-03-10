@@ -16,9 +16,10 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <string>
 #include <unordered_map>
+
+namespace ovms {
 
 template <typename T>
 struct is_chrono_duration_type : std::false_type {};
@@ -42,8 +43,8 @@ public:
     template <typename T>
     double elapsed(const std::string& name) {
         static_assert(is_chrono_duration_type<T>::value, "Non supported type.");
-        double duration_us = 0;
-        duration_us = std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
-        return duration_us;
+        return std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
     }
 };
+
+}  // namespace ovms

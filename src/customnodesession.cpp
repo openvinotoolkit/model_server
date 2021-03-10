@@ -26,6 +26,7 @@
 #include "node_library_utils.hpp"
 #include "nodeinputhandler.hpp"
 #include "pipelineeventqueue.hpp"
+#include "timer.hpp"
 
 namespace ovms {
 
@@ -44,6 +45,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsCount = 0;
 
+    this->timer->start("execution");
     int result = library.execute(
         inputTensors.get(),
         inputTensorsCount,
@@ -51,6 +53,11 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         &outputTensorsCount,
         parameters.get(),
         parametersCount);
+    this->timer->stop("execution");
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
+        this->getName(),
+        this->getSessionKey(),
+        this->timer->elapsed<std::chrono::microseconds>("execution") / 1000);
 
     // If result is not 0, it means execution has failed.
     // In this case shared library is responsible for cleaning up resources (memory).
