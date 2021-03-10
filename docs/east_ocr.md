@@ -130,15 +130,15 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-While the OVMS is started with the pipeline loaded, you can query it using an exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py).
+Exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
 
-From the context of [example_client](../example_client) folder install the python3 requirements:
+From the context of [example_client](../example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 
 Next download the image to process:
 ```bash
-wget https://www.pxfuel.com/en/free-photo-quvji
+wget https://p0.pxfuel.com/preview/518/700/866/australia-road-signs-note-sunset.jpg
 ```
 Now you can run the client:
 ```bash
@@ -156,5 +156,5 @@ c__o_m__mm__u_n__iity____
 com___e__r__c_i_a_ll____e
 ```
 
-With additional parameter `--text_images_save_path` the client script save all detected text boxes to jpeg file to confirm
+With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg file to confirm
 if the image was analyzed correctly.
