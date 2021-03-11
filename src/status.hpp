@@ -237,8 +237,8 @@ enum class StatusCode {
     NODE_LIBRARY_OUTPUT_MISSING_NAME,
 
     // Model control API
-    OK_CONFIG_FILE_RELOAD_NOT_NEEDED, /*!< Operation succeeded but no config reload was needed */
-    OK_CONFIG_FILE_RELOAD_NEEDED,     /*!< Operation succeeded but no config reload was needed */
+    OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
+    OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
 
     STATUS_CODE_END
 };
@@ -271,7 +271,7 @@ public:
     }
 
     bool ok() const {
-        return code == StatusCode::OK;
+        return (code == StatusCode::OK || code == StatusCode::OK_RELOADED || code == StatusCode::OK_NOT_RELOADED);
     }
 
     const StatusCode getCode() const {

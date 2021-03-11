@@ -545,13 +545,21 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
     }
 }
 
-void ModelManager::updateConfigurationWithoutConfigFile() {
+Status ModelManager::updateConfigurationWithoutConfigFile() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
+    bool reloadNeeded = false;
     for (auto& [name, config] : servedModelConfigs) {
-        reloadModelWithVersions(config);
+        if (reloadModelWithVersions(config) == StatusCode::OK_RELOADED) {
+            reloadNeeded = true;
+        }
     }
     pipelineFactory.revalidatePipelines(*this);
+    if (reloadNeeded) {
+        return StatusCode::OK_RELOADED;
+    } else {
+        return StatusCode::OK_NOT_RELOADED;
+    }
 }
 
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
@@ -850,6 +858,10 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    bool reloadNeeded = false;
+    if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
+        reloadNeeded = true;
+    }
 
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
@@ -890,6 +902,11 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return status;
         }
     }
+
+    if (blocking_status.ok() && reloadNeeded) {
+        return StatusCode::OK_RELOADED;
+    }
+
     return blocking_status;
 }
 

@@ -25,6 +25,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "modelmanager.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
 
@@ -154,9 +155,9 @@ public:
         const std::optional<std::string_view>& model_version_label,
         std::string* response);
 
-    Status processConfigReloadRequest(std::string& response);
+    Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
-    Status processConfigStatusRequest(std::string& response);
+    Status processConfigStatusRequest(std::string& response, ModelManager& manager);
 
 private:
     const std::regex predictionRegex;

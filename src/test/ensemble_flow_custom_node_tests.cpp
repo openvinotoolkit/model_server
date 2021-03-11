@@ -215,7 +215,7 @@ protected:
         // in multilayered demultiplication we still will have more than
         // 16 concurrent inferences
         config.setNireq(16);
-        ASSERT_EQ(modelManager.reloadModelWithVersions(config), StatusCode::OK);
+        ASSERT_EQ(modelManager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
         ASSERT_EQ(manager.loadLibrary(
                       differentOpsLibraryName,
                       differentOpsLibraryPath),
@@ -1786,7 +1786,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenDLMod
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
@@ -1816,7 +1816,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, ShapesNotMatchBetweenCusto
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
@@ -1884,7 +1884,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenDL
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_PRECISION);
 }
@@ -1914,7 +1914,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, PrecisionNotMatchBetweenCu
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_PRECISION);
 }
@@ -2494,7 +2494,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEno
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY);
 }
@@ -2587,7 +2587,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
@@ -2618,7 +2618,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenCu
 
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
@@ -2783,7 +2783,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
@@ -2834,7 +2834,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
@@ -2928,7 +2928,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }
@@ -2979,7 +2979,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::INVALID_SHAPE);
 }

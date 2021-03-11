@@ -35,6 +35,8 @@ static const char* configWith1Dummy = R"(
     ]
 })";
 
+class ModelManagerTest : public ovms::ModelManager {};
+
 class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
 
@@ -47,8 +49,7 @@ public:
         ovms::Config::instance().parse(arg_count, n_argv);
     }
 
-    void LoadConfig() {
-        ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    void LoadConfig(ModelManagerTest& manager) {
         manager.loadConfig(configFilePath);
     }
 
@@ -60,45 +61,48 @@ public:
 class ConfigReload : public ConfigApi {};
 
 TEST_F(ConfigReload, nonExistingConfigFile) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
-    LoadConfig();
+    LoadConfig(manager);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     RemoveConfig();
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
     const char* expectedJson = "{\n\t\"error\": \"Config file not found or cannot open.\"\n}";
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 }
 
 TEST_F(ConfigReload, removeConfigFileThenRestore) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
-    LoadConfig();
+    LoadConfig(manager);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     RemoveConfig();
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 
     SetUpConfig(configWith1Dummy);
-    status = handler.processConfigReloadRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    status = handler.processConfigReloadRequest(response, manager);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 TEST_F(ConfigReload, startWith1DummyThenReload) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    LoadConfig();
+    LoadConfig(manager);
     RemoveConfig();
     SetUpConfig(configWith1Dummy);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -118,10 +122,87 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
  ]
 }
 })";
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+}
+
+static const char* configWith1DummyInTmp = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/tmp/dummy"
+            }
+        }
+    ]
+})";
+
+TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1DummyInTmp);
+    std::filesystem::remove_all("/tmp/dummy");
+    std::filesystem::copy("/ovms/src/test/dummy", "/tmp/dummy", std::filesystem::copy_options::recursive);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson1 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    auto status = handler.processConfigReloadRequest(response, manager);
+
+    EXPECT_EQ(expectedJson1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
+
+    std::filesystem::copy("/ovms/src/test/dummy/1", "/tmp/dummy/2", std::filesystem::copy_options::recursive);
+
+    const char* expectedJson2 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  },
+  {
+   "version": "2",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    status = handler.processConfigReloadRequest(response, manager);
+
+    EXPECT_EQ(expectedJson2, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+    std::filesystem::remove_all("/tmp/dummy");
 }
 
 static const char* emptyConfig = R"(
@@ -130,8 +211,9 @@ static const char* emptyConfig = R"(
 })";
 
 TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
-    LoadConfig();
+    LoadConfig(manager);
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -152,9 +234,9 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 }
 })";
 
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 
     RemoveConfig();
     SetUpConfig(emptyConfig);
@@ -176,36 +258,38 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToRetireDummy) {
 }
 })";
 
-    status = handler.processConfigReloadRequest(response);
+    status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 TEST_F(ConfigReload, reloadNotNeeded) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
-    LoadConfig();
-    auto status = handler.processConfigReloadRequest(response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+    LoadConfig(manager);
+    auto status = handler.processConfigReloadRequest(response, manager);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 }
 
 TEST_F(ConfigReload, reloadNotNeededManyThreads) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    LoadConfig();
+    LoadConfig(manager);
 
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
-    std::function<void()> func = [&handler]() {
+    std::function<void()> func = [&handler, &manager]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string response;
-        EXPECT_EQ(handler.processConfigReloadRequest(response), ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED);
+        EXPECT_EQ(handler.processConfigReloadRequest(response, manager), ovms::StatusCode::OK_NOT_RELOADED);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -256,13 +340,14 @@ static const char* configWith1DummyPipeline = R"(
 })";
 
 TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    LoadConfig();
+    LoadConfig(manager);
     RemoveConfig();
     SetUpConfig(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -295,10 +380,10 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
  ]
 }
 })";
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
 
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 static const char* configWith2DummyPipelines = R"(
@@ -364,12 +449,13 @@ static const char* configWith2DummyPipelines = R"(
 })";
 
 TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
+    ModelManagerTest manager;
     SetUpConfig(configWith1DummyPipeline);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    LoadConfig();
+    LoadConfig(manager);
     RemoveConfig();
     SetUpConfig(configWith1DummyPipeline);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -403,9 +489,9 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 }
 })";
 
-    auto status = handler.processConfigReloadRequest(response);
+    auto status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_1, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
     RemoveConfig();
     SetUpConfig(configWith2DummyPipelines);
@@ -453,19 +539,20 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
 }
 })";
 
-    status = handler.processConfigReloadRequest(response);
+    status = handler.processConfigReloadRequest(response, manager);
     EXPECT_EQ(expectedJson_2, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
 class ConfigStatus : public ConfigApi {};
 
 TEST_F(ConfigStatus, configWithPipelines) {
+    ModelManagerTest manager;
     SetUpConfig(configWith2DummyPipelines);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
-    LoadConfig();
+    LoadConfig(manager);
 
     const char* expectedJson = R"({
 "dummy" : 
@@ -508,7 +595,7 @@ TEST_F(ConfigStatus, configWithPipelines) {
  ]
 }
 })";
-    auto status = handler.processConfigStatusRequest(response);
+    auto status = handler.processConfigStatusRequest(response, manager);
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }

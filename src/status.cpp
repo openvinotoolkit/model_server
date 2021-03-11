@@ -254,8 +254,8 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
 
 const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
-    {StatusCode::OK_CONFIG_FILE_RELOAD_NEEDED, net_http::HTTPStatusCode::CREATED},
-    {StatusCode::OK_CONFIG_FILE_RELOAD_NOT_NEEDED, net_http::HTTPStatusCode::OK},
+    {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
+    {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
 
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},

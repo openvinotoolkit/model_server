@@ -887,8 +887,9 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     dummy_1x20.setBatchSize(0);
     ASSERT_EQ(dummy_1x10.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(dummy_1x20.parseShapeParameter("(1,20)"), StatusCode::OK);
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x10), StatusCode::OK);
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x20), StatusCode::OK);
+
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x10), StatusCode::OK_RELOADED);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_1x20), StatusCode::OK_RELOADED);
 
     PipelineFactory factory;
 
@@ -925,8 +926,8 @@ TEST_F(EnsembleFlowTest, DISABLED_PipelineDefinitionPrecisionsNotMatchBetweenDLM
     dummy_u8.setName("dummy_u8");
     // Set precision of dummy_FP32 to FP32
     // Set precision of dummy_U8 to U8
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_fp32), StatusCode::OK);
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_u8), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_fp32), StatusCode::OK_RELOADED);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_u8), StatusCode::OK_RELOADED);
 
     PipelineFactory factory;
 
