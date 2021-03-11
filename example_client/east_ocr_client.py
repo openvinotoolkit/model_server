@@ -71,7 +71,16 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = args['pipeline_name']
 prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
-response = stub.Predict(request, 30.0)
+
+try:
+    response = stub.Predict(request, 30.0)
+except grpc.RpcError as err:
+    if err.code() == grpc.StatusCode.ABORTED:
+        print('No text has been found in the image')
+        exit(1)
+    else:
+        raise err
+
 for name in response.outputs:
     print(f"Output: name[{name}]")
     tensor_proto = response.outputs[name]

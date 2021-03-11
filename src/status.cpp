@@ -142,6 +142,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
 
     // Storage errors
     // S3
@@ -211,6 +212,7 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
@@ -299,6 +301,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
