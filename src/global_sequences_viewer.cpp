@@ -52,7 +52,7 @@ Status GlobalSequencesViewer::unregisterFromCleanup(std::string modelName, model
         registeredSequenceManagers.erase(registration_id);
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, has been successfully unregistered from sequence cleaner", modelName, modelVersion);
     } else {
-        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, cannot unregister model instance from sequence cleaner. It has not been registered.");
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, cannot unregister model instance from sequence cleaner. It has not been registered.", modelName, modelVersion);
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;

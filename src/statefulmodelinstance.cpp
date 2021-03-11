@@ -88,7 +88,7 @@ Status StatefulModelInstance::loadModel(const ModelConfig& config) {
 Status StatefulModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     Status status;
-    if (autoCleanupEnabled) {
+    if (autoCleanupEnabled && this->status.getState() != ModelVersionState::END) {
         status = globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
         if (!status.ok())
             return status;
