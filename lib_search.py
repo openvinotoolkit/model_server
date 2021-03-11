@@ -50,7 +50,7 @@ def check_dir(start_dir):
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch',]
                    
-    exclude_directories = ['/dist/']
+    exclude_directories = ['/dist/', 'extras/ovms-operator']
 
     for (d_path, dir_set, file_set) in os.walk(start_dir):
         for f_name in file_set:
