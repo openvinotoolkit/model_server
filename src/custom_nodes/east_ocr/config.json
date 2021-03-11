@@ -19,7 +19,7 @@
     "custom_node_library_config_list": [
         {
             "name": "east_image_extractor",
-            "base_path": "/OCR//lib/libcustom_node_east_ocr.so"
+            "base_path": "/OCR/lib/libcustom_node_east_ocr.so"
         }
     ],
     "pipeline_config_list": [
