@@ -40,6 +40,7 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
+BASE_OS_TAG_REDHAT ?= 8.2
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -61,6 +62,11 @@ else
   BAZEL_DEBUG_FLAGS=" --strip=never "
 endif
 
+# Option to Override release image.
+# Release image OS *must have* glibc version >= glibc version on BASE_OS:
+DIST_OS ?= $(BASE_OS)
+DIST_OS_TAG ?= $(BASE_OS_TAG)
+
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
 endif
@@ -70,11 +76,13 @@ endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
 endif
-
-# Option to Override release image.
-# Release image OS *must have* glibc version >= glibc version on BASE_OS:
-DIST_OS ?= $(BASE_OS)
-DIST_OS_TAG ?= $(BASE_OS_TAG)
+ifeq ($(BASE_OS),redhat)
+  BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+  DIST_OS=redhat
+  DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  DLDT_PACKAGE_URL=http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.3.323.tgz
+endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
@@ -192,7 +200,7 @@ endif
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
 	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" && \
+	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 
 test_checksec:
