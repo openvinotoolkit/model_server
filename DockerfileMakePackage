@@ -52,6 +52,10 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/in
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 RUN find /usr/lib64/ -iname 'libcrypto.so*' -exec cp -vP {} /ovms_release/lib/ \;
 
+RUN if [ -f /ovms_release/lib/libbsl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libbsl.so.0 ; ln -s libbsl.so libbsl.so.0 ; fi
+RUN if [ -f /ovms_release/lib/libmvnc-hddl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libmvnc-hddl.so.0 ; ln -s libmvnc-hddl.so libmvnc-hddl.so.0 ; fi
+RUN if [ -f /ovms_release/lib/libion.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libion.so.0 ; ln -s libion.so libion.so.0 ; fi
+
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 WORKDIR /ovms_release/bin
 RUN patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
