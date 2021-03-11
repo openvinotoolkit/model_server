@@ -205,7 +205,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
         if (resultsDemultiplyCount == 0) {
             // TODO handle dynamic demultiply_count == 0
-            SPDLOG_DEBUG("Node {} has no results. Dynamic demultiplexer with demultiply == 0 is not supported yet.", this->getName());
+            SPDLOG_DEBUG("Node: {} has no results. Dynamic demultiplexer with demultiply == 0 is not supported yet.", this->getName());
             nodeSessionOutputs.erase(metadata.getSessionKey());
             return StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS;
         }
