@@ -544,6 +544,87 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
+TEST_F(ConfigReload, addPipelineWithNonexistingNode) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1Dummy);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    RemoveConfig();
+    SetUpConfig(configWith1Dummy);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson_1 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+
+    auto status = handler.processConfigReloadRequest(response, manager);
+    EXPECT_EQ(expectedJson_1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+
+static const char* configWith1PipelineWithNonExistingNode = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "nonExisting",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+    RemoveConfig();
+    SetUpConfig(configWith1PipelineWithNonExistingNode);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson_2 = "{\n\t\"error\": \"Reloading config file failed. Check server logs for more info.\"\n}";
+
+    status = handler.processConfigReloadRequest(response, manager);
+    EXPECT_EQ(expectedJson_2, response);
+    EXPECT_EQ(status, ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL);
+}
+
 class ConfigStatus : public ConfigApi {};
 
 TEST_F(ConfigStatus, configWithPipelines) {

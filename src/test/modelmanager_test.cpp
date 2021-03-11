@@ -159,13 +159,13 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
         "model_config_list": [
             {
                 "config": {
-                    "name": "alpha",
+                    "name": "dummy1",
                     "base_path": "/tmp/models/dummy1"
                 }
             },
             {
                 "config": {
-                    "name": "beta",
+                    "name": "dummy2",
                     "base_path": "/tmp/models/dummy2"
                 }
             }
@@ -178,15 +178,15 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
                 "outputs": [{"a":{"node_name": "beta","data_item": "text"}}], 
                 "nodes": [  
                     { 
-                        "name": "alpha", 
-                        "model_name": "dummy",
+                        "name": "dummy1", 
+                        "model_name": "alpha",
                         "type": "DL model", 
                         "inputs": [{"a":{"node_name": "input","data_item": "in"}}], 
                         "outputs": [{"data_item": "prob","alias": "prob"}] 
                     }, 
                     { 
-                        "name": "beta", 
-                        "model_name": "dummy",
+                        "name": "dummy2", 
+                        "model_name": "beta",
                         "type": "DL model",
                         "inputs": [{"a":{"node_name": "alpha","data_item": "prob"}}],
                         "outputs": [{"data_item": "text","alias": "text"}] 

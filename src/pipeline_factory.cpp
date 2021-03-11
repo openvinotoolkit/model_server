@@ -99,17 +99,20 @@ Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     return pd->reload(manager, std::move(nodeInfos), std::move(connections));
 }
 
-void PipelineFactory::revalidatePipelines(ModelManager& manager) {
+Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
+    Status status = StatusCode::OK;
     for (auto& [name, definition] : definitions) {
         if (definition->getStatus().isRevalidationRequired()) {
             auto validationResult = definition->validate(manager);
             if (!validationResult.ok()) {
+                status = validationResult;
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Revalidation pipeline definition: {} failed: {}", name, validationResult.string());
             } else {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Revalidation of pipeline: {} succeeded", name);
             }
         }
     }
+    return status;
 }
 const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     std::vector<std::string> names;

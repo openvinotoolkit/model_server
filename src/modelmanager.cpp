@@ -219,11 +219,11 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     return StatusCode::OK;
 }
 
-void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
+Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);
-        return;
+        return StatusCode::OK;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
@@ -243,7 +243,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         auto status = toNodeKind(nodeKindStr, nodeKind);
         if (!status.ok()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {} for pipeline: {}", nodeKindStr, pipelineName);
-            return;
+            return status;
         }
 
         DLNodeInfo dlNodeInfo;
@@ -253,7 +253,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         } else if (nodeKind == NodeKind::CUSTOM) {
             status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
             if (!status.ok()) {
-                return;
+                return status;
             }
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline {} contains unknown node kind", pipelineName);
@@ -263,7 +263,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
-            return;
+            return StatusCode::PIPELINE_CONFIGURATION_INVALID;
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
         processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
@@ -305,7 +305,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
         pipelinesInConfigFile.insert(pipelineName);
-        return;
+        return status;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,
@@ -313,6 +313,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::move(connections),
         manager);
     pipelinesInConfigFile.insert(pipelineName);
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
@@ -340,11 +341,16 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
         return StatusCode::OK;
     }
     std::set<std::string> pipelinesInConfigFile;
+    Status status = StatusCode::OK;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        auto pipelineStatus = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        if(!pipelineStatus.ok())
+        {
+            status = pipelineStatus;
+        }
     }
     pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
-    return ovms::StatusCode::OK;
+    return status;
 }
 
 Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
@@ -514,14 +520,18 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (status != StatusCode::OK) {
         return status;
     }
+
     status = loadCustomNodeLibrariesConfig(configJson);
     status = loadPipelinesConfig(configJson);
+
     tryReloadGatedModelConfigs(gatedModelConfigs);
 
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctime;
-    return StatusCode::OK;
+    if(status.ok()){
+        struct stat statTime;
+        stat(configFilename.c_str(), &statTime);
+        lastConfigChangeTime = statTime.st_ctime;
+    }
+    return status;
 }
 
 void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile) {
@@ -549,17 +559,28 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
+    Status status = StatusCode::OK_NOT_RELOADED;
     for (auto& [name, config] : servedModelConfigs) {
-        if (reloadModelWithVersions(config) == StatusCode::OK_RELOADED) {
+        auto reloadStatus = reloadModelWithVersions(config);
+        if (reloadStatus == StatusCode::OK_RELOADED) {
             reloadNeeded = true;
         }
+        if (!reloadStatus.ok()){
+            status = reloadStatus;
+        }
     }
-    pipelineFactory.revalidatePipelines(*this);
+    auto revalidationStatus = pipelineFactory.revalidatePipelines(*this);;
+    if (!revalidationStatus.ok()) {
+        status = revalidationStatus;
+    }
+
+    if (!status.ok()) {
+        return status;
+    }
     if (reloadNeeded) {
         return StatusCode::OK_RELOADED;
-    } else {
-        return StatusCode::OK_NOT_RELOADED;
     }
+    return StatusCode::OK_NOT_RELOADED;
 }
 
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {

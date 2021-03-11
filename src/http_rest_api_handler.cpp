@@ -373,6 +373,10 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         }
     }
     status = manager.updateConfigurationWithoutConfigFile();
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Reloading model versions and dependent DAGs failed. Check server logs for more info.");
+        return status;
+    }
     if (status == StatusCode::OK_RELOADED) {
         reloadNeeded = true;
     }
