@@ -33,8 +33,6 @@
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
-
-#define DEBUG
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;

@@ -34,8 +34,6 @@
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
 #include "status.hpp"
-
-#define DEBUG
 #include "timer.hpp"
 
 using grpc::ServerContext;

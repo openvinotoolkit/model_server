@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <sstream>
 
@@ -21,21 +23,17 @@
 #include <gtest/gtest.h>
 
 #include "../dl_node.hpp"
+#include "../dlnodesession.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
 #include "../gathernodeinputhandler.hpp"
+#include "../logging.hpp"
 #include "../modelconfig.hpp"
+#include "../modelinstance.hpp"
 #include "../nodeinputhandler.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
 #include "../pipelinedefinition.hpp"
-#define DEBUG
-#include <cstdio>
-#include <cstdlib>
-
-#include "../dlnodesession.hpp"
-#include "../logging.hpp"
-#include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "test_utils.hpp"

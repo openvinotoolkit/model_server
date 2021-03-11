@@ -19,6 +19,7 @@
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
+#include "timer.hpp"
 
 namespace ovms {
 NodeSession::~NodeSession() = default;
@@ -43,6 +44,7 @@ NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string&
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
+    timer(std::make_unique<Timer>()),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
@@ -50,6 +52,7 @@ NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),
+    timer(std::make_unique<Timer>()),
     inputHandler(std::make_unique<NodeInputHandler>(inputsCount)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
@@ -61,6 +64,10 @@ bool NodeSession::isReady() const {
 
 Status NodeSession::notifyFinishedDependency() {
     return this->inputHandler->notifyFinishedDependency();
+}
+
+Timer& NodeSession::getTimer() const {
+    return *this->timer;
 }
 
 ReleaseSessionGuard::ReleaseSessionGuard(NodeSession& nodeSession) :

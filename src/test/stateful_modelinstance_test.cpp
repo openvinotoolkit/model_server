@@ -186,7 +186,7 @@ public:
             std::cout << "[WARNING] This method must be kept up to date with StatefulModelInstance::infer for tests to function properly." << std::endl;
             testWarningPrinted = true;
         }
-        Timer timer;
+        ovms::Timer timer;
         using std::chrono::microseconds;
         ovms::SequenceProcessingSpec sequenceProcessingSpec;
         auto status = validate(requestProto, sequenceProcessingSpec);

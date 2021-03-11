@@ -13,26 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cstdio>
 #include <sstream>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <stdlib.h>
 
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
+#include "../localfilesystem.hpp"
+#include "../logging.hpp"
 #include "../modelconfig.hpp"
+#include "../modelinstance.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
 #include "../pipelinedefinition.hpp"
-#define DEBUG
-#include <cstdio>
-
-#include <stdlib.h>
-
-#include "../localfilesystem.hpp"
-#include "../logging.hpp"
-#include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
