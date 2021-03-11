@@ -72,40 +72,42 @@ dtype_name = [ 'DT_INVALID',
                'DT_UINT64']
 # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto
 
-parser = argparse.ArgumentParser(description='Get information about served models')
-parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
-                    dest='model_name')
-parser.add_argument('--model_version', default=None, type=int, help='Define model version - must be numerical',
-                    dest='model_version')
-args = vars(parser.parse_args())
+def main():
+    parser = argparse.ArgumentParser(description='Get information about served models')
+    parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
+    parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
+    parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
+                        dest='model_name')
+    parser.add_argument('--model_version', default=None, type=int, help='Define model version - must be numerical',
+                        dest='model_version')
+    args = vars(parser.parse_args())
 
-channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
+    channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
 
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
-print('Getting model metadata for model:',args.get('model_name'))
+    print('Getting model metadata for model:',args.get('model_name'))
 
-metadata_field = "signature_def"
-request = get_model_metadata_pb2.GetModelMetadataRequest()
-request.model_spec.name = args.get('model_name')
-if args.get('model_version') is not None:
-    request.model_spec.version.value = args.get('model_version')
-request.metadata_field.append(metadata_field)
+    metadata_field = "signature_def"
+    request = get_model_metadata_pb2.GetModelMetadataRequest()
+    request.model_spec.name = args.get('model_name')
+    if args.get('model_version') is not None:
+        request.model_spec.version.value = args.get('model_version')
+    request.metadata_field.append(metadata_field)
 
-result = stub.GetModelMetadata(request, 10.0) # result includes a dictionary with all model outputs
-input_metadata, output_metadata = model_metadata_response(
-    response=result)
-print('Inputs metadata:')
-for i in input_metadata:
-    print("\tInput name: {}; shape: {}; dtype: {}"
-          .format(i, input_metadata[i]['shape'],
-                  dtype_name[input_metadata[i]['dtype']]))
-print('Outputs metadata:')
-for i in output_metadata:
-    print("\tOutput name: {}; shape: {}; dtype: {}"
-          .format(i, output_metadata[i]['shape'],
-                  dtype_name[output_metadata[i]['dtype']]))
+    result = stub.GetModelMetadata(request, 10.0) # result includes a dictionary with all model outputs
+    input_metadata, output_metadata = model_metadata_response(
+        response=result)
+    print('Inputs metadata:')
+    for i in input_metadata:
+        print("\tInput name: {}; shape: {}; dtype: {}"
+            .format(i, input_metadata[i]['shape'],
+                    dtype_name[input_metadata[i]['dtype']]))
+    print('Outputs metadata:')
+    for i in output_metadata:
+        print("\tOutput name: {}; shape: {}; dtype: {}"
+            .format(i, output_metadata[i]['shape'],
+                    dtype_name[output_metadata[i]['dtype']]))
 
-
+if __name__ == "__main__":
+    main()
