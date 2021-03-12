@@ -1226,7 +1226,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     EXPECT_EQ(json_output, expected_json_end);
 
     // Copy back the model files & try reload
-    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
 
     tensorflow::serving::GetModelStatusRequest req3;
