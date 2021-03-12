@@ -199,6 +199,7 @@ cc_test(
         "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
+        "test/prediction_service_test.hpp",
         "test/prediction_service_utils_test.cpp",
         "test/custom_loader_test.cpp",
         "test/rest_parser_row_test.cpp",
