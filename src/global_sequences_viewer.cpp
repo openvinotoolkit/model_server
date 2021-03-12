@@ -71,10 +71,10 @@ Status GlobalSequencesViewer::removeIdleSequences() {
     return ovms::StatusCode::OK;
 }
 
-void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInterval, std::future<void> exitSignal) {
+void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner thread");
 
-    while (exitSignal.wait_for(std::chrono::minutes(sequenceCleanerInterval)) == std::future_status::timeout) {
+    while (exitSignal.wait_for(std::chrono::minutes(sequenceCleanerIntervalMinutes)) == std::future_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
 
         removeIdleSequences();
@@ -95,10 +95,10 @@ void GlobalSequencesViewer::join() {
     }
 }
 
-void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerInterval) {
-    if ((!sequenceCleanerStarted) && (sequenceCleanerInterval > 0)) {
+void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerIntervalMinutes) {
+    if ((!sequenceCleanerStarted) && (sequenceCleanerIntervalMinutes > 0)) {
         std::future<void> exitSignal = exitTrigger.get_future();
-        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerInterval, std::move(exitSignal)));
+        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerIntervalMinutes, std::move(exitSignal)));
         sequenceCleanerStarted = true;
         sequenceCleanerThread = std::move(t);
     }

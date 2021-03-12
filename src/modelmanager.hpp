@@ -133,7 +133,7 @@ private:
     /**
      * Time interval between two consecutive sequence cleaner scans (in minutes)
      */
-    uint32_t sequenceCleanerInterval = 5;
+    uint32_t sequenceCleanerIntervalMinutes = 5;
 
     /**
      * @brief Time of last config change

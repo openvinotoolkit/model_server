@@ -61,7 +61,7 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    sequenceCleanerInterval = config.sequenceCleanerPollWaitMinutes();
+    sequenceCleanerIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -88,7 +88,7 @@ void ModelManager::startWatcher() {
 }
 
 void ModelManager::startSequenceCleaner() {
-    globalSequencesViewer.startCleanerThread(sequenceCleanerInterval);
+    globalSequencesViewer.startCleanerThread(sequenceCleanerIntervalMinutes);
 }
 
 Status ModelManager::startFromConfig() {

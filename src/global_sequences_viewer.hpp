@@ -39,7 +39,7 @@ private:
 
     std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
 
-    void sequenceCleanerRoutine(uint32_t sequenceCleanerInterval, std::future<void> exitSignal);
+    void sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal);
 
     std::thread sequenceCleanerThread;
 
@@ -47,7 +47,7 @@ protected:
     Status removeIdleSequences();
 
 public:
-    void startCleanerThread(uint32_t sequenceCleanerInterval = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
+    void startCleanerThread(uint32_t sequenceCleanerIntervalMinutes = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
 
     // Gracefully finish sequence cleaner thread
     void join();
