@@ -349,7 +349,7 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     ret = load_files(binFile, modelFile, modelType, model, weights);
     if (ret != SAMPLE_LOADER_OK) {
         std::cout << "custSampleLoader: Could not read model files" << std::endl;
-        return CustomLoaderStatus::INTERNAL_ERROR;
+        return CustomLoaderStatus::MODEL_LOAD_ERROR;
     }
 
     /* Start the watcher thread after first moel load */
