@@ -359,8 +359,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     auto& config = ovms::Config::instance();
 
     bool reloadNeeded = false;
-    if(manager.getConfigFilename() != "")
-    {
+    if (manager.getConfigFilename() != "") {
         status = manager.configFileReloadNeeded(reloadNeeded);
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Config file not found or cannot open.");
