@@ -308,8 +308,10 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         std::string strModel(model.begin(), model.end());
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
-            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel,
-                make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C}, weights.data())));
+            Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
+            blobWts->allocate();
+            std::memcpy(blobWts->buffer(), weights.data(), weights.size());
+            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, blobWts));
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
             network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
@@ -672,7 +674,6 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     }
     return StatusCode::OK;
 }
-
 const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
     if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
         std::stringstream ss;
