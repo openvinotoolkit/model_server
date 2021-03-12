@@ -64,6 +64,7 @@ enum class StatusCode {
     INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
     REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
     REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
+    REQUESTED_MODEL_TYPE_CHANGE,                       /*!< Model type cannot be changed after it's loaded */
     INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
     INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
 

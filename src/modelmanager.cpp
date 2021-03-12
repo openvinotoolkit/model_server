@@ -699,6 +699,18 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
+Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag) {
+    std::unique_lock modelsLock(modelsMtx);
+    auto modelIt = models.find(modelName);
+    if (models.end() == modelIt)
+        return StatusCode::OK; // Model has not been loaded yet, so there are no restrictions regarding stateful flag setup
+    
+    auto model = models[modelName];
+    if (model->isStateful() != configStatefulFlag)
+        return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
+    return StatusCode::OK;
+}
+
 std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
@@ -824,6 +836,13 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
     }
+
+    auto status = checkStatefulFlagChange(config.getName(), config.isStateful());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested model type change on model: {}. Stateful flag cannot be changed after model is loaded", config.getName());
+        return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
+    }
+
     auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
     if (model->isAnyVersionSubscribed()) {
         if (config.isDynamicParameterEnabled()) {

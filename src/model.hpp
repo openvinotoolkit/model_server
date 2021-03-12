@@ -107,8 +107,8 @@ public:
     /**
          * @brief Constructor
          */
-    Model(const std::string& name, bool isStateful, GlobalSequencesViewer* globalSequencesViewer) :
-        isStateful(isStateful),
+    Model(const std::string& name, bool stateful, GlobalSequencesViewer* globalSequencesViewer) :
+        stateful(stateful),
         globalSequencesViewer(globalSequencesViewer),
         name(name),
         defaultVersion(0),
@@ -127,6 +127,10 @@ public:
          */
     const std::string& getName() const {
         return name;
+    }
+
+    const bool isStateful() const {
+         return stateful;
     }
 
     /**

@@ -111,7 +111,7 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
 }
 
 std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
-    if (isStateful) {
+    if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
         return std::move(std::static_pointer_cast<ModelInstance>(
             std::make_shared<StatefulModelInstance>(modelName, modelVersion, this->globalSequencesViewer)));
