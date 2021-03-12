@@ -44,7 +44,7 @@ public:
     void SetUpConfig(const std::string& configContent) {
         configFilePath = directoryPath + "/ovms_config.json";
         createConfigFileWithContent(configContent, configFilePath);
-        char* n_argv[] = {"ovms", "--config_path", &configFilePath[0], "--file_system_poll_wait_seconds", "0"};
+        char* n_argv[] = {"ovms", "--config_path", configFilePath.data(), "--file_system_poll_wait_seconds", "0"};
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
@@ -58,7 +58,7 @@ public:
     }
 
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
-        char* n_argv[] = {"ovms", "--model_path", &modelPath[0], "--model_name", &modelName[0], "--file_system_poll_wait_seconds", "0"};
+        char* n_argv[] = {"ovms", "--model_path", modelPath.data(), "--model_name", modelName.data(), "--file_system_poll_wait_seconds", "0"};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
