@@ -56,6 +56,12 @@ public:
     void RemoveConfig() {
         std::filesystem::remove(configFilePath);
     }
+
+    void SetUpSingleModel(std::string modelPath, std::string modelName) {
+        char* n_argv[] = {"ovms", "--model_path", &modelPath[0], "--model_name", &modelName[0], "--file_system_poll_wait_seconds", "0"};
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
+    }
 };
 
 class ConfigReload : public ConfigApi {};
@@ -126,6 +132,36 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
 
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+}
+
+TEST_F(ConfigReload, singleModel) {
+    ModelManagerTest manager;
+    SetUpSingleModel("/ovms/src/test/dummy", "dummy");
+    manager.startFromConfig();
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    auto status = handler.processConfigReloadRequest(response, manager);
+
+    const char* expectedJson = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 }
 
 static const char* configWith1DummyInTmp = R"(
