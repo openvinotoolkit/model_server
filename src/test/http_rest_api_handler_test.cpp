@@ -39,12 +39,14 @@ class ModelManagerTest : public ovms::ModelManager {};
 
 class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
+    std::string modelPath;
+    std::string modelName;
 
 public:
     void SetUpConfig(const std::string& configContent) {
         configFilePath = directoryPath + "/ovms_config.json";
         createConfigFileWithContent(configContent, configFilePath);
-        char* n_argv[] = {"ovms", "--config_path", &configFilePath[0], "--file_system_poll_wait_seconds", "0"};
+        char* n_argv[] = {"ovms", "--config_path", configFilePath.data(), "--file_system_poll_wait_seconds", "0"};
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
@@ -55,6 +57,14 @@ public:
 
     void RemoveConfig() {
         std::filesystem::remove(configFilePath);
+    }
+
+    void SetUpSingleModel(std::string modelPath, std::string modelName) {
+        this->modelPath = modelPath;
+        this->modelName = modelName;
+        char* n_argv[] = {"ovms", "--model_path", this->modelPath.data(), "--model_name", this->modelName.data(), "--file_system_poll_wait_seconds", "0"};
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
     }
 };
 
@@ -126,6 +136,36 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
 
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+}
+
+TEST_F(ConfigReload, singleModel) {
+    ModelManagerTest manager;
+    SetUpSingleModel("/ovms/src/test/dummy", "dummy");
+    manager.startFromConfig();
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    auto status = handler.processConfigReloadRequest(response, manager);
+
+    const char* expectedJson = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 }
 
 static const char* configWith1DummyInTmp = R"(
