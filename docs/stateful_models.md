@@ -317,3 +317,4 @@ There are following limitations when using stateful models with OVMS:
  - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md)
  - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
  - When stateful model instance gets reloaded due to change in model configuration, **all ongoing sequences are dropped**.
+ - Model type cannot be changed in the runtime - switching stateful flag will be rejected.
