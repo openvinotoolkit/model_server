@@ -35,22 +35,19 @@ private:
     std::mutex viewerMutex;
 
     // used to send exit signal to sequence cleaner thread and force termination
-    std::mutex cleanerControlMutex;
-    std::condition_variable cleanerControlCv;
+    std::promise<void> exitTrigger;
 
     std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
 
-    void sequenceCleanerRoutine(uint32_t sequenceCleanerInterval);
+    void sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal);
 
     std::thread sequenceCleanerThread;
-
-    std::cv_status waitFor(uint32_t sequenceCleanerInterval);
 
 protected:
     Status removeIdleSequences();
 
 public:
-    void startCleanerThread(uint32_t sequenceCleanerInterval = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
+    void startCleanerThread(uint32_t sequenceCleanerIntervalMinutes = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
 
     // Gracefully finish sequence cleaner thread
     void join();

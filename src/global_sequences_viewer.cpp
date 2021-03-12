@@ -71,15 +71,10 @@ Status GlobalSequencesViewer::removeIdleSequences() {
     return ovms::StatusCode::OK;
 }
 
-std::cv_status GlobalSequencesViewer::waitFor(uint32_t sequenceCleanerInterval) {
-    std::unique_lock<std::mutex> lock(cleanerControlMutex);
-    return cleanerControlCv.wait_for(lock, std::chrono::minutes(sequenceCleanerInterval));
-}
-
-void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInterval) {
+void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner thread");
 
-    while (waitFor(sequenceCleanerInterval) == std::cv_status::timeout) {
+    while (exitSignal.wait_for(std::chrono::minutes(sequenceCleanerIntervalMinutes)) == std::future_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
 
         removeIdleSequences();
@@ -91,7 +86,7 @@ void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerInter
 
 void GlobalSequencesViewer::join() {
     if (sequenceCleanerStarted) {
-        cleanerControlCv.notify_one();
+        exitTrigger.set_value();
         if (sequenceCleanerThread.joinable()) {
             sequenceCleanerThread.join();
             sequenceCleanerStarted = false;
@@ -100,9 +95,10 @@ void GlobalSequencesViewer::join() {
     }
 }
 
-void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerInterval) {
-    if ((!sequenceCleanerStarted) && (sequenceCleanerInterval > 0)) {
-        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerInterval));
+void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerIntervalMinutes) {
+    if ((!sequenceCleanerStarted) && (sequenceCleanerIntervalMinutes > 0)) {
+        std::future<void> exitSignal = exitTrigger.get_future();
+        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerIntervalMinutes, std::move(exitSignal)));
         sequenceCleanerStarted = true;
         sequenceCleanerThread = std::move(t);
     }

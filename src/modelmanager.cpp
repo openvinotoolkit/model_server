@@ -62,7 +62,7 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    sequenceCleanerInterval = config.sequenceCleanerPollWaitMinutes();
+    sequenceCleanerIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -79,7 +79,8 @@ Status ModelManager::start() {
 
 void ModelManager::startWatcher() {
     if ((!watcherStarted) && (watcherIntervalSec > 0)) {
-        std::thread t(std::thread(&ModelManager::watcher, this));
+        std::future<void> exitSignal = exitTrigger.get_future();
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
         watcherStarted = true;
         monitor = std::move(t);
     }
@@ -88,7 +89,7 @@ void ModelManager::startWatcher() {
 }
 
 void ModelManager::startSequenceCleaner() {
-    globalSequencesViewer.startCleanerThread(sequenceCleanerInterval);
+    globalSequencesViewer.startCleanerThread(sequenceCleanerIntervalMinutes);
 }
 
 Status ModelManager::startFromConfig() {
@@ -581,17 +582,11 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
-std::cv_status ModelManager::waitFor(uint32_t filesystemWatcherInterval) {
-    std::unique_lock<std::mutex> lock(watcherControlMutex);
-    return watcherControlCv.wait_for(lock, std::chrono::seconds(filesystemWatcherInterval));
-}
-
-void ModelManager::watcher() {
+void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
 
-    while (waitFor(watcherIntervalSec) == std::cv_status::timeout) {
+    while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle begin");
-
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
         bool isNeeded;
         configFileReloadNeeded(isNeeded);
@@ -607,7 +602,7 @@ void ModelManager::watcher() {
 
 void ModelManager::join() {
     if (watcherStarted) {
-        watcherControlCv.notify_one();
+        exitTrigger.set_value();
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
