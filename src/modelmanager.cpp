@@ -486,6 +486,10 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    configFilename = jsonFilename;
+    struct stat statTime;
+    stat(configFilename.c_str(), &statTime);
+    lastConfigChangeTime = statTime.st_ctim;
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
@@ -504,7 +508,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
         return StatusCode::JSON_INVALID;
     }
-    configFilename = jsonFilename;
     Status status;
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -520,9 +523,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     status = loadPipelinesConfig(configJson);
     tryReloadGatedModelConfigs(gatedModelConfigs);
 
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctime;
     return StatusCode::OK;
 }
 
@@ -573,7 +573,9 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
         isNeeded = false;
         return StatusCode::FILE_INVALID;
     }
-    if (configFilename == "" || (lastConfigChangeTime == statTime.st_ctime)) {
+    bool configFileModified = !(lastConfigChangeTime.tv_sec == statTime.st_ctim.tv_sec && lastConfigChangeTime.tv_nsec == statTime.st_ctim.tv_nsec);
+
+    if (configFilename == "" || !configFileModified) {
         isNeeded = false;
     } else {
         isNeeded = true;

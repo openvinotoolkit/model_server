@@ -27,6 +27,7 @@
 
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
+#include <sys/stat.h>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
@@ -139,7 +140,7 @@ private:
     /**
      * @brief Time of last config change
      */
-    int64_t lastConfigChangeTime;
+    timespec lastConfigChangeTime;
 
 public:
     /**
