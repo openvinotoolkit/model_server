@@ -39,6 +39,8 @@ class ModelManagerTest : public ovms::ModelManager {};
 
 class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
+    std::string modelPath;
+    std::string modelName;
 
 public:
     void SetUpConfig(const std::string& configContent) {
@@ -58,7 +60,9 @@ public:
     }
 
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
-        char* n_argv[] = {"ovms", "--model_path", modelPath.data(), "--model_name", modelName.data(), "--file_system_poll_wait_seconds", "0"};
+        this->modelPath = modelPath;
+        this->modelName = modelName;
+        char* n_argv[] = {"ovms", "--model_path", this->modelPath.data(), "--model_name", this->modelName.data(), "--file_system_poll_wait_seconds", "0"};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
