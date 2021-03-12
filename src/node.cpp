@@ -201,7 +201,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
     auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
     if (tensorDesc.getDims()[0] > DEMULTIPLY_LIMIT) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[1] size: {} of blob: {}. Maximum allowed is: {}",
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of blob: {}. Maximum allowed is: {}",
             getName(), tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
         return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
     }
@@ -225,7 +225,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 
         if ((demultiplexCount.value() != 0) &&
             (newDims[0] != demultiplexCount.value())) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[1] size: {} of blob: {} expected: {} to demultiply",
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of blob: {} expected: {} to demultiply",
                 newDims[0], blobName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }

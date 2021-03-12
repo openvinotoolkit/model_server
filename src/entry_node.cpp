@@ -35,6 +35,7 @@ Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEnd
     NodeSessionMetadata metadata;
     auto nodeSession = getNodeSession(metadata);  // call to create session
     if (!nodeSession) {
+        notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession->getSessionKey()));
         return StatusCode::INTERNAL_ERROR;
     }
     notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession->getSessionKey()));
