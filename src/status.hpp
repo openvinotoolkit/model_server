@@ -57,7 +57,9 @@ enum class StatusCode {
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
+    MODEL_CONFIG_INVALID,                              /*!< Model config is invalid */
     MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
+    MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
     MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
     MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
     MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */

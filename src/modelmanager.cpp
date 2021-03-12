@@ -221,11 +221,11 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     return StatusCode::OK;
 }
 
-void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
+Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);
-        return;
+        return StatusCode::OK;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     auto itr2 = pipelineConfig.FindMember("nodes");
@@ -245,7 +245,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         auto status = toNodeKind(nodeKindStr, nodeKind);
         if (!status.ok()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {} for pipeline: {}", nodeKindStr, pipelineName);
-            return;
+            return status;
         }
 
         DLNodeInfo dlNodeInfo;
@@ -255,7 +255,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         } else if (nodeKind == NodeKind::CUSTOM) {
             status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
             if (!status.ok()) {
-                return;
+                return status;
             }
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline {} contains unknown node kind", pipelineName);
@@ -265,7 +265,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         auto nodeOutputsItr = nodeConfig.FindMember("outputs");
         if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
-            return;
+            return status;
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
         processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
@@ -306,8 +306,11 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
+        if(!status.ok())
+        {
+            return status;
+        }
         pipelinesInConfigFile.insert(pipelineName);
-        return;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,
@@ -315,6 +318,7 @@ void processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Val
         std::move(connections),
         manager);
     pipelinesInConfigFile.insert(pipelineName);
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
@@ -343,7 +347,11 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     }
     std::set<std::string> pipelinesInConfigFile;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        if(!status.ok()){
+            pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
+            return status;
+        }
     }
     pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
     return ovms::StatusCode::OK;
@@ -424,22 +432,35 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
+    std::optional<Status> firstError;
     std::set<std::string> modelsInConfigFile;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
+            if(!firstError)
+            {
+                firstError = StatusCode::MODEL_CONFIG_INVALID;
+            }
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
             continue;
         }
 
         const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
+            if(!firstError)
+            {
+                firstError = StatusCode::MODEL_NAME_OCCUPIED;
+            }
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
             continue;
         }
         if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
+            if(!firstError)
+            {
+                firstError = StatusCode::MODEL_NAME_OCCUPIED;
+            }
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
             continue;
         }
@@ -447,6 +468,10 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         modelsInConfigFile.emplace(modelName);
 
         if (!status.ok()) {
+            if(!firstError)
+            {
+                firstError = status;
+            }
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
         if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL) {
@@ -464,6 +489,10 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
     this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile);
+    if(firstError)
+    {
+        return *firstError;
+    }
     return ovms::StatusCode::OK;
 }
 

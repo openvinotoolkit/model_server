@@ -2404,7 +2404,8 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToCorruptedModel) {
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
@@ -3038,7 +3039,8 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
     auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 static const char* pipelineDemultiplexerShape = R"(
@@ -3092,5 +3094,6 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
     auto status = manager.loadConfig(fileToReload);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
