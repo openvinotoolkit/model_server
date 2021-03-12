@@ -144,41 +144,50 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
     return StatusCode::OK;
 }
 
-Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info) {
-    if (info.getPrecision() != blob->getTensorDesc().getPrecision()) {
+Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& tensorInfo) {
+    if (tensorInfo.getPrecision() != blob->getTensorDesc().getPrecision()) {
         std::stringstream ss;
-        ss << "Expected: " << info.getPrecisionAsString()
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid precision -"
+           << " Expected: " << tensorInfo.getPrecisionAsString()
            << "; Actual: " << TensorInfo::getPrecisionAsString(blob->getTensorDesc().getPrecision());
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Invalid precision - {}", getName(), details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
     // If batch size differes, check if remaining dimensions are equal
-    if (info.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
+    if (tensorInfo.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
-        if (std::equal(info.getShape().begin() + 1, info.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {
-            ss << "Expected: " << info.getShape()[0] << "; Actual: " << blob->getTensorDesc().getDims()[0];
+        if (std::equal(tensorInfo.getShape().begin() + 1, tensorInfo.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {
+            ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+               << " Invalid batch size -"
+               << " Expected: " << tensorInfo.getShape()[0]
+               << "; Actual: " << blob->getTensorDesc().getDims()[0];
             const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Invalid batch size - {}", getName(), details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
         } else {
             // Otherwise whole shape is incorrect
-            ss << "Expected: " << TensorInfo::shapeToString(info.getShape())
+            ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+               << " Invalid shape -"
+               << " Expected: " << TensorInfo::shapeToString(tensorInfo.getShape())
                << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
             const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {}] Invalid shape - {}", getName(), details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
 
-    if (info.getShape() != blob->getTensorDesc().getDims()) {
+    if (tensorInfo.getShape() != blob->getTensorDesc().getDims()) {
         std::stringstream ss;
-        ss << "Expected: " << TensorInfo::shapeToString(info.getShape())
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid shape -"
+           << " Expected: " << TensorInfo::shapeToString(tensorInfo.getShape())
            << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {}] Invalid shape - {}", getName(), details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
 
