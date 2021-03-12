@@ -108,7 +108,6 @@ for line in lines:
     nu = np.array(output)
     # for object classification models show imagenet class
     print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
-                                                                                  )
     ma = np.argmax(nu)
     if int(label) == ma:
         matched += 1
