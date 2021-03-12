@@ -52,7 +52,8 @@ namespace ovms {
 
 static bool watcherStarted = false;
 
-ModelManager::ModelManager() {
+ModelManager::ModelManager() :
+    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
 }
 
@@ -951,7 +952,7 @@ Status ModelManager::getModelInstance(const std::string& modelName,
         }
     }
 
-    return modelInstance->waitForLoaded(WAIT_FOR_MODEL_LOADED_TIMEOUT_MS, modelInstanceUnloadGuardPtr);
+    return modelInstance->waitForLoaded(waitForModelLoadedTimeoutMs, modelInstanceUnloadGuardPtr);
 }
 
 Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,

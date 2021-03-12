@@ -39,7 +39,7 @@
 
 namespace ovms {
 
-const uint WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 
 class IVersionReader;
 class CustomNodeLibraryManager;
@@ -66,6 +66,7 @@ protected:
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
     GlobalSequencesViewer globalSequencesViewer;
+    uint32_t waitForModelLoadedTimeoutMs;
 
 private:
     /**
