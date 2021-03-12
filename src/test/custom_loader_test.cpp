@@ -1089,7 +1089,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
     std::string fileToReload = cl_models_path + "/cl_config.json";
     createConfigFileWithContent(configStr, fileToReload);
     ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
-    
+
     tensorflow::serving::GetModelStatusRequest req;
     tensorflow::serving::GetModelStatusResponse res;
 
