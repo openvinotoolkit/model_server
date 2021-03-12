@@ -1302,6 +1302,10 @@ public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelWithModelInstanceLoadedWaitInLoadingState;
     }
+
+    void setWaitForModelLoadedTimeoutMs(uint32_t newTimeout) {
+        waitForModelLoadedTimeoutMs = newTimeout;
+    }
 };
 
 class ModelInstanceModelLoadedNotify : public ::testing::Test {};
@@ -1309,7 +1313,7 @@ class ModelInstanceModelLoadedNotify : public ::testing::Test {};
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInNotReachingTimeoutShouldSuceed) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    const uint32_t modelLoadingTimeoutMs = 500;
+    const uint32_t modelLoadingTimeoutMs = 100;
     manager.setWaitForModelLoadedTimeoutMs(modelLoadingTimeoutMs);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
@@ -1325,7 +1329,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInReachingTimeoutShouldReturnModelNotLoadedYet) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    const uint32_t modelLoadingTimeoutMs = 500;
+    const uint32_t modelLoadingTimeoutMs = 100;
     manager.setWaitForModelLoadedTimeoutMs(modelLoadingTimeoutMs);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
 

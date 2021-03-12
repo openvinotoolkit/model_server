@@ -165,8 +165,6 @@ public:
         return watcherIntervalSec;
     }
 
-    void setWaitForModelLoadedTimeoutMs(uint32_t newTimeout);
-
     /**
      * @brief Destroy the Model Manager object
      * 

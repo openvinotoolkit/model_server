@@ -57,10 +57,6 @@ ModelManager::ModelManager() :
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
 }
 
-void ModelManager::setWaitForModelLoadedTimeoutMs(uint32_t newTimeout) {
-    waitForModelLoadedTimeoutMs = newTimeout;
-}
-
 ModelManager::~ModelManager() = default;
 
 Status ModelManager::start() {
