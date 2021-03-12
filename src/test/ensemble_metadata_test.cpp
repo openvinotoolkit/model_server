@@ -389,11 +389,11 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getShape(), shape_t({1, 50}));
+    EXPECT_EQ(input->getShape(), shape_t({1, 0}));
     EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape(), shape_t({1, 50}));
+    EXPECT_EQ(output->getShape(), shape_t({1, 0}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
@@ -446,12 +446,12 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_NE(outputs.find("request_output_name_2"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getShape(), shape_t({1, 50}));
+    EXPECT_EQ(input->getShape(), shape_t({1, 0}));
     EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
 
     for (int i = 0; i < 3; i++) {
         const auto& output = outputs.at("request_output_name_" + std::to_string(i));
-        EXPECT_EQ(output->getShape(), shape_t({1, 50}));
+        EXPECT_EQ(output->getShape(), shape_t({1, 0}));
         EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
     }
 }

@@ -77,8 +77,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-// TODO: Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
-// This needs to be addressed before release.
+// Some unit tests are based on a fact that this node library is dynamic and can take shape{1,3} as input.
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
@@ -86,7 +85,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)->dimsCount = 2;
     (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 1;
-    (*info)->dims[1] = 50;
+    (*info)->dims[1] = 0;
     (*info)->precision = FP32;
     return 0;
 }
@@ -98,7 +97,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)->dimsCount = 2;
     (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 1;
-    (*info)->dims[1] = 50;
+    (*info)->dims[1] = 0;
     (*info)->precision = FP32;
     return 0;
 }
