@@ -703,8 +703,8 @@ Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool 
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt)
-        return StatusCode::OK; // Model has not been loaded yet, so there are no restrictions regarding stateful flag setup
-    
+        return StatusCode::OK;  // Model has not been loaded yet, so there are no restrictions regarding stateful flag setup
+
     auto model = models[modelName];
     if (model->isStateful() != configStatefulFlag)
         return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;

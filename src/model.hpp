@@ -41,7 +41,7 @@ private:
     /**
      * @brief Flag indicating whether model is stateful or not
      */
-    bool isStateful;
+    bool stateful;
 
     GlobalSequencesViewer* globalSequencesViewer;
 
@@ -130,7 +130,7 @@ public:
     }
 
     const bool isStateful() const {
-         return stateful;
+        return stateful;
     }
 
     /**
