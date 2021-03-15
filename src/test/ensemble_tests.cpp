@@ -2404,7 +2404,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToCorruptedModel) {
     createConfigFileWithContent(pipelineOneDummyConfigWithCorruptedModel, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(fileToReload);
-    //ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(status, StatusCode::PATH_INVALID);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
