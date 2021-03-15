@@ -36,6 +36,7 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "stringutils.hpp"
+#include "version.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -101,6 +102,8 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
 }
 
 void logConfig(Config& config) {
+    SPDLOG_INFO("OVMS version: {}", PROJECT_NAME);
+    SPDLOG_INFO("OpenVINO backend version: {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {
         SPDLOG_DEBUG("model_path: {}", config.modelPath());

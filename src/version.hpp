@@ -15,6 +15,6 @@
 //*****************************************************************************
 #ifndef SRC_VERSION_HPP_
 #define SRC_VERSION_HPP_
-#define PROJECT_NAME "REPLACE_PROJECT_NAME"
-#define OPENVINO_NAME "REPLACE_OPENVINO_NAME"
+#define PROJECT_NAME "2021.2.1"
+#define OPENVINO_NAME "2021.2"
 #endif  // SRC_VERSION_HPP_"
