@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <optional>
 #include <string>
 
 #pragma GCC diagnostic push
@@ -21,6 +22,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "logging.hpp"
 #include "node.hpp"
 #include "tensorinfo.hpp"
 
@@ -32,8 +34,9 @@ class EntryNode : public Node {
     const tensorflow::serving::PredictRequest* request;
 
 public:
-    EntryNode(const tensorflow::serving::PredictRequest* request) :
-        Node(ENTRY_NODE_NAME),
+    EntryNode(const tensorflow::serving::PredictRequest* request,
+        std::optional<uint32_t> demultiplyCount = std::nullopt) :
+        Node(ENTRY_NODE_NAME, demultiplyCount),
         request(request) {}
 
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;

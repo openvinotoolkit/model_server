@@ -317,11 +317,11 @@ TEST(SchemaTest, PipelineConfigContainsNotAllowedKeys) {
                         "inputs": [
                             {"b": {"node_name": "request",
                                 "data_item": "custom_dummy_input"}}
-                        ], 
+                        ],
                         "outputs": [
                             {"data_item": "a",
                             "alias": "new_dummy_output"}
-                        ] 
+                        ]
                     }
                 ],
                 "outputs": [
