@@ -520,6 +520,25 @@ TEST(ModelManager, ConfigReloadingNonStateful) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
 }
 
+TEST(ModelManager, ConfigReloadingStatelessToStateful) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    config.setStateful(true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_MODEL_TYPE_CHANGE);
+}
+
+TEST(ModelManager, ConfigReloadingStatefulToStateless) {
+    ConstructorEnabledModelManager manager;
+    auto config = DUMMY_MODEL_CONFIG;
+    config.setStateful(true);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    config.setStateful(false);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_MODEL_TYPE_CHANGE);
+}
+
 class DummyModelDirectoryStructure {
 private:
     std::string modelSourcePath;

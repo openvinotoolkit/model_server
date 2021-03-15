@@ -2738,7 +2738,7 @@ TEST_F(EnsembleFlowTest, EnablingStatefulParamteresForModelUsedInPipeline) {
 
     auto instance = manager.findModelInstance("dummy");
     ASSERT_NE(instance, nullptr);
-    ASSERT_TRUE(instance->getModelConfig().isStateful());
+    ASSERT_FALSE(instance->getModelConfig().isStateful());  // Switching model type is not valid
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
 
