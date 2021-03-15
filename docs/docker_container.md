@@ -485,10 +485,10 @@ Below is a config example using heterogeneous plugin with GPU as a primary devic
 
 ## Security Considerations <a name="sec"></a>
 
-OpenVINO Model Server docker containers, by default, starts with the security context of local account ovms with linux uid 5000. It ensure docker container has not elevated permissions on the host machine. This is in line with best practices to use minimal permissions to run docker applications. You can change the security context by adding --user parameter to docker run command. It might be needed for example to load mounted models with restricted access. For example:
+OpenVINO Model Server docker containers, by default, starts with the security context of local account ovms with linux uid 5000. It ensure docker container has not elevated permissions on the host machine. This is in line with best practices to use minimal permissions to run docker applications. You can change the security context by adding --user parameter to docker run command. It might be needed for example to load mounted models with restricted access. You should also consider adding a --read-only flag to force a container's process to only write to locations that will be persisted with volumes. For example:
 
 ```
-docker run --rm -d  --user $(id -u):$(id -g)  -v ${pwd}/model/:/model -p 9178:9178 openvino/model_server:latest \
+docker run --rm -d  --user $(id -u):$(id -g) --read-only -v ${pwd}/model/:/model -p 9178:9178 openvino/model_server:latest \
 --model_path /model --model_name my_model
 
 ``` 
