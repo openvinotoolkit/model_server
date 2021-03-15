@@ -61,7 +61,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     Status validationResult = pipelineDefinition->validate(manager);
     if (!validationResult.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline definition: {} failed: {}", pipelineName, validationResult.string());
-        if(validationResult == StatusCode::PIPELINE_NAME_OCCUPIED){
+        if (validationResult == StatusCode::PIPELINE_NAME_OCCUPIED) {
             return validationResult;
         }
     }

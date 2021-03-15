@@ -147,7 +147,7 @@ Status ModelManager::startFromConfig() {
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
-    if (status == StatusCode::FILE_INVALID || status == StatusCode::JSON_INVALID){
+    if (status == StatusCode::FILE_INVALID || status == StatusCode::JSON_INVALID) {
         return status;
     }
 
@@ -207,10 +207,10 @@ void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
     }
 }
 
-#define IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status)            \
-    if (!firstErrorStatus) {                                                  \
-        firstErrorStatus = status;                                            \
-    }                                                                         \
+#define IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status) \
+    if (!firstErrorStatus) {                                       \
+        firstErrorStatus = status;                                 \
+    }
 
 Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
     std::string libraryName = nodeConfig["library_name"].GetString();
@@ -312,8 +312,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
         pipelinesInConfigFile.insert(pipelineName);
-        if(!status.ok())
-        {
+        if (!status.ok()) {
             return status;
         }
     }
@@ -354,12 +353,12 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     std::optional<Status> firstErrorStatus;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
         auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
-        if(status != StatusCode::OK) {
+        if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         }
     }
     pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
-    if(firstErrorStatus){
+    if (firstErrorStatus) {
         return *firstErrorStatus;
     }
     return ovms::StatusCode::OK;
@@ -433,7 +432,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     // All loaders are the done. Finalize the list by deleting removed loaders in config
     auto& customloaders = ovms::CustomLoaders::instance();
     customloaders.finalize();
-    if(firstErrorStatus){
+    if (firstErrorStatus) {
         return *firstErrorStatus;
     }
     return ovms::StatusCode::OK;
@@ -470,7 +469,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         }
         status = reloadModelWithVersions(modelConfig);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-        
+
         modelsInConfigFile.emplace(modelName);
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
@@ -490,8 +489,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
     this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile);
-    if(firstErrorStatus)
-    {
+    if (firstErrorStatus) {
         return *firstErrorStatus;
     }
     return ovms::StatusCode::OK;
@@ -559,8 +557,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
     tryReloadGatedModelConfigs(gatedModelConfigs);
-    if(firstErrorStatus)
-    {
+    if (firstErrorStatus) {
         return *firstErrorStatus;
     }
     return StatusCode::OK;
