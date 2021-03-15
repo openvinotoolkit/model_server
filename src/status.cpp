@@ -213,6 +213,7 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
+    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
@@ -302,6 +303,7 @@ const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
+    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
