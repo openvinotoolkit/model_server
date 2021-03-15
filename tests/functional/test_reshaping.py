@@ -37,7 +37,6 @@ fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
 class TestModelReshaping:
-    @pytest.mark.skip(reason="temporarily skipped")
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
         _, ports = start_server_face_detection_model_auto_shape
@@ -50,7 +49,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'],
                                     True, FaceDetection.name, stub)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -68,7 +66,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, FaceDetection.name, stub)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -82,7 +79,6 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -103,7 +99,6 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     def test_multi_local_model_reshaping_auto(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -116,7 +111,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'], True,
                                     "face_detection_auto", stub)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -135,7 +129,6 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, model_name, stub)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -149,7 +142,6 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 
-    @pytest.mark.skip(reason="temporarily skipped")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -169,7 +161,6 @@ class TestModelReshaping:
                                     is_correct, request_format, rest_url)
 
     @staticmethod
-    @pytest.mark.skip(reason="temporarily skipped")
     def run_inference_rest(imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
         if is_correct:
@@ -188,7 +179,6 @@ class TestModelReshaping:
             assert not output
 
     @staticmethod
-    @pytest.mark.skip(reason="temporarily skipped")
     def run_inference_grpc(imgs, out_name, out_shape, is_correct, model_name, stub):
         if is_correct:
             output = infer(imgs, input_tensor=FaceDetection.input_name, grpc_stub=stub,
