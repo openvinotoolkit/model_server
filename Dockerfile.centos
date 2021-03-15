@@ -166,7 +166,7 @@ RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.
 # OPENSSL
 WORKDIR /openssl
 
-RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1h
+RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1j
 RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$JOBS && make --jobs=$JOBS install || true && make --jobs=$JOBS install_runtime
 
 ####### Azure SDK
