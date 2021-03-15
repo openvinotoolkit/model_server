@@ -269,7 +269,7 @@ Average latency= 19.8 ms
 ### Multiple input example for HDDL
 
 
-The purpose of this example is to show how to send inputs from multiple sources(cameras, video files) to a model served from inside the OpenVINO model server(inside docker)
+The purpose of this example is to show how to send inputs from multiple sources (cameras, video files) to a model served from inside the OpenVINO model server (inside docker)
 
 - Pre-requisite
 
