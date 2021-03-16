@@ -43,7 +43,12 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
 
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Size taretShape(targetImageWidth, targetImageHeight);
-        cv::Mat image = crop_and_resize(originalImage, boxes[i], taretShape);
+        cv::Mat image;
+        if (!crop_and_resize(originalImage, image, boxes[i], taretShape)) {
+            std::cout << "box is out of bounds" << std::endl;
+            free(buffer);
+            return 1;
+        }
         if (convertToGrayScale) {
             image = apply_grayscale(image);
         }
@@ -110,6 +115,11 @@ int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<f
     output->dims[2] = 1;
     output->precision = FP32;
     return 0;
+}
+
+void cleanup(CustomNodeTensor& tensor) {
+    free(tensor.data);
+    free(tensor.dims);
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
@@ -269,18 +279,24 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
     if (copy_images_into_output(&textImagesTensor, filteredBoxes, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
+        free(*outputs);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
     if (copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+        free(*outputs);
+        cleanup(textImagesTensor);
         return 1;
     }
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
     if (copy_scores_into_output(&confidenceTensor, filteredScores)) {
+        free(*outputs);
+        cleanup(textImagesTensor);
+        cleanup(coordinatesTensor);
         return 1;
     }
 
