@@ -29,26 +29,62 @@ The metadata are the `text_coordinates` and the `confidence_level` outputs.
 ### East-resnet50 model
 
 The original pretrained model for east-resnet50 topology is stored on https://github.com/argman/EAST in TensorFlow checkpoint format.
-Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to folder.
+
+Clone github repository:
+```bash
+git clone https://github.com/argman/EAST 
+cd EAST 
+```
+Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
-Convert the TensorFlow Model to Intermediate Representation format using the model_optimizer tool. It can be done
-using a public docker image with OpenVINO toolkit:
-```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/east_icdar2015_resnet_v1_50_rbox:/model:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py \
---input_meta_graph /model/model.ckpt-49491.meta --input_shape [1,1024,1920,3] --input split:0 --output model_0/feature_fusion/Conv_7/Sigmoid,model_0/feature_fusion/concat_3 \
---output_dir /model/IR/1/
+Inside the EAST folder add a file `freeze_east_model.py` with the following content:
+```python
+from tensorflow.python.framework import graph_util
+import tensorflow as tf
+import model
+
+def export_model(input_checkpoint, output_graph):
+    with tf.get_default_graph().as_default():
+        input_images = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='input_images')
+        global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
+        f_score, f_geometry = model.model(input_images, is_training=False)
+    graph = tf.get_default_graph()
+    input_graph_def = graph.as_graph_def()
+
+    init_op = tf.global_variables_initializer()
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(init_op)
+        saver.restore(sess, input_checkpoint)
+        output_graph_def = graph_util.convert_variables_to_constants(sess=sess, input_graph_def=input_graph_def, output_node_names=['feature_fusion/concat_3','feature_fusion/Conv_7/Sigmoid'])
+        with tf.gfile.GFile(output_graph, "wb") as f:
+            f.write(output_graph_def.SerializeToString())
+
+export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491',"./model.pb")
 ```
-It will create model files in `${PWD}/east_icdar2015_resnet_v1_50_rbox/IR/1/` folder.
+Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
+
+```bash
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:latest python3 freeze_east_model.py
+```
+
+Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
+```bash
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py \
+--framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3  \
+--input_model /EAST/model.pb --output_dir /EAST/IR/1/
+```
+It will create model files in `${PWD}/IR/1/` folder.
 ```bash
 model.ckpt-49491.bin
 model.ckpt-49491.xml
 ```
 Converted east-reasnet50 model will have the following interface:
-- Input name: `split/placeholder_out_port_0` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
-- Output name: `model_0/feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
-- Output name: `model_0/feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
+- Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
+- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
+- Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
 
 ### CRNN model
 In this pipeline example is used from from https://github.com/MaybeShewill-CV/CRNN_Tensorflow. It includes TensorFlow
