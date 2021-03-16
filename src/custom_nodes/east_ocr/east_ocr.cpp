@@ -45,7 +45,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
         cv::Size taretShape(targetImageWidth, targetImageHeight);
         cv::Mat image;
         if (!crop_and_resize(originalImage, image, boxes[i], taretShape)) {
-            std::cout << "box is out of bounds" << std::endl;
+            std::cout << "box is outside of original image" << std::endl;
             free(buffer);
             return 1;
         }
@@ -169,8 +169,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(scoresTensor->precision == FP32, "image input is not FP32");
     NODE_ASSERT(geometryTensor->precision == FP32, "image input is not FP32");
 
-    uint64_t imageHeight = imageTensor->dims[2];
-    uint64_t imageWidth = imageTensor->dims[3];
+    uint64_t _imageHeight = imageTensor->dims[2];
+    uint64_t _imageWidth = imageTensor->dims[3];
+    NODE_ASSERT(_imageHeight <= std::numeric_limits<int>::max(), "image height is too large");
+    NODE_ASSERT(_imageWidth <= std::numeric_limits<int>::max(), "image width is too large");
+    int imageHeight = static_cast<int>(_imageHeight);
+    int imageWidth = static_cast<int>(_imageWidth);
 
     if (debugMode) {
         std::cout << "Processing input tensor image resolution: " << cv::Size(imageHeight, imageWidth) << "; expected resolution: " << cv::Size(originalImageHeight, originalImageWidth) << std::endl;
@@ -185,8 +189,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
 
-    uint64_t numRows = scoresTensor->dims[2];
-    uint64_t numCols = scoresTensor->dims[3];
+    uint64_t _numRows = scoresTensor->dims[2];
+    uint64_t _numCols = scoresTensor->dims[3];
+    NODE_ASSERT(_numRows <= std::numeric_limits<int>::max(), "score  rows is too large");
+    NODE_ASSERT(_numCols <= std::numeric_limits<int>::max(), "score columns is too large");
+    int numRows = static_cast<int>(_numRows);
+    int numCols = static_cast<int>(_numCols);
 
     NODE_ASSERT(scoresTensor->dims[1] == 1, "scores has dim 1 not equal to 1");
     NODE_ASSERT(geometryTensor->dims[1] == 5, "geometry has dim 1 not equal to 5");
@@ -200,7 +208,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     std::vector<float> scores;
 
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
-    for (uint64_t y = 0; y < numRows; y++) {
+    for (int y = 0; y < numRows; y++) {
         float* scoresData = (float*)scoresTensor->data + (y * numCols);
         float* xData0 = (float*)geometryTensor->data + ((0 * numRows * numCols) + (y * numCols));
         float* xData1 = (float*)geometryTensor->data + ((1 * numRows * numCols) + (y * numCols));
@@ -208,7 +216,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         float* xData3 = (float*)geometryTensor->data + ((3 * numRows * numCols) + (y * numCols));
         float* anglesData = (float*)geometryTensor->data + ((4 * numRows * numCols) + (y * numCols));
 
-        for (uint64_t x = 0; x < numCols; x++) {
+        for (int x = 0; x < numCols; x++) {
             float score = scoresData[x];
             // If our score does not have sufficient probability, ignore it
             if (score < confidenceThreshold) {
@@ -219,8 +227,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
                 std::cout << "Found confidence: " << scoresData[x] << std::endl;
 
             // Compute the offset factor as our resulting feature maps will be 4x smaller than the input image
-            uint64_t offsetX = x * 4;
-            uint64_t offsetY = y * 4;
+            int offsetX = x * 4;
+            int offsetY = y * 4;
 
             // Extract the rotation angle for the prediction and then compute the sin and cosine
             float angle = anglesData[x];
@@ -234,10 +242,18 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             float h = xData0[x] + xData2[x];
             float w = xData1[x] + xData3[x];
 
-            cv::Point2i p2{offsetX + (cos * xData1[x] + sin * xData2[x]), offsetY + (-sin * xData1[x] + cos * xData2[x])};
-            cv::Point2i p1{-sin * h + p2.x, -cos * h + p2.y};
-            cv::Point2i p3{-cos * w + p2.x, sin * w + p2.y};
-            cv::Point2i p4{p3.x + p1.x - p2.x, p3.y + p1.y - p2.y};
+            cv::Point2i p2{
+                offsetX + static_cast<int>(cos * xData1[x] + sin * xData2[x]),
+                offsetY + static_cast<int>(-sin * xData1[x] + cos * xData2[x])};
+            cv::Point2i p1{
+                static_cast<int>(-sin * h) + p2.x,
+                static_cast<int>(-cos * h) + p2.y};
+            cv::Point2i p3{
+                static_cast<int>(-cos * w) + p2.x,
+                static_cast<int>(sin * w) + p2.y};
+            cv::Point2i p4{
+                p3.x + p1.x - p2.x,
+                p3.y + p1.y - p2.y};
 
             int x1 = std::min(std::min(std::min(p2.x, p1.x), p3.x), p4.x);
             int x2 = std::max(std::max(std::max(p2.x, p1.x), p3.x), p4.x);
@@ -254,8 +270,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
                 std::cout << ss.str() << std::endl;
             }
 
-            x1 = std::max(0, (int)(x1 - (x2-x1) * xCornerAdjustment));
-            y1 = std::max(0, (int)(y1 - (y2-y1) * yCornerAdjustment));
+            x1 = std::max(0, (int)(x1 - (x2 - x1) * xCornerAdjustment));
+            y1 = std::max(0, (int)(y1 - (y2 - y1) * yCornerAdjustment));
 
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
