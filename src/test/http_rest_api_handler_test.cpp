@@ -83,7 +83,7 @@ TEST_F(ConfigReload, nonExistingConfigFile) {
     auto status = handler.processConfigReloadRequest(response, manager);
     const char* expectedJson = "{\n\t\"error\": \"Config file not found or cannot open.\"\n}";
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
+    EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED);
 }
 
 static const char* configWithModelNonExistingPath = R"(

@@ -359,9 +359,11 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     bool reloadNeeded = false;
     if (manager.getConfigFilename() != "") {
         status = manager.configFileReloadNeeded(reloadNeeded);
-        if (!status.ok()) {
-            response = createErrorJsonWithMessage("Config file not found or cannot open.");
-            return status;
+        if (!reloadNeeded) {
+            if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {
+                response = createErrorJsonWithMessage("Config file not found or cannot open.");
+                return status;
+            }
         }
     }
 
@@ -372,7 +374,6 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
             return status;
         }
     } else {
-        status = manager.getlastLoadConfigStatus();
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;

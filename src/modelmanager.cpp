@@ -518,7 +518,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "File is invalid {}", jsonFilename);
-        std::shared_lock lock(lastLoadConfigMtx);
         lastLoadConfigStatus = StatusCode::FILE_INVALID;
         return lastLoadConfigStatus;
     }
@@ -526,14 +525,12 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::IStreamWrapper isw(ifs);
     if (configJson.ParseStream(isw).HasParseError()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file.");
-        std::shared_lock lock(lastLoadConfigMtx);
         lastLoadConfigStatus = StatusCode::JSON_INVALID;
         return lastLoadConfigStatus;
     }
 
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
-        std::shared_lock lock(lastLoadConfigMtx);
         lastLoadConfigStatus = StatusCode::JSON_INVALID;
         return lastLoadConfigStatus;
     }
@@ -562,7 +559,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
-    std::shared_lock lock(lastLoadConfigMtx);
     lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
@@ -625,12 +621,13 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     if (stat(configFilename.c_str(), &statTime) != 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
         isNeeded = false;
-        return StatusCode::FILE_INVALID;
+        return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
     bool configFileModified = !(lastConfigChangeTime.tv_sec == statTime.st_ctim.tv_sec && lastConfigChangeTime.tv_nsec == statTime.st_ctim.tv_nsec);
 
     if (configFilename == "" || !configFileModified) {
         isNeeded = false;
+        return lastLoadConfigStatus;
     } else {
         isNeeded = true;
     }
