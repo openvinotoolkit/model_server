@@ -51,7 +51,6 @@
 namespace ovms {
 
 static bool watcherStarted = false;
-Status ModelManager::lastLoadConfigStatus = StatusCode::OK;
 
 ModelManager::ModelManager() :
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
@@ -519,18 +518,24 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "File is invalid {}", jsonFilename);
-        return StatusCode::FILE_INVALID;
+        std::shared_lock lock(lastLoadConfigMtx);
+        lastLoadConfigStatus =  StatusCode::FILE_INVALID;
+        return lastLoadConfigStatus;
     }
     rapidjson::Document configJson;
     rapidjson::IStreamWrapper isw(ifs);
     if (configJson.ParseStream(isw).HasParseError()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file.");
-        return StatusCode::JSON_INVALID;
+        std::shared_lock lock(lastLoadConfigMtx);
+        lastLoadConfigStatus =  StatusCode::JSON_INVALID;
+        return lastLoadConfigStatus;
     }
 
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
-        return StatusCode::JSON_INVALID;
+        std::shared_lock lock(lastLoadConfigMtx);
+        lastLoadConfigStatus = StatusCode::JSON_INVALID;
+        return lastLoadConfigStatus;
     }
     Status status;
     Status firstErrorStatus = StatusCode::OK;
@@ -558,7 +563,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     std::shared_lock lock(lastLoadConfigMtx);
-    ModelManager::lastLoadConfigStatus = firstErrorStatus;
+    lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
 

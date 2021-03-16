@@ -77,7 +77,7 @@ private:
      */
     ModelManager(const ModelManager&) = delete;
 
-    static Status lastLoadConfigStatus;
+    Status lastLoadConfigStatus = StatusCode::OK;
     mutable std::shared_mutex lastLoadConfigMtx;
 
     Status cleanupModelTmpFiles(ModelConfig& config);
