@@ -373,6 +373,10 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         }
     }
     status = manager.updateConfigurationWithoutConfigFile();
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Reloading models versions failed. Check server logs for more info.");
+        return status;
+    }
     if (status == StatusCode::OK_RELOADED) {
         reloadNeeded = true;
     }
@@ -380,13 +384,13 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
     if (!status.ok()) {
-        response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
+        response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
     }
 
     status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, response);
     if (!status.ok()) {
-        response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
+        response = createErrorJsonWithMessage("Serializing model statuses to json failed. Check server logs for more info.");
         return status;
     }
 

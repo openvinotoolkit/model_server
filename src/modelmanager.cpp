@@ -496,14 +496,17 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
 }
 
 Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs) {
+    std::optional<Status> firstErrorStatus;
     for (auto& modelConfig : gatedModelConfigs) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
         auto status = reloadModelWithVersions(modelConfig);
         if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             continue;
         }
         auto it = this->servedModelConfigs.find(modelConfig.getName());
         if (it == this->servedModelConfigs.end()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             continue;
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
@@ -588,12 +591,25 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
+    std::optional<Status> firstErrorStatus;
+    Status status;
     for (auto& [name, config] : servedModelConfigs) {
-        if (reloadModelWithVersions(config) == StatusCode::OK_RELOADED) {
+        status = reloadModelWithVersions(config);
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        } else if (status == StatusCode::OK_RELOADED) {
             reloadNeeded = true;
         }
     }
-    pipelineFactory.revalidatePipelines(*this);
+    status = pipelineFactory.revalidatePipelines(*this);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+
+    if (firstErrorStatus) {
+        return *firstErrorStatus;
+    }
+
     if (reloadNeeded) {
         return StatusCode::OK_RELOADED;
     } else {
