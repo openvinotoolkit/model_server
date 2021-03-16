@@ -24,6 +24,8 @@
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
 
+#include "version.hpp"
+
 namespace ovms {
 
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
@@ -41,6 +43,8 @@ Config& Config::parse(int argc, char** argv) {
         options->add_options()
             ("h, help",
                 "Show this help message and exit")
+            ("version",
+                "Show binary version")
             ("port",
                 "gRPC server port",
                 cxxopts::value<uint64_t>()->default_value("9178"),
@@ -144,6 +148,12 @@ Config& Config::parse(int argc, char** argv) {
         // clang-format on
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
+
+        if (result->count("version")) {
+            std::cout << PROJECT_NAME << std::endl;
+            std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            exit(EX_OK);
+        }
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
