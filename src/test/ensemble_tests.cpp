@@ -2239,7 +2239,6 @@ TEST_F(EnsembleFlowTest, RetireAllPipelinesAfterLoading) {
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(fileToReload);
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "STATUS: {}", status.string());
     ASSERT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);

@@ -307,7 +307,7 @@ TEST_F(ModelManager, loadConfigManyThreads) {
     std::filesystem::create_directory("/tmp/models/dummy1");
     std::filesystem::create_directory("/tmp/models/dummy2");
     auto status = manager.startFromFile(configFile);
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     int numberOfThreads = 10;
