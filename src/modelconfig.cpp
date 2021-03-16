@@ -359,6 +359,7 @@ Status ModelConfig::parseModelMapping() {
 Status ModelConfig::parseNode(const rapidjson::Value& v) {
     this->setName(v["name"].GetString());
     this->setBasePath(v["base_path"].GetString());
+    Status firstErrorStatus = StatusCode::OK;
 
     // Check for optional parameters
     if (v.HasMember("batch_size")) {
@@ -380,7 +381,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         // Legacy format as string
         if (v["shape"].IsString()) {
             ShapeInfo shapeInfo;
-            if (!parseShape(shapeInfo, v["shape"].GetString()).ok()) {
+            auto status = parseShape(shapeInfo, v["shape"].GetString());
+            if (!status.ok()) {
+                if(!firstErrorStatus.ok())
+                {
+                    firstErrorStatus = status;
+                }
                 SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
             }
             this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
@@ -398,7 +404,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     ShapeInfo shapeInfo;
                     // check if legacy format is used
                     if (s.value.IsString()) {
-                        if (!ModelConfig::parseShape(shapeInfo, s.value.GetString()).ok()) {
+                        auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
+                        if (!status.ok()) {
+                            if(!firstErrorStatus.ok())
+                            {
+                                firstErrorStatus = status;
+                            }
                             SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
                         }
                     } else {
@@ -427,7 +438,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     if (v.HasMember("plugin_config")) {
-        if (!parsePluginConfig(v["plugin_config"]).ok()) {
+        auto status = parsePluginConfig(v["plugin_config"]);
+        if (!status.ok()) {
+            if(!firstErrorStatus.ok())
+            {
+                firstErrorStatus = status;
+            }
             SPDLOG_WARN("Couldn't parse plugin config");
         }
     }
@@ -470,6 +486,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         v["model_version_policy"].Accept(writer);
         const auto& status = parseModelVersionPolicy(buffer.GetString());
         if (!status.ok()) {
+            if(!firstErrorStatus.ok())
+            {
+                firstErrorStatus = status;
+            }
+            SPDLOG_WARN("Couldn't parse plugin config");
             SPDLOG_WARN("Couldn't parse model version policy. {}", status.string());
         }
     } else {

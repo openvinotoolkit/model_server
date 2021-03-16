@@ -304,6 +304,7 @@ TEST_F(ModelManager, loadConfigManyThreads) {
     MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
+    std::filesystem::create_directory("/tmp/models");
     std::filesystem::create_directory("/tmp/models/dummy1");
     std::filesystem::create_directory("/tmp/models/dummy2");
     auto status = manager.startFromFile(configFile);

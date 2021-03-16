@@ -416,8 +416,8 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         CustomLoaderConfig loaderConfig;
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             SPDLOG_ERROR("Parsing loader: {} config failed", loaderName);
-            return status;
         }
 
         auto retVal = createCustomLoader(loaderConfig);
