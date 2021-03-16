@@ -208,7 +208,7 @@ void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
 }
 
 #define IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status) \
-    if (firstErrorStatus.ok()) {                                       \
+    if (firstErrorStatus.ok()) {                                   \
         firstErrorStatus = status;                                 \
     }
 
