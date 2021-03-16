@@ -360,7 +360,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
             getName(),
             getVersion(),
             config.getTargetDevice());
-        return StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
+        return status;
     }
     SPDLOG_INFO("Plugin config for device {}:", targetDevice);
     for (const auto pair : pluginConfig) {
@@ -515,17 +515,31 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
 }
 
 Status ModelInstance::recoverFromReloadingError(const Status& status) {
-    SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Reloading to previous configuration",
+    SPDLOG_WARN("Failed to perform complete reload with requested dynamic parameter. Model: {} version: {} with error: {}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
     bool changeStatus{false};
     unloadModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config);
     if (!recoveryStatus.ok()) {
-        SPDLOG_WARN("Failed to reload model: {} version: {} to previous configuration with error: {}",
+        SPDLOG_WARN("Failed to recover model: {} version: {} to previous configuration with error: {}",
             getName(), getVersion(), recoveryStatus.string());
     }
     return status;
+}
+
+Status ModelInstance::reshapeWithFullReload(const Status& status, const DynamicModelParameter& parameter) {
+    SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Trying to perform complete reload with requested dynamic parameter",
+        getName(), getVersion(), status.string());
+    bool changeStatus{false};
+    unloadModel(changeStatus);
+
+    auto recoveryStatus = reloadModel(config, parameter);
+    if (!recoveryStatus.ok()) {
+        SPDLOG_WARN("Failed to reload model: {} version: {} to previous configuration with error: {}",
+            getName(), getVersion(), recoveryStatus.string());
+    }
+    return recoveryStatus;
 }
 
 Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
@@ -548,10 +562,12 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
 
     auto status = reloadModel(config, parameter);
     if (!status.ok()) {
-        return this->recoverFromReloadingError(status);
-    } else {
-        unloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
+        status = this->reshapeWithFullReload(status, parameter);
+        if (!status.ok()) {
+            return this->recoverFromReloadingError(status);
+        }
     }
+    unloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
     return status;
 }
 

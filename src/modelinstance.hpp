@@ -298,6 +298,16 @@ private:
          */
     Status recoverFromReloadingError(const Status& status);
 
+    /**
+         * @brief Perform full engine/network reload with dynamic parameter
+         * 
+         * @param status returned from reload operation
+         * @param parameter requested dynamic parameter
+         * 
+         * @return Status
+         */
+    Status reshapeWithFullReload(const Status& status, const DynamicModelParameter& parameter);
+
 public:
     /**
          * @brief A default constructor
