@@ -519,7 +519,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!ifs.good()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "File is invalid {}", jsonFilename);
         std::shared_lock lock(lastLoadConfigMtx);
-        lastLoadConfigStatus =  StatusCode::FILE_INVALID;
+        lastLoadConfigStatus = StatusCode::FILE_INVALID;
         return lastLoadConfigStatus;
     }
     rapidjson::Document configJson;
@@ -527,7 +527,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (configJson.ParseStream(isw).HasParseError()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file.");
         std::shared_lock lock(lastLoadConfigMtx);
-        lastLoadConfigStatus =  StatusCode::JSON_INVALID;
+        lastLoadConfigStatus = StatusCode::JSON_INVALID;
         return lastLoadConfigStatus;
     }
 
