@@ -34,7 +34,7 @@ Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterfac
 }
 
 Status CustomLoaders::remove(const std::string& name) {
-    SPDLOG_INFO("Removing loder {} from loaders list", name);
+    SPDLOG_INFO("Removing loader {} from loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
@@ -57,7 +57,7 @@ std::shared_ptr<CustomLoaderInterface> CustomLoaders::find(const std::string& na
 }
 
 Status CustomLoaders::move(const std::string& name) {
-    SPDLOG_INFO("Moving loder {} from old to new loaders list", name);
+    SPDLOG_INFO("Moving loader {} from old to new loaders list", name);
     auto loaderIt = customLoaderInterfacePtrs.find(name);
 
     if (loaderIt == customLoaderInterfacePtrs.end()) {
