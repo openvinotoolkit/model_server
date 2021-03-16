@@ -304,7 +304,7 @@ TEST(ModelManager, loadConfigManyThreads) {
 
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(status.ok());
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     int numberOfThreads = 10;
