@@ -322,7 +322,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         std::move(connections),
         manager);
     pipelinesInConfigFile.insert(pipelineName);
-    return StatusCode::OK;
+    return status;
 }
 
 Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
@@ -509,9 +509,6 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctim;
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
@@ -550,7 +547,15 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
-    tryReloadGatedModelConfigs(gatedModelConfigs);
+    status = tryReloadGatedModelConfigs(gatedModelConfigs);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+    if (firstErrorStatus.ok()) {
+        struct stat statTime;
+        stat(configFilename.c_str(), &statTime);
+        lastConfigChangeTime = statTime.st_ctim;
+    }
     return firstErrorStatus;
 }
 

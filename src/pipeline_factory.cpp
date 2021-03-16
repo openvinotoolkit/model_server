@@ -62,6 +62,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     if (!validationResult.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline definition: {} failed: {}", pipelineName, validationResult.string());
         if (validationResult == StatusCode::PIPELINE_NAME_OCCUPIED) {
+            pipelineDefinition->resetSubscriptions(manager);
             return validationResult;
         }
     }
@@ -69,11 +70,8 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} finished", pipelineName);
-    if (!validationResult.ok()) {
-        return validationResult;
-    }
-    return StatusCode::OK;
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} succeeded", pipelineName);
+    return validationResult;
 }
 
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,

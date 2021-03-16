@@ -486,7 +486,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
-            SPDLOG_WARN("Couldn't parse plugin config");
             SPDLOG_WARN("Couldn't parse model version policy. {}", status.string());
         }
     } else {

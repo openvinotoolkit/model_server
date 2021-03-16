@@ -108,7 +108,7 @@ TEST_F(ConfigReload, nonExistingModelPathInConfig) {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto status = handler.processConfigReloadRequest(response, manager);
-    const char* expectedJson = "{\n\t\"error\": \"Reloading models versions failed. Check server logs for more info.\"\n}";
+    const char* expectedJson = "{\n\t\"error\": \"Reloading config file failed. Check server logs for more info.\"\n}";
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
@@ -141,23 +141,9 @@ TEST_F(ConfigReload, duplicatedModelNameInConfig) {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto status = handler.processConfigReloadRequest(response, manager);
-    const char* expectedJson = R"({
-"dummy" : 
-{
- "model_version_status": [
-  {
-   "version": "1",
-   "state": "AVAILABLE",
-   "status": {
-    "error_code": "OK",
-    "error_message": "OK"
-   }
-  }
- ]
-}
-})";
+    const char* expectedJson = "{\n\t\"error\": \"Reloading config file failed. Check server logs for more info.\"\n}";
     EXPECT_EQ(expectedJson, response);
-    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
+    EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_OCCUPIED);
 }
 
 TEST_F(ConfigReload, startWith1DummyThenReload) {
@@ -540,6 +526,59 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipelineWithInvalidOutputs) {
     EXPECT_EQ(status, ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_DATA_SOURCE);
 }
 
+TEST_F(ConfigReload, reloadWithInvalidPipelineConfigManyThreads) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1Dummy);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    RemoveConfig();
+    SetUpConfig(configWithPipelineWithInvalidOutputs);
+    int numberOfThreads = 2;
+    std::vector<std::thread> threads;
+    std::function<void()> func = [&handler, &manager]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::string response;
+        EXPECT_EQ(handler.processConfigReloadRequest(response, manager), ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_DATA_SOURCE);
+    };
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        threads.push_back(std::thread(func));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
+
+TEST_F(ConfigReload, reloadWithInvalidModelConfigManyThreads) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1Dummy);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    RemoveConfig();
+    SetUpConfig(configWithDuplicatedModelName);
+    int numberOfThreads = 2;
+    std::vector<std::thread> threads;
+    std::function<void()> func = [&handler, &manager]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::string response;
+        EXPECT_EQ(handler.processConfigReloadRequest(response, manager), ovms::StatusCode::MODEL_NAME_OCCUPIED);
+    };
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        threads.push_back(std::thread(func));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
 static const char* configWithPipelineContainsNonExistingModel = R"(
 {
     "model_config_list": [
