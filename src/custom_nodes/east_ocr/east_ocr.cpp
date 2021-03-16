@@ -150,13 +150,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         }
     }
 
+    NODE_ASSERT(imageTensor != nullptr, "Missing input image");
+    NODE_ASSERT(scoresTensor != nullptr, "Missin input scores");
+    NODE_ASSERT(geometryTensor != nullptr, "Missing input geometry");
     NODE_ASSERT(imageTensor->precision == FP32, "image input is not FP32");
     NODE_ASSERT(scoresTensor->precision == FP32, "image input is not FP32");
     NODE_ASSERT(geometryTensor->precision == FP32, "image input is not FP32");
-
-    NODE_ASSERT(imageTensor, "Missing image input");
-    NODE_ASSERT(scoresTensor, "Missing scores input");
-    NODE_ASSERT(geometryTensor, "Missing geometry input");
 
     uint64_t imageHeight = imageTensor->dims[2];
     uint64_t imageWidth = imageTensor->dims[3];
@@ -266,6 +265,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     *outputsCount = 3;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
 
+    NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
     if (copy_images_into_output(&textImagesTensor, filteredBoxes, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
