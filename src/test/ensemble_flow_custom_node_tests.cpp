@@ -902,9 +902,9 @@ protected:
         this->loadConfiguration(pipelineCustomNodeConfig);
     }
 
-    void loadConfiguration(const char* configContent) {
+    void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
         createConfigFileWithContent(configContent, configJsonFilePath);
-        ASSERT_EQ(manager.loadConfig(configJsonFilePath), StatusCode::OK);
+        ASSERT_EQ(manager.loadConfig(configJsonFilePath), expectedStatus);
     }
 
     void checkResponseForCorrectConfiguration() {
@@ -981,7 +981,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig);
+    this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     response.Clear();
 
@@ -1169,7 +1169,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRest
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig);
+    this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     response.Clear();
 

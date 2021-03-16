@@ -2403,8 +2403,9 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingFailDueToCorruptedModel) {
     createConfigFileWithContent(pipelineOneDummyConfigWithCorruptedModel, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_TRUE(status.ok()) << status.string();
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(status, StatusCode::PATH_INVALID);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
@@ -2824,7 +2825,7 @@ TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
     createConfigFileWithContent(pipelineModelSameNameConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(status, StatusCode::PIPELINE_NAME_OCCUPIED);
 
     ASSERT_FALSE(manager.getPipelineFactory().definitionExists(PIPELINE_1_DUMMY_NAME));
 
@@ -3036,9 +3037,10 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
 
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
 static const char* pipelineDemultiplexerShape = R"(
@@ -3090,7 +3092,8 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
 
-    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME), nullptr);
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }

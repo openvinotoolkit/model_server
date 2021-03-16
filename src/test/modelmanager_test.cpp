@@ -207,12 +207,18 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     modelMock.reset();
 }
 
+void setupModelsDirs() {
+    std::filesystem::create_directory("/tmp/models");
+    std::filesystem::create_directory("/tmp/models/dummy1");
+    std::filesystem::create_directory("/tmp/models/dummy2");
+}
+
 TEST(ModelManager, configRelodNotNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-
+    setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -242,7 +248,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-
+    setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -301,8 +307,9 @@ TEST(ModelManager, loadConfigManyThreads) {
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-
+    setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
+
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
