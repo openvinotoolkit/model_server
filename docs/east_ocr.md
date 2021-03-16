@@ -201,12 +201,13 @@ if the image was analyzed correctly.
 
 |Exemplary input image: |
 | --- |
-| ![image]("../src/custom_nodes/east_ocr/demo_images/input.jpg)|
+| ![image](../src/custom_nodes/east_ocr/demo_images/input.jpg)|
 
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-
-![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)
+                                     
+| --- | --- |                                                           
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)    |
 ![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)
 ![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)
 ![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)
