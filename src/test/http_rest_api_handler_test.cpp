@@ -100,11 +100,13 @@ static const char* configWithModelNonExistingPath = R"(
 
 TEST_F(ConfigReload, nonExistingModelPathInConfig) {
     ModelManagerTest manager;
-    SetUpConfig(configWithModelNonExistingPath);
+    SetUpConfig(configWith1Dummy);
     LoadConfig(manager);
 
     auto handler = ovms::HttpRestApiHandler(10);
     std::string response;
+    RemoveConfig();
+    SetUpConfig(configWithModelNonExistingPath);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto status = handler.processConfigReloadRequest(response, manager);

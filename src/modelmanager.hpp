@@ -77,6 +77,9 @@ private:
      */
     ModelManager(const ModelManager&) = delete;
 
+    static Status lastLoadConfigStatus;
+    mutable std::shared_mutex lastLoadConfigMtx;
+
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
@@ -349,6 +352,11 @@ public:
      * @return Status 
      */
     Status loadConfig(const std::string& jsonFilename);
+
+    const Status getlastLoadConfigStatus() {
+        std::shared_lock lock(lastLoadConfigMtx);
+        return lastLoadConfigStatus;
+    }
 
     /**
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions

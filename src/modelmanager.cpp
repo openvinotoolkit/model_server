@@ -51,6 +51,7 @@
 namespace ovms {
 
 static bool watcherStarted = false;
+Status ModelManager::lastLoadConfigStatus = StatusCode::OK;
 
 ModelManager::ModelManager() :
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
@@ -510,6 +511,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
 
+    struct stat statTime;
+    stat(configFilename.c_str(), &statTime);
+    lastConfigChangeTime = statTime.st_ctim;
+
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
@@ -551,11 +556,9 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
-    if (firstErrorStatus.ok()) {
-        struct stat statTime;
-        stat(configFilename.c_str(), &statTime);
-        lastConfigChangeTime = statTime.st_ctim;
-    }
+
+    std::shared_lock lock(lastLoadConfigMtx);
+    ModelManager::lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
 
