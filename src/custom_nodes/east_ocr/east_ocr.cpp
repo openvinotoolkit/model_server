@@ -142,6 +142,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     int maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
+    float xCornerAdjustment = get_float_parameter("x_corner_adjustment", params, paramsCount, 0.12);
+    float yCornerAdjustment = get_float_parameter("y_corner_adjustment", params, paramsCount, 0.3);
 
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
@@ -252,7 +254,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
                 std::cout << ss.str() << std::endl;
             }
 
-            rects.emplace_back(x1, y1, x2 - x1 - 1, y2 - y1 - 1);
+            x1 = std::max(0, (int)(x1 - (x2-x1) * xCornerAdjustment));
+            y1 = std::max(0, (int)(y1 - (y2-y1) * yCornerAdjustment));
+
+            rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
         }
     }
