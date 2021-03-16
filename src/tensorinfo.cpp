@@ -37,7 +37,8 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision(precision),
-    shape(shape) {}
+    shape(shape),
+    layout(InferenceEngine::Layout::ANY) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Precision& precision,
