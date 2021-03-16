@@ -200,8 +200,9 @@ With additional parameter `--text_images_save_path` the client script saves all 
 if the image was analyzed correctly.
 
 Below is depicted the exemplary imput image:
-|![input image](../src/custom_nodes/east_ocr/demo_images/input.jpg)|
--
+<kbd>
+<img src="../src/custom_nodes/east_ocr/demo_images/input.jpg>
+</kbd>
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
 
