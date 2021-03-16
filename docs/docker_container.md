@@ -71,7 +71,7 @@ It will generate the images, tagged as :
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 </details>
 
-Note: Latest images include OpenVINO 2021.2 release.
+Note: Latest images include OpenVINO 2021.3 release.
 
 
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>

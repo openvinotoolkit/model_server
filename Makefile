@@ -49,7 +49,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= releases/2021/2
 
-DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.3.330.tgz
+DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_latest.tgz
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
@@ -81,14 +81,14 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL=http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.3.323.tgz
+  DLDT_PACKAGE_URL=http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.3.338.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.2"
+PRODUCT_VERSION ?= "2021.3"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
