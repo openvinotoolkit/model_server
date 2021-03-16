@@ -25,8 +25,5 @@ COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN /opt/rh/devtoolset-8/root/bin/g++  -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/opencv/include/
+RUN /opt/rh/devtoolset-8/root/bin/g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
 RUN /opt/rh/devtoolset-8/root/bin/g++ -shared -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o -L/opencv/lib/ -I/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
-
-
-
