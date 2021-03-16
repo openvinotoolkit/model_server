@@ -69,7 +69,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} succeeded", pipelineName);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} finished", pipelineName);
     if (!validationResult.ok()) {
         return validationResult;
     }
