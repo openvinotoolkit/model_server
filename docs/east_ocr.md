@@ -199,19 +199,18 @@ Output: name[text_coordinates]
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg file to confirm
 if the image was analyzed correctly.
 
-|Exemplary input image: |
-| --- |
 | ![image](../src/custom_nodes/east_ocr/demo_images/input.jpg)|
+| --- |
+| Exemplary input image |
 
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-| | |                                  
-| --- | --- |                                                       
-| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)    |
-
-![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)
-![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)
-![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)
-![text4](../src/custom_nodes/east_ocr/demo_images/text_4.jpg)
-![text5](../src/custom_nodes/east_ocr/demo_images/text_5.jpg)
-![text6](../src/custom_nodes/east_ocr/demo_images/text_6.jpg)
+| #| Image | CRNN Recognition |                     
+| --- | --- | --- |                                                      
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)| s_______e__r__v___e_____r |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)| g______d___a__n___s_____k |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)| mm______oo___d____e____ll |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)| oo____pp_e_n__v_inn_____o |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_4.jpg)| p_____i_p___elliinn_____e |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_5.jpg)| ii____nn____tt__ee_____ll |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_6.jpg)| 2_______0_____2_________1 |
