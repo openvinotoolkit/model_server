@@ -383,8 +383,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             ShapeInfo shapeInfo;
             auto status = parseShape(shapeInfo, v["shape"].GetString());
             if (!status.ok()) {
-                if(!firstErrorStatus.ok())
-                {
+                if (!firstErrorStatus.ok()) {
                     firstErrorStatus = status;
                 }
                 SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
@@ -406,8 +405,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     if (s.value.IsString()) {
                         auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
                         if (!status.ok()) {
-                            if(!firstErrorStatus.ok())
-                            {
+                            if (!firstErrorStatus.ok()) {
                                 firstErrorStatus = status;
                             }
                             SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
@@ -440,8 +438,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("plugin_config")) {
         auto status = parsePluginConfig(v["plugin_config"]);
         if (!status.ok()) {
-            if(!firstErrorStatus.ok())
-            {
+            if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
             SPDLOG_WARN("Couldn't parse plugin config");
@@ -486,8 +483,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         v["model_version_policy"].Accept(writer);
         const auto& status = parseModelVersionPolicy(buffer.GetString());
         if (!status.ok()) {
-            if(!firstErrorStatus.ok())
-            {
+            if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
             SPDLOG_WARN("Couldn't parse plugin config");
