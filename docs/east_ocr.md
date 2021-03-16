@@ -205,9 +205,10 @@ if the image was analyzed correctly.
 
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-                                     
-| --- | --- |                                                           
+                                  
+| --- | --- |                                                       
 | text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)    |
+
 ![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)
 ![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)
 ![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)
