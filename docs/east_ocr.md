@@ -178,19 +178,36 @@ wget https://p0.pxfuel.com/preview/518/700/866/australia-road-signs-note-sunset.
 ```
 Now you can run the client:
 ```bash
-python east_ocr_client.py --image_input_path australia-road-signs-note-sunset.jpg --grpc_port 9000 --pipeline_name detect_text_images
-Output: name[confidence_levels]
-    numpy => shape[(3, 1, 1)] data[float32]
-Output: name[text_images]
-    numpy => shape[(3, 1, 3, 32, 100)] data[float32]
-Output: name[text_coordinates]
-    numpy => shape[(3, 1, 4)] data[int32]
+python east_ocr_client.py --grpc_port 7777 --image_input_path ../src/custom_node/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path text
 Output: name[texts]
-    numpy => shape[(3, 25, 1, 37)] data[float32]
-c____r___aa___f____t_____
-c__o_m__mm__u_n__iity____
-com___e__r__c_i_a_ll____e
+    numpy => shape[(7, 25, 1, 37)] data[float32]
+s_______e__r__v___e_____r
+g______d___a__n___s_____k
+mm______oo___d____e____ll
+oo____pp_e_n__v_inn_____o
+p_____i_p___elliinn_____e
+ii____nn____tt__ee_____ll
+2_______0_____2_________1
+Output: name[confidence_levels]
+    numpy => shape[(7, 1, 1)] data[float32]
+Output: name[text_images]
+    numpy => shape[(7, 1, 3, 32, 100)] data[float32]
+Output: name[text_coordinates]
+    numpy => shape[(7, 1, 4)] data[int32]
 ```
 
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg file to confirm
 if the image was analyzed correctly.
+
+Below is depicted the exemplary imput image:
+![input image](../src/custom_nodes/east_ocr/demo_images/input.jpg)
+
+The custom node generates the following text images retrieved from the original input to CRNN model:
+
+![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)
+![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)
+![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)
+![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)
+![text4](../src/custom_nodes/east_ocr/demo_images/text_4.jpg)
+![text5](../src/custom_nodes/east_ocr/demo_images/text_5.jpg)
+![text6](../src/custom_nodes/east_ocr/demo_images/text_6.jpg)
