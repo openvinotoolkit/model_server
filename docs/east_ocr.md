@@ -172,10 +172,7 @@ From the context of [example_client](../example_client) folder install python3 r
 ```bash
 pip install -r client_requirements.txt
 ``` 
-Next download the image to process:
-```bash
-wget https://p0.pxfuel.com/preview/518/700/866/australia-road-signs-note-sunset.jpg
-```
+
 Now you can run the client:
 ```bash
 python east_ocr_client.py --grpc_port 7777 --image_input_path ../src/custom_node/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path text
