@@ -18,6 +18,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cmath>
 
 #include "../../custom_node_interface.h"
 #include "opencv2/opencv.hpp"
@@ -71,9 +72,17 @@ const cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     return image;
 }
 
-bool crop_and_resize(cv::Mat originalImage, cv::Mat& targetImage, cv::Rect roi, cv::Size targetShape) {
+bool crop_rotate_resize(cv::Mat originalImage, cv::Mat& targetImage, cv::Rect roi, float angle, float originalTextWidth, float originalTextHeight, cv::Size targetShape) {
+    cv::Mat cropped = originalImage(roi);
+    cv::Mat rotationMatrix = cv::getRotationMatrix2D(cv::Point2f(cropped.size().width / 2, cropped.size().height / 2), angle * (180.0 / M_PI), 1.0);
+    cv::Mat rotated;
+    cv::warpAffine(cropped, rotated, rotationMatrix, cropped.size());
+
+    int sliceOffset = (rotated.size().height - originalTextHeight) / 2;
+
     try {
-        cv::resize(originalImage(roi), targetImage, targetShape);
+        cv::Mat rotatedSlicedImage = rotated(cv::Rect(0, sliceOffset, rotated.size().width, originalTextHeight));
+        cv::resize(rotatedSlicedImage, targetImage, targetShape);
     } catch (const cv::Exception& e) {
         std::cout << e.what() << std::endl;
         return false;

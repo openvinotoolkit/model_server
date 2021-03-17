@@ -29,7 +29,13 @@ static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
 static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
 
-int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale) {
+struct BoxMetadata {
+    float angle;
+    float originalWidth;
+    float originalHeight;
+};
+
+int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale) {
     uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -42,9 +48,9 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
-        cv::Size taretShape(targetImageWidth, targetImageHeight);
+        cv::Size targetShape(targetImageWidth, targetImageHeight);
         cv::Mat image;
-        if (!crop_and_resize(originalImage, image, boxes[i], taretShape)) {
+        if (!crop_rotate_resize(originalImage, image, boxes[i], -metadata[i].angle, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
             std::cout << "box is outside of original image" << std::endl;
             free(buffer);
             return 1;
@@ -206,6 +212,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     std::vector<cv::Rect> rects;
     std::vector<float> scores;
+    std::vector<BoxMetadata> metadata;
 
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
     for (int y = 0; y < numRows; y++) {
@@ -275,6 +282,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
+            metadata.emplace_back(BoxMetadata{angle, w * (1+xCornerAdjustment), h * (1+yCornerAdjustment)});
         }
     }
 
@@ -283,15 +291,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     std::vector<cv::Rect> filteredBoxes;
     std::vector<float> filteredScores;
-    nms2(rects, scores, filteredBoxes, filteredScores, overlapThreshold);
+    std::vector<BoxMetadata> filteredMetadata;
+    nms2(rects, scores, metadata, filteredBoxes, filteredScores, filteredMetadata, overlapThreshold);
     NODE_ASSERT(filteredBoxes.size() == filteredScores.size(), "filtered boxes and scores are not equal length");
     if (filteredBoxes.size() > maxOutputBatch) {
         filteredBoxes.resize(maxOutputBatch);
         filteredScores.resize(maxOutputBatch);
     }
 
-    if (debugMode)
+    if (debugMode) {
         std::cout << "Total findings after NMS2 (non max suppression) filter: " << filteredBoxes.size() << std::endl;
+    }
 
     *outputsCount = 3;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
@@ -299,7 +309,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (copy_images_into_output(&textImagesTensor, filteredBoxes, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
+    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
         free(*outputs);
         return 1;
     }
