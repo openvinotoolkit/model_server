@@ -1035,11 +1035,14 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
     return StatusCode::OK;
 }
 
-std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape) {
+std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
     if (gatherShape.size() == 0) {
         return tensorInfo;
     }
     shape_t newShape = tensorInfo->getShape();
+    if (isConnectionFromDemultiplexer) {
+        newShape.erase(newShape.begin());
+    }
     newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
     return tensorInfo->createCopyWithNewShape(newShape);
 }
@@ -1058,7 +1061,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(instance->getOutputsInfo().at(finalName), gatherShape);
+        outputsInfo[realName] = applyGatherShapeForTensor(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1074,7 +1077,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(info.at(finalName), gatherShape);
+        outputsInfo[realName] = applyGatherShapeForTensor(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1191,8 +1194,9 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
 
             shape.emplace_back(demultiplyCount);
         }
-        for (const auto& [previousNodeName, _] : this->connections.at(nodeName)) {
-            search(previousNodeName);
+
+        if (this->connections.at(nodeName).size() > 0) {
+            search(this->connections.at(nodeName).begin()->first);
         }
     };
     search(info.nodeName);
