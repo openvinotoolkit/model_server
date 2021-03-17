@@ -1,5 +1,6 @@
+#!/bin/bash
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +15,25 @@
 # limitations under the License.
 #
 
-.PHONY: centos redhat
-all: centos redhat
+set -e
+set -x
 
-centos:
-	docker build -f Dockerfile.centos -t ovms:centos --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+mkdir -vp /root/pkg/{src,bin,internal_src}
 
-redhat:
-	docker build -f Dockerfile.redhat -t ovms:redhat --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+yum install -y xz
 
+cd /rpmbuild
+tar -xf ovms-rpmbuild-deps.tar.xz
+cp -v pkg/src/* /root/pkg/internal_src/
+cp -v pkg/bin/* /root/pkg/bin/
+
+cd /root/pkg/bin/
+rpm -i *.rpm
+cd ../
+
+ls -lah ./src/
+ls -lah ./internal_src/
+ls -lah ./bin/
+
+cd ..
+tar cvzf rpms.tar.xz ./pkg

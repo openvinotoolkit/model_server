@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ BASE_OS_TAG_CLEARLINUX ?= latest
 BASE_OS_TAG_REDHAT ?= 8.2
 
 INSTALL_RPMS_FROM_URL ?=
+INSTALL_DRIVER_VERSION ?=
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -196,6 +197,7 @@ endif
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
     	--build-arg no_proxy=$(NO_PROXY) \
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
@@ -320,11 +322,11 @@ test_functional: venv
 
 
 tools_get_deps:
-	cd tools/deps && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
-	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
-	docker run -d --rm --name  $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
+	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
+	-docker rm -f ovms-$(BASE_OS)-deps
+	docker run -d --rm --name  ovms-$(BASE_OS)-deps  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
 	sleep 5
-	docker cp $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG):/root/rpms.tar.xz ./
+	docker cp ovms-$(BASE_OS)-deps:/root/rpms.tar.xz ./
 	sleep 5
-	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
+	-docker rm -f ovms-$(BASE_OS)-deps
 	@echo "Success! Dependencies saved to rpms.tar.xz in this directory"

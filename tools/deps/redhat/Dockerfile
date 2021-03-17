@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,17 @@
 # limitations under the License.
 #
 
-.PHONY: centos redhat
-all: centos redhat
+FROM registry.access.redhat.com/ubi8/ubi:8.2 as rpmbuild
 
-centos:
-	docker build -f Dockerfile.centos -t ovms:centos --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+WORKDIR /root
+COPY rpmbuild.sh /root/
+RUN /root/rpmbuild.sh
 
-redhat:
-	docker build -f Dockerfile.redhat -t ovms:redhat --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+FROM registry.access.redhat.com/ubi8/ubi:8.2
 
+RUN mkdir /rpmbuild/
+COPY --from=rpmbuild /ovms-rpmbuild-deps.tar.xz /rpmbuild/
+COPY get.sh /
+RUN /get.sh
+
+ENTRYPOINT [ "sleep", "360" ]
