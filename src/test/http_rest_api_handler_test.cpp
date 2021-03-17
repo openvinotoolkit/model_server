@@ -289,6 +289,78 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     std::filesystem::remove_all("/tmp/dummy");
 }
 
+TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1DummyInTmp);
+    std::filesystem::remove_all("/tmp/dummy");
+    std::filesystem::create_directory("/tmp/dummy");
+    std::filesystem::create_directory("/tmp/dummy/1");
+    std::filesystem::copy("/ovms/src/test/dummy/1/dummy.bin", "/tmp/dummy/1/dummy.bin", std::filesystem::copy_options::recursive);
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson1 = "{\n\t\"error\": \"Reloading config file failed. Check server logs for more info.\"\n}";
+    auto status = handler.processConfigReloadRequest(response, manager);
+
+    EXPECT_EQ(expectedJson1, response);
+    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
+
+    std::filesystem::copy("/ovms/src/test/dummy/1/dummy.xml", "/tmp/dummy/1/dummy.xml", std::filesystem::copy_options::recursive);
+
+    const char* expectedJson2 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    status = handler.processConfigReloadRequest(response, manager);
+
+    EXPECT_EQ(expectedJson2, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+    std::filesystem::remove_all("/tmp/dummy");
+}
+
+TEST_F(ConfigReload, startWithEmptyModelDir) {
+    ModelManagerTest manager;
+    SetUpConfig(configWith1DummyInTmp);
+    std::filesystem::remove_all("/tmp/dummy");
+    std::filesystem::create_directory("/tmp/dummy");
+
+    auto handler = ovms::HttpRestApiHandler(10);
+    std::string response;
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LoadConfig(manager);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson = R"({
+"dummy" : 
+{
+ "model_version_status": []
+}
+})";
+    auto status = handler.processConfigReloadRequest(response, manager);
+
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
+
+    std::filesystem::remove_all("/tmp/dummy");
+}
+
 static const char* emptyConfig = R"(
 {
     "model_config_list": []
