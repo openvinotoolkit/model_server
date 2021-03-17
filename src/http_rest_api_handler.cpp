@@ -375,8 +375,12 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         }
     } else {
         if (!status.ok()) {
-            response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
-            return status;
+            status = manager.loadConfig(config.configPath());
+            if (!status.ok()) {
+                response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
+                return status;
+            }
+            reloadNeeded = true;
         }
     }
 
