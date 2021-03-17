@@ -257,6 +257,11 @@ cc_binary(
             "@opencv//:opencv"
     ],
     linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
 )
 
 cc_binary(

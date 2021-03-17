@@ -71,10 +71,14 @@ const cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     return image;
 }
 
-cv::Mat crop_and_resize(cv::Mat originalImage, cv::Rect roi, cv::Size targetShape) {
-    cv::Mat resized;
-    cv::resize(originalImage(roi), resized, targetShape);
-    return resized;
+bool crop_and_resize(cv::Mat originalImage, cv::Mat& targetImage, cv::Rect roi, cv::Size targetShape) {
+    try {
+        cv::resize(originalImage(roi), targetImage, targetShape);
+    } catch (const cv::Exception& e) {
+        std::cout << e.what() << std::endl;
+        return false;
+    }
+    return true;
 }
 
 cv::Mat apply_grayscale(cv::Mat image) {
