@@ -19,10 +19,11 @@ set -e
 set -x
 
 yum update -y
-yum install -y ruby curl wget rpm-build autoconf automake gcc libtool make
+yum install -y ruby curl wget rpm-build autoconf automake gcc libtool make pkg-config
 
 wget http://vault.centos.org/8.3.2011/PowerTools/Source/SPackages/opencl-headers-2.2-1.20180306gite986688.el8.src.rpm
 wget http://vault.centos.org/8.3.2011/AppStream/Source/SPackages/ocl-icd-2.2.12-1.el8.src.rpm
+wget http://vault.centos.org/8.3.2011/BaseOS/Source/SPackages/numactl-2.0.12-11.el8.src.rpm
 
 mkdir -vp /pkg/{src,bin}
 cp *.src.rpm /pkg/src
@@ -33,7 +34,11 @@ rpm -i /root/rpmbuild/RPMS/noarch/opencl-headers-2.2-1*.rpm
 rpmbuild --rebuild ocl-icd-*.src.rpm
 rpm -i /root/rpmbuild/RPMS/x86_64/ocl-icd-*.rpm
 
+rpmbuild --rebuild numactl-*.src.rpm
+rpm -i /root/rpmbuild/RPMS/x86_64/numactl-*.rpm
+
 cp -v /root/rpmbuild/RPMS/noarch/opencl-headers-2.2-1*.rpm /pkg/bin/
 cp -v /root/rpmbuild/RPMS/x86_64/ocl-icd-2*.rpm /pkg/bin/
+cp -v /root/rpmbuild/RPMS/x86_64/numactl*.rpm /pkg/bin/
 
 tar cvJf /ovms-rpmbuild-deps.tar.xz /pkg

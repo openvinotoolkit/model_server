@@ -43,7 +43,7 @@ BASE_OS_TAG_CLEARLINUX ?= latest
 BASE_OS_TAG_REDHAT ?= 8.2
 
 INSTALL_RPMS_FROM_URL ?=
-INSTALL_DRIVER_VERSION ?=
+INSTALL_DRIVER_VERSION ?= "19.41.14441"
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section

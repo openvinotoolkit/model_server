@@ -70,6 +70,8 @@ RUN     set -e ; \
                 esac ; \
         fi ; \
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+                rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
+                rpm -ivh http://mirror.centos.org/centos/8/BaseOS/x86_64/os/Packages/numactl-2.0.12-11.el8.x86_64.rpm; \
                 rpm -ivh http://mirror.centos.org/centos/8/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
         else  \
                 microdnf install tar gzip; \

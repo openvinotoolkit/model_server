@@ -20,7 +20,7 @@ set -x
 
 mkdir -vp /root/pkg/{src,bin,internal_src}
 
-yum install -y xz
+yum install -y xz pkg-config
 
 cd /rpmbuild
 tar -xf ovms-rpmbuild-deps.tar.xz
