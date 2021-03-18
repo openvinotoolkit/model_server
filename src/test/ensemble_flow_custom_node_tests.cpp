@@ -3414,10 +3414,48 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
-    const auto& input_A = inputs.at(pipelineInputName);
+    auto& input_A = inputs.at(pipelineInputName);
     EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
-    const auto& output = outputs.at(pipelineOutputName);
+    auto& output = outputs.at(pipelineOutputName);
     EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
+
+    std::shared_ptr<ModelInstance> modelInstance;
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    tensor_map_t modelInputs = modelInstance->getInputsInfo();
+    tensor_map_t modelOutputs = modelInstance->getOutputsInfo();
+    ASSERT_NE(modelInputs.find("b"), modelInputs.end());
+    ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
+    auto inputDummy = modelInputs.at("b");
+    EXPECT_EQ(inputDummy->getShape(), shape_t({1, 10}));
+    auto outputDummy = modelOutputs.at("a");
+    EXPECT_EQ(outputDummy->getShape(), shape_t({1, 10}));
+
+    inputs.clear();
+    outputs.clear();
+    modelInputs.clear();
+    modelOutputs.clear();
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+    auto input_A2 = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A2->getShape(), shape_t({1, 10}));
+    auto output2 = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output2->getShape(), shape_t({0, 1, 10}));
+
+    status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    modelInputs = modelInstance->getInputsInfo();
+    modelOutputs = modelInstance->getOutputsInfo();
+    ASSERT_NE(modelInputs.find("b"), modelInputs.end());
+    ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
+    auto inputDummy2 = modelInputs.at("b");
+    EXPECT_EQ(inputDummy2->getShape(), shape_t({1, 10}));
+    auto outputDummy2 = modelOutputs.at("a");
+    EXPECT_EQ(outputDummy2->getShape(), shape_t({1, 10}));
 }
 
 static const char* pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig = R"(
