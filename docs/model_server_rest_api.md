@@ -208,8 +208,8 @@ To trigger reload, HTTP POST request should be sent on given URL.
 
 
 * Response  
-In case of config reload success, response contains aggregation of getModelStatus responses(in JSON format) for all models and DAGs after reload is finished, along with operation status: 
-```Bash
+In case of config reload success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+```JSON
 { 
 "<model name>": 
 { 
@@ -292,8 +292,8 @@ GET http://${REST_URL}:${REST_PORT}/v1/config
 To trigger this API HTTP GET request should be sent on given URL.
 
 * Response  
-In case of success, response contains aggregation of getModelStatus(in JSON format) responses for all models and DAGs, along with operation status: 
-```Bash
+In case of success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
+```JSON
 { 
 "<model name>": 
 { 
