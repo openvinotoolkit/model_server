@@ -325,7 +325,7 @@ OpenVINO Model Server, starting from release 2021.1, monitors the changes in its
 
 - Config reload may be also triggered using [Config Reload API](./model_server_rest_api.md#config-reload).
 
-- Error occurence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not breake the reload process of correct ones but it results in a proper error logs and, if [Config Reload API](./model_server_rest_api.md#config-reload) was used, in error message containing response. (Errors may by caused by invalid paths, forbidden values in config, invalid structure of DAG - found cycle in graph for example, etc.)
+- Error occurrence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not affect the reload process of the valid ones, but it results in a proper error logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, response also contains proper error message. Errors may be caused by invalid paths, forbidden values in config, invalid structure of DAG (e.g. found cycle in a graph), etc.
 
 **Note**: changes in the config file are checked regularly with an internal defined by the parameter --file_system_poll_wait_seconds.
 
