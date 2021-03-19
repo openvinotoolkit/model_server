@@ -98,7 +98,7 @@ TEST(ModelManager, WrongConfigFile) {
     std::string configFile = "123/tmp/not_a_valid_file_name";
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
+    EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
 }
 
 TEST(ModelManager, ConfigParseEmpty) {

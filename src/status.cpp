@@ -23,6 +23,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
     {StatusCode::FILE_INVALID, "File not found or cannot open"},
+    {StatusCode::CONFIG_FILE_INVALID, "Configuration file not found or cannot open"},
     {StatusCode::NOT_IMPLEMENTED, "Functionality not implemented"},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
     {StatusCode::NETWORK_NOT_LOADED, "Error while loading a network"},
