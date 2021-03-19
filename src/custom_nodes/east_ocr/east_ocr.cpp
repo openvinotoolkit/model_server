@@ -142,8 +142,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
-    float xCornerAdjustment = get_float_parameter("x_corner_adjustment", params, paramsCount, 0.12);
-    float yCornerAdjustment = get_float_parameter("y_corner_adjustment", params, paramsCount, 0.3);
+    float xCornerAdjustment = get_float_parameter("x_corner_adjustment", params, paramsCount, 0);
+    float yCornerAdjustment = get_float_parameter("y_corner_adjustment", params, paramsCount, 0);
 
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
