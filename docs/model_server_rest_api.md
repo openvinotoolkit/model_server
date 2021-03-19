@@ -186,52 +186,29 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
 Read more about *Predict API* usage [here](./../example_client/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
-* Description
+* Description  
 
-Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response.
-
-This endpoint can be used with disabled automatic config reload to ensure changes in configuration are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter --file_system_poll_wait_seconds 0.
+Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response.This endpoint can be used with disabled automatic config reload to ensure changes in configuration are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
 Reload operation does not pass new configuration to OVMS server. The configuration file changes needs to be applied by the OVMS administrator. The REST API call just initiate applying the configuration file which is already present.
+
+* URL  
+```
+POST http://${REST_URL}:${REST_PORT}/v1/config/reload
+```
+* FLOW  
 
 Flow after receiving request:
 1) If config file was changed - reload config.
 2) If any model version directory was changed or new version was added - reload this model.
-3) If any model that is part of a DAG was changed or new version dir was added - reload this pipeline.
-4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs. If any of those first 3 steps causes reload - return code is 201, otherwise 200.
+3) If any model that is part of a DAG was changed or new version was added - reload this pipeline.
+4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs, otherwise error message is returned.
 
-If any of above steps fail - error message with code 412 is returned. Possible messages returned on error:
-
-- obtaining config file change time failed (file is not exisiting or cannot be accessed):
-```Bash
-{
-  "error": "Config file not found or cannot open."
-}
-```
-- config file was changed and config reloading failed (file content is not a valid JSON, any of model or DAG config is incorrect):
-```Bash
-{
-  "error": "Reloading config file failed. Check server logs for more info."
-}
-```
-
-- config file was not changed and model versions reloading failed (model directory was removed):
-```Bash
-{
-  "error": "Reloading models versions failed. Check server logs for more info."
-}
-```
-Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
-
-* URL
-```
-POST http://${REST_URL}:${REST_PORT}/v1/config/reload
-```
-* Request
+* Request  
 To trigger reload, HTTP POST request should be sent on given URL.
 
 
-* Response
-In case of config reload success, response contains aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+* Response  
+In case of config reload success, response contains aggregation of getModelStatus responses(in JSON format) for all models and DAGs after reload is finished, along with operation status: 
 ```Bash
 { 
 "<model name>": 
@@ -261,24 +238,61 @@ In case of any failure during execution:
 } 
 ```
 When operation succeeds HTTP response status code is
-  - `201` when config file was reloaded 
+  - `201` when config(config file or model version) was reloaded 
   - `200` when reload was not required, already applied or OVMS was started in single model mode
-When operation fails, HTTP response status code is 412.
+When operation fails other status code is returned.
+
+Possible messages returned on error:
+
+- obtaining config file change time failed (file is not exisiting or cannot be accessed):
+```Bash
+{
+  "error": "Config file not found or cannot open."
+}
+```
+- config file was changed and config reloading failed (file content is not a valid JSON, any of model or DAG config is incorrect):
+```Bash
+{
+  "error": "Reloading config file failed. Check server logs for more info."
+}
+```
+
+- config file was not changed and model versions reloading failed (model directory was removed):
+```Bash
+{
+  "error": "Reloading models versions failed. Check server logs for more info."
+}
+```
+
+- retrieving status of one of the models failed:
+```Bash
+{
+  "error": "Retrieving all model statuses failed. Check server logs for more info."
+}
+```
+
+- converting model status responses to json failed:
+```Bash
+{
+  "error": "Serializing model statuses to json failed. Check server logs for more info."
+}
+```
+Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
 ## Config Status API <a name="config-status"></a>
 * Description
 
 Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
 
-* URL
+* URL  
 ```
 GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
-* Request
+* Request  
 To trigger this API HTTP GET request should be sent on given URL.
 
-* Response
-In case of success, response contains aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+* Response  
+In case of success, response contains aggregation of getModelStatus(in JSON format) responses for all models and DAGs, along with operation status: 
 ```Bash
 { 
 "<model name>": 
@@ -307,4 +321,19 @@ In case of any failure during execution:
   "error": <error message>|<string> 
 } 
 ```
-When operation succeeded HTTP response status code should be 200. For failure status code is 412.
+When operation succeeded HTTP response status code should be 200, for 412 or 500.
+Possible messages returned on error:
+
+- retrieving status of one of the models failed:
+```Bash
+{
+  "error": "Retrieving all model statuses failed. Check server logs for more info."
+}
+```
+
+- converting model status responses to json failed:
+```Bash
+{
+  "error": "Serializing model statuses to json failed. Check server logs for more info."
+}
+```
