@@ -161,6 +161,8 @@ Example configuration file :
 }
 ```
 
+
+
 When the config file is present, the Docker container can be started in a similar manner as a single model. Keep in mind that models with cloud storage path require specific environmental variables set. Refer to cloud storage requirements below.
 
 ```bash
@@ -322,6 +324,10 @@ OpenVINO Model Server, starting from release 2021.1, monitors the changes in its
 - OVMS can also detect changes in the configuration of deployed models. All model version will be reloaded when there is a change in batch_size, plugin_config, target_device, shape, model_version_policy or nireq parameters. When model path is changed, all versions will be reloaded according to the model_version_policy.
 
 - In case the new config.json is invalid (not compliant with json schema), no changes will be applied to the served models.
+
+- Config reload may be also triggered using [Config Reload API](./model_server_rest_api.md#config-reload).
+
+- Error occurence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not breake the reload process of correct ones but it results in a proper error logs and, if [Config Reload API](./model_server_rest_api.md#config-reload) was used, in error message containing response. (Errors may by caused by invalid paths, forbidden values in config, invalid structure of DAG - found cycle in graph for example etc.)
 
 **Note**: changes in the config file are checked regularly with an internal defined by the parameter --file_system_poll_wait_seconds.
 
