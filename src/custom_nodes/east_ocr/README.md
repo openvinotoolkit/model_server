@@ -45,5 +45,5 @@ It will compile the library inside a docker container and save the results in `l
 | overlap_threshold | a ratio in a range of 0-1 for non-max suppression algorithm. Defines the overlapping ratio to reject detection as duplicated  | 0.3 |
 | debug  | Defines if debug messages should be displayed | false |
 | max_output_batch  | Prevents too big batches with incorrect confidence level. It can avoid exceeding RAM resources | 100 |
-| x_corner_adjustment | Horizontal size expansion level for text images to compensate cut letter | 0 | 
-| y_corner_adjustment | Vertical size expansion level for text images to compensate cut letter | 0 | 
+| x_corner_adjustment | Horizontal size expansion level for text images to compensate cut letter. Letters might be cut on the edges in case of the EAST model accuracy problems. That parameter defines how much horizontal size should be expanded comparing to the original width | 0 |
+| y_corner_adjustment | Vertical size expansion level for text images to compensate cut letter. Letters might be cut on the edges in case of the EAST model accuracy problems. That parameter defines how much vertical size should be expanded comparing to the original height  | 0 |
