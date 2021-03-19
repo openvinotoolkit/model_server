@@ -240,7 +240,7 @@ In case of any failure during execution:
 When operation succeeds HTTP response status code is
   - `201` when config(config file or model version) was reloaded 
   - `200` when reload was not required, already applied or OVMS was started in single model mode
-When operation fails other status code is returned.
+When operation fails another status code is returned.
 
 Possible messages returned on error:
 
@@ -321,7 +321,7 @@ In case of any failure during execution:
   "error": <error message>|<string> 
 } 
 ```
-When operation succeeded HTTP response status code should be 200, for 412 or 500.
+When operation succeeded HTTP response status code is 200, otherwise another code is returned.
 Possible messages returned on error:
 
 - retrieving status of one of the models failed:
