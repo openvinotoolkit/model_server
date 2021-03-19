@@ -45,6 +45,7 @@ enum class StatusCode {
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
+    CONFIG_FILE_TIMESTAMP_READING_FAILED,   /*!< Reading config file timestamp failed */
     NO_MODEL_VERSION_AVAILABLE,             /*!< No model version found in path */
     RESHAPE_ERROR,                          /*!< Impossible to perform reshape */
     RESHAPE_REQUIRED,                       /*!< Model instance needs to be reloaded with new shape */
@@ -57,7 +58,9 @@ enum class StatusCode {
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
+    MODEL_CONFIG_INVALID,                              /*!< Model config is invalid */
     MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
+    MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
     MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
     MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
     MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */

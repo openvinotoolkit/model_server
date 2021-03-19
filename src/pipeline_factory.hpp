@@ -63,7 +63,7 @@ public:
         ModelManager& manager);
 
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
-    void revalidatePipelines(ModelManager&);
+    Status revalidatePipelines(ModelManager&);
     const std::vector<std::string> getPipelinesNames() const;
 };
 

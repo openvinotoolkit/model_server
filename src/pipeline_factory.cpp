@@ -60,16 +60,18 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     pipelineDefinition->makeSubscriptions(manager);
     Status validationResult = pipelineDefinition->validate(manager);
     if (!validationResult.ok()) {
-        pipelineDefinition->resetSubscriptions(manager);
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading pipeline definition: {} failed: {}", pipelineName, validationResult.string());
-        return validationResult;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline definition: {} failed: {}", pipelineName, validationResult.string());
+        if (validationResult == StatusCode::PIPELINE_NAME_OCCUPIED) {
+            pipelineDefinition->resetSubscriptions(manager);
+            return validationResult;
+        }
     }
 
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} succeeded", pipelineName);
-    return StatusCode::OK;
+    return validationResult;
 }
 
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
@@ -99,17 +101,22 @@ Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     return pd->reload(manager, std::move(nodeInfos), std::move(connections));
 }
 
-void PipelineFactory::revalidatePipelines(ModelManager& manager) {
+Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
+    Status firstErrorStatus = StatusCode::OK;
     for (auto& [name, definition] : definitions) {
         if (definition->getStatus().isRevalidationRequired()) {
             auto validationResult = definition->validate(manager);
             if (!validationResult.ok()) {
+                if (firstErrorStatus.ok()) {
+                    firstErrorStatus = validationResult;
+                }
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Revalidation pipeline definition: {} failed: {}", name, validationResult.string());
             } else {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Revalidation of pipeline: {} succeeded", name);
             }
         }
     }
+    return firstErrorStatus;
 }
 const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     std::vector<std::string> names;

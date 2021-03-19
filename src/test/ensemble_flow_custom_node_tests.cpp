@@ -902,9 +902,9 @@ protected:
         this->loadConfiguration(pipelineCustomNodeConfig);
     }
 
-    void loadConfiguration(const char* configContent) {
+    void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
         createConfigFileWithContent(configContent, configJsonFilePath);
-        ASSERT_EQ(manager.loadConfig(configJsonFilePath), StatusCode::OK);
+        ASSERT_EQ(manager.loadConfig(configJsonFilePath), expectedStatus);
     }
 
     void checkResponseForCorrectConfiguration() {
@@ -981,7 +981,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig);
+    this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     response.Clear();
 
@@ -1169,7 +1169,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRest
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig);
+    this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
     response.Clear();
 
@@ -1408,6 +1408,18 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
+    tensor_map_t inputs, outputs;
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
@@ -3288,6 +3300,17 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedOutput, {dynamicDemultiplyCount, 1, 10});
+    tensor_map_t inputs, outputs;
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
