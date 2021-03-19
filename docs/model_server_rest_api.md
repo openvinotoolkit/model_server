@@ -204,9 +204,11 @@ Flow after receiving request:
 4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs, otherwise error message is returned.
 
 * Request  
-To trigger reload, HTTP POST request should be sent on given URL.
+To trigger reload, HTTP POST request with empty body should be sent on given URL. Example `curl` command:
 
-
+```Bash
+curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
+```
 * Response  
 In case of config reload success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
 ```JSON
@@ -232,7 +234,7 @@ In case of config reload success, response contains JSON with aggregation of get
 
 In case of any failure during execution: 
  
-```Bash
+```JSON
 { 
   "error": <error message>|<string> 
 } 
@@ -245,34 +247,34 @@ When operation fails another status code is returned.
 Possible messages returned on error:
 
 - obtaining config file change time failed (file is not exisiting or cannot be accessed):
-```Bash
+```JSON
 {
   "error": "Config file not found or cannot open."
 }
 ```
 - config file was changed and config reloading failed (file content is not a valid JSON, any of model or DAG config is incorrect):
-```Bash
+```JSON
 {
   "error": "Reloading config file failed. Check server logs for more info."
 }
 ```
 
 - config file was not changed and model versions reloading failed (model directory was removed):
-```Bash
+```JSON
 {
   "error": "Reloading models versions failed. Check server logs for more info."
 }
 ```
 
 - retrieving status of one of the models failed:
-```Bash
+```JSON
 {
   "error": "Retrieving all model statuses failed. Check server logs for more info."
 }
 ```
 
 - converting model status responses to json failed:
-```Bash
+```JSON
 {
   "error": "Serializing model statuses to json failed. Check server logs for more info."
 }
@@ -289,7 +291,11 @@ Sends requests via RESTful API to get response that contains aggregation of getM
 GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 * Request  
-To trigger this API HTTP GET request should be sent on given URL.
+To trigger this API HTTP GET request should be sent on given URL.Example `curl` command:
+
+```Bash
+curl --request GET http://${REST_URL}:${REST_PORT}/v1/config
+```
 
 * Response  
 In case of success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
@@ -316,7 +322,7 @@ In case of success, response contains JSON with aggregation of getModelStatus re
 
 In case of any failure during execution:
  
-```Bash
+```JSON
 { 
   "error": <error message>|<string> 
 } 
@@ -325,14 +331,14 @@ When operation succeeded HTTP response status code is 200, otherwise another cod
 Possible messages returned on error:
 
 - retrieving status of one of the models failed:
-```Bash
+```JSON
 {
   "error": "Retrieving all model statuses failed. Check server logs for more info."
 }
 ```
 
 - converting model status responses to json failed:
-```Bash
+```JSON
 {
   "error": "Serializing model statuses to json failed. Check server logs for more info."
 }
