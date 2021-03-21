@@ -41,6 +41,21 @@ Custom nodes are not versioned, meaning one custom node library is bound to one 
 
 Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
 
+## Demultiplexing data
+
+During the pipeline execution, it is possible to split a request with mulitple batches into a set of branches with a single batch.
+That way a model configured with a batch size 1, can process requests with arbitrary batch size. Internally, OVMS demultiplexer will
+divide the data, process them in parallel and combine the results. 
+
+De-multiplication of the node output is enabled in the configuration file by adding `demultiply_count`. 
+It assumes the batches are combined on the first dimension which is dropped after splitting. For example:
+- a node returns output with shape `[8,1,3,224,224]`
+- demuliplexer created 8 requests with shape `[1,3,224,224]`
+- next model process in parallel 8 requests with output shape `[1,1001]` each.
+- results will be combined into a single output with shape `[8,1,1001]`
+
+[Learn more about demuliplexing](demultiplexing.md) 
+
 ## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 

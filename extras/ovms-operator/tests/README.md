@@ -3,7 +3,7 @@
 ## Building the operator image 
 
 ```
-export REGISTRY=ger-registry-pre.caas.intel.com/ovms
+export REGISTRY=quay.io
 export IMG=$REGISTRY/ovms-operator:latest
 make docker-build docker-push IMG=$IMG
 ```
@@ -16,10 +16,10 @@ Prerequisites:
 - registry with push permissions
 
 ```bash
-export REGISTRY=ger-registry-pre.caas.intel.com/ovms
+export REGISTRY=quay.io
 export IMG_BUNDLE=$REGISTRY/ovms-operator-bundle:latest
 export IMG_CATALOG=$REGISTRY/test-catalog:latest
-git clone -b ovms-operator https://github.com/dtrawins/community-operators
+git clone -b ovms-operator https://github.com/community-operators
 cd community-operators/upstream-community-operators/ovms-operator/0.1.0
 
 # edit manifests/ovms-operator.clusterserviceversion.yaml and set image: to point to the test operator image

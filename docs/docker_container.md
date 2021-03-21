@@ -73,6 +73,8 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 
 Note: Latest images include OpenVINO 2021.3 release.
 
+Note: OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
+Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
@@ -421,6 +423,9 @@ The command example is listed below:
 docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
+
+Note: As for now, the public docker image doesn't support GPU on TigerLake platform. Such image can be built using a command:
+`make docker_build BASE_OS=redhat INSTALL_DRIVER_VERSION=20.35.17767`. It will not support, however, older GPU platforms.
 </details>
 
 <details><summary>Using Multi-Device Plugin</summary>
