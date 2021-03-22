@@ -35,7 +35,7 @@ struct BoxMetadata {
     float originalHeight;
 };
 
-int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale) {
+int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
     uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -50,7 +50,9 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Size targetShape(targetImageWidth, targetImageHeight);
         cv::Mat image;
-        if (!crop_rotate_resize(originalImage, image, boxes[i], -metadata[i].angle, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
+        float degree = metadata[i].angle * (180.0 / M_PI);
+
+        if (!crop_rotate_resize(originalImage, image, boxes[i], (abs(degree) > rotationAngleThreshold) ? -degree : 0.0, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
             std::cout << "box is outside of original image" << std::endl;
             free(buffer);
             return 1;
@@ -148,8 +150,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
-    float xCornerAdjustment = get_float_parameter("x_corner_adjustment", params, paramsCount, 0.0f);
-    float yCornerAdjustment = get_float_parameter("y_corner_adjustment", params, paramsCount, 0.0f);
+    float boxWidthAdjustment = get_float_parameter("box_width_adjustment", params, paramsCount, 0.0);
+    float boxHeightAdjustment = get_float_parameter("box_height_adjustment", params, paramsCount, 0.0);
+    NODE_ASSERT(boxWidthAdjustment >= 0.0, "box width adjustment must be positive");
+    NODE_ASSERT(boxHeightAdjustment >= 0.0, "box height adjustment must be positive");
+    int rotationAngleThreshold = get_int_parameter("rotation_angle_threshold", params, paramsCount, 20);
+    NODE_ASSERT(rotationAngleThreshold >= 0, "rotation angle threshold must be positive");
 
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
@@ -267,22 +273,23 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             int y1 = std::min(std::min(std::min(p2.y, p1.y), p3.y), p4.y);
             int y2 = std::max(std::max(std::max(p2.y, p1.y), p3.y), p4.y);
 
+            x1 = std::max(0, (int)(x1 - (x2 - x1) * boxWidthAdjustment));
+            x2 = std::min(originalImageWidth, (int)(x2 + (x2 - x1) * boxWidthAdjustment));
+            y1 = std::max(0, (int)(y1 - (y2 - y1) * boxHeightAdjustment));
+            y2 = std::min(originalImageHeight, (int)(y2 + (y2 - y1) * boxHeightAdjustment));
+
             if (debugMode) {
                 std::stringstream ss;
                 ss << "Angled polygon coordinates: " << std::endl;
                 ss << p4 << p3 << p1 << p2 << std::endl;
                 ss << "Polygon bounding box with no rotation: " << std::endl;
                 ss << cv::Point2i(x1, y1) << cv::Point2i(x2, y2) << std::endl;
-                ss << "---------------------------" << std::endl;
                 std::cout << ss.str() << std::endl;
             }
 
-            x1 = std::max(0, (int)(x1 - (x2 - x1) * xCornerAdjustment));
-            y1 = std::max(0, (int)(y1 - (y2 - y1) * yCornerAdjustment));
-
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
-            metadata.emplace_back(BoxMetadata{angle, w * (1+xCornerAdjustment), h * (1+yCornerAdjustment)});
+            metadata.emplace_back(BoxMetadata{angle, w, h});
         }
     }
 
@@ -309,7 +316,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
+    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
         free(*outputs);
         return 1;
     }
