@@ -35,7 +35,7 @@ Clone github repository:
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
@@ -78,8 +78,9 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:latest
 ```
 It will create model files in `${PWD}/IR/1/` folder.
 ```bash
-model.ckpt-49491.bin
-model.ckpt-49491.xml
+model.bin
+model.mapping
+model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
 - Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
@@ -106,7 +107,7 @@ It will save the frozen graph of the model during the demo execution.
 
 Install the following python dependencies in your python virtual environment:
 ```
-virtualenv . .venv ; source .venv/bin/activate
+virtualenv .venv ; source .venv/bin/activate
 pip install tensorflow==1.15.0 opencv-python matplotlib easydict
 ```
 Run the demo code via 
@@ -119,7 +120,7 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/CRNN_Tensorflow:rw openvino/ubuntu18
 --input_model /CRNN_Tensorflow/frozen_graph.pb \
 --output_dir /CRNN_Tensorflow/IR/1/
 ```
-It will export the optimized CRNN model to `CRNN_Tensorflow/IR/1/` folder.
+It will export the optimized CRNN model to `${PWD}/IR/1` folder.
 
 Converted CRNN model will have the following interface:
 - Input name: `input`;  shape: `[1 3 32 100]` ; precision: `FP32`, layout: `NCHW`
@@ -127,7 +128,7 @@ Converted CRNN model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library 
 
-Custom nodes in are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
