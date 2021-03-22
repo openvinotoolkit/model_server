@@ -29,26 +29,62 @@ The metadata are the `text_coordinates` and the `confidence_level` outputs.
 ### East-resnet50 model
 
 The original pretrained model for east-resnet50 topology is stored on https://github.com/argman/EAST in TensorFlow checkpoint format.
-Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to folder.
+
+Clone github repository:
+```bash
+git clone https://github.com/argman/EAST 
+cd EAST 
+```
+Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
-Convert the TensorFlow Model to Intermediate Representation format using the model_optimizer tool. It can be done
-using a public docker image with OpenVINO toolkit:
-```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/east_icdar2015_resnet_v1_50_rbox:/model:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py \
---input_meta_graph /model/model.ckpt-49491.meta --input_shape [1,1024,1920,3] --input split:0 --output model_0/feature_fusion/Conv_7/Sigmoid,model_0/feature_fusion/concat_3 \
---output_dir /model/IR/1/
+Inside the EAST folder add a file `freeze_east_model.py` with the following content:
+```python
+from tensorflow.python.framework import graph_util
+import tensorflow as tf
+import model
+
+def export_model(input_checkpoint, output_graph):
+    with tf.get_default_graph().as_default():
+        input_images = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='input_images')
+        global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
+        f_score, f_geometry = model.model(input_images, is_training=False)
+    graph = tf.get_default_graph()
+    input_graph_def = graph.as_graph_def()
+
+    init_op = tf.global_variables_initializer()
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(init_op)
+        saver.restore(sess, input_checkpoint)
+        output_graph_def = graph_util.convert_variables_to_constants(sess=sess, input_graph_def=input_graph_def, output_node_names=['feature_fusion/concat_3','feature_fusion/Conv_7/Sigmoid'])
+        with tf.gfile.GFile(output_graph, "wb") as f:
+            f.write(output_graph_def.SerializeToString())
+
+export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491',"./model.pb")
 ```
-It will create model files in `${PWD}/east_icdar2015_resnet_v1_50_rbox/IR/1/` folder.
+Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
+
+```bash
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:latest python3 freeze_east_model.py
+```
+
+Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
+```bash
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py \
+--framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3  \
+--input_model /EAST/model.pb --output_dir /EAST/IR/1/
+```
+It will create model files in `${PWD}/IR/1/` folder.
 ```bash
 model.ckpt-49491.bin
 model.ckpt-49491.xml
 ```
 Converted east-reasnet50 model will have the following interface:
-- Input name: `split/placeholder_out_port_0` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
-- Output name: `model_0/feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
-- Output name: `model_0/feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
+- Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
+- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
+- Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
 
 ### CRNN model
 In this pipeline example is used from from https://github.com/MaybeShewill-CV/CRNN_Tensorflow. It includes TensorFlow
@@ -136,25 +172,42 @@ From the context of [example_client](../example_client) folder install python3 r
 ```bash
 pip install -r client_requirements.txt
 ``` 
-Next download the image to process:
-```bash
-wget https://p0.pxfuel.com/preview/518/700/866/australia-road-signs-note-sunset.jpg
-```
+
 Now you can run the client:
 ```bash
-python east_ocr_client.py --image_input_path australia-road-signs-note-sunset.jpg --grpc_port 9000 --pipeline_name detect_text_images
-Output: name[confidence_levels]
-    numpy => shape[(3, 1, 1)] data[float32]
-Output: name[text_images]
-    numpy => shape[(3, 1, 3, 32, 100)] data[float32]
-Output: name[text_coordinates]
-    numpy => shape[(3, 1, 4)] data[int32]
+python east_ocr_client.py --grpc_port 7777 --image_input_path ../src/custom_node/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path text
 Output: name[texts]
-    numpy => shape[(3, 25, 1, 37)] data[float32]
-c____r___aa___f____t_____
-c__o_m__mm__u_n__iity____
-com___e__r__c_i_a_ll____e
+    numpy => shape[(7, 25, 1, 37)] data[float32]
+s_______e__r__v___e_____r
+g______d___a__n___s_____k
+mm______oo___d____e____ll
+oo____pp_e_n__v_inn_____o
+p_____i_p___elliinn_____e
+ii____nn____tt__ee_____ll
+2_______0_____2_________1
+Output: name[confidence_levels]
+    numpy => shape[(7, 1, 1)] data[float32]
+Output: name[text_images]
+    numpy => shape[(7, 1, 3, 32, 100)] data[float32]
+Output: name[text_coordinates]
+    numpy => shape[(7, 1, 4)] data[int32]
 ```
 
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg file to confirm
 if the image was analyzed correctly.
+
+| ![image](../src/custom_nodes/east_ocr/demo_images/input.jpg)|
+| --- |
+| Exemplary input image |
+
+
+The custom node generates the following text images retrieved from the original input to CRNN model:
+| #| Image | CRNN Recognition |                     
+| --- | --- | --- |                                                      
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)| s_______e__r__v___e_____r |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)| g______d___a__n___s_____k |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)| mm______oo___d____e____ll |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)| oo____pp_e_n__v_inn_____o |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_4.jpg)| p_____i_p___elliinn_____e |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_5.jpg)| ii____nn____tt__ee_____ll |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_6.jpg)| 2_______0_____2_________1 |
