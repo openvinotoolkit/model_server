@@ -39,8 +39,8 @@ WORKDIR /
 
 RUN     set -e ; \
         set -x ; \
+        microdnf install pkg-config; \
         if [ "$GPU" == "1" ] ; then \
-                microdnf install pkg-config; \
                 case $INSTALL_DRIVER_VERSION in \
                 "19.41.14441") \
                         mkdir /tmp/gpu_deps ; \
