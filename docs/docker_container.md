@@ -313,24 +313,25 @@ To know more about it, refer to [Version Policy](./model_version_policy.md) docu
 
 
 ### Updating Configuration File
-OpenVINO Model Server, starting from release 2021.1, monitors the changes in its configuration file and applies required modifications in runtime :
+OpenVINO Model Server monitors the changes in its configuration and applies required modifications in runtime in two ways:
 
-- When new model is added to the configuration file config.json, OVMS will load and start serving the configured versions. It will also start monitoring for version changes in the configured model storage. If the new model has invalid configuration or it doesn't include any version, which can be successfully loaded, it will be ignored till next update in the configuration file is detected.
+- Automatically, with an interval defined by the parameter --file_system_poll_wait_seconds. (introduced in release 2021.1)
+- On demand, by using [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in release 2021.3)  
 
-- When a deployed model is deleted from config.json, it will be unloaded completely from OVMS after already started inference operations are completed.
+When configuration reload is triggered in one of above described ways:
 
-- OVMS can also detect changes in the configuration of deployed models. All model version will be reloaded when there is a change in batch_size, plugin_config, target_device, shape, model_version_policy or nireq parameters. When model path is changed, all versions will be reloaded according to the model_version_policy.
+- new model or [DAGs](./dag_scheduler.md) added to the configuration file will be loaded and served by OVMS.
+- changes made in the configured model storage (e.g. new model version is added) will be applied. 
+- changes in the configuration of deployed models and [DAGs](./dag_scheduler.md) will be applied. 
+- all model version will be reloaded when there is a change in the model batch_size, plugin_config, target_device, shape, model_version_policy or nireq parameters. When model path is changed, all versions will be reloaded according to the model_version_policy.
+- when a deployed model, [DAG](./dag_scheduler.md) is deleted from config.json, it will be unloaded completely from OVMS after already started inference operations are completed.
+- [DAGs](./dag_scheduler.md) that depends on changed or removed models will also be reloaded.
+- changes in [custom loaders](./custom_model_loader.md) and custom node libraries configs will also be applied.
 
-- In case the new config.json is invalid (not compliant with json schema), no changes will be applied to the served models.
-
-- Config reload may be also triggered using [Config Reload API](./model_server_rest_api.md#config-reload).
-
-- Error occurrence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not affect the reload process of the valid ones, but it results in a proper error logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, response also contains proper error message. Errors may be caused by invalid paths, forbidden values in config, invalid structure of DAG (e.g. found cycle in a graph), etc.
-
-**Note**: changes in the config file are checked regularly with an internal defined by the parameter --file_system_poll_wait_seconds.
-
-
-
+OVMS behavior in case of errors during config reloading:
+- if the new config.json is invalid (not compliant with json schema), no changes will be applied to the served models.
+- if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has invalid configuration it will be ignored till next configuration reload. Configuration may be inalid because of invalid paths(leading to non-existing directories), forbidden values in config, invalid structure of [DAG](./dag_scheduler.md) (e.g. found cycle in a graph), etc.
+- error occurrence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not affect the reload process of the valid ones, but it results in a proper error logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, response also contains proper error message. 
 
 ### Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU <a name="ai"></a>
 
