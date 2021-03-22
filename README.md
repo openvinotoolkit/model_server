@@ -27,7 +27,7 @@ A few key features:
 [Docker containers](docs/docker_container.md).
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
-- [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference can be represented by a custom node implementation attached as a C/C++ library.
+- [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
@@ -116,6 +116,5 @@ Submit Github issue to ask question, request a feature or report a bug.
 
 ---
 \* Other names and brands may be claimed as the property of others.
-
 
 
