@@ -147,7 +147,7 @@ Status ModelManager::startFromConfig() {
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
-    if (status == StatusCode::FILE_INVALID || status == StatusCode::JSON_INVALID) {
+    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID) {
         return status;
     }
 
@@ -517,8 +517,8 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
     std::ifstream ifs(jsonFilename.c_str());
     if (!ifs.good()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "File is invalid {}", jsonFilename);
-        lastLoadConfigStatus = StatusCode::FILE_INVALID;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
+        lastLoadConfigStatus = StatusCode::CONFIG_FILE_INVALID;
         return lastLoadConfigStatus;
     }
     rapidjson::Document configJson;
