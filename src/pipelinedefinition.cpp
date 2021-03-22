@@ -387,6 +387,13 @@ public:
                     gather);
                 return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
             }
+            if (it->kind == NodeKind::ENTRY && dependantNodeInfo.kind != NodeKind::EXIT) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Node name: {}, have gather_from: {}. Gathering from entry node is not allowed for non exit node",
+                    pipelineName,
+                    dependantNodeInfo.nodeName,
+                    gather);
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE;
+            }
         }
         return StatusCode::OK;
     }
