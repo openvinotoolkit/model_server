@@ -20,7 +20,7 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 A few key features: 
 - Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
 - Online deployment of new [model versions](docs/model_version_policy.md).
-- Configuration updates a in runtime
+- [Configuration updates in a runtime](docs/docker_container.md#updating-configuration-file)
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
@@ -107,7 +107,7 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
-* [What is new in OpenVINO Model Server C++]()
+* [What is new in OpenVINO Model Server C++](https://www.intel.com/content/www/us/en/artificial-intelligence/posts/whats-new-openvino-model-server.html)
 
 ## Contact
 
