@@ -318,7 +318,7 @@ OpenVINO Model Server monitors the changes in its configuration and applies requ
 - Automatically, with an interval defined by the parameter --file_system_poll_wait_seconds. (introduced in release 2021.1)
 - On demand, by using [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in release 2021.3)  
 
-When configuration reload is triggered in one of above described ways:
+Configuration reload triggers the following operations:
 
 - new model or [DAGs](./dag_scheduler.md) added to the configuration file will be loaded and served by OVMS.
 - changes made in the configured model storage (e.g. new model version is added) will be applied. 
@@ -329,9 +329,11 @@ When configuration reload is triggered in one of above described ways:
 - changes in [custom loaders](./custom_model_loader.md) and custom node libraries configs will also be applied.
 
 OVMS behavior in case of errors during config reloading:
+
 - if the new config.json is not compliant with json schema, no changes will be applied to the served models.
 - if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has invalid configuration it will be ignored till next configuration reload. Configuration may be invalid because of invalid paths(leading to non-existing directories), forbidden values in config, invalid structure of [DAG](./dag_scheduler.md) (e.g. found cycle in a graph), etc.
-- error occurrence during reloading model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not affect the reload process of the valid ones, but it results in a proper error logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, response also contains proper error message. 
+- an error during one model reloading, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not prevent the reload of the remaining updated models.
+- errors from configuration reloads triggered internally are saved in the logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, also the response contains an error message. 
 
 ### Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU <a name="ai"></a>
 
