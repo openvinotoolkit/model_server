@@ -284,6 +284,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
                 ss << p4 << p3 << p1 << p2 << std::endl;
                 ss << "Polygon bounding box with no rotation: " << std::endl;
                 ss << cv::Point2i(x1, y1) << cv::Point2i(x2, y2) << std::endl;
+                ss << "---------------------------" << std::endl;
                 std::cout << ss.str() << std::endl;
             }
 
