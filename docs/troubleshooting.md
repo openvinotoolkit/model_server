@@ -99,3 +99,9 @@ HTTP_proxy
 
 ## Unable to load network into device with: `can't protect` in server logs <a name="load-network-issue"></a>
 - Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
+
+## TigerLake GPU support
+
+As for now, the public docker image doesn't support GPU on TigerLake platform. Such image can be built using a command:
+`make docker_build BASE_OS=redhat INSTALL_DRIVER_VERSION=20.35.17767`. It will not support, however, older GPU platforms.
+
