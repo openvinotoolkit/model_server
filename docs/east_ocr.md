@@ -35,7 +35,7 @@ Clone github repository:
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the fle east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
@@ -78,8 +78,9 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:latest
 ```
 It will create model files in `${PWD}/IR/1/` folder.
 ```bash
-model.ckpt-49491.bin
-model.ckpt-49491.xml
+model.bin
+model.mapping
+model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
 - Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
@@ -106,7 +107,7 @@ It will save the frozen graph of the model during the demo execution.
 
 Install the following python dependencies in your python virtual environment:
 ```
-virtualenv . .venv ; source .venv/bin/activate
+virtualenv .venv ; source .venv/bin/activate
 pip install tensorflow==1.15.0 opencv-python matplotlib easydict
 ```
 Run the demo code via 
@@ -119,7 +120,7 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/CRNN_Tensorflow:rw openvino/ubuntu18
 --input_model /CRNN_Tensorflow/frozen_graph.pb \
 --output_dir /CRNN_Tensorflow/IR/1/
 ```
-It will export the optimized CRNN model to `CRNN_Tensorflow/IR/1/` folder.
+It will export the optimized CRNN model to `${PWD}/IR/1` folder.
 
 Converted CRNN model will have the following interface:
 - Input name: `input`;  shape: `[1 3 32 100]` ; precision: `FP32`, layout: `NCHW`
@@ -127,7 +128,7 @@ Converted CRNN model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library 
 
-Custom nodes in are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
@@ -173,27 +174,32 @@ From the context of [example_client](../example_client) folder install python3 r
 pip install -r client_requirements.txt
 ``` 
 
-Now you can run the client:
+Now you can create directory for text images and run the client:
 ```bash
-python east_ocr_client.py --grpc_port 7777 --image_input_path ../src/custom_node/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path text
-Output: name[texts]
-    numpy => shape[(7, 25, 1, 37)] data[float32]
-s_______e__r__v___e_____r
-g______d___a__n___s_____k
-mm______oo___d____e____ll
-oo____pp_e_n__v_inn_____o
-p_____i_p___elliinn_____e
-ii____nn____tt__ee_____ll
-2_______0_____2_________1
-Output: name[confidence_levels]
-    numpy => shape[(7, 1, 1)] data[float32]
-Output: name[text_images]
-    numpy => shape[(7, 1, 3, 32, 100)] data[float32]
+mkdir results
+```
+```bash
+python east_ocr_client.py --grpc_port 9000 --image_input_path ../src/custom_nodes/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/
 Output: name[text_coordinates]
-    numpy => shape[(7, 1, 4)] data[int32]
+    numpy => shape[(9, 1, 4)] data[int32]
+Output: name[texts]
+    numpy => shape[(9, 25, 1, 37)] data[float32]
+pp___er_ior_m__a_n_c____d
+g______d___a_nn__ss_____k
+s______ee__r_v___e_____rr
+mm_______o___dd___e_____l
+o_____p_ee_n_vv_inn_____o
+pp____iipp__elliin______e
+2_______o_____2_________1
+ii____nn____tt___e_____ll
+rr____o_ttaa_tiio__n____n
+Output: name[confidence_levels]
+    numpy => shape[(9, 1, 1)] data[float32]
+Output: name[text_images]
+    numpy => shape[(9, 1, 3, 32, 100)] data[float32]
 ```
 
-With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg file to confirm
+With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm
 if the image was analyzed correctly.
 
 | ![image](../src/custom_nodes/east_ocr/demo_images/input.jpg)|
@@ -204,10 +210,12 @@ if the image was analyzed correctly.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 | #| Image | CRNN Recognition |                     
 | --- | --- | --- |                                                      
-| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_0.jpg)| s_______e__r__v___e_____r |
-| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_1.jpg)| g______d___a__n___s_____k |
-| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_2.jpg)| mm______oo___d____e____ll |
-| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_3.jpg)| oo____pp_e_n__v_inn_____o |
-| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_4.jpg)| p_____i_p___elliinn_____e |
-| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_5.jpg)| ii____nn____tt__ee_____ll |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_6.jpg)| 2_______0_____2_________1 |
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| pp___er_ior_m__a_n_c____d |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g______d___a_nn__ss_____k |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s______ee__r_v___e_____rr |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| mm_______o___dd___e_____l |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| o_____p_ee_n_vv_inn_____o |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| pp____iipp__elliin______e |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2_______o_____2_________1 |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| ii____nn____tt___e_____ll |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| rr____o_ttaa_tiio__n____n |

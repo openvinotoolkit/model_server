@@ -93,21 +93,26 @@ inline void nms(const std::vector<cv::Rect>& srcRects,
  * @param thresh
  * @param neighbors
  */
+template <typename T>
 inline void nms2(const std::vector<cv::Rect>& srcRects,
     const std::vector<float>& scores,
+    const std::vector<T>& metadata,
     std::vector<cv::Rect>& resRects,
     std::vector<float>& resScores,
+    std::vector<T>& resMetadata,
     float thresh,
     int neighbors = 0,
     float minScoresSum = 0.f) {
     resRects.clear();
     resScores.clear();
+    resMetadata.clear();
 
     const size_t size = srcRects.size();
     if (!size)
         return;
 
     assert(srcRects.size() == scores.size());
+    assert(srcRects.size() == metadata.size());
 
     // Sort the bounding boxes by the detection score
     std::multimap<float, size_t> idxs;
@@ -121,6 +126,7 @@ inline void nms2(const std::vector<cv::Rect>& srcRects,
         auto lastElem = --std::end(idxs);
         const cv::Rect& rect1 = srcRects[lastElem->second];
         float score = scores[lastElem->second];
+        const T& data = metadata[lastElem->second];
 
         int neigborsCount = 0;
         float scoresSum = lastElem->first;
@@ -147,6 +153,7 @@ inline void nms2(const std::vector<cv::Rect>& srcRects,
         if (neigborsCount >= neighbors && scoresSum >= minScoresSum) {
             resRects.push_back(rect1);
             resScores.push_back(score);
+            resMetadata.push_back(data);
         }
     }
 }

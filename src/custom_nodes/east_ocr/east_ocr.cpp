@@ -29,7 +29,13 @@ static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
 static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
 
-int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale) {
+struct BoxMetadata {
+    float angle;
+    float originalWidth;
+    float originalHeight;
+};
+
+int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
     uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -42,9 +48,11 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
-        cv::Size taretShape(targetImageWidth, targetImageHeight);
+        cv::Size targetShape(targetImageWidth, targetImageHeight);
         cv::Mat image;
-        if (!crop_and_resize(originalImage, image, boxes[i], taretShape)) {
+        float degree = metadata[i].angle * (180.0 / M_PI);
+
+        if (!crop_rotate_resize(originalImage, image, boxes[i], (abs(degree) > rotationAngleThreshold) ? -degree : 0.0, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
             std::cout << "box is outside of original image" << std::endl;
             free(buffer);
             return 1;
@@ -142,8 +150,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
-    float xCornerAdjustment = get_float_parameter("x_corner_adjustment", params, paramsCount, 0.0f);
-    float yCornerAdjustment = get_float_parameter("y_corner_adjustment", params, paramsCount, 0.0f);
+    float boxWidthAdjustment = get_float_parameter("box_width_adjustment", params, paramsCount, 0.0);
+    float boxHeightAdjustment = get_float_parameter("box_height_adjustment", params, paramsCount, 0.0);
+    NODE_ASSERT(boxWidthAdjustment >= 0.0, "box width adjustment must be positive");
+    NODE_ASSERT(boxHeightAdjustment >= 0.0, "box height adjustment must be positive");
+    int rotationAngleThreshold = get_int_parameter("rotation_angle_threshold", params, paramsCount, 20);
+    NODE_ASSERT(rotationAngleThreshold >= 0, "rotation angle threshold must be positive");
 
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* scoresTensor = nullptr;
@@ -206,6 +218,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     std::vector<cv::Rect> rects;
     std::vector<float> scores;
+    std::vector<BoxMetadata> metadata;
 
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
     for (int y = 0; y < numRows; y++) {
@@ -260,6 +273,11 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             int y1 = std::min(std::min(std::min(p2.y, p1.y), p3.y), p4.y);
             int y2 = std::max(std::max(std::max(p2.y, p1.y), p3.y), p4.y);
 
+            x1 = std::max(0, (int)(x1 - (x2 - x1) * boxWidthAdjustment));
+            x2 = std::min(originalImageWidth, (int)(x2 + (x2 - x1) * boxWidthAdjustment));
+            y1 = std::max(0, (int)(y1 - (y2 - y1) * boxHeightAdjustment));
+            y2 = std::min(originalImageHeight, (int)(y2 + (y2 - y1) * boxHeightAdjustment));
+
             if (debugMode) {
                 std::stringstream ss;
                 ss << "Angled polygon coordinates: " << std::endl;
@@ -270,11 +288,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
                 std::cout << ss.str() << std::endl;
             }
 
-            x1 = std::max(0, (int)(x1 - (x2 - x1) * xCornerAdjustment));
-            y1 = std::max(0, (int)(y1 - (y2 - y1) * yCornerAdjustment));
+            NODE_ASSERT(x2 > x1, "detected box width must be greater than 0");
+            NODE_ASSERT(y2 > y1, "detected box height must be greater than 0");
 
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
+            metadata.emplace_back(BoxMetadata{angle, w * (1.0f + boxWidthAdjustment), h * (1.0f + boxHeightAdjustment)});
         }
     }
 
@@ -283,15 +302,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     std::vector<cv::Rect> filteredBoxes;
     std::vector<float> filteredScores;
-    nms2(rects, scores, filteredBoxes, filteredScores, overlapThreshold);
+    std::vector<BoxMetadata> filteredMetadata;
+    nms2(rects, scores, metadata, filteredBoxes, filteredScores, filteredMetadata, overlapThreshold);
     NODE_ASSERT(filteredBoxes.size() == filteredScores.size(), "filtered boxes and scores are not equal length");
     if (filteredBoxes.size() > maxOutputBatch) {
         filteredBoxes.resize(maxOutputBatch);
         filteredScores.resize(maxOutputBatch);
     }
 
-    if (debugMode)
+    if (debugMode) {
         std::cout << "Total findings after NMS2 (non max suppression) filter: " << filteredBoxes.size() << std::endl;
+    }
 
     *outputsCount = 3;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
@@ -299,7 +320,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (copy_images_into_output(&textImagesTensor, filteredBoxes, image, targetImageHeight, targetImageWidth, convertToGrayScale)) {
+    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
         free(*outputs);
         return 1;
     }

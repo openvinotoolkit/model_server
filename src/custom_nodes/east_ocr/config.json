@@ -56,8 +56,9 @@
                         "confidence_threshold": "0.9",
                         "overlap_threshold": "0.2",
                         "max_output_batch": "100",
-                        "x_corner_adjustment": "0.2",
-                        "y_corner_adjustment": "0.2",
+                        "box_width_adjustment": "0.1",
+                        "box_height_adjustment": "0.0",
+                        "rotation_angle_threshold": "8",
                         "debug": "true"
                     },
                     "inputs": [

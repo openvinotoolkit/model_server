@@ -23,7 +23,7 @@ Example configuration file with one demultiplexer:
         {"config": {
             "name": "Model_B",
             "base_path": "/models/model_b"
-        }},
+        }}
     ],
     "pipeline_config_list": [
         {
@@ -98,7 +98,7 @@ Example configuration file for pipeline with `gather_from_node` specified before
         {"config": {
             "name": "Model_B",
             "base_path": "/models/model_b"
-        }},
+        }}
     ],
     "pipeline_config_list": [
         {
