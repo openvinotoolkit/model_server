@@ -213,8 +213,8 @@ The custom node generates the following text images retrieved from the original 
 | text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| pp___er_ior_m__a_n_c____d |
 | text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g______d___a_nn__ss_____k |
 | text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s______ee__r_v___e_____rr |
-| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| o_____p_ee_n_vv_inn_____o |
-| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| p_____i_p___elliinn_____e |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| mm_______o___dd___e_____l |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| o_____p_ee_n_vv_inn_____o |
 | text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| pp____iipp__elliin______e |
 | text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2_______o_____2_________1 |
 | text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| ii____nn____tt___e_____ll |
