@@ -20,7 +20,7 @@ from the original image, resize them to the target resolution and combines into 
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom model](../src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexer.md)
-- Model crnn - this model recognize the characters included in the input image in the grayscale. 
+- Model crnn - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
 The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
